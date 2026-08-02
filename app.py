@@ -1,20 +1,9 @@
 import streamlit as st
-import pandas as pd
-from datetime import datetime
-import io
-import time
 import gspread
-from google.oauth2.service_account import Credentials  # <--- Cambio clave
-
-# --- CONFIGURACIÓN DE PÁGINA ---
-st.set_page_config(
-    page_title="Control Asistencia & Caja | Premium Market",
-    page_icon="🛍️",
-    layout="wide"
-)
+from google.oauth2.service_account import Credentials
 
 # --- CONEXIÓN CON GOOGLE SHEETS ---
-@st.cache_resource
+@st.cache_resource(show_spinner="Conectando a Google Sheets...")
 def conectar_google_sheets():
     try:
         scope = [
@@ -22,22 +11,33 @@ def conectar_google_sheets():
             "https://www.googleapis.com/auth/drive"
         ]
         
-        # Lee directamente desde Secrets usando la librería oficial actualizada
-        creds = Credentials.from_service_account_info(
-            st.secrets["gcp_service_account"], 
-            scopes=scope
-        )
+        # 1. Cargar credenciales desde Secrets
+        creds_dict = dict(st.secrets["gcp_service_account"])
+        
+        # Corregir saltos de línea si TOML los tomó literales
+        if "private_key" in creds_dict:
+            creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
+            
+        creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
         client = gspread.authorize(creds)
         
-        # Nombre de la hoja de cálculo
+        # 2. Abrir el documento
+        # IMPORTANTE: Asegúrate de que el nombre sea EXACTO como está en tu Google Drive
         sheet = client.open("BD_PremiumMarket")
         return sheet
+
     except Exception as e:
-        st.sidebar.error(f"⚠️ Error de Conexión: {e}")
+        st.error(f"❌ Error al conectar con Google Sheets: {e}")
         return None
 
 doc_sheets = conectar_google_sheets()
 
+# Muestra advertencia clara en la interfaz si la conexión falló
+if doc_sheets is None:
+    st.warning("⚠️ No hay conexión activa con la base de datos.")
+    if st.button("🔄 Reintentar Conexión"):
+        st.cache_resource.clear()
+        st.rerun()
 # --- FUNCIONES DE LECTURA Y ESCRITURA EN LA NUBE ---
 def obtener_colaboradores_gsheets():
     if doc_sheets:
