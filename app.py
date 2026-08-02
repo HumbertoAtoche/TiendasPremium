@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 import io
+import time
 
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(
@@ -80,6 +81,9 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- INICIALIZACIÓN DE SESSION STATE (MEMORIA LOCAL) ---
+if "usuario_login" not in st.session_state:
+    st.session_state.usuario_login = None
+
 if "empleados" not in st.session_state:
     st.session_state.empleados = pd.DataFrame([
         {"dni": "72819034", "nombre": "Carlos Mendoza", "cargo": "Cajero", "estado": "Activo"},
@@ -88,10 +92,29 @@ if "empleados" not in st.session_state:
     ])
 
 if "asistencia" not in st.session_state:
-    st.session_state.asistencia = pd.DataFrame(columns=["dni", "nombre", "tipo", "fecha_hora", "fecha"])
+    st.session_state.asistencia = pd.DataFrame(columns=["dni", "nombre", "tipo", "fecha_hora", "fecha", "operador"])
 
 if "descuadres" not in st.session_state:
-    st.session_state.descuadres = pd.DataFrame(columns=["fecha", "dni", "nombre", "tipo", "monto", "observacion", "fecha_registro"])
+    st.session_state.descuadres = pd.DataFrame(columns=["fecha", "dni", "nombre", "tipo", "monto", "observacion", "fecha_registro", "operador"])
+
+# --- LOGIN / SELECCIÓN DE OPERADOR ---
+if not st.session_state.usuario_login:
+    st.markdown("<br><br>", unsafe_allow_html=True)
+    c_log1, c_log2, c_log3 = st.columns([1, 1.2, 1])
+    with c_log2:
+        with st.container(border=True):
+            st.title("🛍️ Premium Market")
+            st.subheader("Acceso a Terminal")
+            usr = st.text_input("Nombre de Usuario / Operador de Caja")
+            if st.button("INGRESAR AL SISTEMA", use_container_width=True):
+                if usr.strip():
+                    st.session_state.usuario_login = usr.strip()
+                    st.success(f"Bienvenido/a, {usr}")
+                    time.sleep(0.4)
+                    st.rerun()
+                else:
+                    st.error("Ingrese un nombre de operador para continuar.")
+    st.stop()
 
 # --- FUNCIONES DE APOYO ---
 def to_excel(df):
@@ -107,13 +130,20 @@ def registrar_marca(dni, nombre, tipo):
         "nombre": nombre,
         "tipo": tipo,
         "fecha_hora": ahora.strftime("%Y-%m-%d %H:%M:%S"),
-        "fecha": ahora.strftime("%Y-%m-%d")
+        "fecha": ahora.strftime("%Y-%m-%d"),
+        "operador": st.session_state.usuario_login
     }
     st.session_state.asistencia = pd.concat([pd.DataFrame([nueva_marca]), st.session_state.asistencia], ignore_index=True)
 
 # --- SIDEBAR NAVEGACIÓN ---
 st.sidebar.markdown('<div style="font-size: 60px; text-align: center;">🛍️</div>', unsafe_allow_html=True)
 st.sidebar.markdown("<h2 style='text-align: center;'>PREMIUM MARKET</h2>", unsafe_allow_html=True)
+st.sidebar.markdown(f"<p style='text-align: center; font-size:13px;'>👤 Operador: <b>{st.session_state.usuario_login}</b></p>", unsafe_allow_html=True)
+
+if st.sidebar.button("🚪 Cambiar Operador", use_container_width=True):
+    st.session_state.usuario_login = None
+    st.rerun()
+
 st.sidebar.markdown("---")
 
 menu = ["⏱️ Marcar Asistencia", "💰 Descuadres de Caja", "👥 Gestión Empleados", "📊 Dashboard Diario"]
@@ -197,7 +227,7 @@ elif choice == "💰 Descuadres de Caja":
             
             c1, c2 = st.columns(2)
             opciones_emp = {f"{row['nombre']} ({row['dni']})": row['dni'] for _, row in emp_activos.iterrows()}
-            emp_sel_key = c1.selectbox("Cajero Responsable:", list(opciones_emp.keys()))
+            emp_sel_key = c1.selectbox("Cajero Responsable:", list(opciones_emp.keys())) if opciones_emp else c1.text_input("Cajero Responsable")
             
             f_operacion = c2.date_input("Fecha Operativa", datetime.now())
 
@@ -208,8 +238,12 @@ elif choice == "💰 Descuadres de Caja":
             obs = st.text_area("Observaciones o Sustento")
 
             if st.form_submit_button("REGISTRAR DESCUADRE"):
-                dni_sel = opciones_emp[emp_sel_key]
-                nombre_sel = emp_sel_key.split(" (")[0]
+                if opciones_emp:
+                    dni_sel = opciones_emp[emp_sel_key]
+                    nombre_sel = emp_sel_key.split(" (")[0]
+                else:
+                    dni_sel = "S/D"
+                    nombre_sel = emp_sel_key
                 
                 nuevo_row = {
                     "fecha": str(f_operacion),
@@ -218,7 +252,8 @@ elif choice == "💰 Descuadres de Caja":
                     "tipo": "Sobrante" if "+" in tipo_desc else "Faltante",
                     "monto": monto if "+" in tipo_desc else -monto,
                     "observacion": obs,
-                    "fecha_registro": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    "fecha_registro": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "operador": st.session_state.usuario_login
                 }
                 st.session_state.descuadres = pd.concat([pd.DataFrame([nuevo_row]), st.session_state.descuadres], ignore_index=True)
                 st.toast("Descuadre guardado exitosamente", icon="💰")
@@ -264,6 +299,7 @@ elif choice == "👥 Gestión Empleados":
                     nuevo_e = {"dni": dni_in, "nombre": nom_in, "cargo": cargo_in, "estado": "Activo"}
                     st.session_state.empleados = pd.concat([st.session_state.empleados, pd.DataFrame([nuevo_e])], ignore_index=True)
                     st.toast(f"Empleado {nom_in} añadido", icon="👥")
+                    st.rerun()
 
     with col_list:
         st.subheader("Lista de Colaboradores")
@@ -271,13 +307,19 @@ elif choice == "👥 Gestión Empleados":
 
         for idx, row in df_emp.iterrows():
             with st.container(border=True):
-                c1, c2, c3 = st.columns([2, 1, 1])
-                c1.markdown(f"**{row['nombre']}**  \n`DNI: {row['dni']}` — *{row['cargo']}*")
+                c1, c2, c3, c4 = st.columns([2, 1, 1, 0.8])
+                c1.markdown(f"**{row['nombre']}** \n`DNI: {row['dni']}` — *{row['cargo']}*")
                 c2.markdown(f"**Estado:** {row['estado']}")
                 
                 label_btn = "Desactivar" if row["estado"] == "Activo" else "Activar"
                 if c3.button(label_btn, key=f"btn_st_{row['dni']}"):
                     st.session_state.empleados.at[idx, "estado"] = "Inactivo" if row["estado"] == "Activo" else "Activo"
+                    st.rerun()
+
+                # Botón para ELIMINAR REGISTRO DEFINITIVAMENTE
+                if c4.button("🗑️", key=f"btn_del_{row['dni']}", help="Eliminar empleado"):
+                    st.session_state.empleados = st.session_state.empleados.drop(idx).reset_index(drop=True)
+                    st.toast(f"Empleado {row['nombre']} eliminado", icon="🗑️")
                     st.rerun()
 
 # -------------------- 4. DASHBOARD DIARIO --------------------
@@ -297,7 +339,6 @@ elif choice == "📊 Dashboard Diario":
     salieron = []
 
     if not df_asist_hoy.empty:
-        # Agrupar por la marca más reciente de cada persona
         ultimas_marcas = df_asist_hoy.sort_values("fecha_hora").groupby("dni").last()
         for dni, row in ultimas_marcas.iterrows():
             if row["tipo"] == "INGRESO":
@@ -336,7 +377,7 @@ elif choice == "📊 Dashboard Diario":
             </div>
         ''', unsafe_allow_html=True)
 
-    # Detalle de Estados
+    # Detalle de Estados (CORREGIDO: Usando st.caption en lugar de st.gray)
     col_t1, col_t2 = st.columns(2)
 
     with col_t1:
@@ -351,7 +392,7 @@ elif choice == "📊 Dashboard Diario":
         st.subheader("🚪 Turno Finalizado")
         if salieron:
             for nom in salieron:
-                st.gray(f"👤 {nom}")
+                st.caption(f"👤 **{nom}** (Salida registrada)")
         else:
             st.info("Sin registros de salida en la fecha.")
 
