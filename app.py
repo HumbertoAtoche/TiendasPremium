@@ -37,7 +37,7 @@ def obtener_colaboradores_gsheets():
                 return pd.DataFrame(datos)
         except Exception:
             pass
-    # Base por defecto si aún no hay datos en la hoja
+    # Base de respaldo si la hoja está vacía
     return pd.DataFrame([
         {"dni": "72819034", "nombre": "Fran", "cargo": "Cajero", "estado": "Activo", "clave": "12345", "rol": "operativo"},
         {"dni": "45129803", "nombre": "Luz Soplin", "cargo": "Supervisora", "estado": "Activo", "clave": "12345", "rol": "operativo"},
@@ -55,7 +55,7 @@ def guardar_colaborador_gsheets(dni, nombre, cargo, estado, clave, rol):
 def guardar_asistencia_gsheets(dni, nombre, tipo, fecha_hora, fecha):
     if doc_sheets:
         try:
-            hoja = doc_sheets.worksheet("Asistencia")
+            hoja = doc_sheets.worksheet("Asistencia")  # Nombre exacto: Asistencia
             hoja.append_row([str(dni), nombre, tipo, fecha_hora, fecha])
         except Exception as e:
             st.error(f"Error al guardar asistencia: {e}")
@@ -151,7 +151,7 @@ if "descuadres" not in st.session_state:
     else:
         st.session_state.descuadres = pd.DataFrame(columns=["fecha", "dni", "nombre", "tipo", "monto", "observacion", "fecha_registro"])
 
-# Construir diccionario dinámico de usuarios desde los Colaboradores cargados
+# Diccionario dinámico de usuarios cargado desde Google Sheets
 USUARIOS = {}
 for _, row in st.session_state.empleados.iterrows():
     if str(row.get("estado", "")).lower() == "activo":
@@ -322,7 +322,7 @@ elif choice == "💰 Registrar Descuadre":
             }
             st.session_state.descuadres = pd.concat([pd.DataFrame([nuevo_row]), st.session_state.descuadres], ignore_index=True)
             guardar_descuadre_gsheets(str(f_operacion), dni_actual, user_actual, tipo_final, monto_final, obs, f_reg)
-            st.toast("Descuadre sincronizado con AppSheet", icon="💰")
+            st.toast("Descuadre guardado en Google Sheets / AppSheet", icon="💰")
 
 elif choice == "📊 Mi Dashboard Mensual":
     st.markdown(f"""
