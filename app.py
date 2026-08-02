@@ -4,37 +4,32 @@ from datetime import datetime
 import io
 import time
 import gspread
-from google.oauth2.service_account import Credentials
 
-# --- CONFIGURACIÓN DE PÁGINA ---
-st.set_page_config(
-    page_title="Control Asistencia & Caja | Premium Market",
-    page_icon="🛍️",
-    layout="wide"
-)
-
-# --- CONEXIÓN CON GOOGLE SHEETS / APPSHEET ---
+# --- CONEXIÓN A PRUEBA DE ERRORES ---
 @st.cache_resource
 def conectar_google_sheets():
     try:
-        scope = [
-            "https://www.googleapis.com/auth/spreadsheets",
-            "https://www.googleapis.com/auth/drive"
-        ]
-        
-        # Intenta primero leer desde Streamlit Secrets (Nube)
+        # Modo Nube (Secrets de Streamlit)
         if "gcp_service_account" in st.secrets:
-            sec_dict = dict(st.secrets["gcp_service_account"])
-            if "private_key" in sec_dict:
-                sec_dict["private_key"] = sec_dict["private_key"].replace("\\n", "\n")
-            creds = Credentials.from_service_account_info(sec_dict, scopes=scope)
-        else:
-            # Respaldo para entorno local usando credentials.json
-            creds = Credentials.from_service_account_file("credentials.json", scopes=scope)
+            # Creamos un diccionario copiable
+            creds_dict = dict(st.secrets["gcp_service_account"])
             
-        client = gspread.authorize(creds)
+            # Limpiamos los saltos de línea de la llave privada
+            if "private_key" in creds_dict:
+                pk = creds_dict["private_key"]
+                pk = pk.replace("\\n", "\n")
+                creds_dict["private_key"] = pk
+            
+            # Autenticación directa de gspread
+            client = gspread.service_account_from_dict(creds_dict)
+            
+        # Modo Local
+        else:
+            client = gspread.service_account(filename="credentials.json")
+
         sheet = client.open("BD_PremiumMarket")
         return sheet
+
     except Exception as e:
         st.sidebar.error(f"⚠️ Error de Conexión: {e}")
         return None
