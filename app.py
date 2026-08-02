@@ -4,7 +4,7 @@ from datetime import datetime
 import io
 import time
 import gspread
-from oauth2client.service_account import ServiceAccountCredentials
+from google.oauth2.service_account import Credentials  # <--- Cambio clave
 
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(
@@ -13,20 +13,23 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- CONEXIÓN CON GOOGLE SHEETS / APPSHEET ---
+# --- CONEXIÓN CON GOOGLE SHEETS ---
 @st.cache_resource
 def conectar_google_sheets():
     try:
-        scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+        scope = [
+            "https://www.googleapis.com/auth/spreadsheets",
+            "https://www.googleapis.com/auth/drive"
+        ]
         
-        # Intenta primero leer desde Streamlit Secrets (Nube)
-        if "gcp_service_account" in st.secrets:
-            creds = ServiceAccountCredentials.from_json_keyfile_dict(dict(st.secrets["gcp_service_account"]), scope)
-        else:
-            # Respaldo para entorno local usando credentials.json
-            creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
-            
+        # Lee directamente desde Secrets usando la librería oficial actualizada
+        creds = Credentials.from_service_account_info(
+            st.secrets["gcp_service_account"], 
+            scopes=scope
+        )
         client = gspread.authorize(creds)
+        
+        # Nombre de la hoja de cálculo
         sheet = client.open("BD_PremiumMarket")
         return sheet
     except Exception as e:
