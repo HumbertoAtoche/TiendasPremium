@@ -3,6 +3,8 @@ import pandas as pd
 from datetime import datetime
 import io
 import time
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(
@@ -10,6 +12,61 @@ st.set_page_config(
     page_icon="🛍️",
     layout="wide"
 )
+
+# --- CONEXIÓN CON GOOGLE SHEETS / APPSHEET ---
+@st.cache_resource
+def conectar_google_sheets():
+    try:
+        scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+        creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
+        client = gspread.authorize(creds)
+        sheet = client.open("BD_PremiumMarket")
+        return sheet
+    except Exception as e:
+        return None
+
+doc_sheets = conectar_google_sheets()
+
+# --- FUNCIONES DE LECTURA Y ESCRITURA EN LA NUBE ---
+def obtener_colaboradores_gsheets():
+    if doc_sheets:
+        try:
+            hoja = doc_sheets.worksheet("Colaboradores")
+            datos = hoja.get_all_records()
+            if datos:
+                return pd.DataFrame(datos)
+        except Exception:
+            pass
+    # Base por defecto si aún no hay datos en la hoja
+    return pd.DataFrame([
+        {"dni": "72819034", "nombre": "Fran", "cargo": "Cajero", "estado": "Activo", "clave": "12345", "rol": "operativo"},
+        {"dni": "45129803", "nombre": "Luz Soplin", "cargo": "Supervisora", "estado": "Activo", "clave": "12345", "rol": "operativo"},
+        {"dni": "00000000", "nombre": "Administrador", "cargo": "Gerente de Tienda", "estado": "Activo", "clave": "admin123", "rol": "admin"}
+    ])
+
+def guardar_colaborador_gsheets(dni, nombre, cargo, estado, clave, rol):
+    if doc_sheets:
+        try:
+            hoja = doc_sheets.worksheet("Colaboradores")
+            hoja.append_row([str(dni), nombre, cargo, estado, str(clave), rol])
+        except Exception as e:
+            st.error(f"Error al guardar colaborador: {e}")
+
+def guardar_asistencia_gsheets(dni, nombre, tipo, fecha_hora, fecha):
+    if doc_sheets:
+        try:
+            hoja = doc_sheets.worksheet("Asistencia")
+            hoja.append_row([str(dni), nombre, tipo, fecha_hora, fecha])
+        except Exception as e:
+            st.error(f"Error al guardar asistencia: {e}")
+
+def guardar_descuadre_gsheets(fecha, dni, nombre, tipo, monto, observacion, fecha_registro):
+    if doc_sheets:
+        try:
+            hoja = doc_sheets.worksheet("Descuadres")
+            hoja.append_row([fecha, str(dni), nombre, tipo, monto, observacion, fecha_registro])
+        except Exception as e:
+            st.error(f"Error al guardar descuadre: {e}")
 
 # --- ESTILOS CORPORATIVOS ---
 st.markdown("""
@@ -67,30 +124,44 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- INICIALIZACIÓN DE SESSION STATE ---
+# --- INICIALIZACIÓN DE SESSION STATE Y NUBE ---
 if "usuario_login" not in st.session_state:
     st.session_state.usuario_login = None
 
 if "empleados" not in st.session_state:
-    st.session_state.empleados = pd.DataFrame([
-        {"dni": "72819034", "nombre": "Fran", "cargo": "Cajero", "estado": "Activo"},
-        {"dni": "45129803", "nombre": "Luz Soplin", "cargo": "Supervisora", "estado": "Activo"}
-    ])
+    st.session_state.empleados = obtener_colaboradores_gsheets()
 
 if "asistencia" not in st.session_state:
-    st.session_state.asistencia = pd.DataFrame(columns=["dni", "nombre", "tipo", "fecha_hora", "fecha"])
+    if doc_sheets:
+        try:
+            data_asist = doc_sheets.worksheet("Asistencia").get_all_records()
+            st.session_state.asistencia = pd.DataFrame(data_asist)
+        except Exception:
+            st.session_state.asistencia = pd.DataFrame(columns=["dni", "nombre", "tipo", "fecha_hora", "fecha"])
+    else:
+        st.session_state.asistencia = pd.DataFrame(columns=["dni", "nombre", "tipo", "fecha_hora", "fecha"])
 
 if "descuadres" not in st.session_state:
-    st.session_state.descuadres = pd.DataFrame(columns=["fecha", "dni", "nombre", "tipo", "monto", "observacion", "fecha_registro"])
+    if doc_sheets:
+        try:
+            data_desc = doc_sheets.worksheet("Descuadres").get_all_records()
+            st.session_state.descuadres = pd.DataFrame(data_desc)
+        except Exception:
+            st.session_state.descuadres = pd.DataFrame(columns=["fecha", "dni", "nombre", "tipo", "monto", "observacion", "fecha_registro"])
+    else:
+        st.session_state.descuadres = pd.DataFrame(columns=["fecha", "dni", "nombre", "tipo", "monto", "observacion", "fecha_registro"])
 
-# --- USUARIOS Y CREDENCIALES ---
-USUARIOS = {
-    "Fran": {"clave": "12345", "rol": "operativo", "dni": "72819034"},
-    "Luz Soplin": {"clave": "12345", "rol": "operativo", "dni": "45129803"},
-    "Administrador": {"clave": "admin123", "rol": "admin", "dni": "00000000"}
-}
+# Construir diccionario dinámico de usuarios desde los Colaboradores cargados
+USUARIOS = {}
+for _, row in st.session_state.empleados.iterrows():
+    if str(row.get("estado", "")).lower() == "activo":
+        USUARIOS[str(row["nombre"])] = {
+            "clave": str(row["clave"]),
+            "rol": str(row["rol"]),
+            "dni": str(row["dni"])
+        }
 
-# --- PANTALLA DE ACCESO ---
+# --- PANTALLA DE ACCESO (LOGIN) ---
 if not st.session_state.usuario_login:
     st.markdown("<br><br>", unsafe_allow_html=True)
     c_log1, c_log2, c_log3 = st.columns([1, 1.2, 1])
@@ -126,19 +197,28 @@ def to_excel(df):
 
 def registrar_marca(dni, nombre, tipo):
     ahora = datetime.now()
+    fecha_h = ahora.strftime("%Y-%m-%d %H:%M:%S")
+    fecha_s = ahora.strftime("%Y-%m-%d")
+    
     nueva_marca = {
-        "dni": dni,
+        "dni": str(dni),
         "nombre": nombre,
         "tipo": tipo,
-        "fecha_hora": ahora.strftime("%Y-%m-%d %H:%M:%S"),
-        "fecha": ahora.strftime("%Y-%m-%d")
+        "fecha_hora": fecha_h,
+        "fecha": fecha_s
     }
     st.session_state.asistencia = pd.concat([pd.DataFrame([nueva_marca]), st.session_state.asistencia], ignore_index=True)
+    guardar_asistencia_gsheets(dni, nombre, tipo, fecha_h, fecha_s)
 
 # --- SIDEBAR NAVEGACIÓN ---
 st.sidebar.markdown('<div style="font-size: 60px; text-align: center;">🛍️</div>', unsafe_allow_html=True)
 st.sidebar.markdown("<h2 style='text-align: center;'>PREMIUM MARKET</h2>", unsafe_allow_html=True)
 st.sidebar.markdown(f"<p style='text-align: center; font-size:13px;'>👤 Usuario: <b>{user_actual}</b><br><small>({rol_actual.upper()})</small></p>", unsafe_allow_html=True)
+
+if doc_sheets:
+    st.sidebar.caption("🟢 Conectado a Google Sheets / AppSheet")
+else:
+    st.sidebar.caption("🔴 Modo Offline (Verifica credentials.json)")
 
 if st.sidebar.button("🚪 Cerrar Sesión", use_container_width=True):
     st.session_state.usuario_login = None
@@ -146,15 +226,14 @@ if st.sidebar.button("🚪 Cerrar Sesión", use_container_width=True):
 
 st.sidebar.markdown("---")
 
-# Filtrar menú según el rol
 if rol_actual == "admin":
-    menu = ["📊 Dashboard General", "👥 Gestión Empleados", "💰 Historial de Descuadres", "⏱️ Historial de Asistencias"]
+    menu = ["📊 Dashboard General", "👥 Gestión Colaboradores", "💰 Historial de Descuadres", "⏱️ Historial de Asistencias"]
 else:
     menu = ["⏱️ Marcar Asistencia", "💰 Registrar Descuadre", "📊 Mi Dashboard Mensual"]
 
 choice = st.sidebar.radio("Módulos:", menu)
 
-# -------------------- MÓDULOS OPERATIVOS (FRAN / LUZ) --------------------
+# -------------------- MÓDULOS OPERATIVOS (CAJEROS / SUPERVISORES) --------------------
 
 if choice == "⏱️ Marcar Asistencia":
     st.markdown(f"""
@@ -190,18 +269,22 @@ if choice == "⏱️ Marcar Asistencia":
     with col_preview:
         st.subheader("Tus Marcas de Hoy")
         hoy_str = datetime.now().strftime("%Y-%m-%d")
-        df_mismarcas = st.session_state.asistencia[
-            (st.session_state.asistencia["fecha"] == hoy_str) & 
-            (st.session_state.asistencia["dni"] == dni_actual)
-        ]
+        
+        if not st.session_state.asistencia.empty:
+            df_mismarcas = st.session_state.asistencia[
+                (st.session_state.asistencia["fecha"].astype(str) == hoy_str) & 
+                (st.session_state.asistencia["dni"].astype(str) == str(dni_actual))
+            ]
 
-        if not df_mismarcas.empty:
-            st.dataframe(
-                df_mismarcas[["tipo", "fecha_hora"]],
-                use_container_width=True,
-                hide_index=True,
-                column_config={"tipo": "MARCA", "fecha_hora": "HORA Y FECHA"}
-            )
+            if not df_mismarcas.empty:
+                st.dataframe(
+                    df_mismarcas[["tipo", "fecha_hora"]],
+                    use_container_width=True,
+                    hide_index=True,
+                    column_config={"tipo": "MARCA", "fecha_hora": "HORA Y FECHA"}
+                )
+            else:
+                st.info("Aún no tienes marcas registradas hoy.")
         else:
             st.info("Aún no tienes marcas registradas hoy.")
 
@@ -224,17 +307,22 @@ elif choice == "💰 Registrar Descuadre":
         obs = st.text_area("Sustento o Motivo de la diferencia")
 
         if st.form_submit_button("REGISTRAR DESCUADRE"):
+            monto_final = monto if "+" in tipo_desc else -monto
+            tipo_final = "Sobrante" if "+" in tipo_desc else "Faltante"
+            f_reg = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
             nuevo_row = {
                 "fecha": str(f_operacion),
-                "dni": dni_actual,
+                "dni": str(dni_actual),
                 "nombre": user_actual,
-                "tipo": "Sobrante" if "+" in tipo_desc else "Faltante",
-                "monto": monto if "+" in tipo_desc else -monto,
+                "tipo": tipo_final,
+                "monto": monto_final,
                 "observacion": obs,
-                "fecha_registro": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                "fecha_registro": f_reg
             }
             st.session_state.descuadres = pd.concat([pd.DataFrame([nuevo_row]), st.session_state.descuadres], ignore_index=True)
-            st.toast("Descuadre guardado exitosamente", icon="💰")
+            guardar_descuadre_gsheets(str(f_operacion), dni_actual, user_actual, tipo_final, monto_final, obs, f_reg)
+            st.toast("Descuadre sincronizado con AppSheet", icon="💰")
 
 elif choice == "📊 Mi Dashboard Mensual":
     st.markdown(f"""
@@ -244,10 +332,16 @@ elif choice == "📊 Mi Dashboard Mensual":
         </div>
     """, unsafe_allow_html=True)
 
-    df_mis_desc = st.session_state.descuadres[st.session_state.descuadres["dni"] == dni_actual]
-    df_mis_asist = st.session_state.asistencia[st.session_state.asistencia["dni"] == dni_actual]
+    df_mis_desc = pd.DataFrame()
+    df_mis_asist = pd.DataFrame()
 
-    monto_total = df_mis_desc["monto"].sum() if not df_mis_desc.empty else 0.0
+    if not st.session_state.descuadres.empty:
+        df_mis_desc = st.session_state.descuadres[st.session_state.descuadres["dni"].astype(str) == str(dni_actual)]
+    
+    if not st.session_state.asistencia.empty:
+        df_mis_asist = st.session_state.asistencia[st.session_state.asistencia["dni"].astype(str) == str(dni_actual)]
+
+    monto_total = pd.to_numeric(df_mis_desc["monto"]).sum() if not df_mis_desc.empty else 0.0
     dias_trabajados = df_mis_asist["fecha"].nunique() if not df_mis_asist.empty else 0
 
     k1, k2 = st.columns(2)
@@ -285,26 +379,28 @@ elif choice == "📊 Dashboard General":
     st.markdown("""
         <div class="market-header">
             <h1>Panel de Control General</h1>
-            <p>Consolidado operativo de todos los cajeros y supervisores</p>
+            <p>Consolidado operativo en tiempo real sincronizado con AppSheet</p>
         </div>
     """, unsafe_allow_html=True)
 
     hoy_str = datetime.now().strftime("%Y-%m-%d")
-    df_asist_hoy = st.session_state.asistencia[st.session_state.asistencia["fecha"] == hoy_str]
-
     trabajando = []
     salieron = []
 
-    if not df_asist_hoy.empty:
-        ultimas_marcas = df_asist_hoy.sort_values("fecha_hora").groupby("dni").last()
-        for dni, row in ultimas_marcas.iterrows():
-            if row["tipo"] == "INGRESO":
-                trabajando.append(row["nombre"])
-            else:
-                salieron.append(row["nombre"])
+    if not st.session_state.asistencia.empty:
+        df_asist_hoy = st.session_state.asistencia[st.session_state.asistencia["fecha"].astype(str) == hoy_str]
+        if not df_asist_hoy.empty:
+            ultimas_marcas = df_asist_hoy.sort_values("fecha_hora").groupby("dni").last()
+            for dni, row in ultimas_marcas.iterrows():
+                if row["tipo"] == "INGRESO":
+                    trabajando.append(row["nombre"])
+                else:
+                    salieron.append(row["nombre"])
 
-    df_desc_hoy = st.session_state.descuadres[st.session_state.descuadres["fecha"] == hoy_str]
-    total_descuadre_monto = df_desc_hoy["monto"].sum() if not df_desc_hoy.empty else 0.0
+    total_descuadre_monto = 0.0
+    if not st.session_state.descuadres.empty:
+        df_desc_hoy = st.session_state.descuadres[st.session_state.descuadres["fecha"].astype(str) == hoy_str]
+        total_descuadre_monto = pd.to_numeric(df_desc_hoy["monto"]).sum() if not df_desc_hoy.empty else 0.0
 
     k1, k2, k3 = st.columns(3)
     with k1:
@@ -331,43 +427,49 @@ elif choice == "📊 Dashboard General":
         else:
             st.info("Sin registros de salida hoy.")
 
-elif choice == "👥 Gestión Empleados":
+elif choice == "👥 Gestión Colaboradores":
     st.markdown("""
         <div class="market-header">
-            <h1>Gestión de Personal</h1>
-            <p>Mantenimiento de credenciales y colaboradores</p>
+            <h1>Gestión de Colaboradores</h1>
+            <p>Mantenimiento de personal y credenciales sincronizado con AppSheet</p>
         </div>
     """, unsafe_allow_html=True)
 
-    col_add, col_list = st.columns([1, 1.5])
+    col_add, col_list = st.columns([1, 1.3])
 
     with col_add:
         with st.form("form_emp", clear_on_submit=True):
-            st.subheader("Agregar Nuevo Empleado")
+            st.subheader("Agregar Nuevo Colaborador")
             dni_in = st.text_input("DNI / Identificación")
             nom_in = st.text_input("Nombre Completo")
             cargo_in = st.selectbox("Cargo", ["Cajero", "Supervisora", "Reposidor", "Gerente de Tienda"])
+            rol_in = st.selectbox("Rol en Sistema", ["operativo", "admin"])
+            clave_in = st.text_input("Contraseña de Acceso", type="password")
 
-            if st.form_submit_button("GUARDAR EMPLEADO"):
-                if not dni_in or not nom_in:
-                    st.error("DNI y Nombre son obligatorios")
+            if st.form_submit_button("GUARDAR EN NUBE Y APPSHEET"):
+                if not dni_in or not nom_in or not clave_in:
+                    st.error("DNI, Nombre y Contraseña son obligatorios")
                 else:
-                    nuevo_e = {"dni": dni_in, "nombre": nom_in, "cargo": cargo_in, "estado": "Activo"}
+                    nuevo_e = {
+                        "dni": str(dni_in),
+                        "nombre": nom_in,
+                        "cargo": cargo_in,
+                        "estado": "Activo",
+                        "clave": str(clave_in),
+                        "rol": rol_in
+                    }
                     st.session_state.empleados = pd.concat([st.session_state.empleados, pd.DataFrame([nuevo_e])], ignore_index=True)
-                    st.toast(f"Empleado {nom_in} añadido", icon="👥")
+                    guardar_colaborador_gsheets(dni_in, nom_in, cargo_in, "Activo", clave_in, rol_in)
+                    st.toast(f"Colaborador {nom_in} guardado permanentemente", icon="👥")
                     st.rerun()
 
     with col_list:
-        st.subheader("Directorio")
-        for idx, row in st.session_state.empleados.iterrows():
-            with st.container(border=True):
-                c1, c2, c3 = st.columns([2, 1, 0.8])
-                c1.markdown(f"**{row['nombre']}** \n`DNI: {row['dni']}` — *{row['cargo']}*")
-                c2.markdown(f"**Estado:** {row['estado']}")
-                if c3.button("🗑️", key=f"btn_del_{row['dni']}"):
-                    st.session_state.empleados = st.session_state.empleados.drop(idx).reset_index(drop=True)
-                    st.toast(f"Empleado {row['nombre']} eliminado", icon="🗑️")
-                    st.rerun()
+        st.subheader("Directorio General")
+        st.dataframe(
+            st.session_state.empleados[["dni", "nombre", "cargo", "rol", "estado"]],
+            use_container_width=True,
+            hide_index=True
+        )
 
 elif choice == "💰 Historial de Descuadres":
     st.markdown("""
@@ -403,4 +505,4 @@ elif choice == "⏱️ Historial de Asistencias":
         st.info("Sin asistencias registradas.")
 
 st.markdown("---")
-st.markdown('<div style="text-align:center; color:#64748B; font-weight:bold; font-size:12px;">Premium Market System v2.5 | Control de Gestión</div>', unsafe_allow_html=True)
+st.markdown('<div style="text-align:center; color:#64748B; font-weight:bold; font-size:12px;">Premium Market System v3.0 | Conexión Nube AppSheet & Google Sheets</div>', unsafe_allow_html=True)
