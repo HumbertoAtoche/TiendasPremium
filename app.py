@@ -80,40 +80,48 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- INICIALIZACIÓN DE SESSION STATE (MEMORIA LOCAL) ---
+# --- INICIALIZACIÓN DE SESSION STATE ---
 if "usuario_login" not in st.session_state:
     st.session_state.usuario_login = None
 
 if "empleados" not in st.session_state:
     st.session_state.empleados = pd.DataFrame([
-        {"dni": "72819034", "nombre": "Carlos Mendoza", "cargo": "Cajero", "estado": "Activo"},
-        {"dni": "45129803", "nombre": "Ana Lucía Torres", "cargo": "Supervisora", "estado": "Activo"},
-        {"dni": "10923847", "nombre": "Marcos Rivas", "cargo": "Reposidor", "estado": "Activo"}
+        {"dni": "72819034", "nombre": "Fran", "cargo": "Cajero", "estado": "Activo"},
+        {"dni": "45129803", "nombre": "Luz Soplin", "cargo": "Supervisora", "estado": "Activo"}
     ])
 
 if "asistencia" not in st.session_state:
-    st.session_state.asistencia = pd.DataFrame(columns=["dni", "nombre", "tipo", "fecha_hora", "fecha", "operador"])
+    st.session_state.asistencia = pd.DataFrame(columns=["dni", "nombre", "tipo", "fecha_hora", "fecha"])
 
 if "descuadres" not in st.session_state:
-    st.session_state.descuadres = pd.DataFrame(columns=["fecha", "dni", "nombre", "tipo", "monto", "observacion", "fecha_registro", "operador"])
+    st.session_state.descuadres = pd.DataFrame(columns=["fecha", "dni", "nombre", "tipo", "monto", "observacion", "fecha_registro"])
 
-# --- LOGIN / SELECCIÓN DE OPERADOR ---
+# --- CREDENCIALES POR DEFECTO ---
+USUARIOS = {
+    "Fran": "12345",
+    "Luz Soplin": "12345"
+}
+
+# --- PANTALLA DE ACCESO (LOGIN CON MENU DE USUARIOS) ---
 if not st.session_state.usuario_login:
     st.markdown("<br><br>", unsafe_allow_html=True)
     c_log1, c_log2, c_log3 = st.columns([1, 1.2, 1])
     with c_log2:
         with st.container(border=True):
-            st.title("🛍️ Premium Market")
-            st.subheader("Acceso a Terminal")
-            usr = st.text_input("Nombre de Usuario / Operador de Caja")
+            st.markdown("<h2 style='text-align: center;'>🛍️ Premium Market</h2>", unsafe_allow_html=True)
+            st.markdown("<p style='text-align: center; color: #64748B;'>Selecciona tu usuario para ingresar</p>", unsafe_allow_html=True)
+            
+            usuario_sel = st.selectbox("Seleccionar Usuario:", list(USUARIOS.keys()))
+            clave_input = st.text_input("Contraseña:", type="password")
+            
             if st.button("INGRESAR AL SISTEMA", use_container_width=True):
-                if usr.strip():
-                    st.session_state.usuario_login = usr.strip()
-                    st.success(f"Bienvenido/a, {usr}")
+                if clave_input == USUARIOS[usuario_sel]:
+                    st.session_state.usuario_login = usuario_sel
+                    st.success(f"¡Bienvenido/a {usuario_sel}!")
                     time.sleep(0.4)
                     st.rerun()
                 else:
-                    st.error("Ingrese un nombre de operador para continuar.")
+                    st.error("Contraseña incorrecta (Usa: 12345)")
     st.stop()
 
 # --- FUNCIONES DE APOYO ---
@@ -130,17 +138,16 @@ def registrar_marca(dni, nombre, tipo):
         "nombre": nombre,
         "tipo": tipo,
         "fecha_hora": ahora.strftime("%Y-%m-%d %H:%M:%S"),
-        "fecha": ahora.strftime("%Y-%m-%d"),
-        "operador": st.session_state.usuario_login
+        "fecha": ahora.strftime("%Y-%m-%d")
     }
     st.session_state.asistencia = pd.concat([pd.DataFrame([nueva_marca]), st.session_state.asistencia], ignore_index=True)
 
 # --- SIDEBAR NAVEGACIÓN ---
 st.sidebar.markdown('<div style="font-size: 60px; text-align: center;">🛍️</div>', unsafe_allow_html=True)
 st.sidebar.markdown("<h2 style='text-align: center;'>PREMIUM MARKET</h2>", unsafe_allow_html=True)
-st.sidebar.markdown(f"<p style='text-align: center; font-size:13px;'>👤 Operador: <b>{st.session_state.usuario_login}</b></p>", unsafe_allow_html=True)
+st.sidebar.markdown(f"<p style='text-align: center; font-size:13px;'>👤 Usuario: <b>{st.session_state.usuario_login}</b></p>", unsafe_allow_html=True)
 
-if st.sidebar.button("🚪 Cambiar Operador", use_container_width=True):
+if st.sidebar.button("🚪 Cerrar Sesión", use_container_width=True):
     st.session_state.usuario_login = None
     st.rerun()
 
@@ -227,7 +234,7 @@ elif choice == "💰 Descuadres de Caja":
             
             c1, c2 = st.columns(2)
             opciones_emp = {f"{row['nombre']} ({row['dni']})": row['dni'] for _, row in emp_activos.iterrows()}
-            emp_sel_key = c1.selectbox("Cajero Responsable:", list(opciones_emp.keys())) if opciones_emp else c1.text_input("Cajero Responsable")
+            emp_sel_key = c1.selectbox("Cajero Responsable:", list(opciones_emp.keys()))
             
             f_operacion = c2.date_input("Fecha Operativa", datetime.now())
 
@@ -238,12 +245,8 @@ elif choice == "💰 Descuadres de Caja":
             obs = st.text_area("Observaciones o Sustento")
 
             if st.form_submit_button("REGISTRAR DESCUADRE"):
-                if opciones_emp:
-                    dni_sel = opciones_emp[emp_sel_key]
-                    nombre_sel = emp_sel_key.split(" (")[0]
-                else:
-                    dni_sel = "S/D"
-                    nombre_sel = emp_sel_key
+                dni_sel = opciones_emp[emp_sel_key]
+                nombre_sel = emp_sel_key.split(" (")[0]
                 
                 nuevo_row = {
                     "fecha": str(f_operacion),
@@ -252,8 +255,7 @@ elif choice == "💰 Descuadres de Caja":
                     "tipo": "Sobrante" if "+" in tipo_desc else "Faltante",
                     "monto": monto if "+" in tipo_desc else -monto,
                     "observacion": obs,
-                    "fecha_registro": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                    "operador": st.session_state.usuario_login
+                    "fecha_registro": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 }
                 st.session_state.descuadres = pd.concat([pd.DataFrame([nuevo_row]), st.session_state.descuadres], ignore_index=True)
                 st.toast("Descuadre guardado exitosamente", icon="💰")
@@ -316,7 +318,7 @@ elif choice == "👥 Gestión Empleados":
                     st.session_state.empleados.at[idx, "estado"] = "Inactivo" if row["estado"] == "Activo" else "Activo"
                     st.rerun()
 
-                # Botón para ELIMINAR REGISTRO DEFINITIVAMENTE
+                # Botón para ELIMINAR definitivamente
                 if c4.button("🗑️", key=f"btn_del_{row['dni']}", help="Eliminar empleado"):
                     st.session_state.empleados = st.session_state.empleados.drop(idx).reset_index(drop=True)
                     st.toast(f"Empleado {row['nombre']} eliminado", icon="🗑️")
@@ -377,7 +379,7 @@ elif choice == "📊 Dashboard Diario":
             </div>
         ''', unsafe_allow_html=True)
 
-    # Detalle de Estados (CORREGIDO: Usando st.caption en lugar de st.gray)
+    # Detalle de Estados (CORREGIDO)
     col_t1, col_t2 = st.columns(2)
 
     with col_t1:
