@@ -18,7 +18,14 @@ st.set_page_config(
 def conectar_google_sheets():
     try:
         scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-        creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
+        
+        # Intenta primero leer desde Streamlit Secrets (Nube)
+        if "gcp_service_account" in st.secrets:
+            creds = ServiceAccountCredentials.from_json_keyfile_dict(dict(st.secrets["gcp_service_account"]), scope)
+        else:
+            # Respaldo para entorno local usando credentials.json
+            creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
+            
         client = gspread.authorize(creds)
         sheet = client.open("BD_PremiumMarket")
         return sheet
@@ -39,7 +46,7 @@ def obtener_colaboradores_gsheets():
         except Exception as e:
             st.error(f"Error al leer Colaboradores: {e}")
             
-    # Base de respaldo si la hoja está vacía o falla
+    # Base de respaldo si la hoja está vacía o falla la lectura
     return pd.DataFrame([
         {"dni": "72819034", "nombre": "Fran", "cargo": "Cajero", "estado": "Activo", "clave": "12345", "rol": "operativo"},
         {"dni": "45129803", "nombre": "Luz Soplin", "cargo": "Supervisora", "estado": "Activo", "clave": "12345", "rol": "operativo"},
@@ -226,7 +233,7 @@ st.sidebar.markdown(f"<p style='text-align: center; font-size:13px;'>👤 Usuari
 if doc_sheets:
     st.sidebar.caption("🟢 Conectado a Google Sheets")
 else:
-    st.sidebar.caption("🔴 Modo Offline (Verifica credentials.json)")
+    st.sidebar.caption("🔴 Modo Offline (Verifica Secrets / credentials.json)")
 
 if st.sidebar.button("🚪 Cerrar Sesión", width="stretch"):
     st.session_state.usuario_login = None
