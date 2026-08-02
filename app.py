@@ -23,6 +23,7 @@ def conectar_google_sheets():
         sheet = client.open("BD_PremiumMarket")
         return sheet
     except Exception as e:
+        st.sidebar.error(f"⚠️ Error de Conexión: {e}")
         return None
 
 doc_sheets = conectar_google_sheets()
@@ -35,9 +36,10 @@ def obtener_colaboradores_gsheets():
             datos = hoja.get_all_records()
             if datos:
                 return pd.DataFrame(datos)
-        except Exception:
-            pass
-    # Base de respaldo si la hoja está vacía
+        except Exception as e:
+            st.error(f"Error al leer Colaboradores: {e}")
+            
+    # Base de respaldo si la hoja está vacía o falla
     return pd.DataFrame([
         {"dni": "72819034", "nombre": "Fran", "cargo": "Cajero", "estado": "Activo", "clave": "12345", "rol": "operativo"},
         {"dni": "45129803", "nombre": "Luz Soplin", "cargo": "Supervisora", "estado": "Activo", "clave": "12345", "rol": "operativo"},
@@ -50,15 +52,19 @@ def guardar_colaborador_gsheets(dni, nombre, cargo, estado, clave, rol):
             hoja = doc_sheets.worksheet("Colaboradores")
             hoja.append_row([str(dni), nombre, cargo, estado, str(clave), rol])
         except Exception as e:
-            st.error(f"Error al guardar colaborador: {e}")
+            st.error(f"❌ Error al guardar colaborador en Google Sheets: {e}")
+    else:
+        st.warning("⚠️ No hay conexión activa con Google Sheets")
 
 def guardar_asistencia_gsheets(dni, nombre, tipo, fecha_hora, fecha):
     if doc_sheets:
         try:
-            hoja = doc_sheets.worksheet("Asistencia")  # Nombre exacto: Asistencia
+            hoja = doc_sheets.worksheet("Asistencia")
             hoja.append_row([str(dni), nombre, tipo, fecha_hora, fecha])
         except Exception as e:
-            st.error(f"Error al guardar asistencia: {e}")
+            st.error(f"❌ Error al guardar asistencia en Google Sheets: {e}")
+    else:
+        st.warning("⚠️ No hay conexión activa con Google Sheets")
 
 def guardar_descuadre_gsheets(fecha, dni, nombre, tipo, monto, observacion, fecha_registro):
     if doc_sheets:
@@ -66,7 +72,9 @@ def guardar_descuadre_gsheets(fecha, dni, nombre, tipo, monto, observacion, fech
             hoja = doc_sheets.worksheet("Descuadres")
             hoja.append_row([fecha, str(dni), nombre, tipo, monto, observacion, fecha_registro])
         except Exception as e:
-            st.error(f"Error al guardar descuadre: {e}")
+            st.error(f"❌ Error al guardar descuadre en Google Sheets: {e}")
+    else:
+        st.warning("⚠️ No hay conexión activa con Google Sheets")
 
 # --- ESTILOS CORPORATIVOS ---
 st.markdown("""
@@ -173,7 +181,7 @@ if not st.session_state.usuario_login:
             usuario_sel = st.selectbox("Seleccionar Usuario:", list(USUARIOS.keys()))
             clave_input = st.text_input("Contraseña:", type="password")
             
-            if st.button("INGRESAR AL SISTEMA", use_container_width=True):
+            if st.button("INGRESAR AL SISTEMA", width="stretch"):
                 if clave_input == USUARIOS[usuario_sel]["clave"]:
                     st.session_state.usuario_login = usuario_sel
                     st.success(f"¡Bienvenido/a {usuario_sel}!")
@@ -216,11 +224,11 @@ st.sidebar.markdown("<h2 style='text-align: center;'>PREMIUM MARKET</h2>", unsaf
 st.sidebar.markdown(f"<p style='text-align: center; font-size:13px;'>👤 Usuario: <b>{user_actual}</b><br><small>({rol_actual.upper()})</small></p>", unsafe_allow_html=True)
 
 if doc_sheets:
-    st.sidebar.caption("🟢 Conectado a Google Sheets / AppSheet")
+    st.sidebar.caption("🟢 Conectado a Google Sheets")
 else:
     st.sidebar.caption("🔴 Modo Offline (Verifica credentials.json)")
 
-if st.sidebar.button("🚪 Cerrar Sesión", use_container_width=True):
+if st.sidebar.button("🚪 Cerrar Sesión", width="stretch"):
     st.session_state.usuario_login = None
     st.rerun()
 
@@ -254,14 +262,14 @@ if choice == "⏱️ Marcar Asistencia":
             c1, c2 = st.columns(2)
             with c1:
                 st.markdown('<div class="btn-ingreso">', unsafe_allow_html=True)
-                if st.button("⏰ MARCAR INGRESO", use_container_width=True):
+                if st.button("⏰ MARCAR INGRESO", width="stretch"):
                     registrar_marca(dni_actual, user_actual, "INGRESO")
                     st.toast(f"Ingreso registrado: {user_actual}", icon="✅")
                 st.markdown('</div>', unsafe_allow_html=True)
 
             with c2:
                 st.markdown('<div class="btn-salida">', unsafe_allow_html=True)
-                if st.button("🚪 MARCAR SALIDA", use_container_width=True):
+                if st.button("🚪 MARCAR SALIDA", width="stretch"):
                     registrar_marca(dni_actual, user_actual, "SALIDA")
                     st.toast(f"Salida registrada: {user_actual}", icon="🚪")
                 st.markdown('</div>', unsafe_allow_html=True)
@@ -279,7 +287,7 @@ if choice == "⏱️ Marcar Asistencia":
             if not df_mismarcas.empty:
                 st.dataframe(
                     df_mismarcas[["tipo", "fecha_hora"]],
-                    use_container_width=True,
+                    width="stretch",
                     hide_index=True,
                     column_config={"tipo": "MARCA", "fecha_hora": "HORA Y FECHA"}
                 )
@@ -322,7 +330,7 @@ elif choice == "💰 Registrar Descuadre":
             }
             st.session_state.descuadres = pd.concat([pd.DataFrame([nuevo_row]), st.session_state.descuadres], ignore_index=True)
             guardar_descuadre_gsheets(str(f_operacion), dni_actual, user_actual, tipo_final, monto_final, obs, f_reg)
-            st.toast("Descuadre guardado en Google Sheets / AppSheet", icon="💰")
+            st.toast("Descuadre procesado", icon="💰")
 
 elif choice == "📊 Mi Dashboard Mensual":
     st.markdown(f"""
@@ -366,7 +374,7 @@ elif choice == "📊 Mi Dashboard Mensual":
     if not df_mis_desc.empty:
         st.dataframe(
             df_mis_desc[["fecha", "tipo", "monto", "observacion"]],
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
             column_config={"monto": st.column_config.NumberColumn("MONTO", format="S/. %.2f")}
         )
@@ -379,7 +387,7 @@ elif choice == "📊 Dashboard General":
     st.markdown("""
         <div class="market-header">
             <h1>Panel de Control General</h1>
-            <p>Consolidado operativo en tiempo real sincronizado con AppSheet</p>
+            <p>Consolidado operativo en tiempo real</p>
         </div>
     """, unsafe_allow_html=True)
 
@@ -431,7 +439,7 @@ elif choice == "👥 Gestión Colaboradores":
     st.markdown("""
         <div class="market-header">
             <h1>Gestión de Colaboradores</h1>
-            <p>Mantenimiento de personal y credenciales sincronizado con AppSheet</p>
+            <p>Mantenimiento de personal y credenciales</p>
         </div>
     """, unsafe_allow_html=True)
 
@@ -446,7 +454,7 @@ elif choice == "👥 Gestión Colaboradores":
             rol_in = st.selectbox("Rol en Sistema", ["operativo", "admin"])
             clave_in = st.text_input("Contraseña de Acceso", type="password")
 
-            if st.form_submit_button("GUARDAR EN NUBE Y APPSHEET"):
+            if st.form_submit_button("GUARDAR EN NUBE"):
                 if not dni_in or not nom_in or not clave_in:
                     st.error("DNI, Nombre y Contraseña son obligatorios")
                 else:
@@ -460,14 +468,14 @@ elif choice == "👥 Gestión Colaboradores":
                     }
                     st.session_state.empleados = pd.concat([st.session_state.empleados, pd.DataFrame([nuevo_e])], ignore_index=True)
                     guardar_colaborador_gsheets(dni_in, nom_in, cargo_in, "Activo", clave_in, rol_in)
-                    st.toast(f"Colaborador {nom_in} guardado permanentemente", icon="👥")
+                    st.toast(f"Colaborador {nom_in} guardado", icon="👥")
                     st.rerun()
 
     with col_list:
         st.subheader("Directorio General")
         st.dataframe(
             st.session_state.empleados[["dni", "nombre", "cargo", "rol", "estado"]],
-            use_container_width=True,
+            width="stretch",
             hide_index=True
         )
 
@@ -482,7 +490,7 @@ elif choice == "💰 Historial de Descuadres":
     if not st.session_state.descuadres.empty:
         st.dataframe(
             st.session_state.descuadres,
-            use_container_width=True,
+            width="stretch",
             hide_index=True,
             column_config={"monto": st.column_config.NumberColumn("MONTO (S/.)", format="S/. %.2f")}
         )
@@ -499,10 +507,10 @@ elif choice == "⏱️ Historial de Asistencias":
     """, unsafe_allow_html=True)
 
     if not st.session_state.asistencia.empty:
-        st.dataframe(st.session_state.asistencia, use_container_width=True, hide_index=True)
+        st.dataframe(st.session_state.asistencia, width="stretch", hide_index=True)
         st.download_button("Exportar Excel", to_excel(st.session_state.asistencia), "Asistencias_General.xlsx")
     else:
         st.info("Sin asistencias registradas.")
 
 st.markdown("---")
-st.markdown('<div style="text-align:center; color:#64748B; font-weight:bold; font-size:12px;">Premium Market System v3.0 | Conexión Nube AppSheet & Google Sheets</div>', unsafe_allow_html=True)
+st.markdown('<div style="text-align:center; color:#64748B; font-weight:bold; font-size:12px;">Premium Market System v3.0 | Google Sheets Integration</div>', unsafe_allow_html=True)
