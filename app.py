@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, date
 import io
 import time
 import gspread
@@ -425,19 +425,38 @@ elif choice == "Registrar Descuadre":
 elif choice == "Mi Dashboard Mensual":
     st.markdown(f"""
         <div class="market-header">
-            <h1>Rendimiento Mensual</h1>
+            <h1>Rendimiento Mensual / Histórico</h1>
             <p>Resumen consolidado para <b>{user_actual}</b></p>
         </div>
     """, unsafe_allow_html=True)
 
+    # FILTRO POR FECHA
+    col_f1, col_f2 = st.columns([1, 2])
+    with col_f1:
+        hoy = date.today()
+        primer_dia_mes = date(hoy.year, hoy.month, 1)
+        rango_fecha = st.date_input("Filtrar por Período", value=(primer_dia_mes, hoy), key="filtro_user_dash")
+
     df_mis_desc = pd.DataFrame()
     df_mis_asist = pd.DataFrame()
 
-    if not st.session_state.descuadres.empty:
-        df_mis_desc = st.session_state.descuadres[st.session_state.descuadres["dni"].astype(str) == str(dni_actual)]
-    
-    if not st.session_state.asistencia.empty:
-        df_mis_asist = st.session_state.asistencia[st.session_state.asistencia["dni"].astype(str) == str(dni_actual)]
+    # Procesar Rango Seleccionado
+    if isinstance(rango_fecha, tuple) and len(rango_fecha) == 2:
+        f_inicio, f_fin = str(rango_fecha[0]), str(rango_fecha[1])
+
+        if not st.session_state.descuadres.empty:
+            df_mis_desc = st.session_state.descuadres[
+                (st.session_state.descuadres["dni"].astype(str) == str(dni_actual)) &
+                (st.session_state.descuadres["fecha"].astype(str) >= f_inicio) &
+                (st.session_state.descuadres["fecha"].astype(str) <= f_fin)
+            ]
+        
+        if not st.session_state.asistencia.empty:
+            df_mis_asist = st.session_state.asistencia[
+                (st.session_state.asistencia["dni"].astype(str) == str(dni_actual)) &
+                (st.session_state.asistencia["fecha"].astype(str) >= f_inicio) &
+                (st.session_state.asistencia["fecha"].astype(str) <= f_fin)
+            ]
 
     monto_total = pd.to_numeric(df_mis_desc["monto"]).sum() if not df_mis_desc.empty else 0.0
     dias_trabajados = df_mis_asist["fecha"].nunique() if not df_mis_asist.empty else 0
@@ -446,7 +465,7 @@ elif choice == "Mi Dashboard Mensual":
     with k1:
         st.markdown(f'''
             <div class="info-card">
-                <div class="info-label">Días Trabajados</div>
+                <div class="info-label">Días Trabajados en Período</div>
                 <div class="info-value">{dias_trabajados}</div>
             </div>
         ''', unsafe_allow_html=True)
@@ -459,7 +478,7 @@ elif choice == "Mi Dashboard Mensual":
             </div>
         ''', unsafe_allow_html=True)
 
-    st.markdown("<h4 style='font-size:1rem; color:#111827; margin-top:10px;'>Historial Personal</h4>", unsafe_allow_html=True)
+    st.markdown("<h4 style='font-size:1rem; color:#111827; margin-top:10px;'>Historial Filtrado</h4>", unsafe_allow_html=True)
     if not df_mis_desc.empty:
         st.dataframe(
             df_mis_desc[["fecha", "tipo", "monto", "observacion"]],
@@ -468,7 +487,7 @@ elif choice == "Mi Dashboard Mensual":
             column_config={"monto": st.column_config.NumberColumn("MONTO", format="S/. %.2f")}
         )
     else:
-        st.info("Sin registros de descuadres en el período.")
+        st.info("Sin registros de descuadres en el período seleccionado.")
 
 # -------------------- MÓDULOS ADMIN --------------------
 
@@ -476,53 +495,67 @@ elif choice == "Dashboard General":
     st.markdown("""
         <div class="market-header">
             <h1>Panel de Control General</h1>
-            <p>Vista ejecutiva de la operación en tiempo real</p>
+            <p>Vista ejecutiva de la operación y métricas históricas</p>
         </div>
     """, unsafe_allow_html=True)
 
-    hoy_str = datetime.now().strftime("%Y-%m-%d")
+    # FILTRO POR FECHA ADMIN
+    col_f1, _ = st.columns([1, 2])
+    with col_f1:
+        hoy = date.today()
+        rango_admin = st.date_input("Filtrar Análisis por Período", value=(hoy, hoy), key="filtro_admin_dash")
+
     trabajando = []
     salieron = []
-
-    if not st.session_state.asistencia.empty:
-        df_asist_hoy = st.session_state.asistencia[st.session_state.asistencia["fecha"].astype(str) == hoy_str]
-        if not df_asist_hoy.empty:
-            ultimas_marcas = df_asist_hoy.sort_values("fecha_hora").groupby("dni").last()
-            for dni, row in ultimas_marcas.iterrows():
-                if row["tipo"] == "INGRESO":
-                    trabajando.append(row["nombre"])
-                else:
-                    salieron.append(row["nombre"])
-
     total_descuadre_monto = 0.0
-    if not st.session_state.descuadres.empty:
-        df_desc_hoy = st.session_state.descuadres[st.session_state.descuadres["fecha"].astype(str) == hoy_str]
-        total_descuadre_monto = pd.to_numeric(df_desc_hoy["monto"]).sum() if not df_desc_hoy.empty else 0.0
+
+    if isinstance(rango_admin, tuple) and len(rango_admin) == 2:
+        f_inicio, f_fin = str(rango_admin[0]), str(rango_admin[1])
+
+        if not st.session_state.asistencia.empty:
+            df_asist_filtro = st.session_state.asistencia[
+                (st.session_state.asistencia["fecha"].astype(str) >= f_inicio) &
+                (st.session_state.asistencia["fecha"].astype(str) <= f_fin)
+            ]
+            if not df_asist_filtro.empty:
+                ultimas_marcas = df_asist_filtro.sort_values("fecha_hora").groupby("dni").last()
+                for dni, row in ultimas_marcas.iterrows():
+                    if row["tipo"] == "INGRESO":
+                        trabajando.append(row["nombre"])
+                    else:
+                        salieron.append(row["nombre"])
+
+        if not st.session_state.descuadres.empty:
+            df_desc_filtro = st.session_state.descuadres[
+                (st.session_state.descuadres["fecha"].astype(str) >= f_inicio) &
+                (st.session_state.descuadres["fecha"].astype(str) <= f_fin)
+            ]
+            total_descuadre_monto = pd.to_numeric(df_desc_filtro["monto"]).sum() if not df_desc_filtro.empty else 0.0
 
     k1, k2, k3 = st.columns(3)
     with k1:
-        st.markdown(f'<div class="info-card"><div class="info-label">En Turno Ahora</div><div class="info-value" style="color: #00A959;">{len(trabajando)}</div></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="info-card"><div class="info-label">En Turno / Activos</div><div class="info-value" style="color: #00A959;">{len(trabajando)}</div></div>', unsafe_allow_html=True)
     with k2:
-        st.markdown(f'<div class="info-card"><div class="info-label">Turno Concluido</div><div class="info-value" style="color: #6B7280;">{len(salieron)}</div></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="info-card"><div class="info-label">Turnos Salidos</div><div class="info-value" style="color: #6B7280;">{len(salieron)}</div></div>', unsafe_allow_html=True)
     with k3:
-        st.markdown(f'<div class="info-card"><div class="info-label">Balance Descuadres Hoy</div><div class="info-value" style="color: {"#00A959" if total_descuadre_monto >= 0 else "#EC3237"};">S/. {total_descuadre_monto:.2f}</div></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="info-card"><div class="info-label">Balance Descuadres Período</div><div class="info-value" style="color: {"#00A959" if total_descuadre_monto >= 0 else "#EC3237"};">S/. {total_descuadre_monto:.2f}</div></div>', unsafe_allow_html=True)
 
     col_t1, col_t2 = st.columns(2)
     with col_t1:
-        st.markdown("<h4 style='font-size:0.95rem; color:#111827;'>Personal Activo</h4>", unsafe_allow_html=True)
+        st.markdown("<h4 style='font-size:0.95rem; color:#111827;'>Personal Activo en el Período</h4>", unsafe_allow_html=True)
         if trabajando:
             for nom in trabajando:
                 st.text(f"• {nom}")
         else:
-            st.caption("Sin registros activos.")
+            st.caption("Sin registros activos en el rango seleccionado.")
 
     with col_t2:
-        st.markdown("<h4 style='font-size:0.95rem; color:#111827;'>Turnos Salidos</h4>", unsafe_allow_html=True)
+        st.markdown("<h4 style='font-size:0.95rem; color:#111827;'>Turnos Concluidos en el Período</h4>", unsafe_allow_html=True)
         if salieron:
             for nom in salieron:
                 st.caption(f"• {nom}")
         else:
-            st.caption("Sin marcas de salida.")
+            st.caption("Sin marcas de salida en el rango seleccionado.")
 
 elif choice == "Gestión Colaboradores":
     st.markdown("""
@@ -568,7 +601,6 @@ elif choice == "Gestión Colaboradores":
             hide_index=True
         )
 
-        # SECCIÓN ADMINISTRATIVA: ELIMINAR COLABORADOR
         if rol_actual == "admin" and not st.session_state.empleados.empty:
             with st.expander("Eliminar Colaborador"):
                 lista_colabs = st.session_state.empleados["nombre"].tolist()
@@ -596,7 +628,6 @@ elif choice == "Historial de Descuadres":
         )
         st.download_button("Exportar a Excel", to_excel(st.session_state.descuadres), "Descuadres_General.xlsx")
 
-        # SECCIÓN ADMINISTRATIVA: GESTIONAR DESCUADRES (MODIFICAR Y ELIMINAR)
         if rol_actual == "admin":
             st.markdown("<br>", unsafe_allow_html=True)
             col_mod, col_del = st.columns(2)
@@ -650,7 +681,6 @@ elif choice == "Historial de Asistencias":
         st.dataframe(st.session_state.asistencia, width="stretch", hide_index=True)
         st.download_button("Exportar a Excel", to_excel(st.session_state.asistencia), "Asistencias_General.xlsx")
 
-        # SECCIÓN ADMINISTRATIVA: ELIMINAR ASISTENCIA
         if rol_actual == "admin":
             st.markdown("<br>", unsafe_allow_html=True)
             with st.expander("Eliminar Registro de Asistencia"):
