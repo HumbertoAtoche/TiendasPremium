@@ -86,210 +86,213 @@ def guardar_descuadre_gsheets(fecha, dni, nombre, tipo, monto, observacion, fech
 
 # --- ESTILOS CORPORATIVOS PREMIUM MARKET ---
 st.markdown("""
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
 <style>
 
-/* ==============================
-   FUENTE Y FONDO GENERAL
-=================================*/
+/* ===========================
+   FUENTE Y FONDO
+=========================== */
 
-html, body, [class*="css"], .stApp{
-    font-family:'Montserrat',sans-serif !important;
-    background:#F5F7FA;
+html, body, [class*="css"]{
+    font-family:'Montserrat', sans-serif;
 }
 
-/* ==============================
+.stApp{
+    background:#F6F7F9;
+}
+
+/* ===========================
    SIDEBAR
-=================================*/
+=========================== */
 
 [data-testid="stSidebar"]{
-    background:linear-gradient(180deg,#EC3237 0%, #C62828 100%);
-    border-right:5px solid #00A959;
+    background:#FFFFFF;
+    border-right:1px solid #E5E7EB;
 }
 
 [data-testid="stSidebar"] *{
-    color:white !important;
+    font-family:'Montserrat', sans-serif;
 }
 
-/* ==============================
+/* ===========================
    TITULOS
-=================================*/
+=========================== */
 
-h1,h2,h3,h4,h5{
-    font-family:'Montserrat',sans-serif !important;
-    font-weight:700;
-    color:#2C2C2C;
+h1,h2,h3,h4{
+    color:#1F2937 !important;
+    font-weight:700 !important;
 }
 
-/* ==============================
+/* ===========================
    HEADER
-=================================*/
+=========================== */
 
 .market-header{
 
-    background:white;
+    background:#FFFFFF;
 
-    border-radius:20px;
+    border-radius:12px;
 
     padding:28px;
 
-    box-shadow:0 10px 25px rgba(0,0,0,.08);
+    border-top:5px solid #EC3237;
 
-    border-left:8px solid #EC3237;
+    border-left:1px solid #ECECEC;
 
-    margin-bottom:25px;
+    border-right:1px solid #ECECEC;
+
+    border-bottom:1px solid #ECECEC;
+
+    margin-bottom:24px;
 
 }
 
 .market-header h1{
 
-    color:#EC3237!important;
+    color:#1F2937!important;
+
+    font-size:30px;
 
     margin:0;
-
-    font-size:34px;
 
 }
 
 .market-header p{
 
-    color:#666;
+    color:#6B7280;
 
-    margin-top:8px;
+    margin-top:6px;
 
     font-size:15px;
 
 }
 
-/* ==============================
+/* ===========================
    BOTONES
-=================================*/
+=========================== */
 
 .stButton>button{
 
     width:100%;
 
-    height:56px;
+    height:48px;
 
-    border-radius:14px;
+    border-radius:8px;
 
-    border:none;
+    border:1px solid #EC3237;
 
-    background:#EC3237;
+    background:white;
 
-    color:white;
+    color:#EC3237;
 
-    font-weight:700;
+    font-weight:600;
 
-    font-size:16px;
-
-    transition:0.25s;
-
-    box-shadow:0 8px 20px rgba(236,50,55,.30);
+    transition:0.2s;
 
 }
 
 .stButton>button:hover{
 
-    background:#00A959;
+    background:#EC3237;
 
-    transform:translateY(-3px);
-
-    box-shadow:0 12px 24px rgba(0,169,89,.35);
+    color:white;
 
 }
 
-/* Botón ingreso */
+/* Botón verde */
 
 .btn-ingreso button{
 
-    background:#00A959!important;
+    border-color:#00A959!important;
+
+    color:#00A959!important;
 
 }
 
 .btn-ingreso button:hover{
 
-    background:#008D4A!important;
+    background:#00A959!important;
+
+    color:white!important;
 
 }
 
-/* Botón salida */
+/* Botón rojo */
 
 .btn-salida button{
 
-    background:#EC3237!important;
+    border-color:#EC3237!important;
+
+    color:#EC3237!important;
 
 }
 
 .btn-salida button:hover{
 
-    background:#C62828!important;
+    background:#EC3237!important;
+
+    color:white!important;
 
 }
 
-/* ==============================
+/* ===========================
    INPUTS
-=================================*/
+=========================== */
+
+input, textarea{
+
+    border-radius:8px!important;
+
+}
 
 .stTextInput input,
 .stNumberInput input,
-.stDateInput input,
-textarea{
+.stDateInput input{
 
-    border-radius:12px!important;
-
-    border:1px solid #DDDDDD!important;
+    border:1px solid #D1D5DB!important;
 
 }
 
 .stSelectbox div[data-baseweb="select"]{
 
-    border-radius:12px!important;
+    border-radius:8px;
 
 }
 
-/* ==============================
+/* ===========================
    TARJETAS KPI
-=================================*/
+=========================== */
 
 .info-card{
 
     background:white;
 
-    padding:24px;
+    border:1px solid #E5E7EB;
 
-    border-radius:20px;
+    border-radius:12px;
 
-    box-shadow:0 8px 20px rgba(0,0,0,.08);
+    padding:22px;
 
     margin-bottom:18px;
-
-    transition:.25s;
-
-}
-
-.info-card:hover{
-
-    transform:translateY(-4px);
-
-}
-
-.info-card-green{
-
-    border-top:6px solid #00A959;
-
-}
-
-.info-card-red{
-
-    border-top:6px solid #EC3237;
 
 }
 
 .info-card-blue{
 
-    border-top:6px solid #303030;
+    border-top:4px solid #374151;
+
+}
+
+.info-card-green{
+
+    border-top:4px solid #00A959;
+
+}
+
+.info-card-red{
+
+    border-top:4px solid #EC3237;
 
 }
 
@@ -297,125 +300,95 @@ textarea{
 
     font-size:12px;
 
-    color:#888;
-
-    font-weight:700;
-
-    letter-spacing:1px;
+    color:#6B7280;
 
     text-transform:uppercase;
+
+    letter-spacing:.8px;
+
+    font-weight:700;
 
 }
 
 .info-value{
 
-    font-size:34px;
+    margin-top:8px;
 
-    font-weight:800;
+    font-size:30px;
 
-    color:#222;
+    font-weight:700;
 
-    margin-top:12px;
+    color:#111827;
 
 }
 
-/* ==============================
+/* ===========================
    FORMULARIOS
-=================================*/
+=========================== */
 
 [data-testid="stForm"]{
 
     background:white;
 
+    border:1px solid #E5E7EB;
+
+    border-radius:12px;
+
     padding:22px;
-
-    border-radius:20px;
-
-    box-shadow:0 8px 20px rgba(0,0,0,.08);
 
 }
 
-/* ==============================
-   DATAFRAMES
-=================================*/
+/* ===========================
+   DATAFRAME
+=========================== */
 
 [data-testid="stDataFrame"]{
 
-    border-radius:16px;
-
-    overflow:hidden;
-
-    box-shadow:0 8px 18px rgba(0,0,0,.08);
-
-}
-
-/* ==============================
-   CONTAINERS
-=================================*/
-
-[data-testid="stVerticalBlock"] > div:has(.element-container){
-
-    border-radius:16px;
-
-}
-
-/* ==============================
-   MÉTRICAS
-=================================*/
-
-[data-testid="metric-container"]{
-
-    background:white;
-
-    border-radius:18px;
-
-    padding:15px;
-
-    box-shadow:0 8px 20px rgba(0,0,0,.08);
-
-}
-
-/* ==============================
-   MENSAJES
-=================================*/
-
-.stAlert{
-
-    border-radius:14px;
-
-}
-
-/* ==============================
-   RADIO
-=================================*/
-
-.stRadio label{
-
-    font-weight:600;
-
-}
-
-/* ==============================
-   SCROLL
-=================================*/
-
-::-webkit-scrollbar{
-
-    width:8px;
-
-}
-
-::-webkit-scrollbar-thumb{
-
-    background:#EC3237;
+    border:1px solid #E5E7EB;
 
     border-radius:10px;
 
 }
 
-::-webkit-scrollbar-track{
+/* ===========================
+   ALERTAS
+=========================== */
 
-    background:#EEEEEE;
+.stAlert{
+
+    border-radius:8px;
+
+}
+
+/* ===========================
+   RADIO
+=========================== */
+
+.stRadio label{
+
+    font-weight:500;
+
+}
+
+/* ===========================
+   EXPANDER
+=========================== */
+
+.streamlit-expanderHeader{
+
+    font-weight:600;
+
+}
+
+/* ===========================
+   SEPARADORES
+=========================== */
+
+hr{
+
+    border:none;
+
+    border-top:1px solid #E5E7EB;
 
 }
 
