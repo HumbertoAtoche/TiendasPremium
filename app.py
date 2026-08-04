@@ -543,7 +543,6 @@ elif choice == "Dashboard General":
     df_asist_dash = st.session_state.asistencia.copy()
     df_desc_dash = st.session_state.descuadres.copy()
     
-    resumen_colaboradores = []
     fichas_colaboradores = {}  # Guardará el detalle estructurado por persona
     
     en_turno_cnt = 0
@@ -623,14 +622,6 @@ elif choice == "Dashboard General":
                                 "obs": r_d.get("observacion", "")
                             })
 
-                resumen_colaboradores.append({
-                    "Colaborador": nombre_colab,
-                    "Estado": estado,
-                    "Hora Ingreso": hora_ingreso,
-                    "Hora Salida": hora_salida,
-                    "Horas Trabajadas": total_horas_str
-                })
-
                 fichas_colaboradores[nombre_colab] = {
                     "estado": estado,
                     "ingreso": hora_ingreso,
@@ -659,28 +650,12 @@ elif choice == "Dashboard General":
     with k3:
         st.markdown(f'<div class="info-card"><div class="info-label">Balance Descuadres Hoy</div><div class="info-value" style="color: {"#00A959" if total_descuadre_monto >= 0 else "#EC3237"};">S/. {total_descuadre_monto:.2f}</div></div>', unsafe_allow_html=True)
 
-    # 3. Tabla Consolidada General
-    st.markdown("<h4 style='font-size:1rem; color:#111827; margin-top:15px; margin-bottom:10px;'>📋 Resumen de Jornada por Colaborador</h4>", unsafe_allow_html=True)
-    
-    if resumen_colaboradores:
-        df_resumen = pd.DataFrame(resumen_colaboradores)
-        st.dataframe(
-            df_resumen,
-            width="stretch",
-            hide_index=True,
-            column_config={
-                "Colaborador": st.column_config.TextColumn("COLABORADOR", width="medium"),
-                "Estado": st.column_config.TextColumn("ESTADO", width="small"),
-                "Hora Ingreso": st.column_config.TextColumn("INGRESO", width="small"),
-                "Hora Salida": st.column_config.TextColumn("SALIDA", width="small"),
-                "Horas Trabajadas": st.column_config.TextColumn("TIEMPO TOTAL", width="small")
-            }
-        )
+    st.markdown("<br>", unsafe_allow_html=True)
 
-        st.markdown("<br><hr style='border: 0; border-top: 1px solid #E5E7EB;'><br>", unsafe_allow_html=True)
+    # 3. Desglose en Fichas Técnicas por Colaborador
+    if fichas_colaboradores:
         st.markdown("<h4 style='font-size:1rem; color:#111827; margin-bottom:15px;'>📄 Ficha Técnica por Colaborador</h4>", unsafe_allow_html=True)
 
-        # 4. Desglose en Tarjetas / Expander por Colaborador
         for nombre_col, datos in fichas_colaboradores.items():
             with st.expander(f"👤 {nombre_col} — {datos['estado']}", expanded=True):
                 fc1, fc2, fc3, fc4 = st.columns(4)
