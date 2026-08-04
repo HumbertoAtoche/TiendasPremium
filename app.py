@@ -89,7 +89,7 @@ st.markdown("""
 <style>
 
 /* ===========================
-   FUENTE Y FONDO
+    FUENTE Y FONDO
 =========================== */
 
 html, body, [class*="css"]{
@@ -101,7 +101,7 @@ html, body, [class*="css"]{
 }
 
 /* ===========================
-   SIDEBAR
+    SIDEBAR
 =========================== */
 
 [data-testid="stSidebar"]{
@@ -114,7 +114,7 @@ html, body, [class*="css"]{
 }
 
 /* ===========================
-   TITULOS
+    TITULOS
 =========================== */
 
 h1,h2,h3,h4{
@@ -123,271 +123,182 @@ h1,h2,h3,h4{
 }
 
 /* ===========================
-   HEADER
+    HEADER
 =========================== */
 
 .market-header{
-
     background:#FFFFFF;
-
     border-radius:12px;
-
     padding:28px;
-
     border-top:5px solid #EC3237;
-
     border-left:1px solid #ECECEC;
-
     border-right:1px solid #ECECEC;
-
     border-bottom:1px solid #ECECEC;
-
     margin-bottom:24px;
-
 }
 
 .market-header h1{
-
     color:#1F2937!important;
-
     font-size:30px;
-
     margin:0;
-
 }
 
 .market-header p{
-
     color:#6B7280;
-
     margin-top:6px;
-
     font-size:15px;
-
 }
 
 /* ===========================
-   BOTONES
+    BOTONES
 =========================== */
 
 .stButton>button{
-
     width:100%;
-
     height:48px;
-
     border-radius:8px;
-
     border:1px solid #EC3237;
-
     background:white;
-
     color:#EC3237;
-
     font-weight:600;
-
     transition:0.2s;
-
 }
 
 .stButton>button:hover{
-
     background:#EC3237;
-
     color:white;
-
 }
 
 /* Botón verde */
-
 .btn-ingreso button{
-
     border-color:#00A959!important;
-
     color:#00A959!important;
-
 }
 
 .btn-ingreso button:hover{
-
     background:#00A959!important;
-
     color:white!important;
-
 }
 
 /* Botón rojo */
-
 .btn-salida button{
-
     border-color:#EC3237!important;
-
     color:#EC3237!important;
-
 }
 
 .btn-salida button:hover{
-
     background:#EC3237!important;
-
     color:white!important;
-
 }
 
 /* ===========================
-   INPUTS
+    INPUTS
 =========================== */
 
 input, textarea{
-
     border-radius:8px!important;
-
 }
 
 .stTextInput input,
 .stNumberInput input,
 .stDateInput input{
-
     border:1px solid #D1D5DB!important;
-
 }
 
 .stSelectbox div[data-baseweb="select"]{
-
     border-radius:8px;
-
 }
 
 /* ===========================
-   TARJETAS KPI
+    TARJETAS KPI
 =========================== */
 
 .info-card{
-
     background:white;
-
     border:1px solid #E5E7EB;
-
     border-radius:12px;
-
     padding:22px;
-
     margin-bottom:18px;
-
 }
 
 .info-card-blue{
-
     border-top:4px solid #374151;
-
 }
 
 .info-card-green{
-
     border-top:4px solid #00A959;
-
 }
 
 .info-card-red{
-
     border-top:4px solid #EC3237;
-
 }
 
 .info-label{
-
     font-size:12px;
-
     color:#6B7280;
-
     text-transform:uppercase;
-
     letter-spacing:.8px;
-
     font-weight:700;
-
 }
 
 .info-value{
-
     margin-top:8px;
-
     font-size:30px;
-
     font-weight:700;
-
     color:#111827;
-
 }
 
 /* ===========================
-   FORMULARIOS
+    FORMULARIOS
 =========================== */
 
 [data-testid="stForm"]{
-
     background:white;
-
     border:1px solid #E5E7EB;
-
     border-radius:12px;
-
     padding:22px;
-
 }
 
 /* ===========================
-   DATAFRAME
+    DATAFRAME
 =========================== */
 
 [data-testid="stDataFrame"]{
-
     border:1px solid #E5E7EB;
-
     border-radius:10px;
-
 }
 
 /* ===========================
-   ALERTAS
+    ALERTAS
 =========================== */
 
 .stAlert{
-
     border-radius:8px;
-
 }
 
 /* ===========================
-   RADIO
+    RADIO
 =========================== */
 
 .stRadio label{
-
     font-weight:500;
-
 }
 
 /* ===========================
-   EXPANDER
+    EXPANDER
 =========================== */
 
 .streamlit-expanderHeader{
-
     font-weight:600;
-
 }
 
 /* ===========================
-   SEPARADORES
+    SEPARADORES
 =========================== */
 
 hr{
-
     border:none;
-
     border-top:1px solid #E5E7EB;
-
 }
 
 </style>
@@ -442,7 +353,7 @@ if not st.session_state.usuario_login:
             usuario_sel = st.selectbox("Seleccionar Usuario:", list(USUARIOS.keys()))
             clave_input = st.text_input("Contraseña:", type="password")
             
-            if st.button("INGRESAR AL SISTEMA", width="stretch"):
+            if st.button("INGRESAR AL SISTEMA"):
                 if clave_input == USUARIOS[usuario_sel]["clave"]:
                     st.session_state.usuario_login = usuario_sel
                     st.success(f"¡Bienvenido/a {usuario_sel}!")
@@ -489,7 +400,7 @@ if doc_sheets:
 else:
     st.sidebar.caption("🔴 Modo Offline (Verifica Secrets / credentials.json)")
 
-if st.sidebar.button("🚪 Cerrar Sesión", width="stretch"):
+if st.sidebar.button("🚪 Cerrar Sesión"):
     st.session_state.usuario_login = None
     st.rerun()
 
@@ -523,14 +434,14 @@ if choice == "⏱️ Marcar Asistencia":
             c1, c2 = st.columns(2)
             with c1:
                 st.markdown('<div class="btn-ingreso">', unsafe_allow_html=True)
-                if st.button("⏰ MARCAR INGRESO", width="stretch"):
+                if st.button("⏰ MARCAR INGRESO"):
                     registrar_marca(dni_actual, user_actual, "INGRESO")
                     st.toast(f"Ingreso registrado: {user_actual}", icon="✅")
                 st.markdown('</div>', unsafe_allow_html=True)
 
             with c2:
                 st.markdown('<div class="btn-salida">', unsafe_allow_html=True)
-                if st.button("🚪 MARCAR SALIDA", width="stretch"):
+                if st.button("🚪 MARCAR SALIDA"):
                     registrar_marca(dni_actual, user_actual, "SALIDA")
                     st.toast(f"Salida registrada: {user_actual}", icon="🚪")
                 st.markdown('</div>', unsafe_allow_html=True)
@@ -548,7 +459,7 @@ if choice == "⏱️ Marcar Asistencia":
             if not df_mismarcas.empty:
                 st.dataframe(
                     df_mismarcas[["tipo", "fecha_hora"]],
-                    width="stretch",
+                    use_container_width=True,
                     hide_index=True,
                     column_config={"tipo": "MARCA", "fecha_hora": "HORA Y FECHA"}
                 )
@@ -635,7 +546,7 @@ elif choice == "📊 Mi Dashboard Mensual":
     if not df_mis_desc.empty:
         st.dataframe(
             df_mis_desc[["fecha", "tipo", "monto", "observacion"]],
-            width="stretch",
+            use_container_width=True,
             hide_index=True,
             column_config={"monto": st.column_config.NumberColumn("MONTO", format="S/. %.2f")}
         )
@@ -736,7 +647,7 @@ elif choice == "👥 Gestión Colaboradores":
         st.subheader("Directorio General")
         st.dataframe(
             st.session_state.empleados[["dni", "nombre", "cargo", "rol", "estado"]],
-            width="stretch",
+            use_container_width=True,
             hide_index=True
         )
 
@@ -751,7 +662,7 @@ elif choice == "💰 Historial de Descuadres":
     if not st.session_state.descuadres.empty:
         st.dataframe(
             st.session_state.descuadres,
-            width="stretch",
+            use_container_width=True,
             hide_index=True,
             column_config={"monto": st.column_config.NumberColumn("MONTO (S/.)", format="S/. %.2f")}
         )
@@ -768,7 +679,7 @@ elif choice == "⏱️ Historial de Asistencias":
     """, unsafe_allow_html=True)
 
     if not st.session_state.asistencia.empty:
-        st.dataframe(st.session_state.asistencia, width="stretch", hide_index=True)
+        st.dataframe(st.session_state.asistencia, use_container_width=True, hide_index=True)
         st.download_button("Exportar Excel", to_excel(st.session_state.asistencia), "Asistencias_General.xlsx")
     else:
         st.info("Sin asistencias registradas.")
