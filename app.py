@@ -5,6 +5,14 @@ import io
 import time
 import gspread
 
+# --- CONFIGURACIÓN DE PÁGINA (Sidebar abierto por defecto) ---
+st.set_page_config(
+    page_title="Tiendas Premium System",
+    page_icon="🏪",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
 # --- CONEXIÓN A PRUEBA DE ERRORES ---
 @st.cache_resource
 def conectar_google_sheets():
@@ -74,7 +82,7 @@ def guardar_descuadre_gsheets(fecha, dni, nombre, tipo, monto, observacion, fech
     else:
         st.warning("⚠️ No hay conexión activa con Google Sheets")
 
-# --- CSS MINIMALISTA Y EJECUTIVO ---
+# --- CSS MINIMALISTA Y EJECUTIVO (VERDE Y ROJO CORPORATIVOS) ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap');
@@ -88,10 +96,18 @@ st.markdown("""
         background-color: #FAFAFA;
     }
 
-    /* Ocultar barra superior por defecto de Streamlit */
-    header { visibility: hidden; }
+    /* Header transparente que respeta el botón para desplegar la barra lateral */
+    header[data-testid="stHeader"] {
+        background-color: transparent !important;
+        z-index: 100;
+    }
 
-    /* Header sobrio con borde sutil */
+    /* Visibilidad de la flechita de apertura */
+    header[data-testid="stHeader"] button {
+        color: #111827 !important;
+    }
+
+    /* Header sobrio con acento de marca */
     .market-header {
         background-color: #FFFFFF;
         padding: 20px 24px;
@@ -136,7 +152,7 @@ st.markdown("""
         margin-top: 4px;
     }
 
-    /* Botones principales limpios */
+    /* Botones neutros */
     .stButton>button {
         background-color: #111827 !important;
         color: #FFFFFF !important;
@@ -152,7 +168,7 @@ st.markdown("""
         background-color: #374151 !important;
     }
 
-    /* Acciones específicas con colores corporativos sobrios */
+    /* Botones de acción con verde (#00A959) y rojo (#EC3237) */
     .btn-ingreso > button {
         background-color: #00A959 !important;
     }
@@ -167,7 +183,7 @@ st.markdown("""
         background-color: #D02429 !important;
     }
 
-    /* Sidebar claro o ultra limpio */
+    /* Sidebar sobrio */
     [data-testid="stSidebar"] {
         background-color: #111827 !important;
         border-right: 1px solid #1F2937;
@@ -176,7 +192,7 @@ st.markdown("""
         color: #E5E7EB !important;
     }
     
-    /* Botón de cerrar sesión secundario en Sidebar */
+    /* Botón secundario para Cerrar Sesión en Sidebar */
     .btn-logout > button {
         background-color: transparent !important;
         border: 1px solid #374151 !important;
@@ -187,7 +203,7 @@ st.markdown("""
         color: #FFFFFF !important;
     }
 
-    /* Cajas contenedoras */
+    /* Formularios y contenedores */
     div[data-testid="stForm"], div[data-testid="stExpander"] {
         border-radius: 8px !important;
         border: 1px solid #E5E7EB !important;
@@ -196,7 +212,7 @@ st.markdown("""
         box-shadow: none !important;
     }
 
-    /* Tablas elegantes */
+    /* Estilo de tablas */
     .stDataFrame {
         border: 1px solid #E5E7EB;
         border-radius: 6px;
@@ -447,7 +463,7 @@ elif choice == "Mi Dashboard Mensual":
         st.markdown(f'''
             <div class="info-card">
                 <div class="info-label">Balance Acumulado Descuadres</div>
-                <div class="info-value">S/. {monto_total:.2f}</div>
+                <div class="info-value" style="color: {'#00A959' if monto_total >= 0 else '#EC3237'};">S/. {monto_total:.2f}</div>
             </div>
         ''', unsafe_allow_html=True)
 
@@ -493,11 +509,11 @@ elif choice == "Dashboard General":
 
     k1, k2, k3 = st.columns(3)
     with k1:
-        st.markdown(f'<div class="info-card"><div class="info-label">En Turno Ahora</div><div class="info-value">{len(trabajando)}</div></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="info-card"><div class="info-label">En Turno Ahora</div><div class="info-value" style="color: #00A959;">{len(trabajando)}</div></div>', unsafe_allow_html=True)
     with k2:
-        st.markdown(f'<div class="info-card"><div class="info-label">Turno Concluido</div><div class="info-value">{len(salieron)}</div></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="info-card"><div class="info-label">Turno Concluido</div><div class="info-value" style="color: #6B7280;">{len(salieron)}</div></div>', unsafe_allow_html=True)
     with k3:
-        st.markdown(f'<div class="info-card"><div class="info-label">Balance Descuadres Hoy</div><div class="info-value">S/. {total_descuadre_monto:.2f}</div></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="info-card"><div class="info-label">Balance Descuadres Hoy</div><div class="info-value" style="color: {"#00A959" if total_descuadre_monto >= 0 else "#EC3237"};">S/. {total_descuadre_monto:.2f}</div></div>', unsafe_allow_html=True)
 
     col_t1, col_t2 = st.columns(2)
     with col_t1:
