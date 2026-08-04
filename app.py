@@ -538,23 +538,84 @@ elif choice == "Dashboard General":
         colab_dash = st.selectbox("Filtrar Colaborador", lista_colabs, key="dash_colab")
 
     f_dash_str = str(fecha_dash)
-    trabajando = []
-    salieron = []
-
+    
+    # 1. Procesamiento de Asistencias del día
     df_asist_dash = st.session_state.asistencia.copy()
+    resumen_colaboradores = []
+    
+    en_turno_cnt = 0
+    concluido_cnt = 0
+
     if not df_asist_dash.empty:
+        # Filtrar por fecha seleccionada
         df_asist_dash = df_asist_dash[df_asist_dash["fecha"].astype(str) == f_dash_str]
+        
         if colab_dash != "Todos":
             df_asist_dash = df_asist_dash[df_asist_dash["nombre"] == colab_dash]
 
         if not df_asist_dash.empty:
-            ultimas_marcas = df_asist_dash.sort_values("fecha_hora").groupby("dni").last()
-            for dni, row in ultimas_marcas.iterrows():
-                if row["tipo"] == "INGRESO":
-                    trabajando.append(row["nombre"])
+            # Asegurar formato datetime para cálculo preciso de tiempos
+            df_asist_dash["dt"] = pd.to_datetime(df_asist_dash["fecha_hora"])
+            
+            # Agrupar por colaborador
+            for nombre_colab, grupo in df_asist_dash.groupby("nombre"):
+                grupo_ordenado = grupo.sort_values("dt")
+                
+                # Obtener primer INGRESO y última SALIDA (o marca más reciente)
+                ingresos = grupo_ordenado[grupo_ordenado["tipo"] == "INGRESO"]
+                salidas = grupo_ordenado[grupo_ordenado["tipo"] == "SALIDA"]
+                
+                hora_ingreso = ingresos.iloc[0]["dt"].strftime("%H:%M:%S") if not ingresos.empty else "--:--:--"
+                
+                # Determinar estado actual (basado en la última marcación registrada)
+                ultima_marca = grupo_ordenado.iloc[-1]
+                
+                if ultima_marca["tipo"] == "INGRESO":
+                    estado = "🟢 En Turno"
+                    hora_salida = "--:--:--"
+                    en_turno_cnt += 1
+                    
+                    # Calcular horas transcurridas hasta el momento actual (o fin del día)
+                    dt_ingreso = ingresos.iloc[0]["dt"]
+                    
+                    # Si la fecha consultada es HOY, calculamos contra la hora actual en Perú
+                    if f_dash_str == obtener_ahora_peru().strftime("%Y-%m-%d"):
+                        ahora = obtener_ahora_peru().replace(tzinfo=None)
+                        segundos = (ahora - dt_ingreso).total_seconds()
+                    else:
+                        segundos = 0
+                        
                 else:
-                    salieron.append(row["nombre"])
+                    estado = "⚪ Concluido"
+                    hora_salida = salidas.iloc[-1]["dt"].strftime("%H:%M:%S") if not salidas.empty else "--:--:--"
+                    concluido_cnt += 1
+                    
+                    # Calcular horas entre primer ingreso y última salida
+                    dt_ingreso = ingresos.iloc[0]["dt"] if not ingresos.empty else None
+                    dt_salida = salidas.iloc[-1]["dt"] if not salidas.empty else None
+                    
+                    if dt_ingreso and dt_salida:
+                        segundos = (dt_salida - dt_ingreso).total_seconds()
+                    else:
+                        segundos = 0
+                
+                # Formatear horas trabajadas HH:MM
+                if segundos > 0:
+                    horas = int(segundos // 3600)
+                    minutos = int((segundos % 3600) // 60)
+                    total_horas_str = f"{horas}h {minutos}m"
+                else:
+                    total_horas_str = "0h 0m"
+                
+                resumen_colaboradores.append({
+                    "Colaborador": nombre_colab,
+                    "Estado": estado,
+                    "Hora Ingreso": hora_ingreso,
+                    "Hora Salida": hora_salida,
+                    "Horas Trabajadas": total_horas_str
+                })
 
+    # 2. Procesamiento de Descuadres del día
     total_descuadre_monto = 0.0
     df_desc_dash = st.session_state.descuadres.copy()
     if not df_desc_dash.empty:
@@ -562,33 +623,37 @@ elif choice == "Dashboard General":
         if colab_dash != "Todos":
             df_desc_dash = df_desc_dash[df_desc_dash["nombre"] == colab_dash]
         
-        total_descuadre_monto = pd.to_numeric(df_desc_dash["monto"]).sum() if not df_desc_dash.empty else 0.0
+        total_descuadre_monto = pd.to_numeric(df_desc_dash["monto"], errors="coerce").sum() if not df_desc_dash.empty else 0.0
 
+    # 3. Métricas Principales (KPIs)
     st.markdown("<br>", unsafe_allow_html=True)
     k1, k2, k3 = st.columns(3)
     with k1:
-        st.markdown(f'<div class="info-card"><div class="info-label">En Turno Ahora</div><div class="info-value" style="color: #00A959;">{len(trabajando)}</div></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="info-card"><div class="info-label">En Turno Ahora</div><div class="info-value" style="color: #00A959;">{en_turno_cnt}</div></div>', unsafe_allow_html=True)
     with k2:
-        st.markdown(f'<div class="info-card"><div class="info-label">Turno Concluido</div><div class="info-value" style="color: #6B7280;">{len(salieron)}</div></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="info-card"><div class="info-label">Turno Concluido</div><div class="info-value" style="color: #6B7280;">{concluido_cnt}</div></div>', unsafe_allow_html=True)
     with k3:
         st.markdown(f'<div class="info-card"><div class="info-label">Balance Descuadres Hoy</div><div class="info-value" style="color: {"#00A959" if total_descuadre_monto >= 0 else "#EC3237"};">S/. {total_descuadre_monto:.2f}</div></div>', unsafe_allow_html=True)
 
-    col_t1, col_t2 = st.columns(2)
-    with col_t1:
-        st.markdown("<h4 style='font-size:0.95rem; color:#111827;'>Personal Activo</h4>", unsafe_allow_html=True)
-        if trabajando:
-            for nom in trabajando:
-                st.text(f"• {nom}")
-        else:
-            st.caption("Sin registros activos para los criterios seleccionados.")
-
-    with col_t2:
-        st.markdown("<h4 style='font-size:0.95rem; color:#111827;'>Turnos Salidos</h4>", unsafe_allow_html=True)
-        if salieron:
-            for nom in salieron:
-                st.caption(f"• {nom}")
-        else:
-            st.caption("Sin marcas de salida para los criterios seleccionados.")
+    # 4. Tabla de Resumen Consolidado por Colaborador
+    st.markdown("<h4 style='font-size:1rem; color:#111827; margin-top:15px; margin-bottom:10px;'>📋 Resumen de Jornada por Colaborador</h4>", unsafe_allow_html=True)
+    
+    if resumen_colaboradores:
+        df_resumen = pd.DataFrame(resumen_colaboradores)
+        st.dataframe(
+            df_resumen,
+            width="stretch",
+            hide_index=True,
+            column_config={
+                "Colaborador": st.column_config.TextColumn("COLABORADOR", width="medium"),
+                "Estado": st.column_config.TextColumn("ESTADO", width="small"),
+                "Hora Ingreso": st.column_config.TextColumn("INGRESO", width="small"),
+                "Hora Salida": st.column_config.TextColumn("SALIDA", width="small"),
+                "Horas Trabajadas": st.column_config.TextColumn("TIEMPO TOTAL", width="small")
+            }
+        )
+    else:
+        st.info(f"No hay registros de marcación para la fecha {f_dash_str}.")
 
 elif choice == "Gestión Colaboradores":
     st.markdown("""
