@@ -7,7 +7,7 @@ import gspread
 
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(
-    page_title="Tiendas Premium System",
+    page_title="Tiendas Premium EIRL",
     page_icon="🏪",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -753,4 +753,4 @@ elif choice == "Historial de Asistencias":
         st.info("Sin asistencias registradas.")
 
 st.markdown("<br><br>", unsafe_allow_html=True)
-st.markdown('<div style="text-align:center; color:#9CA3AF; font-size:11px;">Tiendas Premium System v3.0</div>', unsafe_allow_html=True)
+st.markdown('<div style="text-align:center; color:#9CA3AF; font-size:11px;">Tiendas Premium EIRL</div>', unsafe_allow_html=True)
