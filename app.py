@@ -84,223 +84,79 @@ def guardar_descuadre_gsheets(fecha, dni, nombre, tipo, monto, observacion, fech
     else:
         st.warning("⚠️ No hay conexión activa con Google Sheets")
 
-# --- ESTILOS CORPORATIVOS PREMIUM MARKET ---
+# --- ESTILOS CORPORATIVOS EJECUTIVOS (PREMIUM MARKET) ---
 st.markdown("""
 <style>
+    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap');
 
-/* ===========================
-    FUENTE Y FONDO
-=========================== */
+    html, body, [class*="css"] {
+        font-family: 'Montserrat', sans-serif !important;
+    }
 
-html, body, [class*="css"]{
-    font-family:'Montserrat', sans-serif;
-}
+    .main { background-color: #F4F6F9; }
+    
+    .stButton>button {
+        background-color: #00a959 !important;
+        color: white !important;
+        border-radius: 6px !important;
+        border: none !important;
+        font-weight: 600 !important;
+        letter-spacing: 0.5px !important;
+        height: 3.0em !important;
+        transition: all 0.2s ease-in-out !important;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+    .stButton>button:hover {
+        background-color: #008f4c !important;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0, 169, 89, 0.2);
+    }
 
-.stApp{
-    background:#F6F7F9;
-}
+    .btn-ingreso > button { background-color: #00a959 !important; }
+    .btn-ingreso > button:hover { background-color: #008f4c !important; }
 
-/* ===========================
-    SIDEBAR
-=========================== */
+    .btn-salida > button { background-color: #ec3237 !important; }
+    .btn-salida > button:hover { background-color: #c8282c !important; }
 
-[data-testid="stSidebar"]{
-    background:#FFFFFF;
-    border-right:1px solid #E5E7EB;
-}
+    h1, h2, h3 { color: #111827 !important; font-family: 'Montserrat', sans-serif !important; font-weight: 700 !important; }
 
-[data-testid="stSidebar"] *{
-    font-family:'Montserrat', sans-serif;
-}
+    .info-card {
+        background-color: #ffffff;
+        padding: 20px;
+        border-radius: 8px;
+        border-left: 5px solid #00a959;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+        margin-bottom: 15px;
+        border-top: 1px solid #E5E7EB;
+        border-right: 1px solid #E5E7EB;
+        border-bottom: 1px solid #E5E7EB;
+    }
+    .info-card-blue { border-left-color: #111827; }
+    .info-card-green { border-left-color: #00a959; }
+    .info-card-red { border-left-color: #ec3237; }
 
-/* ===========================
-    TITULOS
-=========================== */
+    .info-label { color: #6B7280; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; }
+    .info-value { color: #111827; font-size: 1.5rem; font-weight: 700; margin-top: 4px; }
 
-h1,h2,h3,h4{
-    color:#1F2937 !important;
-    font-weight:700 !important;
-}
+    [data-testid="stSidebar"] { 
+        background-color: #111827; 
+        border-right: 1px solid #1F2937;
+    }
+    [data-testid="stSidebar"] * { color: #F3F4F6 !important; }
+    [data-testid="stSidebar"] hr { border-color: #374151 !important; }
 
-/* ===========================
-    HEADER
-=========================== */
-
-.market-header{
-    background:#FFFFFF;
-    border-radius:12px;
-    padding:28px;
-    border-top:5px solid #EC3237;
-    border-left:1px solid #ECECEC;
-    border-right:1px solid #ECECEC;
-    border-bottom:1px solid #ECECEC;
-    margin-bottom:24px;
-}
-
-.market-header h1{
-    color:#1F2937!important;
-    font-size:30px;
-    margin:0;
-}
-
-.market-header p{
-    color:#6B7280;
-    margin-top:6px;
-    font-size:15px;
-}
-
-/* ===========================
-    BOTONES
-=========================== */
-
-.stButton>button{
-    width:100%;
-    height:48px;
-    border-radius:8px;
-    border:1px solid #EC3237;
-    background:white;
-    color:#EC3237;
-    font-weight:600;
-    transition:0.2s;
-}
-
-.stButton>button:hover{
-    background:#EC3237;
-    color:white;
-}
-
-/* Botón verde */
-.btn-ingreso button{
-    border-color:#00A959!important;
-    color:#00A959!important;
-}
-
-.btn-ingreso button:hover{
-    background:#00A959!important;
-    color:white!important;
-}
-
-/* Botón rojo */
-.btn-salida button{
-    border-color:#EC3237!important;
-    color:#EC3237!important;
-}
-
-.btn-salida button:hover{
-    background:#EC3237!important;
-    color:white!important;
-}
-
-/* ===========================
-    INPUTS
-=========================== */
-
-input, textarea{
-    border-radius:8px!important;
-}
-
-.stTextInput input,
-.stNumberInput input,
-.stDateInput input{
-    border:1px solid #D1D5DB!important;
-}
-
-.stSelectbox div[data-baseweb="select"]{
-    border-radius:8px;
-}
-
-/* ===========================
-    TARJETAS KPI
-=========================== */
-
-.info-card{
-    background:white;
-    border:1px solid #E5E7EB;
-    border-radius:12px;
-    padding:22px;
-    margin-bottom:18px;
-}
-
-.info-card-blue{
-    border-top:4px solid #374151;
-}
-
-.info-card-green{
-    border-top:4px solid #00A959;
-}
-
-.info-card-red{
-    border-top:4px solid #EC3237;
-}
-
-.info-label{
-    font-size:12px;
-    color:#6B7280;
-    text-transform:uppercase;
-    letter-spacing:.8px;
-    font-weight:700;
-}
-
-.info-value{
-    margin-top:8px;
-    font-size:30px;
-    font-weight:700;
-    color:#111827;
-}
-
-/* ===========================
-    FORMULARIOS
-=========================== */
-
-[data-testid="stForm"]{
-    background:white;
-    border:1px solid #E5E7EB;
-    border-radius:12px;
-    padding:22px;
-}
-
-/* ===========================
-    DATAFRAME
-=========================== */
-
-[data-testid="stDataFrame"]{
-    border:1px solid #E5E7EB;
-    border-radius:10px;
-}
-
-/* ===========================
-    ALERTAS
-=========================== */
-
-.stAlert{
-    border-radius:8px;
-}
-
-/* ===========================
-    RADIO
-=========================== */
-
-.stRadio label{
-    font-weight:500;
-}
-
-/* ===========================
-    EXPANDER
-=========================== */
-
-.streamlit-expanderHeader{
-    font-weight:600;
-}
-
-/* ===========================
-    SEPARADORES
-=========================== */
-
-hr{
-    border:none;
-    border-top:1px solid #E5E7EB;
-}
-
+    .market-header {
+        background: #ffffff;
+        padding: 20px 24px;
+        border-radius: 8px;
+        color: #111827;
+        margin-bottom: 24px;
+        border: 1px solid #E5E7EB;
+        border-left: 5px solid #ec3237;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+    }
+    .market-header h1 { color: #111827 !important; margin: 0; font-size: 1.6rem; }
+    .market-header p { color: #6B7280; margin: 4px 0 0 0; font-size: 0.9rem; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -347,13 +203,15 @@ if not st.session_state.usuario_login:
     c_log1, c_log2, c_log3 = st.columns([1, 1.2, 1])
     with c_log2:
         with st.container(border=True):
-            st.markdown("<h2 style='text-align: center;'>🛍️ Premium Market</h2>", unsafe_allow_html=True)
-            st.markdown("<p style='text-align: center; color: #64748B;'>Selecciona tu usuario para ingresar</p>", unsafe_allow_html=True)
+            st.markdown("<h2 style='text-align: center; color: #111827;'>🛍️ Premium Market</h2>", unsafe_allow_html=True)
+            st.markdown("<p style='text-align: center; color: #6B7280; font-size: 0.9rem;'>Portal Corporativo de Control</p>", unsafe_allow_html=True)
+            st.markdown("<br>", unsafe_allow_html=True)
             
             usuario_sel = st.selectbox("Seleccionar Usuario:", list(USUARIOS.keys()))
             clave_input = st.text_input("Contraseña:", type="password")
             
-            if st.button("INGRESAR AL SISTEMA"):
+            st.markdown("<br>", unsafe_allow_html=True)
+            if st.button("INGRESAR AL SISTEMA", use_container_width=True):
                 if clave_input == USUARIOS[usuario_sel]["clave"]:
                     st.session_state.usuario_login = usuario_sel
                     st.success(f"¡Bienvenido/a {usuario_sel}!")
@@ -391,16 +249,17 @@ def registrar_marca(dni, nombre, tipo):
     guardar_asistencia_gsheets(dni, nombre, tipo, fecha_h, fecha_s)
 
 # --- SIDEBAR NAVEGACIÓN ---
-st.sidebar.markdown('<div style="font-size: 60px; text-align: center;">🛍️</div>', unsafe_allow_html=True)
-st.sidebar.markdown("<h2 style='text-align: center;'>PREMIUM MARKET</h2>", unsafe_allow_html=True)
-st.sidebar.markdown(f"<p style='text-align: center; font-size:13px;'>👤 Usuario: <b>{user_actual}</b><br><small>({rol_actual.upper()})</small></p>", unsafe_allow_html=True)
+st.sidebar.markdown('<div style="font-size: 40px; text-align: center; padding-top: 10px;">🛍️</div>', unsafe_allow_html=True)
+st.sidebar.markdown("<h3 style='text-align: center; margin-bottom: 0px; font-size: 1.1rem;'>PREMIUM MARKET</h3>", unsafe_allow_html=True)
+st.sidebar.markdown(f"<p style='text-align: center; font-size:12px; color: #9CA3AF;'>👤 <b>{user_actual}</b><br><span style='text-transform: uppercase; font-size: 10px; background: #374151; padding: 2px 6px; border-radius: 4px;'>{rol_actual}</span></p>", unsafe_allow_html=True)
 
+st.sidebar.markdown("<br>", unsafe_allow_html=True)
 if doc_sheets:
     st.sidebar.caption("🟢 Conectado a Google Sheets")
 else:
-    st.sidebar.caption("🔴 Modo Offline (Verifica Secrets / credentials.json)")
+    st.sidebar.caption("🔴 Modo Offline")
 
-if st.sidebar.button("🚪 Cerrar Sesión"):
+if st.sidebar.button("🚪 Cerrar Sesión", use_container_width=True):
     st.session_state.usuario_login = None
     st.rerun()
 
@@ -434,14 +293,14 @@ if choice == "⏱️ Marcar Asistencia":
             c1, c2 = st.columns(2)
             with c1:
                 st.markdown('<div class="btn-ingreso">', unsafe_allow_html=True)
-                if st.button("⏰ MARCAR INGRESO"):
+                if st.button("⏰ MARCAR INGRESO", use_container_width=True):
                     registrar_marca(dni_actual, user_actual, "INGRESO")
                     st.toast(f"Ingreso registrado: {user_actual}", icon="✅")
                 st.markdown('</div>', unsafe_allow_html=True)
 
             with c2:
                 st.markdown('<div class="btn-salida">', unsafe_allow_html=True)
-                if st.button("🚪 MARCAR SALIDA"):
+                if st.button("🚪 MARCAR SALIDA", use_container_width=True):
                     registrar_marca(dni_actual, user_actual, "SALIDA")
                     st.toast(f"Salida registrada: {user_actual}", icon="🚪")
                 st.markdown('</div>', unsafe_allow_html=True)
@@ -486,7 +345,8 @@ elif choice == "💰 Registrar Descuadre":
         monto = st.number_input("Monto en Soles (S/.)", min_value=0.01, step=0.50, format="%.2f")
         obs = st.text_area("Sustento o Motivo de la diferencia")
 
-        if st.form_submit_button("REGISTRAR DESCUADRE"):
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.form_submit_button("REGISTRAR DESCUADRE", use_container_width=True):
             monto_final = monto if "+" in tipo_desc else -monto
             tipo_final = "Sobrante" if "+" in tipo_desc else "Faltante"
             f_reg = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -626,7 +486,8 @@ elif choice == "👥 Gestión Colaboradores":
             rol_in = st.selectbox("Rol en Sistema", ["operativo", "admin"])
             clave_in = st.text_input("Contraseña de Acceso", type="password")
 
-            if st.form_submit_button("GUARDAR EN NUBE"):
+            st.markdown("<br>", unsafe_allow_html=True)
+            if st.form_submit_button("GUARDAR EN NUBE", use_container_width=True):
                 if not dni_in or not nom_in or not clave_in:
                     st.error("DNI, Nombre y Contraseña son obligatorios")
                 else:
@@ -685,4 +546,4 @@ elif choice == "⏱️ Historial de Asistencias":
         st.info("Sin asistencias registradas.")
 
 st.markdown("---")
-st.markdown('<div style="text-align:center; color:#64748B; font-weight:bold; font-size:12px;">Premium Market System v3.0 | Google Sheets Integration</div>', unsafe_allow_html=True)
+st.markdown('<div style="text-align:center; color:#6B7280; font-weight:500; font-size:11px;">Premium Market System v3.0 | Google Sheets Integration</div>', unsafe_allow_html=True)
