@@ -84,59 +84,341 @@ def guardar_descuadre_gsheets(fecha, dni, nombre, tipo, monto, observacion, fech
     else:
         st.warning("⚠️ No hay conexión activa con Google Sheets")
 
-# --- ESTILOS CORPORATIVOS ---
+# --- ESTILOS CORPORATIVOS PREMIUM MARKET ---
 st.markdown("""
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
 <style>
-    .main { background-color: #F8FAFC; }
-    
-    .stButton>button {
-        background-color: #FF6B00 !important;
-        color: white !important;
-        border-radius: 8px !important;
-        border: none !important;
-        font-weight: bold !important;
-        height: 3.2em !important;
-        transition: all 0.3s ease !important;
-        box-shadow: 0 4px 6px -1px rgba(255, 107, 0, 0.2);
-    }
-    .stButton>button:hover {
-        background-color: #E05E00 !important;
-        transform: translateY(-2px);
-    }
 
-    .btn-ingreso > button { background-color: #10B981 !important; }
-    .btn-salida > button { background-color: #EF4444 !important; }
+/* ==============================
+   FUENTE Y FONDO GENERAL
+=================================*/
 
-    h1, h2, h3 { color: #0F172A !important; font-family: 'Inter', sans-serif; }
+html, body, [class*="css"], .stApp{
+    font-family:'Montserrat',sans-serif !important;
+    background:#F5F7FA;
+}
 
-    .info-card {
-        background-color: white;
-        padding: 20px;
-        border-radius: 12px;
-        border-left: 6px solid #FF6B00;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-        margin-bottom: 15px;
-    }
-    .info-card-blue { border-left-color: #0F172A; }
-    .info-card-green { border-left-color: #10B981; }
-    .info-card-red { border-left-color: #EF4444; }
+/* ==============================
+   SIDEBAR
+=================================*/
 
-    .info-label { color: #64748B; font-size: 0.8rem; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; }
-    .info-value { color: #0F172A; font-size: 1.6rem; font-weight: 800; margin-top: 5px; }
+[data-testid="stSidebar"]{
+    background:linear-gradient(180deg,#EC3237 0%, #C62828 100%);
+    border-right:5px solid #00A959;
+}
 
-    [data-testid="stSidebar"] { background-color: #0F172A; }
-    [data-testid="stSidebar"] * { color: #F8FAFC !important; }
+[data-testid="stSidebar"] *{
+    color:white !important;
+}
 
-    .market-header {
-        background: linear-gradient(90deg, #0F172A 0%, #1E293B 100%);
-        padding: 24px;
-        border-radius: 12px;
-        color: white;
-        margin-bottom: 25px;
-        border-bottom: 4px solid #FF6B00;
-    }
-    .market-header h1 { color: #FFFFFF !important; margin: 0; }
-    .market-header p { color: #94A3B8; margin: 5px 0 0 0; }
+/* ==============================
+   TITULOS
+=================================*/
+
+h1,h2,h3,h4,h5{
+    font-family:'Montserrat',sans-serif !important;
+    font-weight:700;
+    color:#2C2C2C;
+}
+
+/* ==============================
+   HEADER
+=================================*/
+
+.market-header{
+
+    background:white;
+
+    border-radius:20px;
+
+    padding:28px;
+
+    box-shadow:0 10px 25px rgba(0,0,0,.08);
+
+    border-left:8px solid #EC3237;
+
+    margin-bottom:25px;
+
+}
+
+.market-header h1{
+
+    color:#EC3237!important;
+
+    margin:0;
+
+    font-size:34px;
+
+}
+
+.market-header p{
+
+    color:#666;
+
+    margin-top:8px;
+
+    font-size:15px;
+
+}
+
+/* ==============================
+   BOTONES
+=================================*/
+
+.stButton>button{
+
+    width:100%;
+
+    height:56px;
+
+    border-radius:14px;
+
+    border:none;
+
+    background:#EC3237;
+
+    color:white;
+
+    font-weight:700;
+
+    font-size:16px;
+
+    transition:0.25s;
+
+    box-shadow:0 8px 20px rgba(236,50,55,.30);
+
+}
+
+.stButton>button:hover{
+
+    background:#00A959;
+
+    transform:translateY(-3px);
+
+    box-shadow:0 12px 24px rgba(0,169,89,.35);
+
+}
+
+/* Botón ingreso */
+
+.btn-ingreso button{
+
+    background:#00A959!important;
+
+}
+
+.btn-ingreso button:hover{
+
+    background:#008D4A!important;
+
+}
+
+/* Botón salida */
+
+.btn-salida button{
+
+    background:#EC3237!important;
+
+}
+
+.btn-salida button:hover{
+
+    background:#C62828!important;
+
+}
+
+/* ==============================
+   INPUTS
+=================================*/
+
+.stTextInput input,
+.stNumberInput input,
+.stDateInput input,
+textarea{
+
+    border-radius:12px!important;
+
+    border:1px solid #DDDDDD!important;
+
+}
+
+.stSelectbox div[data-baseweb="select"]{
+
+    border-radius:12px!important;
+
+}
+
+/* ==============================
+   TARJETAS KPI
+=================================*/
+
+.info-card{
+
+    background:white;
+
+    padding:24px;
+
+    border-radius:20px;
+
+    box-shadow:0 8px 20px rgba(0,0,0,.08);
+
+    margin-bottom:18px;
+
+    transition:.25s;
+
+}
+
+.info-card:hover{
+
+    transform:translateY(-4px);
+
+}
+
+.info-card-green{
+
+    border-top:6px solid #00A959;
+
+}
+
+.info-card-red{
+
+    border-top:6px solid #EC3237;
+
+}
+
+.info-card-blue{
+
+    border-top:6px solid #303030;
+
+}
+
+.info-label{
+
+    font-size:12px;
+
+    color:#888;
+
+    font-weight:700;
+
+    letter-spacing:1px;
+
+    text-transform:uppercase;
+
+}
+
+.info-value{
+
+    font-size:34px;
+
+    font-weight:800;
+
+    color:#222;
+
+    margin-top:12px;
+
+}
+
+/* ==============================
+   FORMULARIOS
+=================================*/
+
+[data-testid="stForm"]{
+
+    background:white;
+
+    padding:22px;
+
+    border-radius:20px;
+
+    box-shadow:0 8px 20px rgba(0,0,0,.08);
+
+}
+
+/* ==============================
+   DATAFRAMES
+=================================*/
+
+[data-testid="stDataFrame"]{
+
+    border-radius:16px;
+
+    overflow:hidden;
+
+    box-shadow:0 8px 18px rgba(0,0,0,.08);
+
+}
+
+/* ==============================
+   CONTAINERS
+=================================*/
+
+[data-testid="stVerticalBlock"] > div:has(.element-container){
+
+    border-radius:16px;
+
+}
+
+/* ==============================
+   MÉTRICAS
+=================================*/
+
+[data-testid="metric-container"]{
+
+    background:white;
+
+    border-radius:18px;
+
+    padding:15px;
+
+    box-shadow:0 8px 20px rgba(0,0,0,.08);
+
+}
+
+/* ==============================
+   MENSAJES
+=================================*/
+
+.stAlert{
+
+    border-radius:14px;
+
+}
+
+/* ==============================
+   RADIO
+=================================*/
+
+.stRadio label{
+
+    font-weight:600;
+
+}
+
+/* ==============================
+   SCROLL
+=================================*/
+
+::-webkit-scrollbar{
+
+    width:8px;
+
+}
+
+::-webkit-scrollbar-thumb{
+
+    background:#EC3237;
+
+    border-radius:10px;
+
+}
+
+::-webkit-scrollbar-track{
+
+    background:#EEEEEE;
+
+}
+
 </style>
 """, unsafe_allow_html=True)
 
