@@ -5,7 +5,7 @@ import io
 import time
 import gspread
 
-# --- CONFIGURACIÓN DE PÁGINA (Sidebar abierto por defecto) ---
+# --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(
     page_title="Tiendas Premium System",
     page_icon="🏪",
@@ -59,8 +59,15 @@ def guardar_colaborador_gsheets(dni, nombre, cargo, estado, clave, rol):
             hoja.append_row([str(dni), nombre, cargo, estado, str(clave), rol])
         except Exception as e:
             st.error(f"❌ Error al guardar colaborador en Google Sheets: {e}")
-    else:
-        st.warning("⚠️ No hay conexión activa con Google Sheets")
+
+def actualizar_hoja_completa(nombre_hoja, df):
+    if doc_sheets:
+        try:
+            hoja = doc_sheets.worksheet(nombre_hoja)
+            hoja.clear()
+            hoja.update([df.columns.values.tolist()] + df.astype(str).values.tolist())
+        except Exception as e:
+            st.error(f"❌ Error al actualizar {nombre_hoja} en Google Sheets: {e}")
 
 def guardar_asistencia_gsheets(dni, nombre, tipo, fecha_hora, fecha):
     if doc_sheets:
@@ -69,8 +76,6 @@ def guardar_asistencia_gsheets(dni, nombre, tipo, fecha_hora, fecha):
             hoja.append_row([str(dni), nombre, tipo, fecha_hora, fecha])
         except Exception as e:
             st.error(f"❌ Error al guardar asistencia en Google Sheets: {e}")
-    else:
-        st.warning("⚠️ No hay conexión activa con Google Sheets")
 
 def guardar_descuadre_gsheets(fecha, dni, nombre, tipo, monto, observacion, fecha_registro):
     if doc_sheets:
@@ -79,10 +84,8 @@ def guardar_descuadre_gsheets(fecha, dni, nombre, tipo, monto, observacion, fech
             hoja.append_row([fecha, str(dni), nombre, tipo, monto, observacion, fecha_registro])
         except Exception as e:
             st.error(f"❌ Error al guardar descuadre en Google Sheets: {e}")
-    else:
-        st.warning("⚠️ No hay conexión activa con Google Sheets")
 
-# --- CSS MINIMALISTA Y EJECUTIVO (VERDE Y ROJO CORPORATIVOS) ---
+# --- CSS MINIMALISTA Y EJECUTIVO ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap');
@@ -91,23 +94,19 @@ st.markdown("""
         font-family: 'Montserrat', sans-serif !important;
     }
 
-    /* Fondo limpio neutro */
     .stApp {
         background-color: #FAFAFA;
     }
 
-    /* Header transparente que respeta el botón para desplegar la barra lateral */
     header[data-testid="stHeader"] {
         background-color: transparent !important;
         z-index: 100;
     }
 
-    /* Visibilidad de la flechita de apertura */
     header[data-testid="stHeader"] button {
         color: #111827 !important;
     }
 
-    /* Header sobrio con acento de marca */
     .market-header {
         background-color: #FFFFFF;
         padding: 20px 24px;
@@ -130,7 +129,6 @@ st.markdown("""
         font-weight: 400;
     }
 
-    /* Tarjetas de métricas sobrias */
     .info-card {
         background-color: #FFFFFF;
         padding: 18px 20px;
@@ -152,7 +150,6 @@ st.markdown("""
         margin-top: 4px;
     }
 
-    /* Botones neutros */
     .stButton>button {
         background-color: #111827 !important;
         color: #FFFFFF !important;
@@ -168,7 +165,6 @@ st.markdown("""
         background-color: #374151 !important;
     }
 
-    /* Botones de acción con verde (#00A959) y rojo (#EC3237) */
     .btn-ingreso > button {
         background-color: #00A959 !important;
     }
@@ -183,7 +179,6 @@ st.markdown("""
         background-color: #D02429 !important;
     }
 
-    /* Sidebar sobrio */
     [data-testid="stSidebar"] {
         background-color: #111827 !important;
         border-right: 1px solid #1F2937;
@@ -192,7 +187,6 @@ st.markdown("""
         color: #E5E7EB !important;
     }
     
-    /* Botón secundario para Cerrar Sesión en Sidebar */
     .btn-logout > button {
         background-color: transparent !important;
         border: 1px solid #374151 !important;
@@ -203,7 +197,6 @@ st.markdown("""
         color: #FFFFFF !important;
     }
 
-    /* Formularios y contenedores */
     div[data-testid="stForm"], div[data-testid="stExpander"] {
         border-radius: 8px !important;
         border: 1px solid #E5E7EB !important;
@@ -212,7 +205,6 @@ st.markdown("""
         box-shadow: none !important;
     }
 
-    /* Estilo de tablas */
     .stDataFrame {
         border: 1px solid #E5E7EB;
         border-radius: 6px;
@@ -565,7 +557,7 @@ elif choice == "Gestión Colaboradores":
                     }
                     st.session_state.empleados = pd.concat([st.session_state.empleados, pd.DataFrame([nuevo_e])], ignore_index=True)
                     guardar_colaborador_gsheets(dni_in, nom_in, cargo_in, "Activo", clave_in, rol_in)
-                    st.toast(f"Colaborador guardado")
+                    st.toast("Colaborador guardado")
                     st.rerun()
 
     with col_list:
@@ -575,6 +567,17 @@ elif choice == "Gestión Colaboradores":
             width="stretch",
             hide_index=True
         )
+
+        # SECCIÓN ADMINISTRATIVA: ELIMINAR COLABORADOR
+        if rol_actual == "admin" and not st.session_state.empleados.empty:
+            with st.expander("Eliminar Colaborador"):
+                lista_colabs = st.session_state.empleados["nombre"].tolist()
+                colab_a_eliminar = st.selectbox("Seleccionar colaborador a eliminar", lista_colabs)
+                if st.button("Eliminar Colaborador", type="primary"):
+                    st.session_state.empleados = st.session_state.empleados[st.session_state.empleados["nombre"] != colab_a_eliminar].reset_index(drop=True)
+                    actualizar_hoja_completa("Colaboradores", st.session_state.empleados)
+                    st.toast(f"Colaborador {colab_a_eliminar} eliminado")
+                    st.rerun()
 
 elif choice == "Historial de Descuadres":
     st.markdown("""
@@ -592,6 +595,46 @@ elif choice == "Historial de Descuadres":
             column_config={"monto": st.column_config.NumberColumn("MONTO", format="S/. %.2f")}
         )
         st.download_button("Exportar a Excel", to_excel(st.session_state.descuadres), "Descuadres_General.xlsx")
+
+        # SECCIÓN ADMINISTRATIVA: GESTIONAR DESCUADRES (MODIFICAR Y ELIMINAR)
+        if rol_actual == "admin":
+            st.markdown("<br>", unsafe_allow_html=True)
+            col_mod, col_del = st.columns(2)
+
+            with col_mod:
+                with st.expander("Modificar Descuadre"):
+                    opciones_desc = [f"{i} | {r['fecha']} | {r['nombre']} | S/. {r['monto']}" for i, r in st.session_state.descuadres.iterrows()]
+                    sel_mod = st.selectbox("Seleccionar Registro a Editar", opciones_desc, key="mod_desc_sel")
+                    
+                    if sel_mod:
+                        idx_mod = int(sel_mod.split(" | ")[0])
+                        row_mod = st.session_state.descuadres.loc[idx_mod]
+                        
+                        nuevo_monto = st.number_input("Nuevo Monto (S/.)", value=float(row_mod["monto"]), step=0.50, format="%.2f")
+                        tipo_options = ["Sobrante", "Faltante"]
+                        idx_tipo = tipo_options.index(row_mod["tipo"]) if row_mod["tipo"] in tipo_options else 0
+                        nuevo_tipo = st.selectbox("Nuevo Tipo", tipo_options, index=idx_tipo)
+                        nueva_obs = st.text_area("Nueva Observación", value=str(row_mod["observacion"]))
+
+                        if st.button("Guardar Cambios en Descuadre"):
+                            st.session_state.descuadres.at[idx_mod, "monto"] = nuevo_monto
+                            st.session_state.descuadres.at[idx_mod, "tipo"] = nuevo_tipo
+                            st.session_state.descuadres.at[idx_mod, "observacion"] = nueva_obs
+                            actualizar_hoja_completa("Descuadres", st.session_state.descuadres)
+                            st.toast("Descuadre actualizado")
+                            st.rerun()
+
+            with col_del:
+                with st.expander("Eliminar Descuadre"):
+                    opciones_desc_del = [f"{i} | {r['fecha']} | {r['nombre']} | S/. {r['monto']}" for i, r in st.session_state.descuadres.iterrows()]
+                    sel_del = st.selectbox("Seleccionar Registro a Eliminar", opciones_desc_del, key="del_desc_sel")
+                    
+                    if st.button("Eliminar Descuadre", type="primary"):
+                        idx_del = int(sel_del.split(" | ")[0])
+                        st.session_state.descuadres = st.session_state.descuadres.drop(idx_del).reset_index(drop=True)
+                        actualizar_hoja_completa("Descuadres", st.session_state.descuadres)
+                        st.toast("Descuadre eliminado correctamente")
+                        st.rerun()
     else:
         st.info("Sin descuadres registrados.")
 
@@ -606,6 +649,20 @@ elif choice == "Historial de Asistencias":
     if not st.session_state.asistencia.empty:
         st.dataframe(st.session_state.asistencia, width="stretch", hide_index=True)
         st.download_button("Exportar a Excel", to_excel(st.session_state.asistencia), "Asistencias_General.xlsx")
+
+        # SECCIÓN ADMINISTRATIVA: ELIMINAR ASISTENCIA
+        if rol_actual == "admin":
+            st.markdown("<br>", unsafe_allow_html=True)
+            with st.expander("Eliminar Registro de Asistencia"):
+                opciones_asist = [f"{i} | {r['fecha_hora']} | {r['nombre']} | {r['tipo']}" for i, r in st.session_state.asistencia.iterrows()]
+                sel_asist_del = st.selectbox("Seleccionar Marcación a Eliminar", opciones_asist)
+                
+                if st.button("Eliminar Registro", type="primary"):
+                    idx_asist = int(sel_asist_del.split(" | ")[0])
+                    st.session_state.asistencia = st.session_state.asistencia.drop(idx_asist).reset_index(drop=True)
+                    actualizar_hoja_completa("Asistencia", st.session_state.asistencia)
+                    st.toast("Marcación eliminada correctamente")
+                    st.rerun()
     else:
         st.info("Sin asistencias registradas.")
 
