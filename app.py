@@ -47,9 +47,9 @@ def obtener_colaboradores_gsheets():
             st.error(f"Error al leer Colaboradores: {e}")
             
     return pd.DataFrame([
-        {"dni": "72819034", "nombre": "Fran", "cargo": "Cajero", "estado": "Activo", "clave": "12345", "rol": "operativo"},
-        {"dni": "45129803", "nombre": "Luz Soplin", "cargo": "Supervisora", "estado": "Activo", "clave": "12345", "rol": "operativo"},
-        {"dni": "00000000", "nombre": "Administrador", "cargo": "Gerente de Tienda", "estado": "Activo", "clave": "admin123", "rol": "admin"}
+        {"dni": "75522639", "nombre": "Fran Bazan Insapillo", "cargo": "Colaborador Multifuncional", "estado": "Activo", "clave": "12345", "rol": "operativo"},
+        {"dni": "75101522", "nombre": "Luz Soplin Chota", "cargo": "Colaborador Multifuncional", "estado": "Activo", "clave": "12345", "rol": "operativo"},
+        {"dni": "75895270", "nombre": "Administrador", "cargo": "Gerente de Tienda", "estado": "Activo", "clave": "admin123", "rol": "admin"}
     ])
 
 def guardar_colaborador_gsheets(dni, nombre, cargo, estado, clave, rol):
