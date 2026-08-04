@@ -539,35 +539,33 @@ elif choice == "Dashboard General":
 
     f_dash_str = str(fecha_dash)
     
-    # 1. Procesamiento de Asistencias del día
+    # 1. Procesamiento de Asistencias y Descuadres del día
     df_asist_dash = st.session_state.asistencia.copy()
+    df_desc_dash = st.session_state.descuadres.copy()
+    
     resumen_colaboradores = []
+    fichas_colaboradores = {}  # Guardará el detalle estructurado por persona
     
     en_turno_cnt = 0
     concluido_cnt = 0
 
     if not df_asist_dash.empty:
-        # Filtrar por fecha seleccionada
         df_asist_dash = df_asist_dash[df_asist_dash["fecha"].astype(str) == f_dash_str]
         
         if colab_dash != "Todos":
             df_asist_dash = df_asist_dash[df_asist_dash["nombre"] == colab_dash]
 
         if not df_asist_dash.empty:
-            # Asegurar formato datetime para cálculo preciso de tiempos
             df_asist_dash["dt"] = pd.to_datetime(df_asist_dash["fecha_hora"])
             
-            # Agrupar por colaborador
             for nombre_colab, grupo in df_asist_dash.groupby("nombre"):
                 grupo_ordenado = grupo.sort_values("dt")
                 
-                # Obtener primer INGRESO y última SALIDA (o marca más reciente)
                 ingresos = grupo_ordenado[grupo_ordenado["tipo"] == "INGRESO"]
                 salidas = grupo_ordenado[grupo_ordenado["tipo"] == "SALIDA"]
                 
                 hora_ingreso = ingresos.iloc[0]["dt"].strftime("%H:%M:%S") if not ingresos.empty else "--:--:--"
                 
-                # Determinar estado actual (basado en la última marcación registrada)
                 ultima_marca = grupo_ordenado.iloc[-1]
                 
                 if ultima_marca["tipo"] == "INGRESO":
@@ -575,22 +573,17 @@ elif choice == "Dashboard General":
                     hora_salida = "--:--:--"
                     en_turno_cnt += 1
                     
-                    # Calcular horas transcurridas hasta el momento actual (o fin del día)
                     dt_ingreso = ingresos.iloc[0]["dt"]
-                    
-                    # Si la fecha consultada es HOY, calculamos contra la hora actual en Perú
                     if f_dash_str == obtener_ahora_peru().strftime("%Y-%m-%d"):
                         ahora = obtener_ahora_peru().replace(tzinfo=None)
                         segundos = (ahora - dt_ingreso).total_seconds()
                     else:
                         segundos = 0
-                        
                 else:
                     estado = "⚪ Concluido"
                     hora_salida = salidas.iloc[-1]["dt"].strftime("%H:%M:%S") if not salidas.empty else "--:--:--"
                     concluido_cnt += 1
                     
-                    # Calcular horas entre primer ingreso y última salida
                     dt_ingreso = ingresos.iloc[0]["dt"] if not ingresos.empty else None
                     dt_salida = salidas.iloc[-1]["dt"] if not salidas.empty else None
                     
@@ -599,7 +592,6 @@ elif choice == "Dashboard General":
                     else:
                         segundos = 0
                 
-                # Formatear horas trabajadas HH:MM
                 if segundos > 0:
                     horas = int(segundos // 3600)
                     minutos = int((segundos % 3600) // 60)
@@ -607,6 +599,30 @@ elif choice == "Dashboard General":
                 else:
                     total_horas_str = "0h 0m"
                 
+                # Recopilar observaciones de asistencia
+                obs_asistencia = [
+                    f"[{r['tipo']}] {r['observacion']}" 
+                    for _, r in grupo_ordenado.iterrows() 
+                    if str(r.get('observacion', '')).strip() != ""
+                ]
+
+                # Recopilar descuadres específicos de este colaborador en la fecha
+                descuadres_user = []
+                monto_desc_user = 0.0
+                if not df_desc_dash.empty:
+                    df_d_u = df_desc_dash[
+                        (df_desc_dash["fecha"].astype(str) == f_dash_str) & 
+                        (df_desc_dash["nombre"] == nombre_colab)
+                    ]
+                    if not df_d_u.empty:
+                        monto_desc_user = pd.to_numeric(df_d_u["monto"], errors="coerce").sum()
+                        for _, r_d in df_d_u.iterrows():
+                            descuadres_user.append({
+                                "tipo": r_d["tipo"],
+                                "monto": r_d["monto"],
+                                "obs": r_d.get("observacion", "")
+                            })
+
                 resumen_colaboradores.append({
                     "Colaborador": nombre_colab,
                     "Estado": estado,
@@ -615,17 +631,25 @@ elif choice == "Dashboard General":
                     "Horas Trabajadas": total_horas_str
                 })
 
-    # 2. Procesamiento de Descuadres del día
+                fichas_colaboradores[nombre_colab] = {
+                    "estado": estado,
+                    "ingreso": hora_ingreso,
+                    "salida": hora_salida,
+                    "tiempo_total": total_horas_str,
+                    "balance_descuadre": monto_desc_user,
+                    "descuadres_detalle": descuadres_user,
+                    "obs_asistencia": obs_asistencia
+                }
+
+    # Balance general de descuadres para los KPIs
     total_descuadre_monto = 0.0
-    df_desc_dash = st.session_state.descuadres.copy()
     if not df_desc_dash.empty:
         df_desc_dash = df_desc_dash[df_desc_dash["fecha"].astype(str) == f_dash_str]
         if colab_dash != "Todos":
             df_desc_dash = df_desc_dash[df_desc_dash["nombre"] == colab_dash]
-        
         total_descuadre_monto = pd.to_numeric(df_desc_dash["monto"], errors="coerce").sum() if not df_desc_dash.empty else 0.0
 
-    # 3. Métricas Principales (KPIs)
+    # 2. Métricas Principales (KPIs)
     st.markdown("<br>", unsafe_allow_html=True)
     k1, k2, k3 = st.columns(3)
     with k1:
@@ -635,7 +659,7 @@ elif choice == "Dashboard General":
     with k3:
         st.markdown(f'<div class="info-card"><div class="info-label">Balance Descuadres Hoy</div><div class="info-value" style="color: {"#00A959" if total_descuadre_monto >= 0 else "#EC3237"};">S/. {total_descuadre_monto:.2f}</div></div>', unsafe_allow_html=True)
 
-    # 4. Tabla de Resumen Consolidado por Colaborador
+    # 3. Tabla Consolidada General
     st.markdown("<h4 style='font-size:1rem; color:#111827; margin-top:15px; margin-bottom:10px;'>📋 Resumen de Jornada por Colaborador</h4>", unsafe_allow_html=True)
     
     if resumen_colaboradores:
@@ -652,6 +676,51 @@ elif choice == "Dashboard General":
                 "Horas Trabajadas": st.column_config.TextColumn("TIEMPO TOTAL", width="small")
             }
         )
+
+        st.markdown("<br><hr style='border: 0; border-top: 1px solid #E5E7EB;'><br>", unsafe_allow_html=True)
+        st.markdown("<h4 style='font-size:1rem; color:#111827; margin-bottom:15px;'>📄 Ficha Técnica por Colaborador</h4>", unsafe_allow_html=True)
+
+        # 4. Desglose en Tarjetas / Expander por Colaborador
+        for nombre_col, datos in fichas_colaboradores.items():
+            with st.expander(f"👤 {nombre_col} — {datos['estado']}", expanded=True):
+                fc1, fc2, fc3, fc4 = st.columns(4)
+                
+                with fc1:
+                    st.caption("🕒 HORARIO INGRESO")
+                    st.markdown(f"**{datos['ingreso']}**")
+                
+                with fc2:
+                    st.caption("🛑 HORARIO SALIDA")
+                    st.markdown(f"**{datos['salida']}**")
+                
+                with fc3:
+                    st.caption("⏳ TIEMPO TRABAJADO")
+                    st.markdown(f"**{datos['tiempo_total']}**")
+                
+                with fc4:
+                    st.caption("💰 BALANCE DESCUADRE")
+                    color_desc = "#00A959" if datos["balance_descuadre"] >= 0 else "#EC3237"
+                    st.markdown(f"<span style='color:{color_desc}; font-weight:700;'>S/. {datos['balance_descuadre']:.2f}</span>", unsafe_allow_html=True)
+
+                st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
+                
+                # Detalle de descuadres
+                if datos["descuadres_detalle"]:
+                    st.markdown("**:bar_chart: Detalle de Caja / Descuadre:**")
+                    for d_item in datos["descuadres_detalle"]:
+                        m_val = float(d_item['monto'])
+                        signo_color = "green" if m_val >= 0 else "red"
+                        obs_txt = f" — *Sustento:* {d_item['obs']}" if d_item['obs'] else ""
+                        st.markdown(f"- **{d_item['tipo']}:** :{signo_color}[S/. {m_val:.2f}]{obs_txt}")
+                else:
+                    st.markdown("**:bar_chart: Detalle de Caja:** Sin descuadres registrados en la fecha.")
+
+                # Detalle de observaciones en marcaciones
+                if datos["obs_asistencia"]:
+                    st.markdown("**:speech_balloon: Observaciones en Marcación:**")
+                    for obs_item in datos["obs_asistencia"]:
+                        st.markdown(f"- {obs_item}")
+
     else:
         st.info(f"No hay registros de marcación para la fecha {f_dash_str}.")
 
