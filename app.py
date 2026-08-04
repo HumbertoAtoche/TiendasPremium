@@ -1,13 +1,21 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
+import zoneinfo  # Manejo de zona horaria de Perú (UTC-5)
 import io
 import time
 import gspread
 
+# --- CONFIGURACIÓN DE ZONA HORARIA (PERÚ) ---
+LIMA_TZ = zoneinfo.ZoneInfo("America/Lima")
+
+def obtener_ahora_peru():
+    """Devuelve un objeto datetime con la hora exacta de Perú"""
+    return datetime.now(LIMA_TZ)
+
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(
-    page_title="Tiendas Premium EIRL",
+    page_title="Tiendas Premium System",
     page_icon="🏪",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -286,9 +294,9 @@ def to_excel(df):
     return output.getvalue()
 
 def registrar_marca(dni, nombre, tipo):
-    ahora = datetime.now()
-    fecha_h = ahora.strftime("%Y-%m-%d %H:%M:%S")
-    fecha_s = ahora.strftime("%Y-%m-%d")
+    ahora_peru = obtener_ahora_peru()
+    fecha_h = ahora_peru.strftime("%Y-%m-%d %H:%M:%S")
+    fecha_s = ahora_peru.strftime("%Y-%m-%d")
     
     nueva_marca = {
         "dni": str(dni),
@@ -374,7 +382,7 @@ if choice == "Marcar Asistencia":
 
     with col_preview:
         st.markdown("<h4 style='margin:0; font-size:1rem; color:#111827; margin-bottom:12px;'>Marcaciones de Hoy</h4>", unsafe_allow_html=True)
-        hoy_str = datetime.now().strftime("%Y-%m-%d")
+        hoy_str = obtener_ahora_peru().strftime("%Y-%m-%d")
         
         if not st.session_state.asistencia.empty:
             df_mismarcas = st.session_state.asistencia[
@@ -406,7 +414,7 @@ elif choice == "Registrar Descuadre":
         st.markdown("<h4 style='margin:0; font-size:1rem; color:#111827; margin-bottom:16px;'>Detalle del Movimiento</h4>", unsafe_allow_html=True)
         
         c1, c2 = st.columns(2)
-        f_operacion = c1.date_input("Fecha Operativa", datetime.now())
+        f_operacion = c1.date_input("Fecha Operativa", obtener_ahora_peru())
         tipo_desc = c2.selectbox("Tipo de Diferencia", ["Sobrante (+)", "Faltante (-)"])
 
         monto = st.number_input("Monto (S/.)", min_value=0.01, step=0.50, format="%.2f")
@@ -415,7 +423,7 @@ elif choice == "Registrar Descuadre":
         if st.form_submit_button("Guardar Registro"):
             monto_final = monto if "+" in tipo_desc else -monto
             tipo_final = "Sobrante" if "+" in tipo_desc else "Faltante"
-            f_reg = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            f_reg = obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S")
 
             nuevo_row = {
                 "fecha": str(f_operacion),
@@ -493,7 +501,7 @@ elif choice == "Dashboard General":
     col_f1, col_f2 = st.columns([1.5, 1])
     
     with col_f1:
-        fecha_dash = st.date_input("Fecha de Consulta", datetime.now(), key="dash_fecha")
+        fecha_dash = st.date_input("Fecha de Consulta", obtener_ahora_peru(), key="dash_fecha")
     with col_f2:
         lista_colabs = ["Todos"] + obtener_solo_colaboradores()
         colab_dash = st.selectbox("Filtrar Colaborador", lista_colabs, key="dash_colab")
@@ -621,7 +629,7 @@ elif choice == "Historial de Descuadres":
         f_col1, f_col2 = st.columns([1.5, 1])
         
         with f_col1:
-            rango_fechas_desc = st.date_input("Rango de Fechas", value=(datetime.now(), datetime.now()), key="desc_fechas")
+            rango_fechas_desc = st.date_input("Rango de Fechas", value=(obtener_ahora_peru(), obtener_ahora_peru()), key="desc_fechas")
         with f_col2:
             colabs_desc = ["Todos"] + [c for c in st.session_state.descuadres["nombre"].unique().tolist() if c in obtener_solo_colaboradores()]
             colab_desc_sel = st.selectbox("Colaborador", colabs_desc, key="desc_colab")
@@ -709,7 +717,7 @@ elif choice == "Historial de Asistencias":
         fa_col1, fa_col2 = st.columns([1.5, 1])
         
         with fa_col1:
-            rango_fechas_asist = st.date_input("Rango de Fechas", value=(datetime.now(), datetime.now()), key="asist_fechas")
+            rango_fechas_asist = st.date_input("Rango de Fechas", value=(obtener_ahora_peru(), obtener_ahora_peru()), key="asist_fechas")
         with fa_col2:
             colabs_asist = ["Todos"] + [c for c in st.session_state.asistencia["nombre"].unique().tolist() if c in obtener_solo_colaboradores()]
             colab_asist_sel = st.selectbox("Colaborador", colabs_asist, key="asist_colab")
@@ -753,4 +761,4 @@ elif choice == "Historial de Asistencias":
         st.info("Sin asistencias registradas.")
 
 st.markdown("<br><br>", unsafe_allow_html=True)
-st.markdown('<div style="text-align:center; color:#9CA3AF; font-size:11px;">Tiendas Premium EIRL - Desarrollado por Humberto Atoche</div>', unsafe_allow_html=True)
+st.markdown('<div style="text-align:center; color:#9CA3AF; font-size:11px;">Tiendas Premium System v3.0</div>', unsafe_allow_html=True)
