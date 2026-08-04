@@ -300,6 +300,14 @@ def registrar_marca(dni, nombre, tipo):
     st.session_state.asistencia = pd.concat([pd.DataFrame([nueva_marca]), st.session_state.asistencia], ignore_index=True)
     guardar_asistencia_gsheets(dni, nombre, tipo, fecha_h, fecha_s)
 
+# Helper para obtener solo colaboradores (excluyendo Administradores)
+def obtener_solo_colaboradores():
+    if "rol" in st.session_state.empleados.columns:
+        df_colab = st.session_state.empleados[st.session_state.empleados["rol"] != "admin"]
+    else:
+        df_colab = st.session_state.empleados[st.session_state.empleados["nombre"] != "Administrador"]
+    return df_colab["nombre"].unique().tolist()
+
 # --- SIDEBAR ELEGANTE ---
 st.sidebar.markdown("""
     <div style='padding: 8px 0 16px 0;'>
@@ -487,7 +495,7 @@ elif choice == "Dashboard General":
     with col_f1:
         fecha_dash = st.date_input("Fecha de Consulta", datetime.now(), key="dash_fecha")
     with col_f2:
-        lista_colabs = ["Todos"] + st.session_state.empleados["nombre"].unique().tolist()
+        lista_colabs = ["Todos"] + obtener_solo_colaboradores()
         colab_dash = st.selectbox("Filtrar Colaborador", lista_colabs, key="dash_colab")
 
     f_dash_str = str(fecha_dash)
@@ -615,7 +623,7 @@ elif choice == "Historial de Descuadres":
         with f_col1:
             rango_fechas_desc = st.date_input("Rango de Fechas", value=(datetime.now(), datetime.now()), key="desc_fechas")
         with f_col2:
-            colabs_desc = ["Todos"] + st.session_state.descuadres["nombre"].unique().tolist()
+            colabs_desc = ["Todos"] + [c for c in st.session_state.descuadres["nombre"].unique().tolist() if c in obtener_solo_colaboradores()]
             colab_desc_sel = st.selectbox("Colaborador", colabs_desc, key="desc_colab")
 
         df_desc_filtrado = st.session_state.descuadres.copy()
@@ -703,7 +711,7 @@ elif choice == "Historial de Asistencias":
         with fa_col1:
             rango_fechas_asist = st.date_input("Rango de Fechas", value=(datetime.now(), datetime.now()), key="asist_fechas")
         with fa_col2:
-            colabs_asist = ["Todos"] + st.session_state.asistencia["nombre"].unique().tolist()
+            colabs_asist = ["Todos"] + [c for c in st.session_state.asistencia["nombre"].unique().tolist() if c in obtener_solo_colaboradores()]
             colab_asist_sel = st.selectbox("Colaborador", colabs_asist, key="asist_colab")
 
         df_asist_filtrado = st.session_state.asistencia.copy()
