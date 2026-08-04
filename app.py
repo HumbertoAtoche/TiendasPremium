@@ -77,11 +77,11 @@ def actualizar_hoja_completa(nombre_hoja, df):
         except Exception as e:
             st.error(f"❌ Error al actualizar {nombre_hoja} en Google Sheets: {e}")
 
-def guardar_asistencia_gsheets(dni, nombre, tipo, fecha_hora, fecha):
+def guardar_asistencia_gsheets(dni, nombre, tipo, fecha_hora, fecha, observacion=""):
     if doc_sheets:
         try:
             hoja = doc_sheets.worksheet("Asistencia")
-            hoja.append_row([str(dni), nombre, tipo, fecha_hora, fecha])
+            hoja.append_row([str(dni), nombre, tipo, fecha_hora, fecha, observacion])
         except Exception as e:
             st.error(f"❌ Error al guardar asistencia en Google Sheets: {e}")
 
@@ -153,7 +153,7 @@ st.markdown("""
     }
     .info-value {
         color: #111827;
-        font-size: 1.5rem;
+        font-size: 1.4rem;
         font-weight: 700;
         margin-top: 4px;
     }
@@ -233,9 +233,13 @@ if "asistencia" not in st.session_state:
             data_asist = doc_sheets.worksheet("Asistencia").get_all_records()
             st.session_state.asistencia = pd.DataFrame(data_asist)
         except Exception:
-            st.session_state.asistencia = pd.DataFrame(columns=["dni", "nombre", "tipo", "fecha_hora", "fecha"])
+            st.session_state.asistencia = pd.DataFrame(columns=["dni", "nombre", "tipo", "fecha_hora", "fecha", "observacion"])
     else:
-        st.session_state.asistencia = pd.DataFrame(columns=["dni", "nombre", "tipo", "fecha_hora", "fecha"])
+        st.session_state.asistencia = pd.DataFrame(columns=["dni", "nombre", "tipo", "fecha_hora", "fecha", "observacion"])
+
+# Asegurar columna de observación en Asistencia
+if "observacion" not in st.session_state.asistencia.columns:
+    st.session_state.asistencia["observacion"] = ""
 
 if "descuadres" not in st.session_state:
     if doc_sheets:
@@ -293,7 +297,22 @@ def to_excel(df):
         df.to_excel(writer, index=False)
     return output.getvalue()
 
-def registrar_marca(dni, nombre, tipo):
+# MEJORA 1 y 3: Validación anti-doble marcación y soporte de observación/motivo
+def registrar_marca(dni, nombre, tipo, observacion=""):
+    hoy_str = obtener_ahora_peru().strftime("%Y-%m-%d")
+    
+    # Validar si la última marcación registrada hoy es del mismo tipo
+    if not st.session_state.asistencia.empty:
+        df_hoy_user = st.session_state.asistencia[
+            (st.session_state.asistencia["fecha"].astype(str) == hoy_str) & 
+            (st.session_state.asistencia["dni"].astype(str) == str(dni))
+        ]
+        if not df_hoy_user.empty:
+            ultima_marca = df_hoy_user.iloc[0]["tipo"]
+            if ultima_marca == tipo:
+                st.warning(f"⚠️ Ya registraste un **{tipo}** previamente en esta jornada.")
+                return False
+
     ahora_peru = obtener_ahora_peru()
     fecha_h = ahora_peru.strftime("%Y-%m-%d %H:%M:%S")
     fecha_s = ahora_peru.strftime("%Y-%m-%d")
@@ -303,10 +322,12 @@ def registrar_marca(dni, nombre, tipo):
         "nombre": nombre,
         "tipo": tipo,
         "fecha_hora": fecha_h,
-        "fecha": fecha_s
+        "fecha": fecha_s,
+        "observacion": observacion
     }
     st.session_state.asistencia = pd.concat([pd.DataFrame([nueva_marca]), st.session_state.asistencia], ignore_index=True)
-    guardar_asistencia_gsheets(dni, nombre, tipo, fecha_h, fecha_s)
+    guardar_asistencia_gsheets(dni, nombre, tipo, fecha_h, fecha_s, observacion)
+    return True
 
 # Helper para obtener solo colaboradores (excluyendo Administradores)
 def obtener_solo_colaboradores():
@@ -363,21 +384,28 @@ if choice == "Marcar Asistencia":
         with st.container(border=True):
             st.markdown("<h4 style='margin:0; font-size:1rem; color:#111827;'>Registro de Turno</h4>", unsafe_allow_html=True)
             st.caption("Selecciona el tipo de marcación que deseas realizar:")
+            
+            # MEJORA 3: Opcion de sustento/nota voluntaria
+            obs_marca = st.text_input("Observación / Justificación (Opcional)", placeholder="Ej. Retraso por tráfico, permiso, etc.")
             st.markdown("<br>", unsafe_allow_html=True)
 
             c1, c2 = st.columns(2)
             with c1:
                 st.markdown('<div class="btn-ingreso">', unsafe_allow_html=True)
                 if st.button("Marcar Ingreso", width="stretch"):
-                    registrar_marca(dni_actual, user_actual, "INGRESO")
-                    st.toast("Ingreso registrado correctamente")
+                    if registrar_marca(dni_actual, user_actual, "INGRESO", obs_marca):
+                        st.toast("Ingreso registrado correctamente")
+                        time.sleep(0.3)
+                        st.rerun()
                 st.markdown('</div>', unsafe_allow_html=True)
 
             with c2:
                 st.markdown('<div class="btn-salida">', unsafe_allow_html=True)
                 if st.button("Marcar Salida", width="stretch"):
-                    registrar_marca(dni_actual, user_actual, "SALIDA")
-                    st.toast("Salida registrada correctamente")
+                    if registrar_marca(dni_actual, user_actual, "SALIDA", obs_marca):
+                        st.toast("Salida registrada correctamente")
+                        time.sleep(0.3)
+                        st.rerun()
                 st.markdown('</div>', unsafe_allow_html=True)
 
     with col_preview:
@@ -392,10 +420,14 @@ if choice == "Marcar Asistencia":
 
             if not df_mismarcas.empty:
                 st.dataframe(
-                    df_mismarcas[["tipo", "fecha_hora"]],
+                    df_mismarcas[["tipo", "fecha_hora", "observacion"]],
                     width="stretch",
                     hide_index=True,
-                    column_config={"tipo": "TIPO", "fecha_hora": "FECHA / HORA"}
+                    column_config={
+                        "tipo": "TIPO", 
+                        "fecha_hora": "FECHA / HORA",
+                        "observacion": "OBSERVACIÓN"
+                    }
                 )
             else:
                 st.info("No hay marcaciones registradas la jornada de hoy.")
@@ -496,7 +528,6 @@ elif choice == "Dashboard General":
         </div>
     """, unsafe_allow_html=True)
 
-    # BARRA DE FILTROS PARA EL PANEL GENERAL
     st.markdown("##### 🔍 Filtros de Consulta")
     col_f1, col_f2 = st.columns([1.5, 1])
     
@@ -510,7 +541,6 @@ elif choice == "Dashboard General":
     trabajando = []
     salieron = []
 
-    # Aplicación de filtros
     df_asist_dash = st.session_state.asistencia.copy()
     if not df_asist_dash.empty:
         df_asist_dash = df_asist_dash[df_asist_dash["fecha"].astype(str) == f_dash_str]
@@ -604,16 +634,21 @@ elif choice == "Gestión Colaboradores":
             hide_index=True
         )
 
-        # SECCIÓN ADMINISTRATIVA: ELIMINAR COLABORADOR
+        # MEJORA 4: Confirmación previa para eliminar
         if rol_actual == "admin" and not st.session_state.empleados.empty:
             with st.expander("Eliminar Colaborador"):
                 lista_colabs = st.session_state.empleados["nombre"].tolist()
                 colab_a_eliminar = st.selectbox("Seleccionar colaborador a eliminar", lista_colabs)
+                confirm_del_colab = st.checkbox(f"Confirmar eliminación de {colab_a_eliminar}")
+                
                 if st.button("Eliminar Colaborador", type="primary"):
-                    st.session_state.empleados = st.session_state.empleados[st.session_state.empleados["nombre"] != colab_a_eliminar].reset_index(drop=True)
-                    actualizar_hoja_completa("Colaboradores", st.session_state.empleados)
-                    st.toast(f"Colaborador {colab_a_eliminar} eliminado correctamente")
-                    st.rerun()
+                    if confirm_del_colab:
+                        st.session_state.empleados = st.session_state.empleados[st.session_state.empleados["nombre"] != colab_a_eliminar].reset_index(drop=True)
+                        actualizar_hoja_completa("Colaboradores", st.session_state.empleados)
+                        st.toast(f"Colaborador {colab_a_eliminar} eliminado correctamente")
+                        st.rerun()
+                    else:
+                        st.warning("Marca la casilla de confirmación antes de eliminar.")
 
 elif choice == "Historial de Descuadres":
     st.markdown("""
@@ -624,7 +659,6 @@ elif choice == "Historial de Descuadres":
     """, unsafe_allow_html=True)
 
     if not st.session_state.descuadres.empty:
-        # BARRA DE FILTROS COMBINADOS (FECHA Y COLABORADOR)
         st.markdown("##### 🔍 Filtros de Búsqueda")
         f_col1, f_col2 = st.columns([1.5, 1])
         
@@ -636,7 +670,6 @@ elif choice == "Historial de Descuadres":
 
         df_desc_filtrado = st.session_state.descuadres.copy()
         
-        # Filtrado por fecha
         if isinstance(rango_fechas_desc, tuple):
             if len(rango_fechas_desc) == 2:
                 f_inicio, f_fin = str(rango_fechas_desc[0]), str(rango_fechas_desc[1])
@@ -648,20 +681,33 @@ elif choice == "Historial de Descuadres":
                 f_inicio = str(rango_fechas_desc[0])
                 df_desc_filtrado = df_desc_filtrado[df_desc_filtrado["fecha"].astype(str) == f_inicio]
 
-        # Filtrado por colaborador
         if colab_desc_sel != "Todos":
             df_desc_filtrado = df_desc_filtrado[df_desc_filtrado["nombre"] == colab_desc_sel]
 
+        # MEJORA 2: Métricas resumen ejecutivas para descuadres
+        if not df_desc_filtrado.empty:
+            df_desc_filtrado["monto_num"] = pd.to_numeric(df_desc_filtrado["monto"], errors="coerce").fillna(0)
+            sobrantes = df_desc_filtrado[df_desc_filtrado["monto_num"] > 0]["monto_num"].sum()
+            faltantes = df_desc_filtrado[df_desc_filtrado["monto_num"] < 0]["monto_num"].sum()
+            balance = df_desc_filtrado["monto_num"].sum()
+
+            m1, m2, m3 = st.columns(3)
+            with m1:
+                st.markdown(f'<div class="info-card"><div class="info-label">Total Sobrantes (+)</div><div class="info-value" style="color:#00A959;">S/. {sobrantes:.2f}</div></div>', unsafe_allow_html=True)
+            with m2:
+                st.markdown(f'<div class="info-card"><div class="info-label">Total Faltantes (-)</div><div class="info-value" style="color:#EC3237;">S/. {abs(faltantes):.2f}</div></div>', unsafe_allow_html=True)
+            with m3:
+                st.markdown(f'<div class="info-card"><div class="info-label">Balance Neto</div><div class="info-value" style="color:{"#00A959" if balance >= 0 else "#EC3237"};">S/. {balance:.2f}</div></div>', unsafe_allow_html=True)
+
         st.markdown("<br>", unsafe_allow_html=True)
         st.dataframe(
-            df_desc_filtrado,
+            df_desc_filtrado.drop(columns=["monto_num"], errors="ignore"),
             width="stretch",
             hide_index=True,
             column_config={"monto": st.column_config.NumberColumn("MONTO", format="S/. %.2f")}
         )
-        st.download_button("Exportar a Excel", to_excel(df_desc_filtrado), "Descuadres_General.xlsx")
+        st.download_button("Exportar a Excel", to_excel(df_desc_filtrado.drop(columns=["monto_num"], errors="ignore")), "Descuadres_General.xlsx")
 
-        # SECCIÓN ADMINISTRATIVA: GESTIONAR DESCUADRES (MODIFICAR Y ELIMINAR)
         if rol_actual == "admin":
             st.markdown("<br>", unsafe_allow_html=True)
             col_mod, col_del = st.columns(2)
@@ -689,17 +735,22 @@ elif choice == "Historial de Descuadres":
                             st.toast("Descuadre actualizado correctamente")
                             st.rerun()
 
+            # MEJORA 4: Confirmación previa al eliminar descuadre
             with col_del:
                 with st.expander("Eliminar Descuadre"):
                     opciones_desc_del = [f"{i} | {r['fecha']} | {r['nombre']} | S/. {r['monto']}" for i, r in st.session_state.descuadres.iterrows()]
                     sel_del = st.selectbox("Seleccionar Registro a Eliminar", opciones_desc_del, key="del_desc_sel")
-                    
+                    confirm_del_desc = st.checkbox("Confirmar eliminación del descuadre")
+
                     if st.button("Eliminar Descuadre", type="primary"):
-                        idx_del = int(sel_del.split(" | ")[0])
-                        st.session_state.descuadres = st.session_state.descuadres.drop(idx_del).reset_index(drop=True)
-                        actualizar_hoja_completa("Descuadres", st.session_state.descuadres)
-                        st.toast("Descuadre eliminado correctamente")
-                        st.rerun()
+                        if confirm_del_desc:
+                            idx_del = int(sel_del.split(" | ")[0])
+                            st.session_state.descuadres = st.session_state.descuadres.drop(idx_del).reset_index(drop=True)
+                            actualizar_hoja_completa("Descuadres", st.session_state.descuadres)
+                            st.toast("Descuadre eliminado correctamente")
+                            st.rerun()
+                        else:
+                            st.warning("Marca la casilla de confirmación antes de eliminar.")
     else:
         st.info("Sin descuadres registrados.")
 
@@ -712,7 +763,6 @@ elif choice == "Historial de Asistencias":
     """, unsafe_allow_html=True)
 
     if not st.session_state.asistencia.empty:
-        # BARRA DE FILTROS COMBINADOS (FECHA Y COLABORADOR)
         st.markdown("##### 🔍 Filtros de Búsqueda")
         fa_col1, fa_col2 = st.columns([1.5, 1])
         
@@ -724,7 +774,6 @@ elif choice == "Historial de Asistencias":
 
         df_asist_filtrado = st.session_state.asistencia.copy()
         
-        # Filtrado por fecha
         if isinstance(rango_fechas_asist, tuple):
             if len(rango_fechas_asist) == 2:
                 f_inicio, f_fin = str(rango_fechas_asist[0]), str(rango_fechas_asist[1])
@@ -736,29 +785,46 @@ elif choice == "Historial de Asistencias":
                 f_inicio = str(rango_fechas_asist[0])
                 df_asist_filtrado = df_asist_filtrado[df_asist_filtrado["fecha"].astype(str) == f_inicio]
 
-        # Filtrado por colaborador
         if colab_asist_sel != "Todos":
             df_asist_filtrado = df_asist_filtrado[df_asist_filtrado["nombre"] == colab_asist_sel]
+
+        # MEJORA 2: Métricas resumen ejecutivas para asistencias
+        if not df_asist_filtrado.empty:
+            total_marcas = len(df_asist_filtrado)
+            ingresos_cnt = len(df_asist_filtrado[df_asist_filtrado["tipo"] == "INGRESO"])
+            colabs_unicos = df_asist_filtrado["nombre"].nunique()
+
+            a1, a2, a3 = st.columns(3)
+            with a1:
+                st.markdown(f'<div class="info-card"><div class="info-label">Total Marcaciones</div><div class="info-value">{total_marcas}</div></div>', unsafe_allow_html=True)
+            with a2:
+                st.markdown(f'<div class="info-card"><div class="info-label">Jornadas Iniciadas</div><div class="info-value" style="color:#00A959;">{ingresos_cnt}</div></div>', unsafe_allow_html=True)
+            with a3:
+                st.markdown(f'<div class="info-card"><div class="info-label">Colaboradores Evaluados</div><div class="info-value">{colabs_unicos}</div></div>', unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
         st.dataframe(df_asist_filtrado, width="stretch", hide_index=True)
         st.download_button("Exportar a Excel", to_excel(df_asist_filtrado), "Asistencias_General.xlsx")
 
-        # SECCIÓN ADMINISTRATIVA: ELIMINAR ASISTENCIA
+        # MEJORA 4: Confirmación previa al eliminar asistencia
         if rol_actual == "admin":
             st.markdown("<br>", unsafe_allow_html=True)
             with st.expander("Eliminar Registro de Asistencia"):
                 opciones_asist = [f"{i} | {r['fecha_hora']} | {r['nombre']} | {r['tipo']}" for i, r in st.session_state.asistencia.iterrows()]
                 sel_asist_del = st.selectbox("Seleccionar Marcación a Eliminar", opciones_asist)
-                
+                confirm_del_asist = st.checkbox("Confirmar eliminación del registro de asistencia")
+
                 if st.button("Eliminar Registro", type="primary"):
-                    idx_asist = int(sel_asist_del.split(" | ")[0])
-                    st.session_state.asistencia = st.session_state.asistencia.drop(idx_asist).reset_index(drop=True)
-                    actualizar_hoja_completa("Asistencia", st.session_state.asistencia)
-                    st.toast("Marcación eliminada correctamente")
-                    st.rerun()
+                    if confirm_del_asist:
+                        idx_asist = int(sel_asist_del.split(" | ")[0])
+                        st.session_state.asistencia = st.session_state.asistencia.drop(idx_asist).reset_index(drop=True)
+                        actualizar_hoja_completa("Asistencia", st.session_state.asistencia)
+                        st.toast("Marcación eliminada correctamente")
+                        st.rerun()
+                    else:
+                        st.warning("Marca la casilla de confirmación antes de eliminar.")
     else:
         st.info("Sin asistencias registradas.")
 
 st.markdown("<br><br>", unsafe_allow_html=True)
-st.markdown('<div style="text-align:center; color:#9CA3AF; font-size:11px;">Tiendas Premium System v3.0</div>', unsafe_allow_html=True)
+st.markdown('<div style="text-align:center; color:#9CA3AF; font-size:11px;">Tiendas Premium System v3.1</div>', unsafe_allow_html=True)
