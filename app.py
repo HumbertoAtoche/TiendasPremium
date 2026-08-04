@@ -9,27 +9,18 @@ import gspread
 @st.cache_resource
 def conectar_google_sheets():
     try:
-        # Modo Nube (Secrets de Streamlit)
         if "gcp_service_account" in st.secrets:
-            # Creamos un diccionario copiable
             creds_dict = dict(st.secrets["gcp_service_account"])
-            
-            # Limpiamos los saltos de línea de la llave privada
             if "private_key" in creds_dict:
                 pk = creds_dict["private_key"]
                 pk = pk.replace("\\n", "\n")
                 creds_dict["private_key"] = pk
-            
-            # Autenticación directa de gspread
             client = gspread.service_account_from_dict(creds_dict)
-            
-        # Modo Local
         else:
             client = gspread.service_account(filename="credentials.json")
 
         sheet = client.open("BD_PremiumMarket")
         return sheet
-
     except Exception as e:
         st.sidebar.error(f"⚠️ Error de Conexión: {e}")
         return None
@@ -47,7 +38,6 @@ def obtener_colaboradores_gsheets():
         except Exception as e:
             st.error(f"Error al leer Colaboradores: {e}")
             
-    # Base de respaldo si la hoja está vacía o falla la lectura
     return pd.DataFrame([
         {"dni": "72819034", "nombre": "Fran", "cargo": "Cajero", "estado": "Activo", "clave": "12345", "rol": "operativo"},
         {"dni": "45129803", "nombre": "Luz Soplin", "cargo": "Supervisora", "estado": "Activo", "clave": "12345", "rol": "operativo"},
@@ -84,134 +74,137 @@ def guardar_descuadre_gsheets(fecha, dni, nombre, tipo, monto, observacion, fech
     else:
         st.warning("⚠️ No hay conexión activa con Google Sheets")
 
-# --- ESTILOS CORPORATIVOS TIENDAS PREMIUM ---
+# --- CSS MINIMALISTA Y EJECUTIVO ---
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap');
 
     html, body, [class*="css"], .stMarkdown, div, button, input, select, textarea {
         font-family: 'Montserrat', sans-serif !important;
     }
 
-    .main {
-        background-color: #f8fafc;
+    /* Fondo limpio neutro */
+    .stApp {
+        background-color: #FAFAFA;
     }
 
-    /* Botones primarios y generales */
-    .stButton>button {
-        background-color: #ec3237 !important;
-        color: white !important;
-        border-radius: 8px !important;
-        border: none !important;
-        font-weight: 700 !important;
-        height: 3.2em !important;
-        transition: all 0.25s ease-in-out !important;
-        box-shadow: 0 4px 10px rgba(236, 50, 55, 0.2) !important;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
+    /* Ocultar barra superior por defecto de Streamlit */
+    header { visibility: hidden; }
+
+    /* Header sobrio con borde sutil */
+    .market-header {
+        background-color: #FFFFFF;
+        padding: 20px 24px;
+        border-radius: 8px;
+        border: 1px solid #E5E7EB;
+        border-left: 4px solid #EC3237;
+        margin-bottom: 24px;
     }
-    .stButton>button:hover {
-        background-color: #d02429 !important;
-        transform: translateY(-2px);
-        box-shadow: 0 6px 14px rgba(236, 50, 55, 0.3) !important;
+    .market-header h1 {
+        color: #111827 !important;
+        margin: 0;
+        font-size: 1.3rem !important;
+        font-weight: 600 !important;
+        letter-spacing: -0.3px;
+    }
+    .market-header p {
+        color: #6B7280;
+        margin: 4px 0 0 0;
+        font-size: 0.85rem;
+        font-weight: 400;
     }
 
-    /* Botones semánticos especiales */
-    .btn-ingreso > button {
-        background-color: #00a959 !important;
-        box-shadow: 0 4px 10px rgba(0, 169, 89, 0.2) !important;
-    }
-    .btn-ingreso > button:hover {
-        background-color: #008847 !important;
-        box-shadow: 0 6px 14px rgba(0, 169, 89, 0.3) !important;
-    }
-
-    .btn-salida > button {
-        background-color: #ec3237 !important;
-        box-shadow: 0 4px 10px rgba(236, 50, 55, 0.2) !important;
-    }
-    .btn-salida > button:hover {
-        background-color: #d02429 !important;
-    }
-
-    /* Encabezados y Textos */
-    h1, h2, h3, h4 {
-        color: #1e293b !important;
-        font-family: 'Montserrat', sans-serif !important;
-        font-weight: 700 !important;
-    }
-
-    /* Tarjetas Métricas */
+    /* Tarjetas de métricas sobrias */
     .info-card {
-        background-color: #ffffff;
-        padding: 22px;
-        border-radius: 12px;
-        border-left: 6px solid #ec3237;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+        background-color: #FFFFFF;
+        padding: 18px 20px;
+        border-radius: 8px;
+        border: 1px solid #E5E7EB;
         margin-bottom: 15px;
     }
-    .info-card-brand { border-left-color: #ec3237; }
-    .info-card-green { border-left-color: #00a959; }
-    .info-card-dark  { border-left-color: #1e293b; }
-
     .info-label {
-        color: #64748b;
-        font-size: 0.75rem;
-        font-weight: 700;
+        color: #6B7280;
+        font-size: 0.7rem;
+        font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.8px;
     }
     .info-value {
-        color: #0f172a;
-        font-size: 1.75rem;
-        font-weight: 800;
-        margin-top: 6px;
+        color: #111827;
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-top: 4px;
     }
 
-    /* Barra lateral */
+    /* Botones principales limpios */
+    .stButton>button {
+        background-color: #111827 !important;
+        color: #FFFFFF !important;
+        border-radius: 6px !important;
+        border: none !important;
+        font-weight: 500 !important;
+        font-size: 0.82rem !important;
+        height: 2.8em !important;
+        transition: all 0.2s ease !important;
+        letter-spacing: 0.3px;
+    }
+    .stButton>button:hover {
+        background-color: #374151 !important;
+    }
+
+    /* Acciones específicas con colores corporativos sobrios */
+    .btn-ingreso > button {
+        background-color: #00A959 !important;
+    }
+    .btn-ingreso > button:hover {
+        background-color: #008847 !important;
+    }
+
+    .btn-salida > button {
+        background-color: #EC3237 !important;
+    }
+    .btn-salida > button:hover {
+        background-color: #D02429 !important;
+    }
+
+    /* Sidebar claro o ultra limpio */
     [data-testid="stSidebar"] {
-        background-color: #1e293b !important;
+        background-color: #111827 !important;
+        border-right: 1px solid #1F2937;
     }
     [data-testid="stSidebar"] * {
-        color: #f8fafc !important;
+        color: #E5E7EB !important;
     }
-    [data-testid="stSidebar"] .stRadio label {
-        font-weight: 500;
-        padding: 6px 0;
+    
+    /* Botón de cerrar sesión secundario en Sidebar */
+    .btn-logout > button {
+        background-color: transparent !important;
+        border: 1px solid #374151 !important;
+        color: #9CA3AF !important;
     }
-
-    /* Banner de Cabecera Principal */
-    .market-header {
-        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-        padding: 28px 24px;
-        border-radius: 14px;
-        color: white;
-        margin-bottom: 25px;
-        border-bottom: 4px solid #ec3237;
-        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
-    }
-    .market-header h1 {
-        color: #ffffff !important;
-        margin: 0;
-        font-size: 1.8rem;
-    }
-    .market-header p {
-        color: #cbd5e1;
-        margin: 6px 0 0 0;
-        font-size: 0.95rem;
+    .btn-logout > button:hover {
+        background-color: #1F2937 !important;
+        color: #FFFFFF !important;
     }
 
-    /* Formularios y Cajas */
-    div[data-testid="stForm"] {
-        border-radius: 12px;
-        border: 1px solid #e2e8f0;
-        background-color: #ffffff;
-        padding: 24px;
+    /* Cajas contenedoras */
+    div[data-testid="stForm"], div[data-testid="stExpander"] {
+        border-radius: 8px !important;
+        border: 1px solid #E5E7EB !important;
+        background-color: #FFFFFF !important;
+        padding: 20px !important;
+        box-shadow: none !important;
+    }
+
+    /* Tablas elegantes */
+    .stDataFrame {
+        border: 1px solid #E5E7EB;
+        border-radius: 6px;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# --- INICIALIZACIÓN DE SESSION STATE Y NUBE ---
+# --- INITIALIZATION ---
 if "usuario_login" not in st.session_state:
     st.session_state.usuario_login = None
 
@@ -238,7 +231,6 @@ if "descuadres" not in st.session_state:
     else:
         st.session_state.descuadres = pd.DataFrame(columns=["fecha", "dni", "nombre", "tipo", "monto", "observacion", "fecha_registro"])
 
-# Diccionario dinámico de usuarios cargado desde Google Sheets
 USUARIOS = {}
 for _, row in st.session_state.empleados.iterrows():
     if str(row.get("estado", "")).lower() == "activo":
@@ -248,36 +240,37 @@ for _, row in st.session_state.empleados.iterrows():
             "dni": str(row["dni"])
         }
 
-# --- PANTALLA DE ACCESO (LOGIN) ---
+# --- LOGIN MINIMALISTA ---
 if not st.session_state.usuario_login:
     st.markdown("<br><br>", unsafe_allow_html=True)
-    c_log1, c_log2, c_log3 = st.columns([1, 1.2, 1])
+    c_log1, c_log2, c_log3 = st.columns([1, 1, 1])
     with c_log2:
         with st.container(border=True):
-            st.markdown("<h2 style='text-align: center; color: #ec3237 !important;'>🛒 TIENDAS PREMIUM</h2>", unsafe_allow_html=True)
-            st.markdown("<p style='text-align: center; color: #64748B; font-size:0.9rem;'>Acceso al Portal Corporativo</p>", unsafe_allow_html=True)
-            st.markdown("<hr style='margin:10px 0 20px 0; border-color:#f1f5f9;'>", unsafe_allow_html=True)
+            st.markdown("""
+                <div style='text-align: center; padding-bottom: 12px;'>
+                    <span style='font-size: 0.75rem; font-weight: 700; letter-spacing: 1.5px; color: #EC3237;'>TIENDAS PREMIUM</span>
+                    <h3 style='margin: 4px 0 0 0; font-weight: 600; color: #111827; font-size: 1.1rem;'>Iniciar Sesión</h3>
+                </div>
+            """, unsafe_allow_html=True)
             
-            usuario_sel = st.selectbox("Seleccionar Usuario:", list(USUARIOS.keys()))
-            clave_input = st.text_input("Contraseña:", type="password")
+            usuario_sel = st.selectbox("Usuario", list(USUARIOS.keys()))
+            clave_input = st.text_input("Contraseña", type="password")
             st.markdown("<br>", unsafe_allow_html=True)
             
-            if st.button("INGRESAR AL SISTEMA", width="stretch"):
+            if st.button("Ingresar al Sistema", width="stretch"):
                 if clave_input == USUARIOS[usuario_sel]["clave"]:
                     st.session_state.usuario_login = usuario_sel
-                    st.success(f"¡Bienvenido/a {usuario_sel}!")
-                    time.sleep(0.4)
+                    st.success("Acceso concedido")
+                    time.sleep(0.3)
                     st.rerun()
                 else:
-                    st.error("Contraseña incorrecta")
+                    st.error("Credenciales incorrectas")
     st.stop()
 
-# --- DATOS DEL USUARIO ACTUAL ---
 user_actual = st.session_state.usuario_login
 rol_actual = USUARIOS[user_actual]["rol"]
 dni_actual = USUARIOS[user_actual]["dni"]
 
-# --- FUNCIONES DE APOYO ---
 def to_excel(df):
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
@@ -299,66 +292,72 @@ def registrar_marca(dni, nombre, tipo):
     st.session_state.asistencia = pd.concat([pd.DataFrame([nueva_marca]), st.session_state.asistencia], ignore_index=True)
     guardar_asistencia_gsheets(dni, nombre, tipo, fecha_h, fecha_s)
 
-# --- SIDEBAR NAVEGACIÓN ---
-st.sidebar.markdown('<div style="font-size: 55px; text-align: center; margin-top: -10px;">🛒</div>', unsafe_allow_html=True)
-st.sidebar.markdown("<h2 style='text-align: center; color: #ffffff !important; font-size:1.3rem; letter-spacing:1px;'>TIENDAS PREMIUM</h2>", unsafe_allow_html=True)
-st.sidebar.markdown(f"<p style='text-align: center; font-size:12px; color:#cbd5e1;'>👤 <b>{user_actual}</b><br><span style='color:#00a959; font-weight:bold;'>({rol_actual.upper()})</span></p>", unsafe_allow_html=True)
+# --- SIDEBAR ELEGANTE ---
+st.sidebar.markdown("""
+    <div style='padding: 8px 0 16px 0;'>
+        <div style='font-size: 0.85rem; font-weight: 700; letter-spacing: 1px; color: #FFFFFF;'>
+            TIENDAS <span style='color: #EC3237;'>PREMIUM</span>
+        </div>
+        <div style='font-size: 0.7rem; color: #6B7280; margin-top:2px;'>Sistema de Control Interno</div>
+    </div>
+""", unsafe_allow_html=True)
 
-if doc_sheets:
-    st.sidebar.caption("🟢 Conectado a Google Sheets")
-else:
-    st.sidebar.caption("🔴 Modo Offline (Verifica Secrets / credentials.json)")
-
-st.sidebar.markdown("<br>", unsafe_allow_html=True)
-
-if st.sidebar.button("🚪 Cerrar Sesión", width="stretch"):
-    st.session_state.usuario_login = None
-    st.rerun()
-
-st.sidebar.markdown("---")
+st.sidebar.markdown(f"""
+    <div style='background-color: #1F2937; padding: 10px 12px; border-radius: 6px; margin-bottom: 16px;'>
+        <div style='font-size: 0.8rem; font-weight: 600; color: #F9FAFB;'>{user_actual}</div>
+        <div style='font-size: 0.68rem; color: #9CA3AF; text-transform: uppercase;'>{rol_actual} • DNI {dni_actual}</div>
+    </div>
+""", unsafe_allow_html=True)
 
 if rol_actual == "admin":
-    menu = ["📊 Dashboard General", "👥 Gestión Colaboradores", "💰 Historial de Descuadres", "⏱️ Historial de Asistencias"]
+    menu = ["Dashboard General", "Gestión Colaboradores", "Historial de Descuadres", "Historial de Asistencias"]
 else:
-    menu = ["⏱️ Marcar Asistencia", "💰 Registrar Descuadre", "📊 Mi Dashboard Mensual"]
+    menu = ["Marcar Asistencia", "Registrar Descuadre", "Mi Dashboard Mensual"]
 
-choice = st.sidebar.radio("Módulos:", menu)
+choice = st.sidebar.radio("Navegación", menu)
 
-# -------------------- MÓDULOS OPERATIVOS (CAJEROS / SUPERVISORES) --------------------
+st.sidebar.markdown("<br><br>", unsafe_allow_html=True)
+st.sidebar.markdown('<div class="btn-logout">', unsafe_allow_html=True)
+if st.sidebar.button("Cerrar Sesión", width="stretch"):
+    st.session_state.usuario_login = None
+    st.rerun()
+st.sidebar.markdown('</div>', unsafe_allow_html=True)
 
-if choice == "⏱️ Marcar Asistencia":
+# -------------------- MÓDULOS OPERATIVOS --------------------
+
+if choice == "Marcar Asistencia":
     st.markdown(f"""
         <div class="market-header">
             <h1>Terminal de Asistencia</h1>
-            <p>Colaborador: <b>{user_actual}</b> — Registra la entrada o salida de tu turno laboral.</p>
+            <p>Colaborador activo: <b>{user_actual}</b></p>
         </div>
     """, unsafe_allow_html=True)
 
-    col_main, col_preview = st.columns([1.2, 1])
+    col_main, col_preview = st.columns([1.1, 1])
 
     with col_main:
         with st.container(border=True):
-            st.subheader(f"Registro Rápido: {user_actual}")
-            st.caption(f"DNI Asociado: {dni_actual}")
+            st.markdown("<h4 style='margin:0; font-size:1rem; color:#111827;'>Registro de Turno</h4>", unsafe_allow_html=True)
+            st.caption("Selecciona el tipo de marcación que deseas realizar:")
             st.markdown("<br>", unsafe_allow_html=True)
 
             c1, c2 = st.columns(2)
             with c1:
                 st.markdown('<div class="btn-ingreso">', unsafe_allow_html=True)
-                if st.button("⏰ MARCAR INGRESO", width="stretch"):
+                if st.button("Marcar Ingreso", width="stretch"):
                     registrar_marca(dni_actual, user_actual, "INGRESO")
-                    st.toast(f"Ingreso registrado: {user_actual}", icon="✅")
+                    st.toast("Ingreso registrado correctamente")
                 st.markdown('</div>', unsafe_allow_html=True)
 
             with c2:
                 st.markdown('<div class="btn-salida">', unsafe_allow_html=True)
-                if st.button("🚪 MARCAR SALIDA", width="stretch"):
+                if st.button("Marcar Salida", width="stretch"):
                     registrar_marca(dni_actual, user_actual, "SALIDA")
-                    st.toast(f"Salida registrada: {user_actual}", icon="🚪")
+                    st.toast("Salida registrada correctamente")
                 st.markdown('</div>', unsafe_allow_html=True)
 
     with col_preview:
-        st.subheader("Tus Marcas de Hoy")
+        st.markdown("<h4 style='margin:0; font-size:1rem; color:#111827; margin-bottom:12px;'>Marcaciones de Hoy</h4>", unsafe_allow_html=True)
         hoy_str = datetime.now().strftime("%Y-%m-%d")
         
         if not st.session_state.asistencia.empty:
@@ -372,32 +371,32 @@ if choice == "⏱️ Marcar Asistencia":
                     df_mismarcas[["tipo", "fecha_hora"]],
                     width="stretch",
                     hide_index=True,
-                    column_config={"tipo": "MARCA", "fecha_hora": "HORA Y FECHA"}
+                    column_config={"tipo": "TIPO", "fecha_hora": "FECHA / HORA"}
                 )
             else:
-                st.info("Aún no tienes marcas registradas hoy.")
+                st.info("No hay marcaciones registradas la jornada de hoy.")
         else:
-            st.info("Aún no tienes marcas registradas hoy.")
+            st.info("No hay marcaciones registradas la jornada de hoy.")
 
-elif choice == "💰 Registrar Descuadre":
+elif choice == "Registrar Descuadre":
     st.markdown(f"""
         <div class="market-header">
             <h1>Registro de Descuadre de Caja</h1>
-            <p>Responsable de Turno: <b>{user_actual}</b></p>
+            <p>Responsable del reporte: <b>{user_actual}</b></p>
         </div>
     """, unsafe_allow_html=True)
 
     with st.form("form_descuadre_user", clear_on_submit=True):
-        st.subheader("Reportar Novedad de Caja")
+        st.markdown("<h4 style='margin:0; font-size:1rem; color:#111827; margin-bottom:16px;'>Detalle del Movimiento</h4>", unsafe_allow_html=True)
         
         c1, c2 = st.columns(2)
         f_operacion = c1.date_input("Fecha Operativa", datetime.now())
-        tipo_desc = c2.selectbox("Tipo de Descuadre", ["Sobrante (+)", "Faltante (-)"])
+        tipo_desc = c2.selectbox("Tipo de Diferencia", ["Sobrante (+)", "Faltante (-)"])
 
-        monto = st.number_input("Monto en Soles (S/.)", min_value=0.01, step=0.50, format="%.2f")
-        obs = st.text_area("Sustento o Motivo de la diferencia")
+        monto = st.number_input("Monto (S/.)", min_value=0.01, step=0.50, format="%.2f")
+        obs = st.text_area("Sustento o motivo")
 
-        if st.form_submit_button("REGISTRAR DESCUADRE"):
+        if st.form_submit_button("Guardar Registro"):
             monto_final = monto if "+" in tipo_desc else -monto
             tipo_final = "Sobrante" if "+" in tipo_desc else "Faltante"
             f_reg = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -413,13 +412,13 @@ elif choice == "💰 Registrar Descuadre":
             }
             st.session_state.descuadres = pd.concat([pd.DataFrame([nuevo_row]), st.session_state.descuadres], ignore_index=True)
             guardar_descuadre_gsheets(str(f_operacion), dni_actual, user_actual, tipo_final, monto_final, obs, f_reg)
-            st.toast("Descuadre procesado correctamente", icon="💰")
+            st.toast("Descuadre registrado en la nube")
 
-elif choice == "📊 Mi Dashboard Mensual":
+elif choice == "Mi Dashboard Mensual":
     st.markdown(f"""
         <div class="market-header">
-            <h1>Tu Rendimiento del Mes</h1>
-            <p>Resumen personal para <b>{user_actual}</b></p>
+            <h1>Rendimiento Mensual</h1>
+            <p>Resumen consolidado para <b>{user_actual}</b></p>
         </div>
     """, unsafe_allow_html=True)
 
@@ -438,22 +437,21 @@ elif choice == "📊 Mi Dashboard Mensual":
     k1, k2 = st.columns(2)
     with k1:
         st.markdown(f'''
-            <div class="info-card info-card-dark">
-                <div class="info-label">Días Registrados este Mes</div>
-                <div class="info-value">{dias_trabajados} Días</div>
+            <div class="info-card">
+                <div class="info-label">Días Trabajados</div>
+                <div class="info-value">{dias_trabajados}</div>
             </div>
         ''', unsafe_allow_html=True)
 
     with k2:
-        color_card = "info-card-brand" if monto_total < 0 else "info-card-green"
         st.markdown(f'''
-            <div class="info-card {color_card}">
-                <div class="info-label">Balance Total Descuadres</div>
+            <div class="info-card">
+                <div class="info-label">Balance Acumulado Descuadres</div>
                 <div class="info-value">S/. {monto_total:.2f}</div>
             </div>
         ''', unsafe_allow_html=True)
 
-    st.subheader("Historial de mis descuadres")
+    st.markdown("<h4 style='font-size:1rem; color:#111827; margin-top:10px;'>Historial Personal</h4>", unsafe_allow_html=True)
     if not df_mis_desc.empty:
         st.dataframe(
             df_mis_desc[["fecha", "tipo", "monto", "observacion"]],
@@ -462,15 +460,15 @@ elif choice == "📊 Mi Dashboard Mensual":
             column_config={"monto": st.column_config.NumberColumn("MONTO", format="S/. %.2f")}
         )
     else:
-        st.success("¡Excelente! No registras descuadres acumulados.")
+        st.info("Sin registros de descuadres en el período.")
 
-# -------------------- MÓDULOS DE ADMINISTRADOR --------------------
+# -------------------- MÓDULOS ADMIN --------------------
 
-elif choice == "📊 Dashboard General":
+elif choice == "Dashboard General":
     st.markdown("""
         <div class="market-header">
             <h1>Panel de Control General</h1>
-            <p>Consolidado operativo en tiempo real — Tiendas Premium</p>
+            <p>Vista ejecutiva de la operación en tiempo real</p>
         </div>
     """, unsafe_allow_html=True)
 
@@ -495,35 +493,34 @@ elif choice == "📊 Dashboard General":
 
     k1, k2, k3 = st.columns(3)
     with k1:
-        st.markdown(f'<div class="info-card info-card-green"><div class="info-label">En Turno Ahora</div><div class="info-value">{len(trabajando)}</div></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="info-card"><div class="info-label">En Turno Ahora</div><div class="info-value">{len(trabajando)}</div></div>', unsafe_allow_html=True)
     with k2:
-        st.markdown(f'<div class="info-card info-card-dark"><div class="info-label">Turno Finalizado</div><div class="info-value">{len(salieron)}</div></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="info-card"><div class="info-label">Turno Concluido</div><div class="info-value">{len(salieron)}</div></div>', unsafe_allow_html=True)
     with k3:
-        color_k3 = "info-card-brand" if total_descuadre_monto < 0 else "info-card-green"
-        st.markdown(f'<div class="info-card {color_k3}"><div class="info-label">Balance Descuadres Hoy</div><div class="info-value">S/. {total_descuadre_monto:.2f}</div></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="info-card"><div class="info-label">Balance Descuadres Hoy</div><div class="info-value">S/. {total_descuadre_monto:.2f}</div></div>', unsafe_allow_html=True)
 
     col_t1, col_t2 = st.columns(2)
     with col_t1:
-        st.subheader("🟢 En Turno")
+        st.markdown("<h4 style='font-size:0.95rem; color:#111827;'>Personal Activo</h4>", unsafe_allow_html=True)
         if trabajando:
             for nom in trabajando:
-                st.success(f"👤 {nom}")
+                st.text(f"• {nom}")
         else:
-            st.info("Nadie en turno actualmente.")
+            st.caption("Sin registros activos.")
 
     with col_t2:
-        st.subheader("🚪 Finalizaron")
+        st.markdown("<h4 style='font-size:0.95rem; color:#111827;'>Turnos Salidos</h4>", unsafe_allow_html=True)
         if salieron:
             for nom in salieron:
-                st.caption(f"👤 **{nom}** (Salida registrada)")
+                st.caption(f"• {nom}")
         else:
-            st.info("Sin registros de salida hoy.")
+            st.caption("Sin marcas de salida.")
 
-elif choice == "👥 Gestión Colaboradores":
+elif choice == "Gestión Colaboradores":
     st.markdown("""
         <div class="market-header">
             <h1>Gestión de Colaboradores</h1>
-            <p>Mantenimiento de personal y credenciales corporativas</p>
+            <p>Mantenimiento de personal y accesos</p>
         </div>
     """, unsafe_allow_html=True)
 
@@ -531,16 +528,16 @@ elif choice == "👥 Gestión Colaboradores":
 
     with col_add:
         with st.form("form_emp", clear_on_submit=True):
-            st.subheader("Agregar Nuevo Colaborador")
+            st.markdown("<h4 style='margin:0; font-size:0.95rem; color:#111827; margin-bottom:12px;'>Nuevo Colaborador</h4>", unsafe_allow_html=True)
             dni_in = st.text_input("DNI / Identificación")
             nom_in = st.text_input("Nombre Completo")
             cargo_in = st.selectbox("Cargo", ["Cajero", "Supervisora", "Reposidor", "Gerente de Tienda"])
-            rol_in = st.selectbox("Rol en Sistema", ["operativo", "admin"])
-            clave_in = st.text_input("Contraseña de Acceso", type="password")
+            rol_in = st.selectbox("Rol", ["operativo", "admin"])
+            clave_in = st.text_input("Contraseña", type="password")
 
-            if st.form_submit_button("GUARDAR EN NUBE"):
+            if st.form_submit_button("Guardar en Nube"):
                 if not dni_in or not nom_in or not clave_in:
-                    st.error("DNI, Nombre y Contraseña son obligatorios")
+                    st.error("Campos requeridos incompletos.")
                 else:
                     nuevo_e = {
                         "dni": str(dni_in),
@@ -552,22 +549,22 @@ elif choice == "👥 Gestión Colaboradores":
                     }
                     st.session_state.empleados = pd.concat([st.session_state.empleados, pd.DataFrame([nuevo_e])], ignore_index=True)
                     guardar_colaborador_gsheets(dni_in, nom_in, cargo_in, "Activo", clave_in, rol_in)
-                    st.toast(f"Colaborador {nom_in} guardado", icon="👥")
+                    st.toast(f"Colaborador guardado")
                     st.rerun()
 
     with col_list:
-        st.subheader("Directorio General")
+        st.markdown("<h4 style='margin:0; font-size:0.95rem; color:#111827; margin-bottom:12px;'>Directorio de Personal</h4>", unsafe_allow_html=True)
         st.dataframe(
             st.session_state.empleados[["dni", "nombre", "cargo", "rol", "estado"]],
             width="stretch",
             hide_index=True
         )
 
-elif choice == "💰 Historial de Descuadres":
+elif choice == "Historial de Descuadres":
     st.markdown("""
         <div class="market-header">
-            <h1>Auditoría Completa de Descuadres</h1>
-            <p>Reporte general para contabilidad y administración</p>
+            <h1>Auditoría de Descuadres</h1>
+            <p>Histórico completo para contabilidad</p>
         </div>
     """, unsafe_allow_html=True)
 
@@ -576,25 +573,25 @@ elif choice == "💰 Historial de Descuadres":
             st.session_state.descuadres,
             width="stretch",
             hide_index=True,
-            column_config={"monto": st.column_config.NumberColumn("MONTO (S/.)", format="S/. %.2f")}
+            column_config={"monto": st.column_config.NumberColumn("MONTO", format="S/. %.2f")}
         )
-        st.download_button("EXPORTAR EXCEL", to_excel(st.session_state.descuadres), "Descuadres_General.xlsx")
+        st.download_button("Exportar a Excel", to_excel(st.session_state.descuadres), "Descuadres_General.xlsx")
     else:
-        st.info("Sin descuadres registrados en la base de datos.")
+        st.info("Sin descuadres registrados.")
 
-elif choice == "⏱️ Historial de Asistencias":
+elif choice == "Historial de Asistencias":
     st.markdown("""
         <div class="market-header">
-            <h1>Reporte General de Marcaciones</h1>
-            <p>Consolidado histórico de entradas y salidas de personal</p>
+            <h1>Reporte de Asistencias</h1>
+            <p>Histórico de marcas de ingreso y salida</p>
         </div>
     """, unsafe_allow_html=True)
 
     if not st.session_state.asistencia.empty:
         st.dataframe(st.session_state.asistencia, width="stretch", hide_index=True)
-        st.download_button("EXPORTAR EXCEL", to_excel(st.session_state.asistencia), "Asistencias_General.xlsx")
+        st.download_button("Exportar a Excel", to_excel(st.session_state.asistencia), "Asistencias_General.xlsx")
     else:
         st.info("Sin asistencias registradas.")
 
-st.markdown("---")
-st.markdown('<div style="text-align:center; color:#64748B; font-weight:600; font-size:12px; font-family: \'Montserrat\', sans-serif;">Tiendas Premium System v3.0 | Google Sheets Integration</div>', unsafe_allow_html=True)
+st.markdown("<br><br>", unsafe_allow_html=True)
+st.markdown('<div style="text-align:center; color:#9CA3AF; font-size:11px;">Tiendas Premium System v3.0</div>', unsafe_allow_html=True)
