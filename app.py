@@ -557,7 +557,7 @@ elif choice == "Gestión Colaboradores":
                     }
                     st.session_state.empleados = pd.concat([st.session_state.empleados, pd.DataFrame([nuevo_e])], ignore_index=True)
                     guardar_colaborador_gsheets(dni_in, nom_in, cargo_in, "Activo", clave_in, rol_in)
-                    st.toast("Colaborador guardado")
+                    st.toast("Colaborador agregado correctamente")
                     st.rerun()
 
     with col_list:
@@ -576,7 +576,7 @@ elif choice == "Gestión Colaboradores":
                 if st.button("Eliminar Colaborador", type="primary"):
                     st.session_state.empleados = st.session_state.empleados[st.session_state.empleados["nombre"] != colab_a_eliminar].reset_index(drop=True)
                     actualizar_hoja_completa("Colaboradores", st.session_state.empleados)
-                    st.toast(f"Colaborador {colab_a_eliminar} eliminado")
+                    st.toast(f"Colaborador {colab_a_eliminar} eliminado correctamente")
                     st.rerun()
 
 elif choice == "Historial de Descuadres":
@@ -621,7 +621,7 @@ elif choice == "Historial de Descuadres":
                             st.session_state.descuadres.at[idx_mod, "tipo"] = nuevo_tipo
                             st.session_state.descuadres.at[idx_mod, "observacion"] = nueva_obs
                             actualizar_hoja_completa("Descuadres", st.session_state.descuadres)
-                            st.toast("Descuadre actualizado")
+                            st.toast("Descuadre actualizado correctamente")
                             st.rerun()
 
             with col_del:
