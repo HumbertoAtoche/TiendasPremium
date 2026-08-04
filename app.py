@@ -86,8 +86,6 @@ def guardar_descuadre_gsheets(fecha, dni, nombre, tipo, monto, observacion, fech
 
 # --- ESTILOS CORPORATIVOS PREMIUM MARKET ---
 st.markdown("""
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-
 <style>
 
 /* ===========================
