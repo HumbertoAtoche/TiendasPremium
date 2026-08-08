@@ -1220,6 +1220,70 @@ elif choice == "Historial de Descuadres":
     """, unsafe_allow_html=True)
 
     if not st.session_state.descuadres.empty:
+        # --- INFORMACIÓN RESUMIDA MENSUAL ENCIMA DE LOS FILTROS ---
+        st.markdown("##### 📅 Resumen Mensual de Descuadres por Trabajador")
+        
+        col_m_desc, col_a_desc = st.columns(2)
+        ahora_p_desc = obtener_ahora_peru()
+        
+        NOMBRES_MESES = [
+            "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+            "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+        ]
+        
+        mes_desc_sel = col_m_desc.selectbox(
+            "Seleccionar Mes", 
+            list(range(1, 13)), 
+            index=ahora_p_desc.month - 1,
+            format_func=lambda x: NOMBRES_MESES[x-1],
+            key="mes_resumen_desc"
+        )
+        anio_desc_sel = col_a_desc.number_input("Año Resumen", min_value=2024, max_value=2030, value=ahora_p_desc.year, key="anio_resumen_desc")
+
+        # Filtrar datos por mes y año seleccionado
+        df_desc_mes = st.session_state.descuadres.copy()
+        df_desc_mes["fecha_dt"] = pd.to_datetime(df_desc_mes["fecha"], errors="coerce")
+        df_desc_mes["monto_num"] = pd.to_numeric(df_desc_mes["monto"], errors="coerce").fillna(0)
+        
+        df_desc_mes = df_desc_mes[
+            (df_desc_mes["fecha_dt"].dt.month == mes_desc_sel) & 
+            (df_desc_mes["fecha_dt"].dt.year == anio_desc_sel)
+        ]
+
+        colabs_operativos = obtener_solo_colaboradores()
+
+        if not df_desc_mes.empty:
+            for nombre_colab in colabs_operativos:
+                df_c = df_desc_mes[df_desc_mes["nombre"] == nombre_colab]
+                
+                if not df_c.empty:
+                    monto_total_colab = df_c["monto_num"].sum()
+                    color_monto = "#00A959" if monto_total_colab >= 0 else "#EC3237"
+                    signo_total = "+" if monto_total_colab > 0 else ""
+                    
+                    with st.expander(f"👤 **{nombre_colab}** | Balance Mes de {NOMBRES_MESES[mes_desc_sel-1]}: S/. {monto_total_colab:.2f}", expanded=True):
+                        st.markdown(f"<div style='font-size:1.05rem; font-weight:700; color:{color_monto}; margin-bottom:8px;'>Balance Total: {signo_total} S/. {monto_total_colab:.2f}</div>", unsafe_allow_html=True)
+                        st.markdown("**Desglose diario del mes:**")
+                        
+                        df_c_sorted = df_c.sort_values("fecha", ascending=False)
+                        for _, row_d in df_c_sorted.iterrows():
+                            m_val = row_d["monto_num"]
+                            signo_d = "+" if m_val > 0 else ""
+                            color_d = "green" if m_val >= 0 else "red"
+                            
+                            # Formatear fecha bonita
+                            f_obj = row_d["fecha_dt"]
+                            fecha_bonita = f"{f_obj.day} de {NOMBRES_MESES[f_obj.month - 1]}" if pd.notnull(f_obj) else row_d["fecha"]
+                            
+                            obs_txt = f" — *Motivo:* {row_d['observacion']}" if str(row_d.get('observacion', '')).strip() != "" else ""
+                            st.markdown(f"- **{signo_d}{m_val:.2f} soles** el día {fecha_bonita}{obs_txt}")
+                else:
+                    st.markdown(f"👤 **{nombre_colab}**: *Sin descuadres registrados en {NOMBRES_MESES[mes_desc_sel-1]}.*")
+        else:
+            st.info(f"No hay descuadres registrados en el mes de {NOMBRES_MESES[mes_desc_sel-1]} de {anio_desc_sel}.")
+
+        st.markdown("---")
+
         st.markdown("##### 🔍 Filtros de Búsqueda")
         f_col1, f_col2 = st.columns([1.5, 1])
         
