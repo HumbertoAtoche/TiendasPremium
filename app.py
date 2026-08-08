@@ -49,8 +49,12 @@ def obtener_colaboradores_gsheets():
             datos = hoja.get_all_records()
             if datos:
                 df = pd.DataFrame(datos)
-                # Asegurar columnas requeridas
-                columnas_req = ["dni", "nombre", "cargo", "estado", "clave", "rol", "direccion", "telefono", "fecha_nacimiento", "foto"]
+                # Asegurar todas las columnas requeridas (13 campos)
+                columnas_req = [
+                    "dni", "nombre", "cargo", "estado", "clave", "rol", 
+                    "direccion", "telefono", "fecha_nacimiento", "foto",
+                    "contacto_emergencia", "numero_emergencia", "link_domicilio"
+                ]
                 for col in columnas_req:
                     if col not in df.columns:
                         df[col] = ""
@@ -58,88 +62,23 @@ def obtener_colaboradores_gsheets():
         except Exception as e:
             st.error(f"Error al leer Colaboradores: {e}")
             
-    return pd.DataFrame([
-        {
-            "dni": "75522639", 
-            "nombre": "Fran Bazan Insapillo", 
-            "cargo": "Colaborador Multifuncional", 
-            "estado": "Activo", 
-            "clave": "12345", 
-            "rol": "operativo",
-            "direccion": "Av. Principal 123 - Lima",
-            "telefono": "987654321",
-            "fecha_nacimiento": "1995-05-15",
-            "foto": "75522639.png"
-        },
-        {
-            "dni": "75101522", 
-            "nombre": "Luz Soplin Chota", 
-            "cargo": "Colaborador Multifuncional", 
-            "estado": "Activo", 
-            "clave": "12345", 
-            "rol": "operativo",
-            "direccion": "Jr. Comercio 456 - Tarapoto",
-            "telefono": "912345678",
-            "fecha_nacimiento": "1998-08-20",
-            "foto": "75101522.jpg"
-        },
-        {
-            "dni": "75895270", 
-            "nombre": "Administrador", 
-            "cargo": "Gerente de Tienda", 
-            "estado": "Activo", 
-            "clave": "admin123", 
-            "rol": "admin",
-            "direccion": "Sede Central",
-            "telefono": "900000000",
-            "fecha_nacimiento": "1990-01-01",
-            "foto": "admin.png"
-        }
+    return pd.DataFrame(columns=[
+        "dni", "nombre", "cargo", "estado", "clave", "rol", 
+        "direccion", "telefono", "fecha_nacimiento", "foto",
+        "contacto_emergencia", "numero_emergencia", "link_domicilio"
     ])
 
-def guardar_colaborador_gsheets(dni, nombre, cargo, estado, clave, rol, direccion="", telefono="", fecha_nacimiento="", foto=""):
+def guardar_colaborador_gsheets(dni, nombre, cargo, estado, clave, rol, direccion="", telefono="", fecha_nacimiento="", foto="", contacto_emergencia="", numero_emergencia="", link_domicilio=""):
     if doc_sheets:
         try:
             hoja = doc_sheets.worksheet("Colaboradores")
-            hoja.append_row([str(dni), nombre, cargo, estado, str(clave), rol, direccion, str(telefono), str(fecha_nacimiento), foto])
+            hoja.append_row([
+                str(dni), nombre, cargo, estado, str(clave), rol, 
+                direccion, str(telefono), str(fecha_nacimiento), foto,
+                contacto_emergencia, str(numero_emergencia), link_domicilio
+            ])
         except Exception as e:
             st.error(f"❌ Error al guardar colaborador en Google Sheets: {e}")
-
-def actualizar_hoja_completa(nombre_hoja, df):
-    if doc_sheets:
-        try:
-            hoja = doc_sheets.worksheet(nombre_hoja)
-            hoja.clear()
-            hoja.update([df.columns.values.tolist()] + df.astype(str).values.tolist())
-        except Exception as e:
-            st.error(f"❌ Error al actualizar {nombre_hoja} en Google Sheets: {e}")
-
-def guardar_asistencia_gsheets(dni, nombre, tipo, fecha_hora, fecha, observacion=""):
-    if doc_sheets:
-        try:
-            hoja = doc_sheets.worksheet("Asistencia")
-            hoja.append_row([str(dni), nombre, tipo, fecha_hora, fecha, observacion])
-        except Exception as e:
-            st.error(f"❌ Error al guardar asistencia en Google Sheets: {e}")
-
-def guardar_descuadre_gsheets(fecha, dni, nombre, tipo, monto, observacion, fecha_registro):
-    if doc_sheets:
-        try:
-            hoja = doc_sheets.worksheet("Descuadres")
-            hoja.append_row([fecha, str(dni), nombre, tipo, monto, observacion, fecha_registro])
-        except Exception as e:
-            st.error(f"❌ Error al guardar descuadre en Google Sheets: {e}")
-
-def calcular_edad(fecha_nac_str):
-    try:
-        if pd.isna(fecha_nac_str) or not str(fecha_nac_str).strip():
-            return "N/A"
-        f_nac = datetime.strptime(str(fecha_nac_str).strip(), "%Y-%m-%d").date()
-        hoy = date.today()
-        edad = hoy.year - f_nac.year - ((hoy.month, hoy.day) < (f_nac.month, f_nac.day))
-        return f"{edad} años"
-    except Exception:
-        return "N/A"
 
 # --- CSS MINIMALISTA Y EJECUTIVO CON TARJETAS DE TRABAJADOR ---
 st.markdown("""
@@ -783,7 +722,7 @@ elif choice == "Gestión Colaboradores":
 
     tab_fichas, tab_nuevo, tab_directorio = st.tabs(["📇 Fichas Técnicas", "➕ Registrar Colaborador", "📋 Directorio General"])
 
-    # TAB 1: FICHAS TÉCNICAS (TARJETAS)
+    # TAB 1: FICHAS TÉCNICAS (TARJETAS AMPLIADAS)
     with tab_fichas:
         st.markdown("<h4 style='font-size:1rem; color:#111827; margin-bottom:15px;'>Tarjetas de Identificación del Personal</h4>", unsafe_allow_html=True)
         
@@ -792,7 +731,6 @@ elif choice == "Gestión Colaboradores":
         if colabs_df.empty:
             st.info("No existen colaboradores registrados.")
         else:
-            # Mostrar tarjetas en rejilla de 2 columnas
             grid_cols = st.columns(2)
             for i, row in colabs_df.iterrows():
                 col_idx = i % 2
@@ -807,6 +745,11 @@ elif choice == "Gestión Colaboradores":
                     f_nac_val = str(row.get("fecha_nacimiento", "")).strip()
                     edad_val = calcular_edad(f_nac_val)
                     
+                    # Nuevos Campos
+                    c_emergencia = str(row.get("contacto_emergencia", "-")).strip() or "-"
+                    num_emergencia = str(row.get("numero_emergencia", "-")).strip() or "-"
+                    link_domicilio = str(row.get("link_domicilio", "")).strip()
+
                     foto_nom = str(row.get("foto", "")).strip()
                     if not foto_nom:
                         foto_nom = f"{dni_val}.png"
@@ -819,7 +762,6 @@ elif choice == "Gestión Colaboradores":
                             try:
                                 st.image(foto_url, use_container_width=True)
                             except Exception:
-                                # Imagen de respaldo si no encuentra el archivo en fotos/
                                 st.image("https://via.placeholder.com/150?text=Sin+Foto", use_container_width=True)
                         
                         with c_info:
@@ -836,13 +778,22 @@ elif choice == "Gestión Colaboradores":
                             st.markdown("<div class='profile-field'>TELÉFONO DE CONTACTO:</div>", unsafe_allow_html=True)
                             st.markdown(f"<div class='profile-val'>{telefono_val}</div>", unsafe_allow_html=True)
 
-                            st.markdown("<div class='profile-field'>DIRECCIÓN DE DOMICILIO:</div>", unsafe_allow_html=True)
-                            st.markdown(f"<div class='profile-val'>{direccion_val}</div>", unsafe_allow_html=True)
-
-                            st.markdown("<div class='profile-field'>FECHA DE NACIMIENTO / EDAD:</div>", unsafe_allow_html=True)
+                            st.markdown("<div class='profile-field'>FECHA NAC. / EDAD:</div>", unsafe_allow_html=True)
                             st.markdown(f"<div class='profile-val'>{f_nac_val if f_nac_val else '-'} ({edad_val})</div>", unsafe_allow_html=True)
 
-    # TAB 2: FORMULARIO DE NUEVO COLABORADOR
+                        st.markdown("---")
+                        
+                        # Bloque Inferior con Emergencia y Google Maps
+                        st.markdown("<div class='profile-field'>📍 DIRECCIÓN DE DOMICILIO:</div>", unsafe_allow_html=True)
+                        if link_domicilio.startswith("http"):
+                            st.markdown(f"<div class='profile-val'>{direccion_val} — <a href='{link_domicilio}' target='_blank' style='color:#EC3237; text-decoration:none; font-weight:700;'> Ver en Google Maps 🗺️</a></div>", unsafe_allow_html=True)
+                        else:
+                            st.markdown(f"<div class='profile-val'>{direccion_val}</div>", unsafe_allow_html=True)
+
+                        st.markdown("<div class='profile-field'>🚨 CONTACTO DE EMERGENCIA:</div>", unsafe_allow_html=True)
+                        st.markdown(f"<div class='profile-val'>{c_emergencia} ({num_emergencia})</div>", unsafe_allow_html=True)
+
+    # TAB 2: FORMULARIO AMPLIADO
     with tab_nuevo:
         with st.form("form_emp_completo", clear_on_submit=True):
             st.markdown("<h4 style='margin:0; font-size:0.95rem; color:#111827; margin-bottom:12px;'>Datos Personales del Trabajador</h4>", unsafe_allow_html=True)
@@ -863,7 +814,15 @@ elif choice == "Gestión Colaboradores":
             fnac_in = f7.date_input("Fecha de Nacimiento", value=date(1995, 1, 1))
             clave_in = f8.text_input("Contraseña de Acceso", type="password")
 
-            st.caption("📌 Nota: Guarda la imagen del trabajador en la carpeta `fotos/` del repositorio con el nombre: `<DNI>.png` o `<DNI>.jpg`")
+            st.markdown("<h4 style='margin:12px 0 0 0; font-size:0.95rem; color:#111827;'>Información de Emergencia y Ubicación</h4>", unsafe_allow_html=True)
+            
+            e1, e2 = st.columns(2)
+            c_emerg_in = e1.text_input("Contacto de Emergencia (Nombre / Parentesco)", placeholder="Ej. Maria Insapillo (Madre)")
+            num_emerg_in = e2.text_input("Teléfono de Emergencia", placeholder="Ej. 987654321")
+
+            link_maps_in = st.text_input("Enlace Ubicación Domicilio (Google Maps Link)", placeholder="https://maps.app.goo.gl/...")
+
+            st.caption("📌 Nota: La imagen debe guardarse en la carpeta `fotos/` del repositorio como: `<DNI>.png` o `<DNI>.jpg`")
 
             if st.form_submit_button("Guardar Registro"):
                 if not dni_in or not nom_in or not clave_in:
@@ -882,18 +841,28 @@ elif choice == "Gestión Colaboradores":
                         "direccion": dir_in.strip(),
                         "telefono": str(tel_in).strip(),
                         "fecha_nacimiento": fnac_str,
-                        "foto": foto_nombre
+                        "foto": foto_nombre,
+                        "contacto_emergencia": c_emerg_in.strip(),
+                        "numero_emergencia": str(num_emerg_in).strip(),
+                        "link_domicilio": link_maps_in.strip()
                     }
                     st.session_state.empleados = pd.concat([st.session_state.empleados, pd.DataFrame([nuevo_e])], ignore_index=True)
-                    guardar_colaborador_gsheets(dni_in, nom_in, cargo_in, "Activo", clave_in, rol_in, dir_in, tel_in, fnac_str, foto_nombre)
+                    guardar_colaborador_gsheets(
+                        dni_in, nom_in, cargo_in, "Activo", clave_in, rol_in, 
+                        dir_in, tel_in, fnac_str, foto_nombre,
+                        c_emerg_in.strip(), num_emerg_in.strip(), link_maps_in.strip()
+                    )
                     st.toast("Colaborador y Ficha Técnica registrados")
                     time.sleep(0.3)
                     st.rerun()
 
-    # TAB 3: DIRECTORIO Y ELIMINACIÓN
+    # TAB 3: DIRECTORIO GENERAL
     with tab_directorio:
         st.markdown("<h4 style='margin:0; font-size:0.95rem; color:#111827; margin-bottom:12px;'>Directorio Consolidado</h4>", unsafe_allow_html=True)
-        cols_mostrar = [c for c in ["dni", "nombre", "cargo", "rol", "telefono", "direccion", "fecha_nacimiento", "estado"] if c in st.session_state.empleados.columns]
+        cols_mostrar = [
+            c for c in ["dni", "nombre", "cargo", "rol", "telefono", "direccion", "fecha_nacimiento", "contacto_emergencia", "numero_emergencia", "estado"] 
+            if c in st.session_state.empleados.columns
+        ]
         st.dataframe(
             st.session_state.empleados[cols_mostrar],
             width="stretch",
