@@ -50,26 +50,21 @@ def obtener_colaboradores_gsheets():
             hoja = doc_sheets.worksheet("Colaboradores")
             datos = hoja.get_all_records()
             if datos:
-                df = pd.DataFrame(datos)
-                # Asegurar columnas adicionales si no existen en el Sheet
-                for col in ["direccion", "telefono", "contacto_emergencia", "link_maps"]:
-                    if col not in df.columns:
-                        df[col] = ""
-                return df
+                return pd.DataFrame(datos)
         except Exception as e:
             st.error(f"Error al leer Colaboradores: {e}")
             
     return pd.DataFrame([
-        {"dni": "75522639", "nombre": "Fran Bazan Insapillo", "cargo": "Colaborador Multifuncional", "estado": "Activo", "clave": "12345", "rol": "operativo", "direccion": "Sin Registrar", "telefono": "-", "contacto_emergencia": "-", "link_maps": ""},
-        {"dni": "75101522", "nombre": "Luz Soplin Chota", "cargo": "Colaborador Multifuncional", "estado": "Activo", "clave": "12345", "rol": "operativo", "direccion": "Sin Registrar", "telefono": "-", "contacto_emergencia": "-", "link_maps": ""},
-        {"dni": "75895270", "nombre": "Administrador", "cargo": "Gerente de Tienda", "estado": "Activo", "clave": "admin123", "rol": "admin", "direccion": "Sede Central", "telefono": "-", "contacto_emergencia": "-", "link_maps": ""}
+        {"dni": "75522639", "nombre": "Fran Bazan Insapillo", "cargo": "Colaborador Multifuncional", "estado": "Activo", "clave": "12345", "rol": "operativo"},
+        {"dni": "75101522", "nombre": "Luz Soplin Chota", "cargo": "Colaborador Multifuncional", "estado": "Activo", "clave": "12345", "rol": "operativo"},
+        {"dni": "75895270", "nombre": "Administrador", "cargo": "Gerente de Tienda", "estado": "Activo", "clave": "admin123", "rol": "admin"}
     ])
 
-def guardar_colaborador_gsheets(dni, nombre, cargo, estado, clave, rol, direccion="", telefono="", contacto_emergencia="", link_maps=""):
+def guardar_colaborador_gsheets(dni, nombre, cargo, estado, clave, rol):
     if doc_sheets:
         try:
             hoja = doc_sheets.worksheet("Colaboradores")
-            hoja.append_row([str(dni), nombre, cargo, estado, str(clave), rol, direccion, str(telefono), contacto_emergencia, link_maps])
+            hoja.append_row([str(dni), nombre, cargo, estado, str(clave), rol])
         except Exception as e:
             st.error(f"❌ Error al guardar colaborador en Google Sheets: {e}")
 
@@ -342,23 +337,6 @@ def obtener_solo_colaboradores():
         df_colab = st.session_state.empleados[st.session_state.empleados["nombre"] != "Administrador"]
     return df_colab["nombre"].unique().tolist()
 
-# Helper para renderizar card visual de ficha técnica
-def renderizar_card_ficha(emp_info):
-    st.markdown(f"""
-    <div style="border:1px solid #E5E7EB; border-radius:8px; padding:18px; background-color:#FFFFFF; margin-bottom:15px;">
-        <h3 style="margin:0 0 10px 0; font-size:1.1rem; color:#111827;">👤 {emp_info.get('nombre', '')}</h3>
-        <p style="margin:2px 0; font-size:0.85rem; color:#4B5563;"><b>Cargo:</b> {emp_info.get('cargo', '')} | <b>DNI:</b> {emp_info.get('dni', '')}</p>
-        <p style="margin:2px 0; font-size:0.85rem; color:#4B5563;"><b>Rol:</b> {emp_info.get('rol', '')} | <b>Estado:</b> {emp_info.get('estado', '')}</p>
-        <hr style="margin:10px 0; border:0; border-top:1px solid #E5E7EB;">
-        <p style="margin:4px 0; font-size:0.85rem; color:#111827;"><b>📍 Dirección:</b> {emp_info.get('direccion', 'Sin registrar')}</p>
-        <p style="margin:4px 0; font-size:0.85rem; color:#111827;"><b>📞 Teléfono:</b> {emp_info.get('telefono', 'Sin registrar')}</p>
-        <p style="margin:4px 0; font-size:0.85rem; color:#111827;"><b>🚨 Contacto de Emergencia:</b> {emp_info.get('contacto_emergencia', 'Sin registrar')}</p>
-    </div>
-    """, unsafe_allow_html=True)
-    maps_link = emp_info.get('link_maps', '')
-    if pd.notna(maps_link) and str(maps_link).strip().startswith("http"):
-        st.markdown(f"👉 [Ver Ubicación en Google Maps]({maps_link})")
-
 # --- SIDEBAR ELEGANTE ---
 st.sidebar.markdown("""
     <div style='padding: 8px 0 16px 0;'>
@@ -379,7 +357,7 @@ st.sidebar.markdown(f"""
 if rol_actual == "admin":
     menu = ["Dashboard General", "Gestión Colaboradores", "Historial de Descuadres", "Historial de Asistencias"]
 else:
-    menu = ["Marcar Asistencia", "Registrar Descuadre", "Mi Dashboard Mensual", "Mi Ficha Técnica"]
+    menu = ["Marcar Asistencia", "Registrar Descuadre", "Mi Dashboard Mensual"]
 
 choice = st.sidebar.radio("Navegación", menu)
 
@@ -539,20 +517,6 @@ elif choice == "Mi Dashboard Mensual":
         )
     else:
         st.info("Sin registros de descuadres en el período.")
-
-elif choice == "Mi Ficha Técnica":
-    st.markdown(f"""
-        <div class="market-header">
-            <h1>Mi Ficha Técnica</h1>
-            <p>Información personal registrada en la empresa</p>
-        </div>
-    """, unsafe_allow_html=True)
-    
-    df_me = st.session_state.empleados[st.session_state.empleados["dni"].astype(str) == str(dni_actual)]
-    if not df_me.empty:
-        renderizar_card_ficha(df_me.iloc[0].to_dict())
-    else:
-        st.info("No se encontraron datos registrados.")
 
 # -------------------- MÓDULOS ADMIN --------------------
 
@@ -753,14 +717,6 @@ elif choice == "Gestión Colaboradores":
             cargo_in = st.selectbox("Cargo", ["Cajero", "Supervisora", "Reposidor", "Gerente de Tienda"])
             rol_in = st.selectbox("Rol", ["operativo", "admin"])
             clave_in = st.text_input("Contraseña", type="password")
-            
-            # --- NUEVOS CAMPOS ---
-            st.markdown("---")
-            st.caption("Ficha Técnica / Datos Personales")
-            dir_in = st.text_input("Dirección de Domicilio")
-            tel_in = st.text_input("Número Teléfono / Celular")
-            contacto_in = st.text_input("Contacto de Emergencia (Nombre y Teléfono)")
-            maps_in = st.text_input("Link de Google Maps Domicilio")
 
             if st.form_submit_button("Guardar en Nube"):
                 if not dni_in or not nom_in or not clave_in:
@@ -772,50 +728,212 @@ elif choice == "Gestión Colaboradores":
                         "cargo": cargo_in,
                         "estado": "Activo",
                         "clave": str(clave_in),
-                        "rol": rol_in,
-                        "direccion": dir_in,
-                        "telefono": str(tel_in),
-                        "contacto_emergencia": contacto_in,
-                        "link_maps": maps_in
+                        "rol": rol_in
                     }
                     st.session_state.empleados = pd.concat([st.session_state.empleados, pd.DataFrame([nuevo_e])], ignore_index=True)
-                    guardar_colaborador_gsheets(dni_in, nom_in, cargo_in, "Activo", clave_in, rol_in, dir_in, tel_in, contacto_in, maps_in)
+                    guardar_colaborador_gsheets(dni_in, nom_in, cargo_in, "Activo", clave_in, rol_in)
                     st.toast("Colaborador agregado correctamente")
                     st.rerun()
 
     with col_list:
-        tab_tabla, tab_fichas, tab_del = st.tabs(["📋 Directorio", "🎴 Fichas Técnicas", "🗑️ Eliminar"])
-        
-        with tab_tabla:
-            st.markdown("<h4 style='margin:0; font-size:0.95rem; color:#111827; margin-bottom:12px;'>Directorio de Personal</h4>", unsafe_allow_html=True)
-            cols_mostrar = [c for c in ["dni", "nombre", "cargo", "rol", "estado", "direccion", "telefono"] if c in st.session_state.empleados.columns]
-            st.dataframe(
-                st.session_state.empleados[cols_mostrar],
-                width="stretch",
-                hide_index=True
-            )
+        st.markdown("<h4 style='margin:0; font-size:0.95rem; color:#111827; margin-bottom:12px;'>Directorio de Personal</h4>", unsafe_allow_html=True)
+        st.dataframe(
+            st.session_state.empleados[["dni", "nombre", "cargo", "rol", "estado"]],
+            width="stretch",
+            hide_index=True
+        )
 
-        with tab_fichas:
-            st.markdown("<h4 style='margin:0; font-size:0.95rem; color:#111827; margin-bottom:12px;'>Consulta Individual de Ficha</h4>", unsafe_allow_html=True)
-            if not st.session_state.empleados.empty:
-                colabs_lista = st.session_state.empleados["nombre"].tolist()
-                colab_sel_ficha = st.selectbox("Seleccionar Colaborador para ver Ficha", colabs_lista, key="sel_ficha_admin")
-                emp_data = st.session_state.empleados[st.session_state.empleados["nombre"] == colab_sel_ficha].iloc[0].to_dict()
-                renderizar_card_ficha(emp_data)
-            else:
-                st.info("No hay colaboradores registrados.")
-
-        with tab_del:
-            if rol_actual == "admin" and not st.session_state.empleados.empty:
+        # MEJORA 4: Confirmación previa para eliminar
+        if rol_actual == "admin" and not st.session_state.empleados.empty:
+            with st.expander("Eliminar Colaborador"):
                 lista_colabs = st.session_state.empleados["nombre"].tolist()
                 colab_a_eliminar = st.selectbox("Seleccionar colaborador a eliminar", lista_colabs)
                 confirm_del_colab = st.checkbox(f"Confirmar eliminación de {colab_a_eliminar}")
                 
                 if st.button("Eliminar Colaborador", type="primary"):
                     if confirm_del_colab:
-                        st.session_state.empleados = st.session_state.empleados[st.session_state.empleados["nombre"] != colab_a_eliminar]
+                        st.session_state.empleados = st.session_state.empleados[st.session_state.empleados["nombre"] != colab_a_eliminar].reset_index(drop=True)
                         actualizar_hoja_completa("Colaboradores", st.session_state.empleados)
-                        st.toast(f"Colaborador {colab_a_eliminar} eliminado.")
+                        st.toast(f"Colaborador {colab_a_eliminar} eliminado correctamente")
                         st.rerun()
                     else:
-                        st.error("Por favor, marca la casilla de confirmación.")
+                        st.warning("Marca la casilla de confirmación antes de eliminar.")
+
+elif choice == "Historial de Descuadres":
+    st.markdown("""
+        <div class="market-header">
+            <h1>Auditoría de Descuadres</h1>
+            <p>Histórico completo para contabilidad</p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    if not st.session_state.descuadres.empty:
+        st.markdown("##### 🔍 Filtros de Búsqueda")
+        f_col1, f_col2 = st.columns([1.5, 1])
+        
+        with f_col1:
+            rango_fechas_desc = st.date_input("Rango de Fechas", value=(obtener_ahora_peru(), obtener_ahora_peru()), key="desc_fechas")
+        with f_col2:
+            colabs_desc = ["Todos"] + [c for c in st.session_state.descuadres["nombre"].unique().tolist() if c in obtener_solo_colaboradores()]
+            colab_desc_sel = st.selectbox("Colaborador", colabs_desc, key="desc_colab")
+
+        df_desc_filtrado = st.session_state.descuadres.copy()
+        
+        if isinstance(rango_fechas_desc, tuple):
+            if len(rango_fechas_desc) == 2:
+                f_inicio, f_fin = str(rango_fechas_desc[0]), str(rango_fechas_desc[1])
+                df_desc_filtrado = df_desc_filtrado[
+                    (df_desc_filtrado["fecha"].astype(str) >= f_inicio) & 
+                    (df_desc_filtrado["fecha"].astype(str) <= f_fin)
+                ]
+            elif len(rango_fechas_desc) == 1:
+                f_inicio = str(rango_fechas_desc[0])
+                df_desc_filtrado = df_desc_filtrado[df_desc_filtrado["fecha"].astype(str) == f_inicio]
+
+        if colab_desc_sel != "Todos":
+            df_desc_filtrado = df_desc_filtrado[df_desc_filtrado["nombre"] == colab_desc_sel]
+
+        # MEJORA 2: Métricas resumen ejecutivas para descuadres
+        if not df_desc_filtrado.empty:
+            df_desc_filtrado["monto_num"] = pd.to_numeric(df_desc_filtrado["monto"], errors="coerce").fillna(0)
+            sobrantes = df_desc_filtrado[df_desc_filtrado["monto_num"] > 0]["monto_num"].sum()
+            faltantes = df_desc_filtrado[df_desc_filtrado["monto_num"] < 0]["monto_num"].sum()
+            balance = df_desc_filtrado["monto_num"].sum()
+
+            m1, m2, m3 = st.columns(3)
+            with m1:
+                st.markdown(f'<div class="info-card"><div class="info-label">Total Sobrantes (+)</div><div class="info-value" style="color:#00A959;">S/. {sobrantes:.2f}</div></div>', unsafe_allow_html=True)
+            with m2:
+                st.markdown(f'<div class="info-card"><div class="info-label">Total Faltantes (-)</div><div class="info-value" style="color:#EC3237;">S/. {abs(faltantes):.2f}</div></div>', unsafe_allow_html=True)
+            with m3:
+                st.markdown(f'<div class="info-card"><div class="info-label">Balance Neto</div><div class="info-value" style="color:{"#00A959" if balance >= 0 else "#EC3237"};">S/. {balance:.2f}</div></div>', unsafe_allow_html=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.dataframe(
+            df_desc_filtrado.drop(columns=["monto_num"], errors="ignore"),
+            width="stretch",
+            hide_index=True,
+            column_config={"monto": st.column_config.NumberColumn("MONTO", format="S/. %.2f")}
+        )
+        st.download_button("Exportar a Excel", to_excel(df_desc_filtrado.drop(columns=["monto_num"], errors="ignore")), "Descuadres_General.xlsx")
+
+        if rol_actual == "admin":
+            st.markdown("<br>", unsafe_allow_html=True)
+            col_mod, col_del = st.columns(2)
+
+            with col_mod:
+                with st.expander("Modificar Descuadre"):
+                    opciones_desc = [f"{i} | {r['fecha']} | {r['nombre']} | S/. {r['monto']}" for i, r in st.session_state.descuadres.iterrows()]
+                    sel_mod = st.selectbox("Seleccionar Registro a Editar", opciones_desc, key="mod_desc_sel")
+                    
+                    if sel_mod:
+                        idx_mod = int(sel_mod.split(" | ")[0])
+                        row_mod = st.session_state.descuadres.loc[idx_mod]
+                        
+                        nuevo_monto = st.number_input("Nuevo Monto (S/.)", value=float(row_mod["monto"]), step=0.50, format="%.2f")
+                        tipo_options = ["Sobrante", "Faltante"]
+                        idx_tipo = tipo_options.index(row_mod["tipo"]) if row_mod["tipo"] in tipo_options else 0
+                        nuevo_tipo = st.selectbox("Nuevo Tipo", tipo_options, index=idx_tipo)
+                        nueva_obs = st.text_area("Nueva Observación", value=str(row_mod["observacion"]))
+
+                        if st.button("Guardar Cambios en Descuadre"):
+                            st.session_state.descuadres.at[idx_mod, "monto"] = nuevo_monto
+                            st.session_state.descuadres.at[idx_mod, "tipo"] = nuevo_tipo
+                            st.session_state.descuadres.at[idx_mod, "observacion"] = nueva_obs
+                            actualizar_hoja_completa("Descuadres", st.session_state.descuadres)
+                            st.toast("Descuadre actualizado correctamente")
+                            st.rerun()
+
+            # MEJORA 4: Confirmación previa al eliminar descuadre
+            with col_del:
+                with st.expander("Eliminar Descuadre"):
+                    opciones_desc_del = [f"{i} | {r['fecha']} | {r['nombre']} | S/. {r['monto']}" for i, r in st.session_state.descuadres.iterrows()]
+                    sel_del = st.selectbox("Seleccionar Registro a Eliminar", opciones_desc_del, key="del_desc_sel")
+                    confirm_del_desc = st.checkbox("Confirmar eliminación del descuadre")
+
+                    if st.button("Eliminar Descuadre", type="primary"):
+                        if confirm_del_desc:
+                            idx_del = int(sel_del.split(" | ")[0])
+                            st.session_state.descuadres = st.session_state.descuadres.drop(idx_del).reset_index(drop=True)
+                            actualizar_hoja_completa("Descuadres", st.session_state.descuadres)
+                            st.toast("Descuadre eliminado correctamente")
+                            st.rerun()
+                        else:
+                            st.warning("Marca la casilla de confirmación antes de eliminar.")
+    else:
+        st.info("Sin descuadres registrados.")
+
+elif choice == "Historial de Asistencias":
+    st.markdown("""
+        <div class="market-header">
+            <h1>Reporte de Asistencias</h1>
+            <p>Histórico de marcas de ingreso y salida</p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    if not st.session_state.asistencia.empty:
+        st.markdown("##### 🔍 Filtros de Búsqueda")
+        fa_col1, fa_col2 = st.columns([1.5, 1])
+        
+        with fa_col1:
+            rango_fechas_asist = st.date_input("Rango de Fechas", value=(obtener_ahora_peru(), obtener_ahora_peru()), key="asist_fechas")
+        with fa_col2:
+            colabs_asist = ["Todos"] + [c for c in st.session_state.asistencia["nombre"].unique().tolist() if c in obtener_solo_colaboradores()]
+            colab_asist_sel = st.selectbox("Colaborador", colabs_asist, key="asist_colab")
+
+        df_asist_filtrado = st.session_state.asistencia.copy()
+        
+        if isinstance(rango_fechas_asist, tuple):
+            if len(rango_fechas_asist) == 2:
+                f_inicio, f_fin = str(rango_fechas_asist[0]), str(rango_fechas_asist[1])
+                df_asist_filtrado = df_asist_filtrado[
+                    (df_asist_filtrado["fecha"].astype(str) >= f_inicio) & 
+                    (df_asist_filtrado["fecha"].astype(str) <= f_fin)
+                ]
+            elif len(rango_fechas_asist) == 1:
+                f_inicio = str(rango_fechas_asist[0])
+                df_asist_filtrado = df_asist_filtrado[df_asist_filtrado["fecha"].astype(str) == f_inicio]
+
+        if colab_asist_sel != "Todos":
+            df_asist_filtrado = df_asist_filtrado[df_asist_filtrado["nombre"] == colab_asist_sel]
+
+        # MEJORA 2: Métricas resumen ejecutivas para asistencias
+        if not df_asist_filtrado.empty:
+            total_marcas = len(df_asist_filtrado)
+            ingresos_cnt = len(df_asist_filtrado[df_asist_filtrado["tipo"] == "INGRESO"])
+            colabs_unicos = df_asist_filtrado["nombre"].nunique()
+
+            a1, a2, a3 = st.columns(3)
+            with a1:
+                st.markdown(f'<div class="info-card"><div class="info-label">Total Marcaciones</div><div class="info-value">{total_marcas}</div></div>', unsafe_allow_html=True)
+            with a2:
+                st.markdown(f'<div class="info-card"><div class="info-label">Jornadas Iniciadas</div><div class="info-value" style="color:#00A959;">{ingresos_cnt}</div></div>', unsafe_allow_html=True)
+            with a3:
+                st.markdown(f'<div class="info-card"><div class="info-label">Colaboradores Evaluados</div><div class="info-value">{colabs_unicos}</div></div>', unsafe_allow_html=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.dataframe(df_asist_filtrado, width="stretch", hide_index=True)
+        st.download_button("Exportar a Excel", to_excel(df_asist_filtrado), "Asistencias_General.xlsx")
+
+        # MEJORA 4: Confirmación previa al eliminar asistencia
+        if rol_actual == "admin":
+            st.markdown("<br>", unsafe_allow_html=True)
+            with st.expander("Eliminar Registro de Asistencia"):
+                opciones_asist = [f"{i} | {r['fecha_hora']} | {r['nombre']} | {r['tipo']}" for i, r in st.session_state.asistencia.iterrows()]
+                sel_asist_del = st.selectbox("Seleccionar Marcación a Eliminar", opciones_asist)
+                confirm_del_asist = st.checkbox("Confirmar eliminación del registro de asistencia")
+
+                if st.button("Eliminar Registro", type="primary"):
+                    if confirm_del_asist:
+                        idx_asist = int(sel_asist_del.split(" | ")[0])
+                        st.session_state.asistencia = st.session_state.asistencia.drop(idx_asist).reset_index(drop=True)
+                        actualizar_hoja_completa("Asistencia", st.session_state.asistencia)
+                        st.toast("Marcación eliminada correctamente")
+                        st.rerun()
+                    else:
+                        st.warning("Marca la casilla de confirmación antes de eliminar.")
+    else:
+        st.info("Sin asistencias registradas.")
+
+st.markdown("<br><br>", unsafe_allow_html=True)
+st.markdown('<div style="text-align:center; color:#9CA3AF; font-size:11px;">Tiendas Premium EIRL - Desarrollado por Humberto Atoche</div>', unsafe_allow_html=True)
