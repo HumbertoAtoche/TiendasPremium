@@ -1259,7 +1259,29 @@ elif choice == "Historial de Descuadres":
             with m3:
                 st.markdown(f'<div class="info-card"><div class="info-label">Balance Neto</div><div class="info-value" style="color:{"#00A959" if balance >= 0 else "#EC3237"};">S/. {balance:.2f}</div></div>', unsafe_allow_html=True)
 
+            # --- DESGLOSE POR TRABAJADOR ---
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown("##### 👤 Balance de Descuadres por Trabajador")
+            
+            for nombre_trab, df_trab in df_desc_filtrado.groupby("nombre"):
+                monto_trab_total = df_trab["monto_num"].sum()
+                color_monto = "#00A959" if monto_trab_total >= 0 else "#EC3237"
+                signo_monto = "+" if monto_trab_total > 0 else ""
+                
+                with st.expander(f"👤 **{nombre_trab}** — Balance Neto: {signo_monto} S/. {monto_trab_total:.2f}"):
+                    st.markdown(f"<span style='color:{color_monto}; font-weight:700; font-size:1.1rem;'>Total Acumulado: {signo_monto} S/. {monto_trab_total:.2f}</span>", unsafe_allow_html=True)
+                    st.markdown("**:bar_chart: Detalle de movimientos:**")
+                    
+                    df_trab_sorted = df_trab.sort_values("fecha", ascending=False)
+                    for _, r_t in df_trab_sorted.iterrows():
+                        m_val = r_t["monto_num"]
+                        s_color = "green" if m_val >= 0 else "red"
+                        signo_item = "+" if m_val > 0 else ""
+                        obs_item = f" — *Motivo:* {r_t['observacion']}" if str(r_t.get('observacion', '')).strip() != "" else ""
+                        st.markdown(f"- **El día {r_t['fecha']}:** :{s_color}[{r_t['tipo']} ({signo_item}S/. {m_val:.2f})]{obs_item}")
+
         st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("##### 📋 Matriz Consolidada de Descuadres")
         st.dataframe(
             df_desc_filtrado.drop(columns=["monto_num"], errors="ignore"),
             width="stretch",
