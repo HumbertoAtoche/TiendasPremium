@@ -117,7 +117,7 @@ def actualizar_hoja_completa(nombre_hoja, df):
         except Exception as e:
             st.error(f"❌ Error al actualizar {nombre_hoja}: {e}")
 
-# --- CSS MINIMALISTA Y TABLAS DE CALENDARIO ---
+# --- CSS MINIMALISTA Y TABLAS DE CALENDARIO EJECUTIVO ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap');
@@ -237,30 +237,121 @@ st.markdown("""
         box-shadow: none !important;
     }
 
-    /* CALENDARIO ESTILO TABLA ADJUNTADA */
+    /* CALENDARIO ESTILO EJECUTIVO MODERNO */
+    .cal-card {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 14px;
+        margin-bottom: 20px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    }
+    .cal-title {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
     .cal-table {
         width: 100%;
-        border-collapse: collapse;
-        margin-bottom: 20px;
-        background-color: #ffffff;
-        font-size: 0.82rem;
-    }
-    .cal-table th, .cal-table td {
-        border: 1px solid #000000;
-        padding: 6px 8px;
-        text-align: center;
-        height: 32px;
+        border-collapse: separate;
+        border-spacing: 3px;
+        font-size: 0.75rem;
     }
     .cal-table th {
-        background-color: #f3f4f6;
-        font-weight: 700;
-        color: #111827;
+        background-color: #f8fafc;
+        color: #64748b;
+        font-weight: 600;
+        padding: 6px 2px;
+        text-align: center;
+        border-radius: 4px;
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
     }
-    .bg-asistio { background-color: #83d043 !important; font-weight: bold; color: #000; }
-    .bg-falta { background-color: #ff0000 !important; color: #ffffff; font-weight: bold; }
-    .bg-extra { background-color: #ffff00 !important; font-weight: bold; color: #000; }
-    .bg-descanso { background-color: #ffffff !important; color: #374151; }
-    .bg-vacio { background-color: #f9fafb !important; color: #d1d5db; }
+    .cal-table td {
+        height: 36px;
+        text-align: center;
+        vertical-align: middle;
+        border-radius: 6px;
+        font-weight: 600;
+        color: #334155;
+        background-color: #ffffff;
+        border: 1px solid #f1f5f9;
+        transition: all 0.15s ease;
+    }
+    
+    .cal-day-num {
+        font-size: 0.82rem;
+        line-height: 1;
+    }
+    .cal-sub {
+        font-size: 0.6rem;
+        font-weight: 500;
+        margin-top: 2px;
+        display: block;
+        opacity: 0.9;
+    }
+
+    /* ESTADOS DE ASISTENCIA */
+    .bg-asistio {
+        background-color: #dcfce7 !important;
+        color: #15803d !important;
+        border: 1px solid #bbf7d0 !important;
+    }
+    .bg-falta {
+        background-color: #fee2e2 !important;
+        color: #b91c1c !important;
+        border: 1px solid #fca5a5 !important;
+    }
+    .bg-extra {
+        background-color: #fef9c3 !important;
+        color: #a16207 !important;
+        border: 1px solid #fef08a !important;
+    }
+    .bg-descanso {
+        background-color: #f3f4f6 !important;
+        color: #6b7280 !important;
+        border: 1px solid #e5e7eb !important;
+    }
+    .bg-vacio {
+        background-color: transparent !important;
+        border: none !important;
+    }
+    .bg-futuro {
+        background-color: #ffffff !important;
+        color: #94a3b8 !important;
+        border: 1px dashed #e2e8f0 !important;
+    }
+
+    /* LEYENDA MODERNA */
+    .legend-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-bottom: 16px;
+        background: #ffffff;
+        padding: 10px 14px;
+        border-radius: 8px;
+        border: 1px solid #e5e7eb;
+    }
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.78rem;
+        font-weight: 500;
+        color: #4b5563;
+    }
+    .legend-badge {
+        width: 12px;
+        height: 12px;
+        border-radius: 3px;
+        display: inline-block;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -358,7 +449,7 @@ def registrar_marca(dni, nombre, tipo, observacion="", es_extra=False):
                 return False
 
     ahora_peru = obtener_ahora_peru()
-    fecha_h = me = ahora_peru.strftime("%Y-%m-%d %H:%M:%S")
+    fecha_h = ahora_peru.strftime("%Y-%m-%d %H:%M:%S")
     fecha_s = ahora_peru.strftime("%Y-%m-%d")
     
     obs_final = f"[TURNO EXTRA] {observacion}".strip() if es_extra else observacion
@@ -383,7 +474,7 @@ def obtener_solo_colaboradores():
         df_colab = st.session_state.empleados[st.session_state.empleados["nombre"] != "Administrador"]
     return df_colab["nombre"].unique().tolist()
 
-# --- DIBUJAR CALENDARIO TIPO CUADRÍCULA ---
+# --- DIBUJAR CALENDARIO EJECUTIVO ELEGANTE ---
 def renderizar_calendario_colaborador(nombre_colab, anio, mes):
     cal = calendar.Calendar(firstweekday=0) # Lunes a Domingo
     mes_dias = cal.monthdayscalendar(anio, mes)
@@ -394,11 +485,25 @@ def renderizar_calendario_colaborador(nombre_colab, anio, mes):
     
     hoy = obtener_ahora_peru().date()
 
-    html = f"<div style='margin-bottom:15px;'><b style='font-size:0.9rem; color:#111827;'>📅 Calendario de Asistencia: {nombre_colab}</b></div>"
-    html += "<table class='cal-table'><thead><tr>"
-    for dia in ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]:
-        html += f"<th>{dia}</th>"
-    html += "</tr></thead><tbody>"
+    html = f"""
+    <div class='cal-card'>
+        <div class='cal-title'>
+            <span>👤</span> <span>{nombre_colab}</span>
+        </div>
+        <table class='cal-table'>
+            <thead>
+                <tr>
+                    <th>Lun</th>
+                    <th>Mar</th>
+                    <th>Mié</th>
+                    <th>Jue</th>
+                    <th>Vie</th>
+                    <th>Sáb</th>
+                    <th>Dom</th>
+                </tr>
+            </thead>
+            <tbody>
+    """
 
     for semana in mes_dias:
         html += "<tr>"
@@ -409,9 +514,9 @@ def renderizar_calendario_colaborador(nombre_colab, anio, mes):
                 fecha_dia = date(anio, mes, d)
                 f_str = fecha_dia.strftime("%Y-%m-%d")
                 
-                # Domingo
+                # Domingo - Descanso
                 if i == 6:
-                    html += f"<td class='bg-descanso'>{d}<br><small>Descanso</small></td>"
+                    html += f"<td class='bg-descanso'><span class='cal-day-num'>{d}</span><span class='cal-sub'>Descanso</span></td>"
                 else:
                     if not df_asist.empty:
                         df_dia = df_asist[df_asist["fecha"].astype(str) == f_str]
@@ -421,16 +526,16 @@ def renderizar_calendario_colaborador(nombre_colab, anio, mes):
                     if not df_dia.empty:
                         tiene_extra = (df_dia["es_extra"].astype(str) == "SI").any() or df_dia["observacion"].str.contains("TURNO EXTRA").any()
                         if tiene_extra:
-                            html += f"<td class='bg-extra'>{d}</td>"
+                            html += f"<td class='bg-extra'><span class='cal-day-num'>{d}</span><span class='cal-sub'>★ Extra</span></td>"
                         else:
-                            html += f"<td class='bg-asistio'>{d}</td>"
+                            html += f"<td class='bg-asistio'><span class='cal-day-num'>{d}</span><span class='cal-sub'>✓ Asistió</span></td>"
                     else:
                         if fecha_dia < hoy:
-                            html += f"<td class='bg-falta'>{d}</td>"
+                            html += f"<td class='bg-falta'><span class='cal-day-num'>{d}</span><span class='cal-sub'>✕ Falta</span></td>"
                         else:
-                            html += f"<td>{d}</td>"
+                            html += f"<td class='bg-futuro'><span class='cal-day-num'>{d}</span></td>"
         html += "</tr>"
-    html += "tbody></table>"
+    html += "</tbody></table></div>"
     return html
 
 # --- SIDEBAR ELEGANTE ---
@@ -633,13 +738,25 @@ elif choice == "Dashboard General":
     mes_sel = col_mes.selectbox("Mes", list(range(1, 13)), index=ahora_p.month - 1)
     anio_sel = col_anio.number_input("Año", min_value=2024, max_value=2030, value=ahora_p.year)
 
-    # Leyenda
+    # Leyenda Ejecutiva
     st.markdown("""
-        <div style='display: flex; gap: 15px; margin-bottom: 12px; font-size: 0.8rem; font-weight: 600;'>
-            <span><span style='background-color:#83d043; border: 1px solid #000; padding: 2px 8px;'>&nbsp;</span> Fue a Trabajar</span>
-            <span><span style='background-color:#ff0000; border: 1px solid #000; padding: 2px 8px;'>&nbsp;</span> No Fue (Falta)</span>
-            <span><span style='background-color:#ffff00; border: 1px solid #000; padding: 2px 8px;'>&nbsp;</span> Turno Adicional</span>
-            <span><span style='background-color:#ffffff; border: 1px solid #000; padding: 2px 8px;'>&nbsp;</span> Descanso</span>
+        <div class="legend-container">
+            <div class="legend-item">
+                <span class="legend-badge" style="background-color: #dcfce7; border: 1px solid #bbf7d0;"></span>
+                <span>Asistió</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-badge" style="background-color: #fee2e2; border: 1px solid #fca5a5;"></span>
+                <span>Inasistencia (Falta)</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-badge" style="background-color: #fef9c3; border: 1px solid #fef08a;"></span>
+                <span>Turno Adicional</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-badge" style="background-color: #f3f4f6; border: 1px solid #e5e7eb;"></span>
+                <span>Descanso Programado</span>
+            </div>
         </div>
     """, unsafe_allow_html=True)
 
