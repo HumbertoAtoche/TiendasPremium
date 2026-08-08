@@ -80,6 +80,45 @@ def guardar_colaborador_gsheets(dni, nombre, cargo, estado, clave, rol, direccio
         except Exception as e:
             st.error(f"❌ Error al guardar colaborador en Google Sheets: {e}")
 
+# --- FUNCIÓN DE CÁLCULO DE EDAD ---
+def calcular_edad(fecha_nac):
+    if not fecha_nac or str(fecha_nac).strip() in ["", "-", "None"]:
+        return "-"
+    try:
+        f_nac = datetime.strptime(str(fecha_nac).split(" ")[0].strip(), "%Y-%m-%d").date()
+        hoy = date.today()
+        edad = hoy.year - f_nac.year - ((hoy.month, hoy.day) < (f_nac.month, f_nac.day))
+        return f"{edad} años"
+    except Exception:
+        return "-"
+
+# --- FUNCIONES ADICIONALES DE GOOGLE SHEETS ---
+def guardar_asistencia_gsheets(dni, nombre, tipo, fecha_hora, fecha, observacion=""):
+    if doc_sheets:
+        try:
+            hoja = doc_sheets.worksheet("Asistencia")
+            hoja.append_row([str(dni), nombre, tipo, str(fecha_hora), str(fecha), observacion])
+        except Exception as e:
+            st.error(f"❌ Error al guardar asistencia: {e}")
+
+def guardar_descuadre_gsheets(fecha, dni, nombre, tipo, monto, observacion, fecha_registro):
+    if doc_sheets:
+        try:
+            hoja = doc_sheets.worksheet("Descuadres")
+            hoja.append_row([str(fecha), str(dni), nombre, tipo, float(monto), observacion, str(fecha_registro)])
+        except Exception as e:
+            st.error(f"❌ Error al guardar descuadre: {e}")
+
+def actualizar_hoja_completa(nombre_hoja, df):
+    if doc_sheets:
+        try:
+            hoja = doc_sheets.worksheet(nombre_hoja)
+            hoja.clear()
+            datos = [df.columns.tolist()] + df.astype(str).values.tolist()
+            hoja.update(datos)
+        except Exception as e:
+            st.error(f"❌ Error al actualizar {nombre_hoja}: {e}")
+
 # --- CSS MINIMALISTA Y EJECUTIVO CON TARJETAS DE TRABAJADOR ---
 st.markdown("""
 <style>
