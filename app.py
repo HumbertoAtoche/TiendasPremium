@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, time as dt_time
 import calendar
 import zoneinfo  # Manejo de zona horaria de Perú (UTC-5)
 import io
@@ -12,6 +12,82 @@ LIMA_TZ = zoneinfo.ZoneInfo("America/Lima")
 
 def obtener_ahora_peru():
     return datetime.now(LIMA_TZ)
+
+# --- REGLAS DE HORARIOS Y TOLERANCIA ---
+HORA_INICIO_MANANA = dt_time(8, 45)
+HORA_LIMITE_MANANA = dt_time(8, 55)   # 10 min de tolerancia
+
+HORA_INICIO_TARDE = dt_time(15, 30)
+HORA_LIMITE_TARDE = dt_time(15, 40)   # 10 min de tolerancia
+
+def calcular_tardanza_ingreso(fecha_hora_str):
+    """
+    Evalúa la hora de ingreso según los turnos de mañana y tarde.
+    Retorna: (minutos_tardanza, es_tardanza, turno)
+    """
+    try:
+        dt_marca = datetime.strptime(str(fecha_hora_str), "%Y-%m-%d %H:%M:%S")
+        hora_marca = dt_marca.time()
+
+        # Determinación de turno (Mañana si es antes de las 13:00, Tarde en adelante)
+        if hora_marca < dt_time(13, 0):
+            turno = "Mañana"
+            hora_prog = HORA_INICIO_MANANA
+            hora_limite = HORA_LIMITE_MANANA
+        else:
+            turno = "Tarde"
+            hora_prog = HORA_INICIO_TARDE
+            hora_limite = HORA_LIMITE_TARDE
+
+        if hora_marca <= hora_limite:
+            return 0, False, turno
+        else:
+            dt_prog = datetime.combine(dt_marca.date(), hora_prog)
+            minutos = int((dt_marca - dt_prog).total_seconds() // 60)
+            return max(0, minutos), True, turno
+    except Exception:
+        return 0, False, "Desconocido"
+
+def calcular_metricas_puntualidad(df_asistencia, nombre_colab=None):
+    """
+    Calcula el total de ingresos, puntuales, tardanzas y el ratio de puntualidad (%).
+    """
+    if df_asistencia.empty:
+        return {"total_ingresos": 0, "puntuales": 0, "tardanzas": 0, "minutos_acumulados": 0, "ratio": 100.0}
+
+    df_ingresos = df_asistencia[
+        (df_asistencia["tipo"] == "INGRESO") & 
+        (df_asistencia["es_extra"].astype(str) != "SI")
+    ].copy()
+
+    if nombre_colab:
+        df_ingresos = df_ingresos[df_ingresos["nombre"] == nombre_colab]
+
+    if df_ingresos.empty:
+        return {"total_ingresos": 0, "puntuales": 0, "tardanzas": 0, "minutos_acumulados": 0, "ratio": 100.0}
+
+    total_ingresos = len(df_ingresos)
+    tardanzas_cnt = 0
+    puntuales_cnt = 0
+    minutos_totales = 0
+
+    for _, row in df_ingresos.iterrows():
+        mins, es_tardanza, _ = calcular_tardanza_ingreso(row["fecha_hora"])
+        if es_tardanza:
+            tardanzas_cnt += 1
+            minutos_totales += mins
+        else:
+            puntuales_cnt += 1
+
+    ratio = (puntuales_cnt / total_ingresos * 100) if total_ingresos > 0 else 100.0
+
+    return {
+        "total_ingresos": total_ingresos,
+        "puntuales": puntuales_cnt,
+        "tardanzas": tardanzas_cnt,
+        "minutos_acumulados": minutos_totales,
+        "ratio": round(ratio, 1)
+    }
 
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(
@@ -692,7 +768,9 @@ elif choice == "Mi Dashboard Mensual":
     monto_total = pd.to_numeric(df_mis_desc["monto"]).sum() if not df_mis_desc.empty else 0.0
     dias_trabajados = df_mis_asist["fecha"].nunique() if not df_mis_asist.empty else 0
 
-    k1, k2 = st.columns(2)
+    metricas_p = calcular_metricas_puntualidad(st.session_state.asistencia, user_actual)
+
+    k1, k2, k3, k4 = st.columns(4)
     with k1:
         st.markdown(f'''
             <div class="info-card">
@@ -704,7 +782,23 @@ elif choice == "Mi Dashboard Mensual":
     with k2:
         st.markdown(f'''
             <div class="info-card">
-                <div class="info-label">Balance Acumulado Descuadres</div>
+                <div class="info-label">Ratio Puntualidad</div>
+                <div class="info-value" style="color: {'#00A959' if metricas_p['ratio'] >= 90 else '#EC3237'};">{metricas_p['ratio']}%</div>
+            </div>
+        ''', unsafe_allow_html=True)
+
+    with k3:
+        st.markdown(f'''
+            <div class="info-card">
+                <div class="info-label">Minutos Tardanza</div>
+                <div class="info-value" style="color: {'#111827' if metricas_p['minutos_acumulados'] == 0 else '#EC3237'};">{metricas_p['minutos_acumulados']} m</div>
+            </div>
+        ''', unsafe_allow_html=True)
+
+    with k4:
+        st.markdown(f'''
+            <div class="info-card">
+                <div class="info-label">Balance Descuadres</div>
                 <div class="info-value" style="color: {'#00A959' if monto_total >= 0 else '#EC3237'};">S/. {monto_total:.2f}</div>
             </div>
         ''', unsafe_allow_html=True)
@@ -810,6 +904,13 @@ elif choice == "Dashboard General":
                 hora_ingreso = ingresos.iloc[0]["dt"].strftime("%H:%M:%S") if not ingresos.empty else "--:--:--"
                 ultima_marca = grupo_ordenado.iloc[-1]
                 
+                # Evaluación de tardanza
+                tardanza_txt = "Puntual"
+                if not ingresos.empty:
+                    mins_t, es_t, turno_p = calcular_tardanza_ingreso(ingresos.iloc[0]["fecha_hora"])
+                    if es_t:
+                        tardanza_txt = f"⚠️ Tardanza ({mins_t} min)"
+
                 if ultima_marca["tipo"] == "INGRESO":
                     estado = "🟢 En Turno"
                     hora_salida = "--:--:--"
@@ -862,6 +963,7 @@ elif choice == "Dashboard General":
                     "ingreso": hora_ingreso,
                     "salida": hora_salida,
                     "tiempo_total": total_horas_str,
+                    "tardanza": tardanza_txt,
                     "balance_descuadre": monto_desc_user,
                     "descuadres_detalle": descuadres_user,
                     "obs_asistencia": obs_asistencia
@@ -875,12 +977,16 @@ elif choice == "Dashboard General":
         total_descuadre_monto = pd.to_numeric(df_desc_dash["monto"], errors="coerce").sum() if not df_desc_dash.empty else 0.0
 
     st.markdown("<br>", unsafe_allow_html=True)
-    k1, k2, k3 = st.columns(3)
+    k1, k2, k3, k4 = st.columns(4)
+    metricas_gen = calcular_metricas_puntualidad(st.session_state.asistencia)
+    
     with k1:
         st.markdown(f'<div class="info-card"><div class="info-label">En Turno Ahora</div><div class="info-value" style="color: #00A959;">{en_turno_cnt}</div></div>', unsafe_allow_html=True)
     with k2:
         st.markdown(f'<div class="info-card"><div class="info-label">Turno Concluido</div><div class="info-value" style="color: #6B7280;">{concluido_cnt}</div></div>', unsafe_allow_html=True)
     with k3:
+        st.markdown(f'<div class="info-card"><div class="info-label">Ratio Puntualidad Global</div><div class="info-value" style="color: {"#00A959" if metricas_gen["ratio"] >= 90 else "#EC3237"};">{metricas_gen["ratio"]}%</div></div>', unsafe_allow_html=True)
+    with k4:
         st.markdown(f'<div class="info-card"><div class="info-label">Balance Descuadres Hoy</div><div class="info-value" style="color: {"#00A959" if total_descuadre_monto >= 0 else "#EC3237"};">S/. {total_descuadre_monto:.2f}</div></div>', unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
@@ -890,22 +996,27 @@ elif choice == "Dashboard General":
 
         for nombre_col, datos in fichas_colaboradores.items():
             with st.expander(f"👤 {nombre_col} — {datos['estado']}", expanded=True):
-                fc1, fc2, fc3, fc4 = st.columns(4)
+                fc1, fc2, fc3, fc4, fc5 = st.columns(5)
                 
                 with fc1:
-                    st.caption("🕒 HORARIO INGRESO")
+                    st.caption("🕒 INGRESO")
                     st.markdown(f"**{datos['ingreso']}**")
                 
                 with fc2:
-                    st.caption("🛑 HORARIO SALIDA")
+                    st.caption("🛑 SALIDA")
                     st.markdown(f"**{datos['salida']}**")
                 
                 with fc3:
-                    st.caption("⏳ TIEMPO TRABAJADO")
+                    st.caption("⏳ TIEMPO")
                     st.markdown(f"**{datos['tiempo_total']}**")
-                
+
                 with fc4:
-                    st.caption("💰 BALANCE DESCUADRE")
+                    st.caption("⏱️ PUNTUALIDAD")
+                    color_tard = "#00A959" if "Puntual" in datos["tardanza"] else "#EC3237"
+                    st.markdown(f"<span style='color:{color_tard}; font-weight:700;'>{datos['tardanza']}</span>", unsafe_allow_html=True)
+
+                with fc5:
+                    st.caption("💰 DESCUADRE")
                     color_desc = "#00A959" if datos["balance_descuadre"] >= 0 else "#EC3237"
                     st.markdown(f"<span style='color:{color_desc}; font-weight:700;'>S/. {datos['balance_descuadre']:.2f}</span>", unsafe_allow_html=True)
 
