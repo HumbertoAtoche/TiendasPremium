@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
+import calendar
 import zoneinfo  # Manejo de zona horaria de Perú (UTC-5)
 import io
 import time
@@ -49,7 +50,6 @@ def obtener_colaboradores_gsheets():
             datos = hoja.get_all_records()
             if datos:
                 df = pd.DataFrame(datos)
-                # Asegurar todas las columnas requeridas (13 campos)
                 columnas_req = [
                     "dni", "nombre", "cargo", "estado", "clave", "rol", 
                     "direccion", "telefono", "fecha_nacimiento", "foto",
@@ -80,7 +80,6 @@ def guardar_colaborador_gsheets(dni, nombre, cargo, estado, clave, rol, direccio
         except Exception as e:
             st.error(f"❌ Error al guardar colaborador en Google Sheets: {e}")
 
-# --- FUNCIÓN DE CÁLCULO DE EDAD ---
 def calcular_edad(fecha_nac):
     if not fecha_nac or str(fecha_nac).strip() in ["", "-", "None"]:
         return "-"
@@ -92,12 +91,11 @@ def calcular_edad(fecha_nac):
     except Exception:
         return "-"
 
-# --- FUNCIONES ADICIONALES DE GOOGLE SHEETS ---
-def guardar_asistencia_gsheets(dni, nombre, tipo, fecha_hora, fecha, observacion=""):
+def guardar_asistencia_gsheets(dni, nombre, tipo, fecha_hora, fecha, observacion="", es_extra="NO"):
     if doc_sheets:
         try:
             hoja = doc_sheets.worksheet("Asistencia")
-            hoja.append_row([str(dni), nombre, tipo, str(fecha_hora), str(fecha), observacion])
+            hoja.append_row([str(dni), nombre, tipo, str(fecha_hora), str(fecha), observacion, es_extra])
         except Exception as e:
             st.error(f"❌ Error al guardar asistencia: {e}")
 
@@ -119,7 +117,7 @@ def actualizar_hoja_completa(nombre_hoja, df):
         except Exception as e:
             st.error(f"❌ Error al actualizar {nombre_hoja}: {e}")
 
-# --- CSS MINIMALISTA Y EJECUTIVO CON TARJETAS DE TRABAJADOR ---
+# --- CSS MINIMALISTA Y TABLAS DE CALENDARIO ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap');
@@ -239,49 +237,30 @@ st.markdown("""
         box-shadow: none !important;
     }
 
-    .stDataFrame {
-        border: 1px solid #E5E7EB;
-        border-radius: 6px;
-    }
-
-    /* ESTILOS FICHA TÉCNICA */
-    .profile-card {
-        background-color: #FFFFFF;
-        border: 1px solid #E5E7EB;
-        border-radius: 12px;
-        padding: 20px;
+    /* CALENDARIO ESTILO TABLA ADJUNTADA */
+    .cal-table {
+        width: 100%;
+        border-collapse: collapse;
         margin-bottom: 20px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        background-color: #ffffff;
+        font-size: 0.82rem;
     }
-    .profile-header {
-        border-bottom: 1px solid #F3F4F6;
-        padding-bottom: 10px;
-        margin-bottom: 15px;
+    .cal-table th, .cal-table td {
+        border: 1px solid #000000;
+        padding: 6px 8px;
+        text-align: center;
+        height: 32px;
     }
-    .profile-name {
-        font-size: 1.1rem;
+    .cal-table th {
+        background-color: #f3f4f6;
         font-weight: 700;
         color: #111827;
-        margin: 0;
     }
-    .profile-role {
-        font-size: 0.8rem;
-        color: #EC3237;
-        font-weight: 600;
-        text-transform: uppercase;
-    }
-    .profile-field {
-        font-size: 0.75rem;
-        color: #6B7280;
-        margin-bottom: 2px;
-        font-weight: 500;
-    }
-    .profile-val {
-        font-size: 0.88rem;
-        color: #1F2937;
-        font-weight: 600;
-        margin-bottom: 8px;
-    }
+    .bg-asistio { background-color: #83d043 !important; font-weight: bold; color: #000; }
+    .bg-falta { background-color: #ff0000 !important; color: #ffffff; font-weight: bold; }
+    .bg-extra { background-color: #ffff00 !important; font-weight: bold; color: #000; }
+    .bg-descanso { background-color: #ffffff !important; color: #374151; }
+    .bg-vacio { background-color: #f9fafb !important; color: #d1d5db; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -298,12 +277,13 @@ if "asistencia" not in st.session_state:
             data_asist = doc_sheets.worksheet("Asistencia").get_all_records()
             st.session_state.asistencia = pd.DataFrame(data_asist)
         except Exception:
-            st.session_state.asistencia = pd.DataFrame(columns=["dni", "nombre", "tipo", "fecha_hora", "fecha", "observacion"])
+            st.session_state.asistencia = pd.DataFrame(columns=["dni", "nombre", "tipo", "fecha_hora", "fecha", "observacion", "es_extra"])
     else:
-        st.session_state.asistencia = pd.DataFrame(columns=["dni", "nombre", "tipo", "fecha_hora", "fecha", "observacion"])
+        st.session_state.asistencia = pd.DataFrame(columns=["dni", "nombre", "tipo", "fecha_hora", "fecha", "observacion", "es_extra"])
 
-if "observacion" not in st.session_state.asistencia.columns:
-    st.session_state.asistencia["observacion"] = ""
+for col in ["observacion", "es_extra"]:
+    if col not in st.session_state.asistencia.columns:
+        st.session_state.asistencia[col] = "NO" if col == "es_extra" else ""
 
 if "descuadres" not in st.session_state:
     if doc_sheets:
@@ -361,34 +341,39 @@ def to_excel(df):
         df.to_excel(writer, index=False)
     return output.getvalue()
 
-def registrar_marca(dni, nombre, tipo, observacion=""):
+def registrar_marca(dni, nombre, tipo, observacion="", es_extra=False):
     hoy_str = obtener_ahora_peru().strftime("%Y-%m-%d")
-    
-    if not st.session_state.asistencia.empty:
+    str_extra = "SI" if es_extra else "NO"
+
+    if not st.session_state.asistencia.empty and not es_extra:
         df_hoy_user = st.session_state.asistencia[
             (st.session_state.asistencia["fecha"].astype(str) == hoy_str) & 
-            (st.session_state.asistencia["dni"].astype(str) == str(dni))
+            (st.session_state.asistencia["dni"].astype(str) == str(dni)) &
+            (st.session_state.asistencia["es_extra"].astype(str) != "SI")
         ]
         if not df_hoy_user.empty:
             ultima_marca = df_hoy_user.iloc[0]["tipo"]
             if ultima_marca == tipo:
-                st.warning(f"⚠️ Ya registraste un **{tipo}** previamente en esta jornada.")
+                st.warning(f"⚠️ Ya registraste un **{tipo}** en tu horario habitual de hoy.")
                 return False
 
     ahora_peru = obtener_ahora_peru()
-    fecha_h = ahora_peru.strftime("%Y-%m-%d %H:%M:%S")
+    fecha_h = me = ahora_peru.strftime("%Y-%m-%d %H:%M:%S")
     fecha_s = ahora_peru.strftime("%Y-%m-%d")
     
+    obs_final = f"[TURNO EXTRA] {observacion}".strip() if es_extra else observacion
+
     nueva_marca = {
         "dni": str(dni),
         "nombre": nombre,
         "tipo": tipo,
         "fecha_hora": fecha_h,
         "fecha": fecha_s,
-        "observacion": observacion
+        "observacion": obs_final,
+        "es_extra": str_extra
     }
     st.session_state.asistencia = pd.concat([pd.DataFrame([nueva_marca]), st.session_state.asistencia], ignore_index=True)
-    guardar_asistencia_gsheets(dni, nombre, tipo, fecha_h, fecha_s, observacion)
+    guardar_asistencia_gsheets(dni, nombre, tipo, fecha_h, fecha_s, obs_final, str_extra)
     return True
 
 def obtener_solo_colaboradores():
@@ -397,6 +382,56 @@ def obtener_solo_colaboradores():
     else:
         df_colab = st.session_state.empleados[st.session_state.empleados["nombre"] != "Administrador"]
     return df_colab["nombre"].unique().tolist()
+
+# --- DIBUJAR CALENDARIO TIPO CUADRÍCULA ---
+def renderizar_calendario_colaborador(nombre_colab, anio, mes):
+    cal = calendar.Calendar(firstweekday=0) # Lunes a Domingo
+    mes_dias = cal.monthdayscalendar(anio, mes)
+    
+    df_asist = st.session_state.asistencia.copy()
+    if not df_asist.empty:
+        df_asist = df_asist[df_asist["nombre"] == nombre_colab]
+    
+    hoy = obtener_ahora_peru().date()
+
+    html = f"<div style='margin-bottom:15px;'><b style='font-size:0.9rem; color:#111827;'>📅 Calendario de Asistencia: {nombre_colab}</b></div>"
+    html += "<table class='cal-table'><thead><tr>"
+    for dia in ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]:
+        html += f"<th>{dia}</th>"
+    html += "</tr></thead><tbody>"
+
+    for semana in mes_dias:
+        html += "<tr>"
+        for i, d in enumerate(semana):
+            if d == 0:
+                html += "<td class='bg-vacio'></td>"
+            else:
+                fecha_dia = date(anio, mes, d)
+                f_str = fecha_dia.strftime("%Y-%m-%d")
+                
+                # Domingo
+                if i == 6:
+                    html += f"<td class='bg-descanso'>{d}<br><small>Descanso</small></td>"
+                else:
+                    if not df_asist.empty:
+                        df_dia = df_asist[df_asist["fecha"].astype(str) == f_str]
+                    else:
+                        df_dia = pd.DataFrame()
+
+                    if not df_dia.empty:
+                        tiene_extra = (df_dia["es_extra"].astype(str) == "SI").any() or df_dia["observacion"].str.contains("TURNO EXTRA").any()
+                        if tiene_extra:
+                            html += f"<td class='bg-extra'>{d}</td>"
+                        else:
+                            html += f"<td class='bg-asistio'>{d}</td>"
+                    else:
+                        if fecha_dia < hoy:
+                            html += f"<td class='bg-falta'>{d}</td>"
+                        else:
+                            html += f"<td>{d}</td>"
+        html += "</tr>"
+    html += "tbody></table>"
+    return html
 
 # --- SIDEBAR ELEGANTE ---
 st.sidebar.markdown("""
@@ -446,14 +481,15 @@ if choice == "Marcar Asistencia":
             st.markdown("<h4 style='margin:0; font-size:1rem; color:#111827;'>Registro de Turno</h4>", unsafe_allow_html=True)
             st.caption("Selecciona el tipo de marcación que deseas realizar:")
             
-            obs_marca = st.text_input("Observación / Justificación (Opcional)", placeholder="Ej. Retraso por tráfico, permiso, etc.")
+            es_turno_extra = st.checkbox("⏰ Marcación Fuera de Horario / Turno Adicional")
+            obs_marca = st.text_input("Observación / Justificación (Opcional)", placeholder="Ej. Cubrir turno mañana, retraso por tráfico, etc.")
             st.markdown("<br>", unsafe_allow_html=True)
 
             c1, c2 = st.columns(2)
             with c1:
                 st.markdown('<div class="btn-ingreso">', unsafe_allow_html=True)
                 if st.button("Marcar Ingreso", width="stretch"):
-                    if registrar_marca(dni_actual, user_actual, "INGRESO", obs_marca):
+                    if registrar_marca(dni_actual, user_actual, "INGRESO", obs_marca, es_turno_extra):
                         st.toast("Ingreso registrado correctamente")
                         time.sleep(0.3)
                         st.rerun()
@@ -462,7 +498,7 @@ if choice == "Marcar Asistencia":
             with c2:
                 st.markdown('<div class="btn-salida">', unsafe_allow_html=True)
                 if st.button("Marcar Salida", width="stretch"):
-                    if registrar_marca(dni_actual, user_actual, "SALIDA", obs_marca):
+                    if registrar_marca(dni_actual, user_actual, "SALIDA", obs_marca, es_turno_extra):
                         st.toast("Salida registrada correctamente")
                         time.sleep(0.3)
                         st.rerun()
@@ -480,13 +516,14 @@ if choice == "Marcar Asistencia":
 
             if not df_mismarcas.empty:
                 st.dataframe(
-                    df_mismarcas[["tipo", "fecha_hora", "observacion"]],
+                    df_mismarcas[["tipo", "fecha_hora", "observacion", "es_extra"]],
                     width="stretch",
                     hide_index=True,
                     column_config={
                         "tipo": "TIPO", 
                         "fecha_hora": "FECHA / HORA",
-                        "observacion": "OBSERVACIÓN"
+                        "observacion": "OBSERVACIÓN",
+                        "es_extra": "EXTRA"
                     }
                 )
             else:
@@ -588,6 +625,38 @@ elif choice == "Dashboard General":
         </div>
     """, unsafe_allow_html=True)
 
+    # --- CALENDARIO MENSUAL ENCIMA DE FILTROS ---
+    st.markdown("##### 📅 Calendarios Mensuales de Asistencia (Rol Operativo)")
+    col_mes, col_anio = st.columns(2)
+    
+    ahora_p = obtener_ahora_peru()
+    mes_sel = col_mes.selectbox("Mes", list(range(1, 13)), index=ahora_p.month - 1)
+    anio_sel = col_anio.number_input("Año", min_value=2024, max_value=2030, value=ahora_p.year)
+
+    # Leyenda
+    st.markdown("""
+        <div style='display: flex; gap: 15px; margin-bottom: 12px; font-size: 0.8rem; font-weight: 600;'>
+            <span><span style='background-color:#83d043; border: 1px solid #000; padding: 2px 8px;'>&nbsp;</span> Fue a Trabajar</span>
+            <span><span style='background-color:#ff0000; border: 1px solid #000; padding: 2px 8px;'>&nbsp;</span> No Fue (Falta)</span>
+            <span><span style='background-color:#ffff00; border: 1px solid #000; padding: 2px 8px;'>&nbsp;</span> Turno Adicional</span>
+            <span><span style='background-color:#ffffff; border: 1px solid #000; padding: 2px 8px;'>&nbsp;</span> Descanso</span>
+        </div>
+    """, unsafe_allow_html=True)
+
+    colaboradores_ops = obtener_solo_colaboradores()
+    
+    if colaboradores_ops:
+        with st.expander("👁️ Ver Calendarios de Asistencia por Trabajador", expanded=True):
+            cols_cal = st.columns(2)
+            for idx, c_nom in enumerate(colaboradores_ops):
+                with cols_cal[idx % 2]:
+                    html_cal = renderizar_calendario_colaborador(c_nom, int(anio_sel), int(mes_sel))
+                    st.markdown(html_cal, unsafe_allow_html=True)
+    else:
+        st.info("No hay colaboradores con rol operativo registrados.")
+
+    st.markdown("---")
+
     st.markdown("##### 🔍 Filtros de Consulta")
     col_f1, col_f2 = st.columns([1.5, 1])
     
@@ -603,7 +672,6 @@ elif choice == "Dashboard General":
     df_desc_dash = st.session_state.descuadres.copy()
     
     fichas_colaboradores = {}
-    
     en_turno_cnt = 0
     concluido_cnt = 0
 
@@ -623,14 +691,12 @@ elif choice == "Dashboard General":
                 salidas = grupo_ordenado[grupo_ordenado["tipo"] == "SALIDA"]
                 
                 hora_ingreso = ingresos.iloc[0]["dt"].strftime("%H:%M:%S") if not ingresos.empty else "--:--:--"
-                
                 ultima_marca = grupo_ordenado.iloc[-1]
                 
                 if ultima_marca["tipo"] == "INGRESO":
                     estado = "🟢 En Turno"
                     hora_salida = "--:--:--"
                     en_turno_cnt += 1
-                    
                     dt_ingreso = ingresos.iloc[0]["dt"]
                     if f_dash_str == obtener_ahora_peru().strftime("%Y-%m-%d"):
                         ahora = obtener_ahora_peru().replace(tzinfo=None)
@@ -641,14 +707,9 @@ elif choice == "Dashboard General":
                     estado = "⚪ Concluido"
                     hora_salida = salidas.iloc[-1]["dt"].strftime("%H:%M:%S") if not salidas.empty else "--:--:--"
                     concluido_cnt += 1
-                    
                     dt_ingreso = ingresos.iloc[0]["dt"] if not ingresos.empty else None
                     dt_salida = salidas.iloc[-1]["dt"] if not salidas.empty else None
-                    
-                    if dt_ingreso and dt_salida:
-                        segundos = (dt_salida - dt_ingreso).total_seconds()
-                    else:
-                        segundos = 0
+                    segundos = (dt_salida - dt_ingreso).total_seconds() if (dt_ingreso and dt_salida) else 0
                 
                 if segundos > 0:
                     horas = int(segundos // 3600)
@@ -761,7 +822,7 @@ elif choice == "Gestión Colaboradores":
 
     tab_fichas, tab_nuevo, tab_directorio = st.tabs(["📇 Fichas Técnicas", "➕ Registrar Colaborador", "📋 Directorio General"])
 
-    # TAB 1: FICHAS TÉCNICAS (TARJETAS AMPLIADAS)
+    # TAB 1: FICHAS TÉCNICAS
     with tab_fichas:
         st.markdown("<h4 style='font-size:1rem; color:#111827; margin-bottom:15px;'>Tarjetas de Identificación del Personal</h4>", unsafe_allow_html=True)
         
@@ -784,7 +845,6 @@ elif choice == "Gestión Colaboradores":
                     f_nac_val = str(row.get("fecha_nacimiento", "")).strip()
                     edad_val = calcular_edad(f_nac_val)
                     
-                    # Nuevos Campos
                     c_emergencia = str(row.get("contacto_emergencia", "-")).strip() or "-"
                     num_emergencia = str(row.get("numero_emergencia", "-")).strip() or "-"
                     link_domicilio = str(row.get("link_domicilio", "")).strip()
@@ -822,7 +882,6 @@ elif choice == "Gestión Colaboradores":
 
                         st.markdown("---")
                         
-                        # Bloque Inferior con Emergencia y Google Maps
                         st.markdown("<div class='profile-field'>📍 DIRECCIÓN DE DOMICILIO:</div>", unsafe_allow_html=True)
                         if link_domicilio.startswith("http"):
                             st.markdown(f"<div class='profile-val'>{direccion_val} — <a href='{link_domicilio}' target='_blank' style='color:#EC3237; text-decoration:none; font-weight:700;'> Ver en Google Maps 🗺️</a></div>", unsafe_allow_html=True)
@@ -859,7 +918,7 @@ elif choice == "Gestión Colaboradores":
             c_emerg_in = e1.text_input("Contacto de Emergencia (Nombre / Parentesco)", placeholder="Ej. Maria Insapillo (Madre)")
             num_emerg_in = e2.text_input("Teléfono de Emergencia", placeholder="Ej. 987654321")
 
-            link_maps_in = st.text_input("Enlace Ubicación Domicilio (Google Maps Link)", placeholder="https://maps.app.goo.gl/...")
+            link_maps_in = st.text_input("Enlace Ubicación Domicilio (Google Maps Link)", placeholder="https://maps.app.glo/...")
 
             st.caption("📌 Nota: La imagen debe guardarse en la carpeta `fotos/` del repositorio como: `<DNI>.png` o `<DNI>.jpg`")
 
