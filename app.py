@@ -50,21 +50,38 @@ def obtener_colaboradores_gsheets():
             hoja = doc_sheets.worksheet("Colaboradores")
             datos = hoja.get_all_records()
             if datos:
-                return pd.DataFrame(datos)
+                df = pd.DataFrame(datos)
+                # Garantizar columnas extras si no están presentes
+                for col in ["direccion", "telefono", "contacto_emergencia", "link_maps"]:
+                    if col not in df.columns:
+                        df[col] = ""
+                return df
         except Exception as e:
             st.error(f"Error al leer Colaboradores: {e}")
             
     return pd.DataFrame([
-        {"dni": "75522639", "nombre": "Fran Bazan Insapillo", "cargo": "Colaborador Multifuncional", "estado": "Activo", "clave": "12345", "rol": "operativo"},
-        {"dni": "75101522", "nombre": "Luz Soplin Chota", "cargo": "Colaborador Multifuncional", "estado": "Activo", "clave": "12345", "rol": "operativo"},
-        {"dni": "75895270", "nombre": "Administrador", "cargo": "Gerente de Tienda", "estado": "Activo", "clave": "admin123", "rol": "admin"}
+        {
+            "dni": "75522639", "nombre": "Fran Bazan Insapillo", "cargo": "Colaborador Multifuncional", 
+            "estado": "Activo", "clave": "12345", "rol": "operativo",
+            "direccion": "Jr. San Martín 123", "telefono": "987654321", "contacto_emergencia": "Mamá - 912345678", "link_maps": "https://maps.google.com"
+        },
+        {
+            "dni": "75101522", "nombre": "Luz Soplin Chota", "cargo": "Colaborador Multifuncional", 
+            "estado": "Activo", "clave": "12345", "rol": "operativo",
+            "direccion": "Av. Circunvalación 456", "telefono": "987654322", "contacto_emergencia": "Hermano - 923456789", "link_maps": "https://maps.google.com"
+        },
+        {
+            "dni": "75895270", "nombre": "Administrador", "cargo": "Gerente de Tienda", 
+            "estado": "Activo", "clave": "admin123", "rol": "admin",
+            "direccion": "Oficina Principal", "telefono": "987654323", "contacto_emergencia": "Gerencia - 934567890", "link_maps": ""
+        }
     ])
 
-def guardar_colaborador_gsheets(dni, nombre, cargo, estado, clave, rol):
+def guardar_colaborador_gsheets(dni, nombre, cargo, estado, clave, rol, direccion, telefono, contacto_emergencia, link_maps):
     if doc_sheets:
         try:
             hoja = doc_sheets.worksheet("Colaboradores")
-            hoja.append_row([str(dni), nombre, cargo, estado, str(clave), rol])
+            hoja.append_row([str(dni), nombre, cargo, estado, str(clave), rol, direccion, str(telefono), contacto_emergencia, link_maps])
         except Exception as e:
             st.error(f"❌ Error al guardar colaborador en Google Sheets: {e}")
 
@@ -237,7 +254,6 @@ if "asistencia" not in st.session_state:
     else:
         st.session_state.asistencia = pd.DataFrame(columns=["dni", "nombre", "tipo", "fecha_hora", "fecha", "observacion"])
 
-# Asegurar columna de observación en Asistencia
 if "observacion" not in st.session_state.asistencia.columns:
     st.session_state.asistencia["observacion"] = ""
 
@@ -297,11 +313,9 @@ def to_excel(df):
         df.to_excel(writer, index=False)
     return output.getvalue()
 
-# MEJORA 1 y 3: Validación anti-doble marcación y soporte de observación/motivo
 def registrar_marca(dni, nombre, tipo, observacion=""):
     hoy_str = obtener_ahora_peru().strftime("%Y-%m-%d")
     
-    # Validar si la última marcación registrada hoy es del mismo tipo
     if not st.session_state.asistencia.empty:
         df_hoy_user = st.session_state.asistencia[
             (st.session_state.asistencia["fecha"].astype(str) == hoy_str) & 
@@ -329,7 +343,6 @@ def registrar_marca(dni, nombre, tipo, observacion=""):
     guardar_asistencia_gsheets(dni, nombre, tipo, fecha_h, fecha_s, observacion)
     return True
 
-# Helper para obtener solo colaboradores (excluyendo Administradores)
 def obtener_solo_colaboradores():
     if "rol" in st.session_state.empleados.columns:
         df_colab = st.session_state.empleados[st.session_state.empleados["rol"] != "admin"]
@@ -385,7 +398,6 @@ if choice == "Marcar Asistencia":
             st.markdown("<h4 style='margin:0; font-size:1rem; color:#111827;'>Registro de Turno</h4>", unsafe_allow_html=True)
             st.caption("Selecciona el tipo de marcación que deseas realizar:")
             
-            # MEJORA 3: Opcion de sustento/nota voluntaria
             obs_marca = st.text_input("Observación / Justificación (Opcional)", placeholder="Ej. Retraso por tráfico, permiso, etc.")
             st.markdown("<br>", unsafe_allow_html=True)
 
@@ -539,11 +551,10 @@ elif choice == "Dashboard General":
 
     f_dash_str = str(fecha_dash)
     
-    # 1. Procesamiento de Asistencias y Descuadres del día
     df_asist_dash = st.session_state.asistencia.copy()
     df_desc_dash = st.session_state.descuadres.copy()
     
-    fichas_colaboradores = {}  # Guardará el detalle estructurado por persona
+    fichas_colaboradores = {}
     
     en_turno_cnt = 0
     concluido_cnt = 0
@@ -598,14 +609,12 @@ elif choice == "Dashboard General":
                 else:
                     total_horas_str = "0h 0m"
                 
-                # Recopilar observaciones de asistencia
                 obs_asistencia = [
                     f"[{r['tipo']}] {r['observacion']}" 
                     for _, r in grupo_ordenado.iterrows() 
                     if str(r.get('observacion', '')).strip() != ""
                 ]
 
-                # Recopilar descuadres específicos de este colaborador en la fecha
                 descuadres_user = []
                 monto_desc_user = 0.0
                 if not df_desc_dash.empty:
@@ -622,6 +631,20 @@ elif choice == "Dashboard General":
                                 "obs": r_d.get("observacion", "")
                             })
 
+                # Búsqueda de datos personales extras
+                row_extra = st.session_state.empleados[st.session_state.empleados["nombre"] == nombre_colab]
+                datos_extras = {}
+                if not row_extra.empty:
+                    r_ex = row_extra.iloc[0]
+                    datos_extras = {
+                        "cargo": r_ex.get("cargo", "N/A"),
+                        "dni": r_ex.get("dni", "N/A"),
+                        "direccion": r_ex.get("direccion", "No registrada"),
+                        "telefono": r_ex.get("telefono", "No registrado"),
+                        "contacto_emergencia": r_ex.get("contacto_emergencia", "No registrado"),
+                        "link_maps": r_ex.get("link_maps", "")
+                    }
+
                 fichas_colaboradores[nombre_colab] = {
                     "estado": estado,
                     "ingreso": hora_ingreso,
@@ -629,10 +652,10 @@ elif choice == "Dashboard General":
                     "tiempo_total": total_horas_str,
                     "balance_descuadre": monto_desc_user,
                     "descuadres_detalle": descuadres_user,
-                    "obs_asistencia": obs_asistencia
+                    "obs_asistencia": obs_asistencia,
+                    "extra": datos_extras
                 }
 
-    # Balance general de descuadres para los KPIs
     total_descuadre_monto = 0.0
     if not df_desc_dash.empty:
         df_desc_dash = df_desc_dash[df_desc_dash["fecha"].astype(str) == f_dash_str]
@@ -640,7 +663,6 @@ elif choice == "Dashboard General":
             df_desc_dash = df_desc_dash[df_desc_dash["nombre"] == colab_dash]
         total_descuadre_monto = pd.to_numeric(df_desc_dash["monto"], errors="coerce").sum() if not df_desc_dash.empty else 0.0
 
-    # 2. Métricas Principales (KPIs)
     st.markdown("<br>", unsafe_allow_html=True)
     k1, k2, k3 = st.columns(3)
     with k1:
@@ -652,33 +674,50 @@ elif choice == "Dashboard General":
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # 3. Desglose en Fichas Técnicas por Colaborador
+    # 3. FICHA TÉCNICA Y OPERATIVA COMPLETA
     if fichas_colaboradores:
         st.markdown("<h4 style='font-size:1rem; color:#111827; margin-bottom:15px;'>📄 Ficha Técnica por Colaborador</h4>", unsafe_allow_html=True)
 
         for nombre_col, datos in fichas_colaboradores.items():
-            with st.expander(f"👤 {nombre_col} — {datos['estado']}", expanded=True):
-                fc1, fc2, fc3, fc4 = st.columns(4)
+            ex = datos.get("extra", {})
+            with st.expander(f"👤 {nombre_col} — {ex.get('cargo', '')} ({datos['estado']})", expanded=True):
                 
+                # Fila 1: Métricas Operativas de la Jornada
+                fc1, fc2, fc3, fc4 = st.columns(4)
                 with fc1:
                     st.caption("🕒 HORARIO INGRESO")
                     st.markdown(f"**{datos['ingreso']}**")
-                
                 with fc2:
                     st.caption("🛑 HORARIO SALIDA")
                     st.markdown(f"**{datos['salida']}**")
-                
                 with fc3:
                     st.caption("⏳ TIEMPO TRABAJADO")
                     st.markdown(f"**{datos['tiempo_total']}**")
-                
                 with fc4:
                     st.caption("💰 BALANCE DESCUADRE")
                     color_desc = "#00A959" if datos["balance_descuadre"] >= 0 else "#EC3237"
                     st.markdown(f"<span style='color:{color_desc}; font-weight:700;'>S/. {datos['balance_descuadre']:.2f}</span>", unsafe_allow_html=True)
 
-                st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
-                
+                st.divider()
+
+                # Fila 2: Datos Extras del Trabajador
+                st.markdown("**:id: Datos Personales & Contacto:**")
+                e1, e2, e3 = st.columns(3)
+                with e1:
+                    st.markdown(f"• **DNI:** {ex.get('dni', 'N/A')}")
+                    st.markdown(f"• **Teléfono:** {ex.get('telefono', 'N/A')}")
+                with e2:
+                    st.markdown(f"• **Contacto Emergencia:** {ex.get('contacto_emergencia', 'N/A')}")
+                    st.markdown(f"• **Dirección:** {ex.get('direccion', 'N/A')}")
+                with e3:
+                    maps_url = ex.get('link_maps', '')
+                    if maps_url:
+                        st.markdown(f"📍 [Ver Domicilio en Google Maps]({maps_url})")
+                    else:
+                        st.markdown("📍 Domicilio: *Sin enlace de Maps*")
+
+                st.divider()
+
                 # Detalle de descuadres
                 if datos["descuadres_detalle"]:
                     st.markdown("**:bar_chart: Detalle de Caja / Descuadre:**")
@@ -707,20 +746,30 @@ elif choice == "Gestión Colaboradores":
         </div>
     """, unsafe_allow_html=True)
 
-    col_add, col_list = st.columns([1, 1.3])
+    col_add, col_list = st.columns([1, 1.2])
 
     with col_add:
         with st.form("form_emp", clear_on_submit=True):
             st.markdown("<h4 style='margin:0; font-size:0.95rem; color:#111827; margin-bottom:12px;'>Nuevo Colaborador</h4>", unsafe_allow_html=True)
-            dni_in = st.text_input("DNI / Identificación")
-            nom_in = st.text_input("Nombre Completo")
-            cargo_in = st.selectbox("Cargo", ["Cajero", "Supervisora", "Reposidor", "Gerente de Tienda"])
-            rol_in = st.selectbox("Rol", ["operativo", "admin"])
+            
+            c_a, c_b = st.columns(2)
+            dni_in = c_a.text_input("DNI / Identificación")
+            nom_in = c_b.text_input("Nombre Completo")
+            
+            cargo_in = c_a.selectbox("Cargo", ["Cajero", "Supervisora", "Reposidor", "Colaborador Multifuncional", "Gerente de Tienda"])
+            rol_in = c_b.selectbox("Rol", ["operativo", "admin"])
             clave_in = st.text_input("Contraseña", type="password")
+
+            st.markdown("---")
+            st.caption("📌 Datos Extras / Ficha Personal")
+            dir_in = st.text_input("Dirección de Domicilio")
+            tel_in = st.text_input("Teléfono / Celular")
+            emerg_in = st.text_input("Contacto de Emergencia", placeholder="Ej. Esposa - 987654321")
+            maps_in = st.text_input("Link Ubicación Google Maps")
 
             if st.form_submit_button("Guardar en Nube"):
                 if not dni_in or not nom_in or not clave_in:
-                    st.error("Campos requeridos incompletos.")
+                    st.error("Campos requeridos incompletos (DNI, Nombre, Contraseña).")
                 else:
                     nuevo_e = {
                         "dni": str(dni_in),
@@ -728,22 +777,26 @@ elif choice == "Gestión Colaboradores":
                         "cargo": cargo_in,
                         "estado": "Activo",
                         "clave": str(clave_in),
-                        "rol": rol_in
+                        "rol": rol_in,
+                        "direccion": dir_in,
+                        "telefono": str(tel_in),
+                        "contacto_emergencia": emerg_in,
+                        "link_maps": maps_in
                     }
                     st.session_state.empleados = pd.concat([st.session_state.empleados, pd.DataFrame([nuevo_e])], ignore_index=True)
-                    guardar_colaborador_gsheets(dni_in, nom_in, cargo_in, "Activo", clave_in, rol_in)
-                    st.toast("Colaborador agregado correctamente")
+                    guardar_colaborador_gsheets(dni_in, nom_in, cargo_in, "Activo", clave_in, rol_in, dir_in, tel_in, emerg_in, maps_in)
+                    st.toast("Colaborador y Ficha Técnica guardados")
                     st.rerun()
 
     with col_list:
         st.markdown("<h4 style='margin:0; font-size:0.95rem; color:#111827; margin-bottom:12px;'>Directorio de Personal</h4>", unsafe_allow_html=True)
+        cols_mostrar = [c for c in ["dni", "nombre", "cargo", "telefono", "contacto_emergencia", "rol", "estado"] if c in st.session_state.empleados.columns]
         st.dataframe(
-            st.session_state.empleados[["dni", "nombre", "cargo", "rol", "estado"]],
+            st.session_state.empleados[cols_mostrar],
             width="stretch",
             hide_index=True
         )
 
-        # MEJORA 4: Confirmación previa para eliminar
         if rol_actual == "admin" and not st.session_state.empleados.empty:
             with st.expander("Eliminar Colaborador"):
                 lista_colabs = st.session_state.empleados["nombre"].tolist()
@@ -770,7 +823,6 @@ elif choice == "Historial de Descuadres":
     if not st.session_state.descuadres.empty:
         df_desc_ver = st.session_state.descuadres.copy()
         
-        # Filtros
         col1, col2 = st.columns([1, 1])
         with col1:
             filtro_colab = st.selectbox("Filtrar por Colaborador", ["Todos"] + list(df_desc_ver["nombre"].unique()))
