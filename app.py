@@ -762,178 +762,77 @@ elif choice == "Gestión Colaboradores":
 elif choice == "Historial de Descuadres":
     st.markdown("""
         <div class="market-header">
-            <h1>Auditoría de Descuadres</h1>
-            <p>Histórico completo para contabilidad</p>
+            <h1>Historial General de Descuadres</h1>
+            <p>Registro completo de diferencias de caja</p>
         </div>
     """, unsafe_allow_html=True)
 
     if not st.session_state.descuadres.empty:
-        st.markdown("##### 🔍 Filtros de Búsqueda")
-        f_col1, f_col2 = st.columns([1.5, 1])
+        df_desc_ver = st.session_state.descuadres.copy()
         
-        with f_col1:
-            rango_fechas_desc = st.date_input("Rango de Fechas", value=(obtener_ahora_peru(), obtener_ahora_peru()), key="desc_fechas")
-        with f_col2:
-            colabs_desc = ["Todos"] + [c for c in st.session_state.descuadres["nombre"].unique().tolist() if c in obtener_solo_colaboradores()]
-            colab_desc_sel = st.selectbox("Colaborador", colabs_desc, key="desc_colab")
+        # Filtros
+        col1, col2 = st.columns([1, 1])
+        with col1:
+            filtro_colab = st.selectbox("Filtrar por Colaborador", ["Todos"] + list(df_desc_ver["nombre"].unique()))
+        with col2:
+            filtro_tipo = st.selectbox("Filtrar por Tipo", ["Todos", "Sobrante", "Faltante"])
 
-        df_desc_filtrado = st.session_state.descuadres.copy()
-        
-        if isinstance(rango_fechas_desc, tuple):
-            if len(rango_fechas_desc) == 2:
-                f_inicio, f_fin = str(rango_fechas_desc[0]), str(rango_fechas_desc[1])
-                df_desc_filtrado = df_desc_filtrado[
-                    (df_desc_filtrado["fecha"].astype(str) >= f_inicio) & 
-                    (df_desc_filtrado["fecha"].astype(str) <= f_fin)
-                ]
-            elif len(rango_fechas_desc) == 1:
-                f_inicio = str(rango_fechas_desc[0])
-                df_desc_filtrado = df_desc_filtrado[df_desc_filtrado["fecha"].astype(str) == f_inicio]
+        if filtro_colab != "Todos":
+            df_desc_ver = df_desc_ver[df_desc_ver["nombre"] == filtro_colab]
+        if filtro_tipo != "Todos":
+            df_desc_ver = df_desc_ver[df_desc_ver["tipo"] == filtro_tipo]
 
-        if colab_desc_sel != "Todos":
-            df_desc_filtrado = df_desc_filtrado[df_desc_filtrado["nombre"] == colab_desc_sel]
-
-        # MEJORA 2: Métricas resumen ejecutivas para descuadres
-        if not df_desc_filtrado.empty:
-            df_desc_filtrado["monto_num"] = pd.to_numeric(df_desc_filtrado["monto"], errors="coerce").fillna(0)
-            sobrantes = df_desc_filtrado[df_desc_filtrado["monto_num"] > 0]["monto_num"].sum()
-            faltantes = df_desc_filtrado[df_desc_filtrado["monto_num"] < 0]["monto_num"].sum()
-            balance = df_desc_filtrado["monto_num"].sum()
-
-            m1, m2, m3 = st.columns(3)
-            with m1:
-                st.markdown(f'<div class="info-card"><div class="info-label">Total Sobrantes (+)</div><div class="info-value" style="color:#00A959;">S/. {sobrantes:.2f}</div></div>', unsafe_allow_html=True)
-            with m2:
-                st.markdown(f'<div class="info-card"><div class="info-label">Total Faltantes (-)</div><div class="info-value" style="color:#EC3237;">S/. {abs(faltantes):.2f}</div></div>', unsafe_allow_html=True)
-            with m3:
-                st.markdown(f'<div class="info-card"><div class="info-label">Balance Neto</div><div class="info-value" style="color:{"#00A959" if balance >= 0 else "#EC3237"};">S/. {balance:.2f}</div></div>', unsafe_allow_html=True)
-
-        st.markdown("<br>", unsafe_allow_html=True)
         st.dataframe(
-            df_desc_filtrado.drop(columns=["monto_num"], errors="ignore"),
+            df_desc_ver[["fecha", "dni", "nombre", "tipo", "monto", "observacion", "fecha_registro"]],
             width="stretch",
             hide_index=True,
-            column_config={"monto": st.column_config.NumberColumn("MONTO", format="S/. %.2f")}
+            column_config={
+                "monto": st.column_config.NumberColumn("MONTO", format="S/. %.2f")
+            }
         )
-        st.download_button("Exportar a Excel", to_excel(df_desc_filtrado.drop(columns=["monto_num"], errors="ignore")), "Descuadres_General.xlsx")
 
-        if rol_actual == "admin":
-            st.markdown("<br>", unsafe_allow_html=True)
-            col_mod, col_del = st.columns(2)
-
-            with col_mod:
-                with st.expander("Modificar Descuadre"):
-                    opciones_desc = [f"{i} | {r['fecha']} | {r['nombre']} | S/. {r['monto']}" for i, r in st.session_state.descuadres.iterrows()]
-                    sel_mod = st.selectbox("Seleccionar Registro a Editar", opciones_desc, key="mod_desc_sel")
-                    
-                    if sel_mod:
-                        idx_mod = int(sel_mod.split(" | ")[0])
-                        row_mod = st.session_state.descuadres.loc[idx_mod]
-                        
-                        nuevo_monto = st.number_input("Nuevo Monto (S/.)", value=float(row_mod["monto"]), step=0.50, format="%.2f")
-                        tipo_options = ["Sobrante", "Faltante"]
-                        idx_tipo = tipo_options.index(row_mod["tipo"]) if row_mod["tipo"] in tipo_options else 0
-                        nuevo_tipo = st.selectbox("Nuevo Tipo", tipo_options, index=idx_tipo)
-                        nueva_obs = st.text_area("Nueva Observación", value=str(row_mod["observacion"]))
-
-                        if st.button("Guardar Cambios en Descuadre"):
-                            st.session_state.descuadres.at[idx_mod, "monto"] = nuevo_monto
-                            st.session_state.descuadres.at[idx_mod, "tipo"] = nuevo_tipo
-                            st.session_state.descuadres.at[idx_mod, "observacion"] = nueva_obs
-                            actualizar_hoja_completa("Descuadres", st.session_state.descuadres)
-                            st.toast("Descuadre actualizado correctamente")
-                            st.rerun()
-
-            # MEJORA 4: Confirmación previa al eliminar descuadre
-            with col_del:
-                with st.expander("Eliminar Descuadre"):
-                    opciones_desc_del = [f"{i} | {r['fecha']} | {r['nombre']} | S/. {r['monto']}" for i, r in st.session_state.descuadres.iterrows()]
-                    sel_del = st.selectbox("Seleccionar Registro a Eliminar", opciones_desc_del, key="del_desc_sel")
-                    confirm_del_desc = st.checkbox("Confirmar eliminación del descuadre")
-
-                    if st.button("Eliminar Descuadre", type="primary"):
-                        if confirm_del_desc:
-                            idx_del = int(sel_del.split(" | ")[0])
-                            st.session_state.descuadres = st.session_state.descuadres.drop(idx_del).reset_index(drop=True)
-                            actualizar_hoja_completa("Descuadres", st.session_state.descuadres)
-                            st.toast("Descuadre eliminado correctamente")
-                            st.rerun()
-                        else:
-                            st.warning("Marca la casilla de confirmación antes de eliminar.")
+        st.download_button(
+            label="📊 Descargar Historial Excel",
+            data=to_excel(df_desc_ver),
+            file_name=f"descuadres_tiendas_premium_{obtener_ahora_peru().strftime('%Y%m%d')}.xlsx",
+            mime="application/vnd.ms-excel"
+        )
     else:
-        st.info("Sin descuadres registrados.")
+        st.info("No hay registros de descuadres en la base de datos.")
 
 elif choice == "Historial de Asistencias":
     st.markdown("""
         <div class="market-header">
-            <h1>Reporte de Asistencias</h1>
-            <p>Histórico de marcas de ingreso y salida</p>
+            <h1>Historial General de Asistencias</h1>
+            <p>Registro consolidado de marcaciones e ingresos</p>
         </div>
     """, unsafe_allow_html=True)
 
     if not st.session_state.asistencia.empty:
-        st.markdown("##### 🔍 Filtros de Búsqueda")
-        fa_col1, fa_col2 = st.columns([1.5, 1])
+        df_asist_ver = st.session_state.asistencia.copy()
         
-        with fa_col1:
-            rango_fechas_asist = st.date_input("Rango de Fechas", value=(obtener_ahora_peru(), obtener_ahora_peru()), key="asist_fechas")
-        with fa_col2:
-            colabs_asist = ["Todos"] + [c for c in st.session_state.asistencia["nombre"].unique().tolist() if c in obtener_solo_colaboradores()]
-            colab_asist_sel = st.selectbox("Colaborador", colabs_asist, key="asist_colab")
+        col1, col2 = st.columns([1, 1])
+        with col1:
+            filtro_colab_a = st.selectbox("Filtrar por Colaborador", ["Todos"] + list(df_asist_ver["nombre"].unique()))
+        with col2:
+            filtro_tipo_a = st.selectbox("Filtrar por Tipo Marcación", ["Todos", "INGRESO", "SALIDA"])
 
-        df_asist_filtrado = st.session_state.asistencia.copy()
-        
-        if isinstance(rango_fechas_asist, tuple):
-            if len(rango_fechas_asist) == 2:
-                f_inicio, f_fin = str(rango_fechas_asist[0]), str(rango_fechas_asist[1])
-                df_asist_filtrado = df_asist_filtrado[
-                    (df_asist_filtrado["fecha"].astype(str) >= f_inicio) & 
-                    (df_asist_filtrado["fecha"].astype(str) <= f_fin)
-                ]
-            elif len(rango_fechas_asist) == 1:
-                f_inicio = str(rango_fechas_asist[0])
-                df_asist_filtrado = df_asist_filtrado[df_asist_filtrado["fecha"].astype(str) == f_inicio]
+        if filtro_colab_a != "Todos":
+            df_asist_ver = df_asist_ver[df_asist_ver["nombre"] == filtro_colab_a]
+        if filtro_tipo_a != "Todos":
+            df_asist_ver = df_asist_ver[df_asist_ver["tipo"] == filtro_tipo_a]
 
-        if colab_asist_sel != "Todos":
-            df_asist_filtrado = df_asist_filtrado[df_asist_filtrado["nombre"] == colab_asist_sel]
+        st.dataframe(
+            df_asist_ver[["dni", "nombre", "tipo", "fecha_hora", "fecha", "observacion"]],
+            width="stretch",
+            hide_index=True
+        )
 
-        # MEJORA 2: Métricas resumen ejecutivas para asistencias
-        if not df_asist_filtrado.empty:
-            total_marcas = len(df_asist_filtrado)
-            ingresos_cnt = len(df_asist_filtrado[df_asist_filtrado["tipo"] == "INGRESO"])
-            colabs_unicos = df_asist_filtrado["nombre"].nunique()
-
-            a1, a2, a3 = st.columns(3)
-            with a1:
-                st.markdown(f'<div class="info-card"><div class="info-label">Total Marcaciones</div><div class="info-value">{total_marcas}</div></div>', unsafe_allow_html=True)
-            with a2:
-                st.markdown(f'<div class="info-card"><div class="info-label">Jornadas Iniciadas</div><div class="info-value" style="color:#00A959;">{ingresos_cnt}</div></div>', unsafe_allow_html=True)
-            with a3:
-                st.markdown(f'<div class="info-card"><div class="info-label">Colaboradores Evaluados</div><div class="info-value">{colabs_unicos}</div></div>', unsafe_allow_html=True)
-
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.dataframe(df_asist_filtrado, width="stretch", hide_index=True)
-        st.download_button("Exportar a Excel", to_excel(df_asist_filtrado), "Asistencias_General.xlsx")
-
-        # MEJORA 4: Confirmación previa al eliminar asistencia
-        if rol_actual == "admin":
-            st.markdown("<br>", unsafe_allow_html=True)
-            with st.expander("Eliminar Registro de Asistencia"):
-                opciones_asist = [f"{i} | {r['fecha_hora']} | {r['nombre']} | {r['tipo']}" for i, r in st.session_state.asistencia.iterrows()]
-                sel_asist_del = st.selectbox("Seleccionar Marcación a Eliminar", opciones_asist)
-                confirm_del_asist = st.checkbox("Confirmar eliminación del registro de asistencia")
-
-                if st.button("Eliminar Registro", type="primary"):
-                    if confirm_del_asist:
-                        idx_asist = int(sel_asist_del.split(" | ")[0])
-                        st.session_state.asistencia = st.session_state.asistencia.drop(idx_asist).reset_index(drop=True)
-                        actualizar_hoja_completa("Asistencia", st.session_state.asistencia)
-                        st.toast("Marcación eliminada correctamente")
-                        st.rerun()
-                    else:
-                        st.warning("Marca la casilla de confirmación antes de eliminar.")
+        st.download_button(
+            label="📊 Descargar Asistencias Excel",
+            data=to_excel(df_asist_ver),
+            file_name=f"asistencias_tiendas_premium_{obtener_ahora_peru().strftime('%Y%m%d')}.xlsx",
+            mime="application/vnd.ms-excel"
+        )
     else:
-        st.info("Sin asistencias registradas.")
-
-st.markdown("<br><br>", unsafe_allow_html=True)
-st.markdown('<div style="text-align:center; color:#9CA3AF; font-size:11px;">Tiendas Premium EIRL - Desarrollado por Humberto Atoche</div>', unsafe_allow_html=True)
+        st.info("No hay registros de asistencias en la base de datos.")
