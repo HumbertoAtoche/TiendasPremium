@@ -186,6 +186,14 @@ def guardar_descuadre_gsheets(fecha, dni, nombre, tipo, monto, observacion, fech
         except Exception as e:
             st.error(f"❌ Error al guardar descuadre: {e}")
 
+def guardar_solicitud_gsheets(id_sol, fecha_reg, dni, nombre, tipo_sol, f_permiso, monto_adel, motivo, estado="Pendiente", respuesta=""):
+    if doc_sheets:
+        try:
+            hoja = doc_sheets.worksheet("Solicitudes")
+            hoja.append_row([str(id_sol), str(fecha_reg), str(dni), nombre, tipo_sol, str(f_permiso), float(monto_adel), motivo, estado, respuesta])
+        except Exception as e:
+            st.error(f"❌ Error al guardar solicitud: {e}")
+
 def actualizar_hoja_completa(nombre_hoja, df):
     if doc_sheets:
         try:
@@ -441,6 +449,30 @@ st.markdown("""
         border-radius: 3px;
         display: inline-block;
     }
+
+    .profile-name {
+        font-weight: 700;
+        font-size: 1.05rem;
+        color: #111827;
+    }
+    .profile-role {
+        font-size: 0.82rem;
+        color: #4B5563;
+        margin-bottom: 6px;
+    }
+    .profile-field {
+        font-size: 0.68rem;
+        font-weight: 700;
+        color: #6B7280;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-top: 6px;
+    }
+    .profile-val {
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: #111827;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -479,6 +511,16 @@ if "descuadres" not in st.session_state:
             st.session_state.descuadres = pd.DataFrame(columns=["fecha", "dni", "nombre", "tipo", "monto", "observacion", "fecha_registro"])
     else:
         st.session_state.descuadres = pd.DataFrame(columns=["fecha", "dni", "nombre", "tipo", "monto", "observacion", "fecha_registro"])
+
+if "solicitudes" not in st.session_state:
+    if doc_sheets:
+        try:
+            data_sol = doc_sheets.worksheet("Solicitudes").get_all_records()
+            st.session_state.solicitudes = pd.DataFrame(data_sol)
+        except Exception:
+            st.session_state.solicitudes = pd.DataFrame(columns=["id_solicitud", "fecha_registro", "dni", "nombre", "tipo_solicitud", "fecha_permiso", "monto_adelanto", "motivo", "estado", "respuesta_admin"])
+    else:
+        st.session_state.solicitudes = pd.DataFrame(columns=["id_solicitud", "fecha_registro", "dni", "nombre", "tipo_solicitud", "fecha_permiso", "monto_adelanto", "motivo", "estado", "respuesta_admin"])
 
 USUARIOS = {}
 for _, row in st.session_state.empleados.iterrows():
@@ -572,7 +614,7 @@ def obtener_solo_colaboradores(fecha_eval=None):
         colabs_validos = []
         for _, row in df_colab.iterrows():
             f_cese = str(row.get("fecha_cese", "")).strip()
-            # Si tiene fecha de cese y la fecha evaluada es estrictamente posterior a la fecha de cese, se oculta
+            # Si tiene fecha de cese y la fecha evaluada es strictly posterior a la fecha de cese, se oculta
             if f_cese and f_cese != "-" and f_cese != "None":
                 if f_eval_str > f_cese:
                     continue
@@ -588,6 +630,74 @@ def parsear_fecha_segura(f_str):
         return datetime.strptime(str(f_str).split(" ")[0].strip(), "%Y-%m-%d").date()
     except Exception:
         return None
+
+def renderizar_tarjeta_colaborador(row):
+    dni_val = str(row.get("dni", "")).strip()
+    nombre_val = str(row.get("nombre", "")).strip()
+    cargo_val = str(row.get("cargo", "")).strip()
+    rol_val = str(row.get("rol", "")).strip()
+    estado_val = str(row.get("estado", "Activo")).strip()
+    direccion_val = str(row.get("direccion", "-")).strip() or "-"
+    telefono_val = str(row.get("telefono", "-")).strip() or "-"
+    f_nac_val = str(row.get("fecha_nacimiento", "")).strip()
+    edad_val = calcular_edad(f_nac_val)
+    
+    c_emergencia = str(row.get("contacto_emergencia", "-")).strip() or "-"
+    num_emergencia = str(row.get("numero_emergencia", "-")).strip() or "-"
+    link_domicilio = str(row.get("link_domicilio", "")).strip()
+    f_inicio_val = str(row.get("fecha_inicio", "")).strip() or "-"
+    f_cese_val = str(row.get("fecha_cese", "")).strip() or "-"
+
+    foto_nom = str(row.get("foto", "")).strip()
+    if not foto_nom:
+        foto_nom = f"{dni_val}.png"
+    foto_url = f"fotos/{foto_nom}"
+
+    with st.container(border=True):
+        c_img, c_info = st.columns([1, 2])
+        
+        with c_img:
+            try:
+                st.image(foto_url, use_container_width=True)
+            except Exception:
+                st.image("https://via.placeholder.com/150?text=Sin+Foto", use_container_width=True)
+        
+        with c_info:
+            st.markdown(f"<div class='profile-name'>{nombre_val}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='profile-role'>{cargo_val} • <span style='color:#6B7280;'>{rol_val}</span></div>", unsafe_allow_html=True)
+            
+            badge_color = "#00A959" if estado_val.lower() == "activo" else "#6B7280"
+            texto_estado = "ACTIVO" if estado_val.lower() == "activo" else "DADO DE BAJA"
+            st.markdown(f"<span style='background-color:{badge_color}; color:#fff; padding:2px 8px; border-radius:10px; font-size:0.65rem; font-weight:700;'>{texto_estado}</span>", unsafe_allow_html=True)
+            st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
+
+            st.markdown("<div class='profile-field'>DNI / ID:</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='profile-val'>{dni_val}</div>", unsafe_allow_html=True)
+
+            st.markdown("<div class='profile-field'>TELÉFONO DE CONTACTO:</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='profile-val'>{telefono_val}</div>", unsafe_allow_html=True)
+
+            st.markdown("<div class='profile-field'>FECHA NAC. / EDAD:</div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='profile-val'>{f_nac_val if f_nac_val else '-'} ({edad_val})</div>", unsafe_allow_html=True)
+
+        st.markdown("---")
+
+        # Información sobre el tiempo laborado y retiro
+        st.markdown("<div class='profile-field'>📅 PERÍODO LABORAL / TIEMPO TRABAJADO:</div>", unsafe_allow_html=True)
+        if estado_val.lower() in ["desactivado", "dado de baja"]:
+            st.markdown(f"<div class='profile-val' style='color:#EC3237; font-weight:600;'>Se retiró de la empresa el {f_cese_val} (Inicio: {f_inicio_val})</div>", unsafe_allow_html=True)
+        else:
+            st.markdown(f"<div class='profile-val'>Inicio de labores: {f_inicio_val}</div>", unsafe_allow_html=True)
+        st.markdown("<div style='height: 6px;'></div>", unsafe_allow_html=True)
+        
+        st.markdown("<div class='profile-field'>📍 DIRECCIÓN DE DOMICILIO:</div>", unsafe_allow_html=True)
+        if link_domicilio.startswith("http"):
+            st.markdown(f"<div class='profile-val'>{direccion_val} — <a href='{link_domicilio}' target='_blank' style='color:#EC3237; text-decoration:none; font-weight:700;'> Ver en Google Maps 🗺️</a></div>", unsafe_allow_html=True)
+        else:
+            st.markdown(f"<div class='profile-val'>{direccion_val}</div>", unsafe_allow_html=True)
+
+        st.markdown("<div class='profile-field'>🚨 CONTACTO DE EMERGENCIA:</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='profile-val'>{c_emergencia} ({num_emergencia})</div>", unsafe_allow_html=True)
 
 # --- DIBUJAR CALENDARIO EJECUTIVO ELEGANTE ---
 def renderizar_calendario_colaborador(nombre_colab, anio, mes):
@@ -694,9 +804,9 @@ st.sidebar.markdown(f"""
 """, unsafe_allow_html=True)
 
 if rol_actual == "admin":
-    menu = ["Dashboard General", "Gestión Colaboradores", "Historial de Descuadres", "Historial de Asistencias"]
+    menu = ["Dashboard General", "Gestión Colaboradores", "Solicitudes y Permisos", "Historial de Descuadres", "Historial de Asistencias"]
 else:
-    menu = ["Marcar Asistencia", "Registrar Descuadre", "Mi Dashboard Mensual"]
+    menu = ["Marcar Asistencia", "Registrar Descuadre", "Mi Ficha Técnica", "Solicitar Permiso / Adelanto", "Mi Dashboard Mensual"]
 
 choice = st.sidebar.radio("Navegación", menu)
 
@@ -809,6 +919,105 @@ elif choice == "Registrar Descuadre":
             st.session_state.descuadres = pd.concat([pd.DataFrame([nuevo_row]), st.session_state.descuadres], ignore_index=True)
             guardar_descuadre_gsheets(str(f_operacion), dni_actual, user_actual, tipo_final, monto_final, obs, f_reg)
             st.toast("Descuadre registrado en la nube")
+
+elif choice == "Mi Ficha Técnica":
+    st.markdown(f"""
+        <div class="market-header">
+            <h1>Mi Ficha Técnica</h1>
+            <p>Información laboral y de contacto registrada para <b>{user_actual}</b></p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    mi_row = st.session_state.empleados[st.session_state.empleados["dni"].astype(str) == str(dni_actual)]
+    if not mi_row.empty:
+        renderizar_tarjeta_colaborador(mi_row.iloc[0])
+    else:
+        st.error("No se encontró tu información en la base de datos de colaboradores.")
+
+elif choice == "Solicitar Permiso / Adelanto":
+    st.markdown(f"""
+        <div class="market-header">
+            <h1>Solicitudes de Permiso y Adelantos</h1>
+            <p>Gestión de permisos laborales y adelantos de sueldo para <b>{user_actual}</b></p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    t_sol, t_hist = st.tabs(["📝 Nueva Solicitud", "📋 Mi Historial de Solicitudes"])
+
+    with t_sol:
+        with st.form("form_nueva_solicitud", clear_on_submit=True):
+            st.markdown("<h4 style='margin:0; font-size:1rem; color:#111827; margin-bottom:12px;'>Formulario de Petición</h4>", unsafe_allow_html=True)
+            
+            tipo_sol = st.selectbox("Tipo de Solicitud", ["Permiso Laboral", "Adelanto de Sueldo"])
+            
+            hoy_peru = obtener_ahora_peru().date()
+            fecha_minima_permiso = hoy_peru + timedelta(days=7)
+            
+            f_permiso_val = ""
+            monto_adel_val = 0.0
+
+            if tipo_sol == "Permiso Laboral":
+                st.info("ℹ️ **Regla de Permisos:** Toda solicitud de permiso debe realizarse con un mínimo de **7 días de anticipación**.")
+                f_permiso_sel = st.date_input("Fecha solicitada para el permiso", value=fecha_minima_permiso, min_value=fecha_minima_permiso)
+                f_permiso_val = str(f_permiso_sel)
+            else:
+                st.info("ℹ️ **Adelanto de Sueldo:** Ingresa el monto total a adelantar.")
+                monto_adel_val = st.number_input("Monto a Adelantar (S/.)", min_value=10.0, step=10.0, format="%.2f")
+
+            motivo_sol = st.text_area("Motivo o Justificación detallada", placeholder="Escribe aquí el motivo de tu solicitud...")
+
+            if st.form_submit_button("Enviar Solicitud"):
+                if not motivo_sol.strip():
+                    st.error("Por favor ingresa un motivo para tu solicitud.")
+                else:
+                    if tipo_sol == "Permiso Laboral":
+                        diff_dias = (f_permiso_sel - hoy_peru).days
+                        if diff_dias < 7:
+                            st.error("❌ Los permisos requieren como mínimo 7 días de anticipación.")
+                            st.stop()
+
+                    id_nuevo = f"SOL-{int(time.time())}"
+                    f_reg_now = obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S")
+
+                    nueva_peticion = {
+                        "id_solicitud": id_nuevo,
+                        "fecha_registro": f_reg_now,
+                        "dni": str(dni_actual),
+                        "nombre": user_actual,
+                        "tipo_solicitud": tipo_sol,
+                        "fecha_permiso": f_permiso_val,
+                        "monto_adelanto": monto_adel_val,
+                        "motivo": motivo_sol.strip(),
+                        "estado": "Pendiente",
+                        "respuesta_admin": ""
+                    }
+
+                    st.session_state.solicitudes = pd.concat([pd.DataFrame([nueva_peticion]), st.session_state.solicitudes], ignore_index=True)
+                    guardar_solicitud_gsheets(id_nuevo, f_reg_now, dni_actual, user_actual, tipo_sol, f_permiso_val, monto_adel_val, motivo_sol.strip())
+                    st.success("✅ Solicitud enviada con éxito. Un administrador la revisará pronto.")
+                    time.sleep(0.5)
+                    st.rerun()
+
+    with t_hist:
+        st.markdown("<h4 style='font-size:1rem; color:#111827; margin-bottom:12px;'>Historial de Solicitudes</h4>", unsafe_allow_html=True)
+        
+        df_mis_sol = st.session_state.solicitudes[st.session_state.solicitudes["dni"].astype(str) == str(dni_actual)].copy() if not st.session_state.solicitudes.empty else pd.DataFrame()
+
+        if not df_mis_sol.empty:
+            for _, r_sol in df_mis_sol.iterrows():
+                est = r_sol["estado"]
+                badge_c = "#EAB308" if est == "Pendiente" else ("#00A959" if est == "Aprobado" else "#EC3237")
+                
+                det_txt = f"**Fecha Permiso:** {r_sol['fecha_permiso']}" if r_sol['tipo_solicitud'] == "Permiso Laboral" else f"**Monto Solicitado:** S/. {float(r_sol['monto_adelanto']):.2f}"
+                
+                with st.expander(f"📌 {r_sol['tipo_solicitud']} — {r_sol['fecha_registro']} [{est}]"):
+                    st.markdown(f"<span style='background-color:{badge_c}; color:#fff; padding:3px 10px; border-radius:12px; font-size:0.75rem; font-weight:700;'>{est}</span>", unsafe_allow_html=True)
+                    st.markdown(f"<br>{det_txt}", unsafe_allow_html=True)
+                    st.markdown(f"**Motivo:** {r_sol['motivo']}")
+                    if str(r_sol.get('respuesta_admin', '')).strip():
+                        st.markdown(f"**Respuesta Admin:** {r_sol['respuesta_admin']}")
+        else:
+            st.info("No registras solicitudes en tu historial.")
 
 elif choice == "Mi Dashboard Mensual":
     st.markdown(f"""
@@ -1126,7 +1335,7 @@ elif choice == "Gestión Colaboradores":
 
     tab_fichas, tab_nuevo, tab_directorio = st.tabs(["📇 Fichas Técnicas", "➕ Registrar Colaborador", "📋 Directorio General"])
 
-    # TAB 1: FICHAS TÉCNICAS
+    # TAB 1: FICHAS TÉCNICAS (ORDENADAS: ACTIVOS PRIMERO, DADOS DE BAJA AL FINAL)
     with tab_fichas:
         st.markdown("<h4 style='font-size:1rem; color:#111827; margin-bottom:15px;'>Tarjetas de Identificación del Personal</h4>", unsafe_allow_html=True)
         
@@ -1135,76 +1344,15 @@ elif choice == "Gestión Colaboradores":
         if colabs_df.empty:
             st.info("No existen colaboradores registrados.")
         else:
+            # Ordenamiento: Activos primero, Dados de baja al final
+            colabs_df["orden_estado"] = colabs_df["estado"].astype(str).str.lower().apply(lambda x: 0 if x == "activo" else 1)
+            colabs_df = colabs_df.sort_values(by="orden_estado").reset_index(drop=True)
+
             grid_cols = st.columns(2)
             for i, row in colabs_df.iterrows():
                 col_idx = i % 2
                 with grid_cols[col_idx]:
-                    dni_val = str(row.get("dni", "")).strip()
-                    nombre_val = str(row.get("nombre", "")).strip()
-                    cargo_val = str(row.get("cargo", "")).strip()
-                    rol_val = str(row.get("rol", "")).strip()
-                    estado_val = str(row.get("estado", "Activo")).strip()
-                    direccion_val = str(row.get("direccion", "-")).strip() or "-"
-                    telefono_val = str(row.get("telefono", "-")).strip() or "-"
-                    f_nac_val = str(row.get("fecha_nacimiento", "")).strip()
-                    edad_val = calcular_edad(f_nac_val)
-                    
-                    c_emergencia = str(row.get("contacto_emergencia", "-")).strip() or "-"
-                    num_emergencia = str(row.get("numero_emergencia", "-")).strip() or "-"
-                    link_domicilio = str(row.get("link_domicilio", "")).strip()
-                    f_inicio_val = str(row.get("fecha_inicio", "")).strip() or "-"
-                    f_cese_val = str(row.get("fecha_cese", "")).strip() or "-"
-
-                    foto_nom = str(row.get("foto", "")).strip()
-                    if not foto_nom:
-                        foto_nom = f"{dni_val}.png"
-                    foto_url = f"fotos/{foto_nom}"
-
-                    with st.container(border=True):
-                        c_img, c_info = st.columns([1, 2])
-                        
-                        with c_img:
-                            try:
-                                st.image(foto_url, use_container_width=True)
-                            except Exception:
-                                st.image("https://via.placeholder.com/150?text=Sin+Foto", use_container_width=True)
-                        
-                        with c_info:
-                            st.markdown(f"<div class='profile-name'>{nombre_val}</div>", unsafe_allow_html=True)
-                            st.markdown(f"<div class='profile-role'>{cargo_val} • <span style='color:#6B7280;'>{rol_val}</span></div>", unsafe_allow_html=True)
-                            
-                            badge_color = "#00A959" if estado_val.lower() == "activo" else "#6B7280"
-                            texto_estado = "ACTIVO" if estado_val.lower() == "activo" else "DADO DE BAJA"
-                            st.markdown(f"<span style='background-color:{badge_color}; color:#fff; padding:2px 8px; border-radius:10px; font-size:0.65rem; font-weight:700;'>{texto_estado}</span>", unsafe_allow_html=True)
-                            st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
-
-                            st.markdown("<div class='profile-field'>DNI / ID:</div>", unsafe_allow_html=True)
-                            st.markdown(f"<div class='profile-val'>{dni_val}</div>", unsafe_allow_html=True)
-
-                            st.markdown("<div class='profile-field'>TELÉFONO DE CONTACTO:</div>", unsafe_allow_html=True)
-                            st.markdown(f"<div class='profile-val'>{telefono_val}</div>", unsafe_allow_html=True)
-
-                            st.markdown("<div class='profile-field'>FECHA NAC. / EDAD:</div>", unsafe_allow_html=True)
-                            st.markdown(f"<div class='profile-val'>{f_nac_val if f_nac_val else '-'} ({edad_val})</div>", unsafe_allow_html=True)
-
-                        st.markdown("---")
-
-                        # Información sobre el tiempo laborado y retiro
-                        st.markdown("<div class='profile-field'>📅 PERÍODO LABORAL / TIEMPO TRABAJADO:</div>", unsafe_allow_html=True)
-                        if estado_val.lower() == "desactivado":
-                            st.markdown(f"<div class='profile-val' style='color:#EC3237; font-weight:600;'>Se retiró de la empresa el {f_cese_val} (Inicio: {f_inicio_val})</div>", unsafe_allow_html=True)
-                        else:
-                            st.markdown(f"<div class='profile-val'>Inicio de labores: {f_inicio_val}</div>", unsafe_allow_html=True)
-                        st.markdown("<div style='height: 6px;'></div>", unsafe_allow_html=True)
-                        
-                        st.markdown("<div class='profile-field'>📍 DIRECCIÓN DE DOMICILIO:</div>", unsafe_allow_html=True)
-                        if link_domicilio.startswith("http"):
-                            st.markdown(f"<div class='profile-val'>{direccion_val} — <a href='{link_domicilio}' target='_blank' style='color:#EC3237; text-decoration:none; font-weight:700;'> Ver en Google Maps 🗺️</a></div>", unsafe_allow_html=True)
-                        else:
-                            st.markdown(f"<div class='profile-val'>{direccion_val}</div>", unsafe_allow_html=True)
-
-                        st.markdown("<div class='profile-field'>🚨 CONTACTO DE EMERGENCIA:</div>", unsafe_allow_html=True)
-                        st.markdown(f"<div class='profile-val'>{c_emergencia} ({num_emergencia})</div>", unsafe_allow_html=True)
+                    renderizar_tarjeta_colaborador(row)
 
     # TAB 2: FORMULARIO AMPLIADO
     with tab_nuevo:
@@ -1312,6 +1460,74 @@ elif choice == "Gestión Colaboradores":
                             st.warning("Marca la casilla de confirmación antes de dar de baja.")
                 else:
                     st.info("No hay colaboradores activos para dar de baja.")
+
+elif choice == "Solicitudes y Permisos":
+    st.markdown("""
+        <div class="market-header">
+            <h1>Gestión de Solicitudes y Permisos</h1>
+            <p>Bandeja de aprobación para administración</p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    if not st.session_state.solicitudes.empty:
+        df_sol = st.session_state.solicitudes.copy()
+        
+        # Filtro de estado
+        estado_filtro = st.selectbox("Filtrar por Estado", ["Todos", "Pendiente", "Aprobado", "Rechazado"])
+        if estado_filtro != "Todos":
+            df_sol = df_sol[df_sol["estado"] == estado_filtro]
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        for idx, row_sol in df_sol.iterrows():
+            id_s = row_sol["id_solicitud"]
+            nom_s = row_sol["nombre"]
+            tipo_s = row_sol["tipo_solicitud"]
+            est_s = row_sol["estado"]
+            
+            color_st = "#EAB308" if est_s == "Pendiente" else ("#00A959" if est_s == "Aprobado" else "#EC3237")
+            
+            with st.expander(f"📥 {tipo_s} - {nom_s} ({row_sol['fecha_registro']}) [{est_s}]"):
+                c_sol1, c_sol2 = st.columns([2, 1])
+                
+                with c_sol1:
+                    st.markdown(f"**Trabajador:** {nom_s} (DNI: {row_sol['dni']})")
+                    st.markdown(f"**Tipo de Solicitud:** {tipo_s}")
+                    if tipo_s == "Permiso Laboral":
+                        st.markdown(f"**Fecha Solicitada:** {row_sol['fecha_permiso']}")
+                    else:
+                        st.markdown(f"**Monto Solicitado:** S/. {float(row_sol['monto_adelanto']):.2f}")
+                    st.markdown(f"**Motivo:** {row_sol['motivo']}")
+                    st.markdown(f"**Estado Actual:** <span style='color:{color_st}; font-weight:700;'>{est_s}</span>", unsafe_allow_html=True)
+
+                with c_sol2:
+                    if est_s == "Pendiente":
+                        st.markdown("**:gear: Acciones:**")
+                        resp_admin_input = st.text_input(f"Observación Admin", key=f"resp_{id_s}")
+                        
+                        btn_col1, btn_col2 = st.columns(2)
+                        if btn_col1.button("Aprobar", key=f"ap_{id_s}"):
+                            idx_real = st.session_state.solicitudes[st.session_state.solicitudes["id_solicitud"] == id_s].index
+                            st.session_state.solicitudes.loc[idx_real, "estado"] = "Aprobado"
+                            st.session_state.solicitudes.loc[idx_real, "respuesta_admin"] = resp_admin_input
+                            actualizar_hoja_completa("Solicitudes", st.session_state.solicitudes)
+                            st.toast("Solicitud Aprobada")
+                            time.sleep(0.3)
+                            st.rerun()
+
+                        if btn_col2.button("Rechazar", key=f"rec_{id_s}"):
+                            idx_real = st.session_state.solicitudes[st.session_state.solicitudes["id_solicitud"] == id_s].index
+                            st.session_state.solicitudes.loc[idx_real, "estado"] = "Rechazado"
+                            st.session_state.solicitudes.loc[idx_real, "respuesta_admin"] = resp_admin_input
+                            actualizar_hoja_completa("Solicitudes", st.session_state.solicitudes)
+                            st.toast("Solicitud Rechazada")
+                            time.sleep(0.3)
+                            st.rerun()
+                    else:
+                        if str(row_sol.get("respuesta_admin", "")).strip():
+                            st.markdown(f"**Respuesta emitida:** {row_sol['respuesta_admin']}")
+    else:
+        st.info("No hay solicitudes registradas en el sistema.")
 
 elif choice == "Historial de Descuadres":
     st.markdown("""
