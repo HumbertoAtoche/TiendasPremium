@@ -25,10 +25,10 @@ def obtener_ahora_peru():
 JORNADA_MINUTOS_BASE = 345  # 5 horas con 45 minutos (5 * 60 + 45 = 345 min)
 
 HORA_INICIO_MANANA = dt_time(8, 45)
-HORA_LIMITE_MANANA = dt_time(8, 55)   # 10 min de tolerancia
+HORA_LIMITE_MANANA = dt_time(8, 55)   # 10 min de tolerancia (hasta 8:55 am)
 
-HORA_INICIO_TARDE = dt_time(15, 30)
-HORA_LIMITE_TARDE = dt_time(15, 40)   # 10 min de tolerancia
+HORA_INICIO_TARDE = dt_time(15, 15)   # 3:15 pm
+HORA_LIMITE_TARDE = dt_time(15, 25)   # 10 min de tolerancia (hasta 3:25 pm)
 
 def calcular_tardanza_ingreso(fecha_hora_str):
     """
@@ -80,13 +80,11 @@ def calcular_jornada_y_horas_extras(df_marcas_dia):
         row_actual = df_ord.iloc[i]
         if row_actual["tipo"] == "INGRESO":
             dt_ingreso = row_actual["dt"]
-            # Buscar la salida correspondiente
             if i + 1 < n and df_ord.iloc[i + 1]["tipo"] == "SALIDA":
                 dt_salida = df_ord.iloc[i + 1]["dt"]
                 segundos_totales += (dt_salida - dt_ingreso).total_seconds()
                 i += 2
             else:
-                # Si no hay salida aún y es el día actual, medir hasta la hora actual
                 hoy_str = obtener_ahora_peru().strftime("%Y-%m-%d")
                 if str(row_actual["fecha"]) == hoy_str:
                     ahora = obtener_ahora_peru().replace(tzinfo=None)
@@ -101,7 +99,6 @@ def calcular_jornada_y_horas_extras(df_marcas_dia):
     minutos_laborales = min(minutos_totales, JORNADA_MINUTOS_BASE)
     minutos_extras = max(0, minutos_totales - JORNADA_MINUTOS_BASE)
 
-    # Identificar turnos adicionales / fuera de horario
     df_extras = df_ord[df_ord["es_extra"].astype(str) == "SI"]
     turnos_adicionales = []
     for _, r_ext in df_extras.iterrows():
@@ -937,7 +934,6 @@ if choice == "Marcar Asistencia":
                     }
                 )
                 
-                # Cálculo rápido de horas trabajadas hoy
                 df_mismarcas["dt"] = pd.to_datetime(df_mismarcas["fecha_hora"])
                 mins_lab, mins_ext, mins_tot, _ = calcular_jornada_y_horas_extras(df_mismarcas)
                 
@@ -1113,7 +1109,6 @@ elif choice == "Mi Dashboard Mensual":
     monto_total = pd.to_numeric(df_mis_desc["monto"]).sum() if not df_mis_desc.empty else 0.0
     dias_trabajados = df_mis_asist["fecha"].nunique() if not df_mis_asist.empty else 0
 
-    # Total de Horas Extras en el mes
     minutos_extras_mes = 0
     if not df_mis_asist.empty:
         df_mis_asist["dt"] = pd.to_datetime(df_mis_asist["fecha_hora"])
@@ -1245,6 +1240,7 @@ elif choice == "Dashboard General":
     fichas_colaboradores = {}
     en_turno_cnt = 0
     concluido_cnt = 0
+    total_minutos_extras_dia = 0
 
     if not df_asist_dash.empty:
         df_asist_dash = df_asist_dash[df_asist_dash["fecha"].astype(str) == f_dash_str]
@@ -1270,7 +1266,6 @@ elif choice == "Dashboard General":
                 
                 tardanza_txt = "Puntual"
                 if not ingresos.empty:
-                    # Se evalúa la puntualidad del primer ingreso regular del día
                     ing_regulares = ingresos[ingresos["es_extra"].astype(str) != "SI"]
                     ing_eval = ing_regulares.iloc[0] if not ing_regulares.empty else ingresos.iloc[0]
                     mins_t, es_t, turno_p = calcular_tardanza_ingreso(ing_eval["fecha_hora"])
@@ -1284,8 +1279,8 @@ elif choice == "Dashboard General":
                     estado = "⚪ Concluido"
                     concluido_cnt += 1
 
-                # Cálculo de la jornada (5h 45m) y horas extras
                 mins_lab, mins_ext, mins_tot, turnos_adicionales = calcular_jornada_y_horas_extras(grupo_ordenado)
+                total_minutos_extras_dia += mins_ext
 
                 obs_asistencia = [
                     f"[{r['tipo']} {r['dt'].strftime('%H:%M')}] {r['observacion']}" 
@@ -1334,7 +1329,7 @@ elif choice == "Dashboard General":
         total_descuadre_monto = pd.to_numeric(df_desc_dash["monto"], errors="coerce").sum() if not df_desc_dash.empty else 0.0
 
     st.markdown("<br>", unsafe_allow_html=True)
-    k1, k2, k3, k4 = st.columns(4)
+    k1, k2, k3, k4, k5 = st.columns(5)
     metricas_gen = calcular_metricas_puntualidad(st.session_state.asistencia)
     
     with k1:
@@ -1342,9 +1337,11 @@ elif choice == "Dashboard General":
     with k2:
         st.markdown(f'<div class="info-card"><div class="info-label">Turno Concluido</div><div class="info-value" style="color: #6B7280;">{concluido_cnt}</div></div>', unsafe_allow_html=True)
     with k3:
-        st.markdown(f'<div class="info-card"><div class="info-label">Ratio Puntualidad Global</div><div class="info-value" style="color: {"#00A959" if metricas_gen["ratio"] >= 90 else "#EC3237"};">{metricas_gen["ratio"]}%</div></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="info-card"><div class="info-label">Horas Extras Hoy</div><div class="info-value" style="color: #00A959;">{formatear_horas_minutos(total_minutos_extras_dia)}</div></div>', unsafe_allow_html=True)
     with k4:
-        st.markdown(f'<div class="info-card"><div class="info-label">Balance Descuadres Hoy</div><div class="info-value" style="color: {"#00A959" if total_descuadre_monto >= 0 else "#EC3237"};">S/. {total_descuadre_monto:.2f}</div></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="info-card"><div class="info-label">Puntualidad Global</div><div class="info-value" style="color: {"#00A959" if metricas_gen["ratio"] >= 90 else "#EC3237"};">{metricas_gen["ratio"]}%</div></div>', unsafe_allow_html=True)
+    with k5:
+        st.markdown(f'<div class="info-card"><div class="info-label">Balance Descuadres</div><div class="info-value" style="color: {"#00A959" if total_descuadre_monto >= 0 else "#EC3237"};">S/. {total_descuadre_monto:.2f}</div></div>', unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
 
@@ -1352,7 +1349,7 @@ elif choice == "Dashboard General":
         st.markdown("<h4 style='font-size:1rem; color:#111827; margin-bottom:15px;'>📄 Control Operativo y Horas Extras por Colaborador</h4>", unsafe_allow_html=True)
 
         for nombre_col, datos in fichas_colaboradores.items():
-            with st.expander(f"👤 {nombre_col} — {datos['estado']} | Total Trab.: {datos['tiempo_total_str']}", expanded=True):
+            with st.expander(f"👤 {nombre_col} — {datos['estado']} | Total Trab.: {datos['tiempo_total_str']} | Extras: {datos['horas_extras_str']}", expanded=True):
                 fc1, fc2, fc3, fc4, fc5 = st.columns(5)
                 
                 with fc1:
@@ -1379,7 +1376,6 @@ elif choice == "Dashboard General":
 
                 st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
                 
-                # Detalle de Turnos Adicionales
                 if datos["turnos_adicionales"]:
                     st.markdown("**:alarm_clock: Turnos Adicionales / Coberturas Marcadas:**")
                     for t_add in datos["turnos_adicionales"]:
@@ -1859,7 +1855,4 @@ elif choice == "Historial de Asistencias":
                     else:
                         st.warning("Marca la casilla de confirmación antes de eliminar.")
     else:
-        st.info("Sin asistencias registradas.")
-
-st.markdown("<br><br>", unsafe_allow_html=True)
-st.markdown('<div style="text-align:center; color:#9CA3AF; font-size:11px;">Tiendas Premium EIRL - Desarrollado por Humberto Atoche</div>', unsafe_allow_html=True)
+        st.info("Sin registros de asistencia.")
