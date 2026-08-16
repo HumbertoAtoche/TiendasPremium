@@ -7,6 +7,14 @@ import io
 import time
 import gspread
 
+# --- CONFIGURACIÓN DE PÁGINA ---
+st.set_page_config(
+    page_title="Tiendas Premium EIRL",
+    page_icon="🏪",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
 # --- CONFIGURACIÓN DE ZONA HORARIA (PERÚ) ---
 LIMA_TZ = zoneinfo.ZoneInfo("America/Lima")
 
@@ -88,14 +96,6 @@ def calcular_metricas_puntualidad(df_asistencia, nombre_colab=None):
         "minutos_acumulados": minutos_totales,
         "ratio": round(ratio, 1)
     }
-
-# --- CONFIGURACIÓN DE PÁGINA ---
-st.set_page_config(
-    page_title="Tiendas Premium EIRL",
-    page_icon="🏪",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
 
 # --- CONEXIÓN A GOOGLE SHEETS ---
 @st.cache_resource
@@ -476,14 +476,14 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- INICIALIZACIÓN ---
+# --- INICIALIZACIÓN DE SESSION STATE ---
 if "usuario_login" not in st.session_state:
     st.session_state.usuario_login = None
 
 if "empleados" not in st.session_state:
     st.session_state.empleados = obtener_colaboradores_gsheets()
 
-# Asegurar que existan las nuevas columnas para fecha de inicio y cese
+# Asegurar que existan las columnas requeridas
 for col in ["fecha_inicio", "fecha_cese"]:
     if col not in st.session_state.empleados.columns:
         st.session_state.empleados[col] = ""
@@ -548,7 +548,7 @@ if not st.session_state.usuario_login:
             clave_input = st.text_input("Contraseña", type="password")
             st.markdown("<br>", unsafe_allow_html=True)
             
-            if st.button("Ingresar al Sistema", width="stretch"):
+            if st.button("Ingresar al Sistema", use_container_width=True):
                 if clave_input == USUARIOS[usuario_sel]["clave"]:
                     st.session_state.usuario_login = usuario_sel
                     st.success("Acceso concedido")
@@ -801,7 +801,7 @@ choice = st.sidebar.radio("Navegación", menu)
 
 st.sidebar.markdown("<br><br>", unsafe_allow_html=True)
 st.sidebar.markdown('<div class="btn-logout">', unsafe_allow_html=True)
-if st.sidebar.button("Cerrar Sesión", width="stretch"):
+if st.sidebar.button("Cerrar Sesión", use_container_width=True):
     st.session_state.usuario_login = None
     st.rerun()
 st.sidebar.markdown('</div>', unsafe_allow_html=True)
@@ -830,7 +830,7 @@ if choice == "Marcar Asistencia":
             c1, c2 = st.columns(2)
             with c1:
                 st.markdown('<div class="btn-ingreso">', unsafe_allow_html=True)
-                if st.button("Marcar Ingreso", width="stretch"):
+                if st.button("Marcar Ingreso", use_container_width=True):
                     if registrar_marca(dni_actual, user_actual, "INGRESO", obs_marca, es_turno_extra):
                         st.toast("Ingreso registrado correctamente")
                         time.sleep(0.3)
@@ -839,7 +839,7 @@ if choice == "Marcar Asistencia":
 
             with c2:
                 st.markdown('<div class="btn-salida">', unsafe_allow_html=True)
-                if st.button("Marcar Salida", width="stretch"):
+                if st.button("Marcar Salida", use_container_width=True):
                     if registrar_marca(dni_actual, user_actual, "SALIDA", obs_marca, es_turno_extra):
                         st.toast("Salida registrada correctamente")
                         time.sleep(0.3)
@@ -859,7 +859,7 @@ if choice == "Marcar Asistencia":
             if not df_mismarcas.empty:
                 st.dataframe(
                     df_mismarcas[["tipo", "fecha_hora", "observacion", "es_extra"]],
-                    width="stretch",
+                    use_container_width=True,
                     hide_index=True,
                     column_config={
                         "tipo": "TIPO", 
@@ -891,7 +891,7 @@ elif choice == "Registrar Descuadre":
         monto = st.number_input("Monto (S/.)", min_value=0.01, step=0.50, format="%.2f")
         obs = st.text_area("Sustento o motivo")
 
-        if st.form_submit_button("Guardar Registro"):
+        if st.form_submit_button("Guardar Registro", use_container_width=True):
             monto_final = monto if "+" in tipo_desc else -monto
             tipo_final = "Sobrante" if "+" in tipo_desc else "Faltante"
             f_reg = obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S")
@@ -908,6 +908,8 @@ elif choice == "Registrar Descuadre":
             st.session_state.descuadres = pd.concat([pd.DataFrame([nuevo_row]), st.session_state.descuadres], ignore_index=True)
             guardar_descuadre_gsheets(str(f_operacion), dni_actual, user_actual, tipo_final, monto_final, obs, f_reg)
             st.toast("Descuadre registrado en la nube")
+            time.sleep(0.3)
+            st.rerun()
 
 elif choice == "Mi Ficha Técnica":
     st.markdown(f"""
@@ -934,7 +936,6 @@ elif choice == "Solicitar Permiso / Adelanto":
     t_sol, t_hist = st.tabs(["📝 Nueva Solicitud", "📋 Mi Historial de Solicitudes"])
 
     with t_sol:
-        # Petición de Tipo de Solicitud fuera del form para renderizado dinámico e instantáneo
         tipo_sol = st.selectbox("Tipo de Solicitud", ["Permiso Laboral", "Adelanto de Sueldo"])
 
         with st.form("form_nueva_solicitud", clear_on_submit=True):
@@ -948,7 +949,6 @@ elif choice == "Solicitar Permiso / Adelanto":
 
             if tipo_sol == "Permiso Laboral":
                 st.info("ℹ️ **Regla de Permisos:** Toda solicitud de permiso debe realizarse con un mínimo de **7 días de anticipación**.")
-                # min_value bloquea físicamente la selección de fechas menores a 7 días en el calendario UI
                 f_permiso_sel = st.date_input(
                     "Fecha solicitada para el permiso", 
                     value=fecha_minima_permiso, 
@@ -962,7 +962,7 @@ elif choice == "Solicitar Permiso / Adelanto":
 
             motivo_sol = st.text_area("Motivo o Justificación detallada", placeholder="Escribe aquí el motivo de tu solicitud...")
 
-            if st.form_submit_button("Enviar Solicitud"):
+            if st.form_submit_button("Enviar Solicitud", use_container_width=True):
                 if not motivo_sol.strip():
                     st.error("Por favor ingresa un motivo para tu solicitud.")
                 else:
@@ -1074,7 +1074,7 @@ elif choice == "Mi Dashboard Mensual":
     if not df_mis_desc.empty:
         st.dataframe(
             df_mis_desc[["fecha", "tipo", "monto", "observacion"]],
-            width="stretch",
+            use_container_width=True,
             hide_index=True,
             column_config={"monto": st.column_config.NumberColumn("MONTO", format="S/. %.2f")}
         )
@@ -1377,7 +1377,7 @@ elif choice == "Gestión Colaboradores":
 
             st.caption("📌 Nota: La imagen debe guardarse en la carpeta `fotos/` del repositorio como: `<DNI>.png` o `<DNI>.jpg`")
 
-            if st.form_submit_button("Guardar Registro"):
+            if st.form_submit_button("Guardar Registro", use_container_width=True):
                 if not dni_in or not nom_in or not clave_in:
                     st.error("DNI, Nombre y Contraseña son obligatorios.")
                 else:
@@ -1421,7 +1421,7 @@ elif choice == "Gestión Colaboradores":
         ]
         st.dataframe(
             st.session_state.empleados[cols_mostrar],
-            width="stretch",
+            use_container_width=True,
             hide_index=True
         )
 
@@ -1435,7 +1435,7 @@ elif choice == "Gestión Colaboradores":
                     f_cese_input = st.date_input("Fecha de Salida / Cese", value=obtener_ahora_peru().date())
                     confirm_desactivar = st.checkbox(f"Confirmar baja del colaborador {colab_a_desactivar}")
                     
-                    if st.button("Dar de Baja al Colaborador", type="primary"):
+                    if st.button("Dar de Baja al Colaborador", type="primary", use_container_width=True):
                         if confirm_desactivar:
                             idx = st.session_state.empleados[st.session_state.empleados["nombre"] == colab_a_desactivar].index
                             if not idx.empty:
@@ -1494,7 +1494,7 @@ elif choice == "Solicitudes y Permisos":
                         resp_admin_input = st.text_input(f"Observación Admin", key=f"resp_{id_s}")
                         
                         btn_col1, btn_col2 = st.columns(2)
-                        if btn_col1.button("Aprobar", key=f"ap_{id_s}"):
+                        if btn_col1.button("Aprobar", key=f"ap_{id_s}", use_container_width=True):
                             idx_real = st.session_state.solicitudes[st.session_state.solicitudes["id_solicitud"] == id_s].index
                             st.session_state.solicitudes.loc[idx_real, "estado"] = "Aprobado"
                             st.session_state.solicitudes.loc[idx_real, "respuesta_admin"] = resp_admin_input
@@ -1503,7 +1503,7 @@ elif choice == "Solicitudes y Permisos":
                             time.sleep(0.3)
                             st.rerun()
 
-                        if btn_col2.button("Rechazar", key=f"rec_{id_s}"):
+                        if btn_col2.button("Rechazar", key=f"rec_{id_s}", use_container_width=True):
                             idx_real = st.session_state.solicitudes[st.session_state.solicitudes["id_solicitud"] == id_s].index
                             st.session_state.solicitudes.loc[idx_real, "estado"] = "Rechazado"
                             st.session_state.solicitudes.loc[idx_real, "respuesta_admin"] = resp_admin_input
@@ -1650,11 +1650,11 @@ elif choice == "Historial de Descuadres":
         st.markdown("##### 📋 Matriz Consolidada de Descuadres")
         st.dataframe(
             df_desc_filtrado.drop(columns=["monto_num"], errors="ignore"),
-            width="stretch",
+            use_container_width=True,
             hide_index=True,
             column_config={"monto": st.column_config.NumberColumn("MONTO", format="S/. %.2f")}
         )
-        st.download_button("Exportar a Excel", to_excel(df_desc_filtrado.drop(columns=["monto_num"], errors="ignore")), "Descuadres_General.xlsx")
+        st.download_button("Exportar a Excel", to_excel(df_desc_filtrado.drop(columns=["monto_num"], errors="ignore")), "Descuadres_General.xlsx", use_container_width=True)
 
         if rol_actual == "admin":
             st.markdown("<br>", unsafe_allow_html=True)
@@ -1675,12 +1675,13 @@ elif choice == "Historial de Descuadres":
                         nuevo_tipo = st.selectbox("Nuevo Tipo", tipo_options, index=idx_tipo)
                         nueva_obs = st.text_area("Nueva Observación", value=str(row_mod["observacion"]))
 
-                        if st.button("Guardar Cambios en Descuadre"):
+                        if st.button("Guardar Cambios en Descuadre", use_container_width=True):
                             st.session_state.descuadres.at[idx_mod, "monto"] = nuevo_monto
                             st.session_state.descuadres.at[idx_mod, "tipo"] = nuevo_tipo
                             st.session_state.descuadres.at[idx_mod, "observacion"] = nueva_obs
                             actualizar_hoja_completa("Descuadres", st.session_state.descuadres)
                             st.toast("Descuadre actualizado correctamente")
+                            time.sleep(0.3)
                             st.rerun()
 
             with col_del:
@@ -1689,12 +1690,13 @@ elif choice == "Historial de Descuadres":
                     sel_del = st.selectbox("Seleccionar Registro a Eliminar", opciones_desc_del, key="del_desc_sel")
                     confirm_del_desc = st.checkbox("Confirmar eliminación del descuadre")
 
-                    if st.button("Eliminar Descuadre", type="primary"):
+                    if st.button("Eliminar Descuadre", type="primary", use_container_width=True):
                         if confirm_del_desc:
                             idx_del = int(sel_del.split(" | ")[0])
                             st.session_state.descuadres = st.session_state.descuadres.drop(idx_del).reset_index(drop=True)
                             actualizar_hoja_completa("Descuadres", st.session_state.descuadres)
                             st.toast("Descuadre eliminado correctamente")
+                            time.sleep(0.3)
                             st.rerun()
                         else:
                             st.warning("Marca la casilla de confirmación antes de eliminar.")
@@ -1749,8 +1751,8 @@ elif choice == "Historial de Asistencias":
                 st.markdown(f'<div class="info-card"><div class="info-label">Colaboradores Evaluados</div><div class="info-value">{colabs_unicos}</div></div>', unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
-        st.dataframe(df_asist_filtrado, width="stretch", hide_index=True)
-        st.download_button("Exportar a Excel", to_excel(df_asist_filtrado), "Asistencias_General.xlsx")
+        st.dataframe(df_asist_filtrado, use_container_width=True, hide_index=True)
+        st.download_button("Exportar a Excel", to_excel(df_asist_filtrado), "Asistencias_General.xlsx", use_container_width=True)
 
         if rol_actual == "admin":
             st.markdown("<br>", unsafe_allow_html=True)
@@ -1759,12 +1761,13 @@ elif choice == "Historial de Asistencias":
                 sel_asist_del = st.selectbox("Seleccionar Marcación a Eliminar", opciones_asist)
                 confirm_del_asist = st.checkbox("Confirmar eliminación del registro de asistencia")
 
-                if st.button("Eliminar Registro", type="primary"):
+                if st.button("Eliminar Registro", type="primary", use_container_width=True):
                     if confirm_del_asist:
                         idx_asist = int(sel_asist_del.split(" | ")[0])
                         st.session_state.asistencia = st.session_state.asistencia.drop(idx_asist).reset_index(drop=True)
                         actualizar_hoja_completa("Asistencia", st.session_state.asistencia)
                         st.toast("Marcación eliminada correctamente")
+                        time.sleep(0.3)
                         st.rerun()
                     else:
                         st.warning("Marca la casilla de confirmación antes de eliminar.")
