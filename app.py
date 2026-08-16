@@ -614,7 +614,6 @@ def obtener_solo_colaboradores(fecha_eval=None):
         colabs_validos = []
         for _, row in df_colab.iterrows():
             f_cese = str(row.get("fecha_cese", "")).strip()
-            # Si tiene fecha de cese y la fecha evaluada es strictly posterior a la fecha de cese, se oculta
             if f_cese and f_cese != "-" and f_cese != "None":
                 if f_eval_str > f_cese:
                     continue
@@ -682,7 +681,6 @@ def renderizar_tarjeta_colaborador(row):
 
         st.markdown("---")
 
-        # Información sobre el tiempo laborado y retiro
         st.markdown("<div class='profile-field'>📅 PERÍODO LABORAL / TIEMPO TRABAJADO:</div>", unsafe_allow_html=True)
         if estado_val.lower() in ["desactivado", "dado de baja"]:
             st.markdown(f"<div class='profile-val' style='color:#EC3237; font-weight:600;'>Se retiró de la empresa el {f_cese_val} (Inicio: {f_inicio_val})</div>", unsafe_allow_html=True)
@@ -699,16 +697,14 @@ def renderizar_tarjeta_colaborador(row):
         st.markdown("<div class='profile-field'>🚨 CONTACTO DE EMERGENCIA:</div>", unsafe_allow_html=True)
         st.markdown(f"<div class='profile-val'>{c_emergencia} ({num_emergencia})</div>", unsafe_allow_html=True)
 
-# --- DIBUJAR CALENDARIO EJECUTIVO ELEGANTE ---
 def renderizar_calendario_colaborador(nombre_colab, anio, mes):
-    cal = calendar.Calendar(firstweekday=0) # Lunes a Domingo
+    cal = calendar.Calendar(firstweekday=0)
     mes_dias = cal.monthdayscalendar(anio, mes)
     
     df_asist = st.session_state.asistencia.copy()
     if not df_asist.empty:
         df_asist = df_asist[df_asist["nombre"] == nombre_colab]
     
-    # Datos laborales del colaborador para inicio y cese
     row_emp = st.session_state.empleados[st.session_state.empleados["nombre"] == nombre_colab]
     f_inicio_lab = None
     f_cese_lab = None
@@ -747,7 +743,6 @@ def renderizar_calendario_colaborador(nombre_colab, anio, mes):
                 fecha_dia = date(anio, mes, d)
                 f_str = fecha_dia.strftime("%Y-%m-%d")
                 
-                # Domingo - Descanso
                 if i == 6:
                     html += f"<td class='bg-descanso'><span class='cal-day-num'>{d}</span><span class='cal-sub'>Descanso</span></td>"
                 else:
@@ -756,7 +751,6 @@ def renderizar_calendario_colaborador(nombre_colab, anio, mes):
                     else:
                         df_dia = pd.DataFrame()
 
-                    # Evaluación de marcas de asistencia
                     if not df_dia.empty:
                         tiene_extra = (df_dia["es_extra"].astype(str) == "SI").any() or df_dia["observacion"].str.contains("TURNO EXTRA").any()
                         if tiene_extra:
@@ -765,18 +759,13 @@ def renderizar_calendario_colaborador(nombre_colab, anio, mes):
                             sub_txt = "1er Día" if (f_inicio_lab and fecha_dia == f_inicio_lab) else "✓ Asistió"
                             html += f"<td class='bg-asistio'><span class='cal-day-num'>{d}</span><span class='cal-sub'>{sub_txt}</span></td>"
                     else:
-                        # Evaluación según fechas de inicio de labores y fecha de cese
                         if f_inicio_lab and fecha_dia < f_inicio_lab:
-                            # Días previos a su ingreso oficial al trabajo
                             html += f"<td class='bg-futuro'><span class='cal-day-num'>{d}</span></td>"
                         elif f_cese_lab and fecha_dia == f_cese_lab:
-                            # Día exacto en el que fue dado de baja
                             html += f"<td class='bg-cese'><span class='cal-day-num'>{d}</span><span class='cal-sub'>Cese</span></td>"
                         elif f_cese_lab and fecha_dia > f_cese_lab:
-                            # Días posteriores a su cese
                             html += f"<td class='bg-futuro'><span class='cal-day-num'>{d}</span></td>"
                         elif fecha_dia == f_inicio_lab:
-                            # Primer día laborado si no registró marca aún
                             html += f"<td class='bg-inicio'><span class='cal-day-num'>{d}</span><span class='cal-sub'>1er Día</span></td>"
                         elif fecha_dia < hoy:
                             html += f"<td class='bg-falta'><span class='cal-day-num'>{d}</span><span class='cal-sub'>✕ Falta</span></td>"
@@ -945,10 +934,11 @@ elif choice == "Solicitar Permiso / Adelanto":
     t_sol, t_hist = st.tabs(["📝 Nueva Solicitud", "📋 Mi Historial de Solicitudes"])
 
     with t_sol:
+        # Petición de Tipo de Solicitud fuera del form para renderizado dinámico e instantáneo
+        tipo_sol = st.selectbox("Tipo de Solicitud", ["Permiso Laboral", "Adelanto de Sueldo"])
+
         with st.form("form_nueva_solicitud", clear_on_submit=True):
             st.markdown("<h4 style='margin:0; font-size:1rem; color:#111827; margin-bottom:12px;'>Formulario de Petición</h4>", unsafe_allow_html=True)
-            
-            tipo_sol = st.selectbox("Tipo de Solicitud", ["Permiso Laboral", "Adelanto de Sueldo"])
             
             hoy_peru = obtener_ahora_peru().date()
             fecha_minima_permiso = hoy_peru + timedelta(days=7)
@@ -958,11 +948,17 @@ elif choice == "Solicitar Permiso / Adelanto":
 
             if tipo_sol == "Permiso Laboral":
                 st.info("ℹ️ **Regla de Permisos:** Toda solicitud de permiso debe realizarse con un mínimo de **7 días de anticipación**.")
-                f_permiso_sel = st.date_input("Fecha solicitada para el permiso", value=fecha_minima_permiso, min_value=fecha_minima_permiso)
+                # min_value bloquea físicamente la selección de fechas menores a 7 días en el calendario UI
+                f_permiso_sel = st.date_input(
+                    "Fecha solicitada para el permiso", 
+                    value=fecha_minima_permiso, 
+                    min_value=fecha_minima_permiso
+                )
                 f_permiso_val = str(f_permiso_sel)
             else:
-                st.info("ℹ️ **Adelanto de Sueldo:** Ingresa el monto total a adelantar.")
-                monto_adel_val = st.number_input("Monto a Adelantar (S/.)", min_value=10.0, step=10.0, format="%.2f")
+                st.info("ℹ️ **Adelanto de Sueldo:** Ingresa el monto total a solicitar y la justificación.")
+                monto_adel_val = st.number_input("Monto a Solicitar (S/.)", min_value=10.0, step=10.0, format="%.2f")
+                f_permiso_val = str(hoy_peru)
 
             motivo_sol = st.text_area("Motivo o Justificación detallada", placeholder="Escribe aquí el motivo de tu solicitud...")
 
@@ -1095,7 +1091,6 @@ elif choice == "Dashboard General":
         </div>
     """, unsafe_allow_html=True)
 
-    # --- CALENDARIO MENSUAL ENCIMA DE FILTROS ---
     st.markdown("##### 📅 Calendarios Mensuales de Asistencia (Rol Operativo)")
     col_mes, col_anio = st.columns(2)
     
@@ -1103,7 +1098,6 @@ elif choice == "Dashboard General":
     mes_sel = col_mes.selectbox("Mes", list(range(1, 13)), index=ahora_p.month - 1)
     anio_sel = col_anio.number_input("Año", min_value=2024, max_value=2030, value=ahora_p.year)
 
-    # Leyenda Ejecutiva
     st.markdown("""
         <div class="legend-container">
             <div class="legend-item">
@@ -1187,7 +1181,6 @@ elif choice == "Dashboard General":
                 hora_ingreso = ingresos.iloc[0]["dt"].strftime("%H:%M:%S") if not ingresos.empty else "--:--:--"
                 ultima_marca = grupo_ordenado.iloc[-1]
                 
-                # Evaluación de tardanza
                 tardanza_txt = "Puntual"
                 if not ingresos.empty:
                     mins_t, es_t, turno_p = calcular_tardanza_ingreso(ingresos.iloc[0]["fecha_hora"])
@@ -1335,7 +1328,6 @@ elif choice == "Gestión Colaboradores":
 
     tab_fichas, tab_nuevo, tab_directorio = st.tabs(["📇 Fichas Técnicas", "➕ Registrar Colaborador", "📋 Directorio General"])
 
-    # TAB 1: FICHAS TÉCNICAS (ORDENADAS: ACTIVOS PRIMERO, DADOS DE BAJA AL FINAL)
     with tab_fichas:
         st.markdown("<h4 style='font-size:1rem; color:#111827; margin-bottom:15px;'>Tarjetas de Identificación del Personal</h4>", unsafe_allow_html=True)
         
@@ -1344,7 +1336,6 @@ elif choice == "Gestión Colaboradores":
         if colabs_df.empty:
             st.info("No existen colaboradores registrados.")
         else:
-            # Ordenamiento: Activos primero, Dados de baja al final
             colabs_df["orden_estado"] = colabs_df["estado"].astype(str).str.lower().apply(lambda x: 0 if x == "activo" else 1)
             colabs_df = colabs_df.sort_values(by="orden_estado").reset_index(drop=True)
 
@@ -1354,7 +1345,6 @@ elif choice == "Gestión Colaboradores":
                 with grid_cols[col_idx]:
                     renderizar_tarjeta_colaborador(row)
 
-    # TAB 2: FORMULARIO AMPLIADO
     with tab_nuevo:
         with st.form("form_emp_completo", clear_on_submit=True):
             st.markdown("<h4 style='margin:0; font-size:0.95rem; color:#111827; margin-bottom:12px;'>Datos Personales del Trabajador</h4>", unsafe_allow_html=True)
@@ -1423,7 +1413,6 @@ elif choice == "Gestión Colaboradores":
                     time.sleep(0.3)
                     st.rerun()
 
-    # TAB 3: DIRECTORIO GENERAL
     with tab_directorio:
         st.markdown("<h4 style='margin:0; font-size:0.95rem; color:#111827; margin-bottom:12px;'>Directorio Consolidado</h4>", unsafe_allow_html=True)
         cols_mostrar = [
@@ -1472,7 +1461,6 @@ elif choice == "Solicitudes y Permisos":
     if not st.session_state.solicitudes.empty:
         df_sol = st.session_state.solicitudes.copy()
         
-        # Filtro de estado
         estado_filtro = st.selectbox("Filtrar por Estado", ["Todos", "Pendiente", "Aprobado", "Rechazado"])
         if estado_filtro != "Todos":
             df_sol = df_sol[df_sol["estado"] == estado_filtro]
@@ -1538,7 +1526,6 @@ elif choice == "Historial de Descuadres":
     """, unsafe_allow_html=True)
 
     if not st.session_state.descuadres.empty:
-        # --- INFORMACIÓN RESUMIDA MENSUAL ENCIMA DE LOS FILTROS ---
         st.markdown("##### 📅 Resumen Mensual de Descuadres por Trabajador")
         
         col_m_desc, col_a_desc = st.columns(2)
@@ -1558,7 +1545,6 @@ elif choice == "Historial de Descuadres":
         )
         anio_desc_sel = col_a_desc.number_input("Año Resumen", min_value=2024, max_value=2030, value=ahora_p_desc.year, key="anio_resumen_desc")
 
-        # Filtrar datos por mes y año seleccionado
         df_desc_mes = st.session_state.descuadres.copy()
         df_desc_mes["fecha_dt"] = pd.to_datetime(df_desc_mes["fecha"], errors="coerce")
         df_desc_mes["monto_num"] = pd.to_numeric(df_desc_mes["monto"], errors="coerce").fillna(0)
@@ -1589,7 +1575,6 @@ elif choice == "Historial de Descuadres":
                             signo_d = "+" if m_val > 0 else ""
                             color_d = "green" if m_val >= 0 else "red"
                             
-                            # Formatear fecha bonita
                             f_obj = row_d["fecha_dt"]
                             fecha_bonita = f"{f_obj.day} de {NOMBRES_MESES[f_obj.month - 1]}" if pd.notnull(f_obj) else row_d["fecha"]
                             
@@ -1641,7 +1626,6 @@ elif choice == "Historial de Descuadres":
             with m3:
                 st.markdown(f'<div class="info-card"><div class="info-label">Balance Neto</div><div class="info-value" style="color:{"#00A959" if balance >= 0 else "#EC3237"};">S/. {balance:.2f}</div></div>', unsafe_allow_html=True)
 
-            # --- DESGLOSE POR TRABAJADOR ---
             st.markdown("<br>", unsafe_allow_html=True)
             st.markdown("##### 👤 Balance de Descuadres por Trabajador")
             
