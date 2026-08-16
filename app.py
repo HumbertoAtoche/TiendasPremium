@@ -129,7 +129,8 @@ def obtener_colaboradores_gsheets():
                 columnas_req = [
                     "dni", "nombre", "cargo", "estado", "clave", "rol", 
                     "direccion", "telefono", "fecha_nacimiento", "foto",
-                    "contacto_emergencia", "numero_emergencia", "link_domicilio"
+                    "contacto_emergencia", "numero_emergencia", "link_domicilio",
+                    "fecha_inicio", "fecha_cese"
                 ]
                 for col in columnas_req:
                     if col not in df.columns:
@@ -141,17 +142,19 @@ def obtener_colaboradores_gsheets():
     return pd.DataFrame(columns=[
         "dni", "nombre", "cargo", "estado", "clave", "rol", 
         "direccion", "telefono", "fecha_nacimiento", "foto",
-        "contacto_emergencia", "numero_emergencia", "link_domicilio"
+        "contacto_emergencia", "numero_emergencia", "link_domicilio",
+        "fecha_inicio", "fecha_cese"
     ])
 
-def guardar_colaborador_gsheets(dni, nombre, cargo, estado, clave, rol, direccion="", telefono="", fecha_nacimiento="", foto="", contacto_emergencia="", numero_emergencia="", link_domicilio=""):
+def guardar_colaborador_gsheets(dni, nombre, cargo, estado, clave, rol, direccion="", telefono="", fecha_nacimiento="", foto="", contacto_emergencia="", numero_emergencia="", link_domicilio="", fecha_inicio="", fecha_cese=""):
     if doc_sheets:
         try:
             hoja = doc_sheets.worksheet("Colaboradores")
             hoja.append_row([
                 str(dni), nombre, cargo, estado, str(clave), rol, 
                 direccion, str(telefono), str(fecha_nacimiento), foto,
-                contacto_emergencia, str(numero_emergencia), link_domicilio
+                contacto_emergencia, str(numero_emergencia), link_domicilio,
+                str(fecha_inicio), str(fecha_cese)
             ])
         except Exception as e:
             st.error(f"❌ Error al guardar colaborador en Google Sheets: {e}")
@@ -438,6 +441,11 @@ if "usuario_login" not in st.session_state:
 if "empleados" not in st.session_state:
     st.session_state.empleados = obtener_colaboradores_gsheets()
 
+# Asegurar que existan las nuevas columnas para fecha de inicio y cese
+for col in ["fecha_inicio", "fecha_cese"]:
+    if col not in st.session_state.empleados.columns:
+        st.session_state.empleados[col] = ""
+
 if "asistencia" not in st.session_state:
     if doc_sheets:
         try:
@@ -525,7 +533,7 @@ def registrar_marca(dni, nombre, tipo, observacion="", es_extra=False):
                 return False
 
     ahora_peru = obtener_ahora_peru()
-    fecha_h = ahora_peru.strftime("%Y-%m-%d %H:%M:%S")
+    fecha_h = me = ahora_peru.strftime("%Y-%m-%d %H:%M:%S")
     fecha_s = ahora_peru.strftime("%Y-%m-%d")
     
     obs_final = f"[TURNO EXTRA] {observacion}".strip() if es_extra else observacion
@@ -1076,6 +1084,8 @@ elif choice == "Gestión Colaboradores":
                     c_emergencia = str(row.get("contacto_emergencia", "-")).strip() or "-"
                     num_emergencia = str(row.get("numero_emergencia", "-")).strip() or "-"
                     link_domicilio = str(row.get("link_domicilio", "")).strip()
+                    f_inicio_val = str(row.get("fecha_inicio", "")).strip() or "-"
+                    f_cese_val = str(row.get("fecha_cese", "")).strip() or "-"
 
                     foto_nom = str(row.get("foto", "")).strip()
                     if not foto_nom:
@@ -1096,7 +1106,8 @@ elif choice == "Gestión Colaboradores":
                             st.markdown(f"<div class='profile-role'>{cargo_val} • <span style='color:#6B7280;'>{rol_val}</span></div>", unsafe_allow_html=True)
                             
                             badge_color = "#00A959" if estado_val.lower() == "activo" else "#6B7280"
-                            st.markdown(f"<span style='background-color:{badge_color}; color:#fff; padding:2px 8px; border-radius:10px; font-size:0.65rem; font-weight:700;'>{estado_val.upper()}</span>", unsafe_allow_html=True)
+                            texto_estado = "ACTIVO" if estado_val.lower() == "activo" else "DADO DE BAJA"
+                            st.markdown(f"<span style='background-color:{badge_color}; color:#fff; padding:2px 8px; border-radius:10px; font-size:0.65rem; font-weight:700;'>{texto_estado}</span>", unsafe_allow_html=True)
                             st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
 
                             st.markdown("<div class='profile-field'>DNI / ID:</div>", unsafe_allow_html=True)
@@ -1109,6 +1120,14 @@ elif choice == "Gestión Colaboradores":
                             st.markdown(f"<div class='profile-val'>{f_nac_val if f_nac_val else '-'} ({edad_val})</div>", unsafe_allow_html=True)
 
                         st.markdown("---")
+
+                        # Información sobre el tiempo laborado y retiro
+                        st.markdown("<div class='profile-field'>📅 PERÍODO LABORAL / TIEMPO TRABAJADO:</div>", unsafe_allow_html=True)
+                        if estado_val.lower() == "desactivado":
+                            st.markdown(f"<div class='profile-val' style='color:#EC3237; font-weight:600;'>Se retiró de la empresa el {f_cese_val} (Inicio: {f_inicio_val})</div>", unsafe_allow_html=True)
+                        else:
+                            st.markdown(f"<div class='profile-val'>Inicio de labores: {f_inicio_val}</div>", unsafe_allow_html=True)
+                        st.markdown("<div style='height: 6px;'></div>", unsafe_allow_html=True)
                         
                         st.markdown("<div class='profile-field'>📍 DIRECCIÓN DE DOMICILIO:</div>", unsafe_allow_html=True)
                         if link_domicilio.startswith("http"):
@@ -1140,6 +1159,8 @@ elif choice == "Gestión Colaboradores":
             fnac_in = f7.date_input("Fecha de Nacimiento", value=date(1995, 1, 1))
             clave_in = f8.text_input("Contraseña de Acceso", type="password")
 
+            finicio_in = st.date_input("Fecha de Inicio de Labores", value=obtener_ahora_peru().date())
+
             st.markdown("<h4 style='margin:12px 0 0 0; font-size:0.95rem; color:#111827;'>Información de Emergencia y Ubicación</h4>", unsafe_allow_html=True)
             
             e1, e2 = st.columns(2)
@@ -1156,6 +1177,7 @@ elif choice == "Gestión Colaboradores":
                 else:
                     foto_nombre = f"{str(dni_in).strip()}.png"
                     fnac_str = str(fnac_in)
+                    finicio_str = str(finicio_in)
                     
                     nuevo_e = {
                         "dni": str(dni_in).strip(),
@@ -1170,13 +1192,16 @@ elif choice == "Gestión Colaboradores":
                         "foto": foto_nombre,
                         "contacto_emergencia": c_emerg_in.strip(),
                         "numero_emergencia": str(num_emerg_in).strip(),
-                        "link_domicilio": link_maps_in.strip()
+                        "link_domicilio": link_maps_in.strip(),
+                        "fecha_inicio": finicio_str,
+                        "fecha_cese": ""
                     }
                     st.session_state.empleados = pd.concat([st.session_state.empleados, pd.DataFrame([nuevo_e])], ignore_index=True)
                     guardar_colaborador_gsheets(
                         dni_in, nom_in, cargo_in, "Activo", clave_in, rol_in, 
                         dir_in, tel_in, fnac_str, foto_nombre,
-                        c_emerg_in.strip(), num_emerg_in.strip(), link_maps_in.strip()
+                        c_emerg_in.strip(), num_emerg_in.strip(), link_maps_in.strip(),
+                        finicio_str, ""
                     )
                     st.toast("Colaborador y Ficha Técnica registrados")
                     time.sleep(0.3)
@@ -1186,7 +1211,7 @@ elif choice == "Gestión Colaboradores":
     with tab_directorio:
         st.markdown("<h4 style='margin:0; font-size:0.95rem; color:#111827; margin-bottom:12px;'>Directorio Consolidado</h4>", unsafe_allow_html=True)
         cols_mostrar = [
-            c for c in ["dni", "nombre", "cargo", "rol", "telefono", "direccion", "fecha_nacimiento", "contacto_emergencia", "numero_emergencia", "estado"] 
+            c for c in ["dni", "nombre", "cargo", "rol", "telefono", "direccion", "fecha_nacimiento", "contacto_emergencia", "numero_emergencia", "estado", "fecha_inicio", "fecha_cese"] 
             if c in st.session_state.empleados.columns
         ]
         st.dataframe(
@@ -1197,19 +1222,28 @@ elif choice == "Gestión Colaboradores":
 
         if rol_actual == "admin" and not st.session_state.empleados.empty:
             st.markdown("<br>", unsafe_allow_html=True)
-            with st.expander("Eliminar Colaborador"):
-                lista_colabs = st.session_state.empleados["nombre"].tolist()
-                colab_a_eliminar = st.selectbox("Seleccionar colaborador a eliminar", lista_colabs)
-                confirm_del_colab = st.checkbox(f"Confirmar eliminación de {colab_a_eliminar}")
+            with st.expander("Desactivar / Dar de Baja a Colaborador"):
+                colabs_activos = st.session_state.empleados[st.session_state.empleados["estado"].astype(str).str.lower() == "activo"]["nombre"].tolist()
                 
-                if st.button("Eliminar Colaborador", type="primary"):
-                    if confirm_del_colab:
-                        st.session_state.empleados = st.session_state.empleados[st.session_state.empleados["nombre"] != colab_a_eliminar].reset_index(drop=True)
-                        actualizar_hoja_completa("Colaboradores", st.session_state.empleados)
-                        st.toast(f"Colaborador {colab_a_eliminar} eliminado correctamente")
-                        st.rerun()
-                    else:
-                        st.warning("Marca la casilla de confirmación antes de eliminar.")
+                if colabs_activos:
+                    colab_a_desactivar = st.selectbox("Seleccionar colaborador a dar de baja", colabs_activos)
+                    f_cese_input = st.date_input("Fecha de Salida / Cese", value=obtener_ahora_peru().date())
+                    confirm_desactivar = st.checkbox(f"Confirmar baja del colaborador {colab_a_desactivar}")
+                    
+                    if st.button("Dar de Baja al Colaborador", type="primary"):
+                        if confirm_desactivar:
+                            idx = st.session_state.empleados[st.session_state.empleados["nombre"] == colab_a_desactivar].index
+                            if not idx.empty:
+                                st.session_state.empleados.loc[idx, "estado"] = "Desactivado"
+                                st.session_state.empleados.loc[idx, "fecha_cese"] = str(f_cese_input)
+                                actualizar_hoja_completa("Colaboradores", st.session_state.empleados)
+                                st.toast(f"Colaborador {colab_a_desactivar} desactivado correctamente")
+                                time.sleep(0.3)
+                                st.rerun()
+                        else:
+                            st.warning("Marca la casilla de confirmación antes de dar de baja.")
+                else:
+                    st.info("No hay colaboradores activos para dar de baja.")
 
 elif choice == "Historial de Descuadres":
     st.markdown("""
@@ -1220,6 +1254,70 @@ elif choice == "Historial de Descuadres":
     """, unsafe_allow_html=True)
 
     if not st.session_state.descuadres.empty:
+        # --- INFORMACIÓN RESUMIDA MENSUAL ENCIMA DE LOS FILTROS ---
+        st.markdown("##### 📅 Resumen Mensual de Descuadres por Trabajador")
+        
+        col_m_desc, col_a_desc = st.columns(2)
+        ahora_p_desc = obtener_ahora_peru()
+        
+        NOMBRES_MESES = [
+            "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+            "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+        ]
+        
+        mes_desc_sel = col_m_desc.selectbox(
+            "Seleccionar Mes", 
+            list(range(1, 13)), 
+            index=ahora_p_desc.month - 1,
+            format_func=lambda x: NOMBRES_MESES[x-1],
+            key="mes_resumen_desc"
+        )
+        anio_desc_sel = col_a_desc.number_input("Año Resumen", min_value=2024, max_value=2030, value=ahora_p_desc.year, key="anio_resumen_desc")
+
+        # Filtrar datos por mes y año seleccionado
+        df_desc_mes = st.session_state.descuadres.copy()
+        df_desc_mes["fecha_dt"] = pd.to_datetime(df_desc_mes["fecha"], errors="coerce")
+        df_desc_mes["monto_num"] = pd.to_numeric(df_desc_mes["monto"], errors="coerce").fillna(0)
+        
+        df_desc_mes = df_desc_mes[
+            (df_desc_mes["fecha_dt"].dt.month == mes_desc_sel) & 
+            (df_desc_mes["fecha_dt"].dt.year == anio_desc_sel)
+        ]
+
+        colabs_operativos = obtener_solo_colaboradores()
+
+        if not df_desc_mes.empty:
+            for nombre_colab in colabs_operativos:
+                df_c = df_desc_mes[df_desc_mes["nombre"] == nombre_colab]
+                
+                if not df_c.empty:
+                    monto_total_colab = df_c["monto_num"].sum()
+                    color_monto = "#00A959" if monto_total_colab >= 0 else "#EC3237"
+                    signo_total = "+" if monto_total_colab > 0 else ""
+                    
+                    with st.expander(f"👤 **{nombre_colab}** | Balance Mes de {NOMBRES_MESES[mes_desc_sel-1]}: S/. {monto_total_colab:.2f}", expanded=True):
+                        st.markdown(f"<div style='font-size:1.05rem; font-weight:700; color:{color_monto}; margin-bottom:8px;'>Balance Total: {signo_total} S/. {monto_total_colab:.2f}</div>", unsafe_allow_html=True)
+                        st.markdown("**Desglose diario del mes:**")
+                        
+                        df_c_sorted = df_c.sort_values("fecha", ascending=False)
+                        for _, row_d in df_c_sorted.iterrows():
+                            m_val = row_d["monto_num"]
+                            signo_d = "+" if m_val > 0 else ""
+                            color_d = "green" if m_val >= 0 else "red"
+                            
+                            # Formatear fecha bonita
+                            f_obj = row_d["fecha_dt"]
+                            fecha_bonita = f"{f_obj.day} de {NOMBRES_MESES[f_obj.month - 1]}" if pd.notnull(f_obj) else row_d["fecha"]
+                            
+                            obs_txt = f" — *Motivo:* {row_d['observacion']}" if str(row_d.get('observacion', '')).strip() != "" else ""
+                            st.markdown(f"- **{signo_d}{m_val:.2f} soles** el día {fecha_bonita}{obs_txt}")
+                else:
+                    st.markdown(f"👤 **{nombre_colab}**: *Sin descuadres registrados en {NOMBRES_MESES[mes_desc_sel-1]}.*")
+        else:
+            st.info(f"No hay descuadres registrados en el mes de {NOMBRES_MESES[mes_desc_sel-1]} de {anio_desc_sel}.")
+
+        st.markdown("---")
+
         st.markdown("##### 🔍 Filtros de Búsqueda")
         f_col1, f_col2 = st.columns([1.5, 1])
         
@@ -1258,43 +1356,6 @@ elif choice == "Historial de Descuadres":
                 st.markdown(f'<div class="info-card"><div class="info-label">Total Faltantes (-)</div><div class="info-value" style="color:#EC3237;">S/. {abs(faltantes):.2f}</div></div>', unsafe_allow_html=True)
             with m3:
                 st.markdown(f'<div class="info-card"><div class="info-label">Balance Neto</div><div class="info-value" style="color:{"#00A959" if balance >= 0 else "#EC3237"};">S/. {balance:.2f}</div></div>', unsafe_allow_html=True)
-
-            # --- INFORMACIÓN RESUMIDA DE DESCUADRES POR TRABAJADOR ---
-            st.markdown("<br>", unsafe_allow_html=True)
-            st.markdown("##### 📅 Resumen Mensual de Descuadres por Trabajador")
-            
-            df_desc_mes = df_desc_filtrado.copy()
-            df_desc_mes["fecha_dt"] = pd.to_datetime(df_desc_mes["fecha"], errors="coerce")
-            
-            NOMBRES_MESES = [
-                "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-                "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
-            ]
-
-            colabs_operativos = [c for c in df_desc_mes["nombre"].unique().tolist() if c in obtener_solo_colaboradores()]
-
-            for nombre_colab in colabs_operativos:
-                df_c = df_desc_mes[df_desc_mes["nombre"] == nombre_colab]
-                
-                if not df_c.empty:
-                    monto_total_colab = df_c["monto_num"].sum()
-                    color_monto = "#00A959" if monto_total_colab >= 0 else "#EC3237"
-                    signo_total = "+" if monto_total_colab > 0 else ""
-                    
-                    with st.expander(f"👤 **{nombre_colab}** | Balance Total: S/. {monto_total_colab:.2f}", expanded=True):
-                        st.markdown(f"<div style='font-size:1.05rem; font-weight:700; color:{color_monto}; margin-bottom:8px;'>Balance Total: {signo_total} S/. {monto_total_colab:.2f}</div>", unsafe_allow_html=True)
-                        st.markdown("**Desglose de movimientos:**")
-                        
-                        df_c_sorted = df_c.sort_values("fecha", ascending=False)
-                        for _, row_d in df_c_sorted.iterrows():
-                            m_val = row_d["monto_num"]
-                            signo_d = "+" if m_val > 0 else ""
-                            
-                            f_obj = row_d["fecha_dt"]
-                            fecha_bonita = f"{f_obj.day} de {NOMBRES_MESES[f_obj.month - 1]}" if pd.notnull(f_obj) else row_d["fecha"]
-                            
-                            obs_txt = f" — *Motivo:* {row_d['observacion']}" if str(row_d.get('observacion', '')).strip() != "" else ""
-                            st.markdown(f"- **{signo_d}{m_val:.2f} soles** el día {fecha_bonita}{obs_txt}")
 
             # --- DESGLOSE POR TRABAJADOR ---
             st.markdown("<br>", unsafe_allow_html=True)
