@@ -21,7 +21,9 @@ LIMA_TZ = zoneinfo.ZoneInfo("America/Lima")
 def obtener_ahora_peru():
     return datetime.now(LIMA_TZ)
 
-# --- REGLAS DE HORARIOS Y TOLERANCIA ---
+# --- REGLAS DE HORARIOS, JORNADA Y TOLERANCIA ---
+JORNADA_MINUTOS_BASE = 345  # 5 horas con 45 minutos (5 * 60 + 45 = 345 min)
+
 HORA_INICIO_MANANA = dt_time(8, 45)
 HORA_LIMITE_MANANA = dt_time(8, 55)   # 10 min de tolerancia
 
@@ -37,7 +39,6 @@ def calcular_tardanza_ingreso(fecha_hora_str):
         dt_marca = datetime.strptime(str(fecha_hora_str), "%Y-%m-%d %H:%M:%S")
         hora_marca = dt_marca.time()
 
-        # Determinación de turno (Mañana si es antes de las 13:00, Tarde en adelante)
         if hora_marca < dt_time(13, 0):
             turno = "Mañana"
             hora_prog = HORA_INICIO_MANANA
@@ -56,10 +57,69 @@ def calcular_tardanza_ingreso(fecha_hora_str):
     except Exception:
         return 0, False, "Desconocido"
 
+def calcular_jornada_y_horas_extras(df_marcas_dia):
+    """
+    Calcula el tiempo total laborado en el día procesando pares (INGRESO -> SALIDA).
+    Compara con la jornada requerida de 5h 45m (345 min).
+    Retorna:
+      - minutos_laborales: Minutos aplicados a la jornada normal (máx 345 min)
+      - minutos_extras: Minutos laborados por encima de los 345 min
+      - minutos_totales: Tiempo total trabajado en el día
+      - turnos_adicionales: Lista con detalles de marcaciones o coberturas extras
+    """
+    if df_marcas_dia.empty:
+        return 0, 0, 0, []
+
+    df_ord = df_marcas_dia.sort_values("dt").reset_index(drop=True)
+    
+    segundos_totales = 0
+    i = 0
+    n = len(df_ord)
+
+    while i < n:
+        row_actual = df_ord.iloc[i]
+        if row_actual["tipo"] == "INGRESO":
+            dt_ingreso = row_actual["dt"]
+            # Buscar la salida correspondiente
+            if i + 1 < n and df_ord.iloc[i + 1]["tipo"] == "SALIDA":
+                dt_salida = df_ord.iloc[i + 1]["dt"]
+                segundos_totales += (dt_salida - dt_ingreso).total_seconds()
+                i += 2
+            else:
+                # Si no hay salida aún y es el día actual, medir hasta la hora actual
+                hoy_str = obtener_ahora_peru().strftime("%Y-%m-%d")
+                if str(row_actual["fecha"]) == hoy_str:
+                    ahora = obtener_ahora_peru().replace(tzinfo=None)
+                    if ahora > dt_ingreso:
+                        segundos_totales += (ahora - dt_ingreso).total_seconds()
+                i += 1
+        else:
+            i += 1
+
+    minutos_totales = int(segundos_totales // 60)
+    
+    minutos_laborales = min(minutos_totales, JORNADA_MINUTOS_BASE)
+    minutos_extras = max(0, minutos_totales - JORNADA_MINUTOS_BASE)
+
+    # Identificar turnos adicionales / fuera de horario
+    df_extras = df_ord[df_ord["es_extra"].astype(str) == "SI"]
+    turnos_adicionales = []
+    for _, r_ext in df_extras.iterrows():
+        obs_clean = r_ext["observacion"].replace("[TURNO EXTRA]", "").strip()
+        turnos_adicionales.append({
+            "tipo": r_ext["tipo"],
+            "hora": r_ext["dt"].strftime("%H:%M:%S"),
+            "detalle": obs_clean if obs_clean else "Marcación en turno adicional"
+        })
+
+    return minutos_laborales, minutos_extras, minutos_totales, turnos_adicionales
+
+def formatear_horas_minutos(minutos):
+    h = minutos // 60
+    m = minutos % 60
+    return f"{h}h {m}m"
+
 def calcular_metricas_puntualidad(df_asistencia, nombre_colab=None):
-    """
-    Calcula el total de ingresos, puntuales, tardanzas y el ratio de puntualidad (%).
-    """
     if df_asistencia.empty:
         return {"total_ingresos": 0, "puntuales": 0, "tardanzas": 0, "minutos_acumulados": 0, "ratio": 100.0}
 
@@ -204,7 +264,7 @@ def actualizar_hoja_completa(nombre_hoja, df):
         except Exception as e:
             st.error(f"❌ Error al actualizar {nombre_hoja}: {e}")
 
-# --- CSS MINIMALISTA Y TABLAS DE CALENDARIO EJECUTIVO ---
+# --- CSS MINIMALISTA Y ESTILOS ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap');
@@ -324,7 +384,6 @@ st.markdown("""
         box-shadow: none !important;
     }
 
-    /* CALENDARIO ESTILO EJECUTIVO MODERNO */
     .cal-card {
         background: #ffffff;
         border: 1px solid #e5e7eb;
@@ -383,7 +442,6 @@ st.markdown("""
         opacity: 0.9;
     }
 
-    /* ESTADOS DE ASISTENCIA */
     .bg-asistio {
         background-color: #dcfce7 !important;
         color: #15803d !important;
@@ -424,7 +482,6 @@ st.markdown("""
         border: 1px dashed #e2e8f0 !important;
     }
 
-    /* LEYENDA MODERNA */
     .legend-container {
         display: flex;
         flex-wrap: wrap;
@@ -483,7 +540,6 @@ if "usuario_login" not in st.session_state:
 if "empleados" not in st.session_state:
     st.session_state.empleados = obtener_colaboradores_gsheets()
 
-# Asegurar que existan las columnas requeridas
 for col in ["fecha_inicio", "fecha_cese"]:
     if col not in st.session_state.empleados.columns:
         st.session_state.empleados[col] = ""
@@ -569,7 +625,8 @@ def to_excel(df):
     return output.getvalue()
 
 def registrar_marca(dni, nombre, tipo, observacion="", es_extra=False):
-    hoy_str = obtener_ahora_peru().strftime("%Y-%m-%d")
+    ahora_peru = obtener_ahora_peru()
+    hoy_str = ahora_peru.strftime("%Y-%m-%d")
     str_extra = "SI" if es_extra else "NO"
 
     if not st.session_state.asistencia.empty and not es_extra:
@@ -581,10 +638,9 @@ def registrar_marca(dni, nombre, tipo, observacion="", es_extra=False):
         if not df_hoy_user.empty:
             ultima_marca = df_hoy_user.iloc[0]["tipo"]
             if ultima_marca == tipo:
-                st.warning(f"⚠️ Ya registraste un **{tipo}** en tu horario habitual de hoy.")
+                st.warning(f"⚠️ Ya registraste un **{tipo}** continuo en tu jornada.")
                 return False
 
-    ahora_peru = obtener_ahora_peru()
     fecha_h = ahora_peru.strftime("%Y-%m-%d %H:%M:%S")
     fecha_s = ahora_peru.strftime("%Y-%m-%d")
     
@@ -775,7 +831,7 @@ def renderizar_calendario_colaborador(nombre_colab, anio, mes):
     html += "</tbody></table></div>"
     return html
 
-# --- SIDEBAR ELEGANTE ---
+# --- SIDEBAR ---
 st.sidebar.markdown("""
     <div style='padding: 8px 0 16px 0;'>
         <div style='font-size: 0.85rem; font-weight: 700; letter-spacing: 1px; color: #FFFFFF;'>
@@ -812,7 +868,7 @@ if choice == "Marcar Asistencia":
     st.markdown(f"""
         <div class="market-header">
             <h1>Terminal de Asistencia</h1>
-            <p>Colaborador activo: <b>{user_actual}</b></p>
+            <p>Colaborador activo: <b>{user_actual}</b> | Jornada laboral requerida: <b>5h 45m</b></p>
         </div>
     """, unsafe_allow_html=True)
 
@@ -824,7 +880,19 @@ if choice == "Marcar Asistencia":
             st.caption("Selecciona el tipo de marcación que deseas realizar:")
             
             es_turno_extra = st.checkbox("⏰ Marcación Fuera de Horario / Turno Adicional")
-            obs_marca = st.text_input("Observación / Justificación (Opcional)", placeholder="Ej. Cubrir turno mañana, retraso por tráfico, etc.")
+            
+            motivo_extra = ""
+            if es_turno_extra:
+                motivo_extra = st.selectbox(
+                    "Motivo del Turno Adicional",
+                    ["Cubrir Turno Mañana (Apoyo)", "Cubrir Turno Tarde (Apoyo)", "Permanencia Extra / Post-Turno", "Otro Sustento"]
+                )
+            
+            obs_marca = st.text_input("Observación / Justificación (Opcional)", placeholder="Ej. Reemplazo por renuncia, apoyo en caja, etc.")
+            
+            if es_turno_extra and motivo_extra:
+                obs_marca = f"[{motivo_extra}] {obs_marca}".strip()
+
             st.markdown("<br>", unsafe_allow_html=True)
 
             c1, c2 = st.columns(2)
@@ -854,7 +922,7 @@ if choice == "Marcar Asistencia":
             df_mismarcas = st.session_state.asistencia[
                 (st.session_state.asistencia["fecha"].astype(str) == hoy_str) & 
                 (st.session_state.asistencia["dni"].astype(str) == str(dni_actual))
-            ]
+            ].copy()
 
             if not df_mismarcas.empty:
                 st.dataframe(
@@ -868,6 +936,16 @@ if choice == "Marcar Asistencia":
                         "es_extra": "EXTRA"
                     }
                 )
+                
+                # Cálculo rápido de horas trabajadas hoy
+                df_mismarcas["dt"] = pd.to_datetime(df_mismarcas["fecha_hora"])
+                mins_lab, mins_ext, mins_tot, _ = calcular_jornada_y_horas_extras(df_mismarcas)
+                
+                st.markdown("---")
+                st.markdown(f"**⏱️ Horas Trabajadas Hoy:** {formatear_horas_minutos(mins_tot)}")
+                st.markdown(f"**📌 Jornada Completa (5h 45m):** {formatear_horas_minutos(mins_lab)} / 5h 45m")
+                if mins_ext > 0:
+                    st.markdown(f"**⭐ Horas Extras Generadas:** <span style='color:#00A959; font-weight:700;'>{formatear_horas_minutos(mins_ext)}</span>", unsafe_allow_html=True)
             else:
                 st.info("No hay marcaciones registradas la jornada de hoy.")
         else:
@@ -1019,7 +1097,7 @@ elif choice == "Mi Dashboard Mensual":
     st.markdown(f"""
         <div class="market-header">
             <h1>Rendimiento Mensual</h1>
-            <p>Resumen consolidado para <b>{user_actual}</b></p>
+            <p>Resumen acumulado para <b>{user_actual}</b></p>
         </div>
     """, unsafe_allow_html=True)
 
@@ -1030,10 +1108,18 @@ elif choice == "Mi Dashboard Mensual":
         df_mis_desc = st.session_state.descuadres[st.session_state.descuadres["dni"].astype(str) == str(dni_actual)]
     
     if not st.session_state.asistencia.empty:
-        df_mis_asist = st.session_state.asistencia[st.session_state.asistencia["dni"].astype(str) == str(dni_actual)]
+        df_mis_asist = st.session_state.asistencia[st.session_state.asistencia["dni"].astype(str) == str(dni_actual)].copy()
 
     monto_total = pd.to_numeric(df_mis_desc["monto"]).sum() if not df_mis_desc.empty else 0.0
     dias_trabajados = df_mis_asist["fecha"].nunique() if not df_mis_asist.empty else 0
+
+    # Total de Horas Extras en el mes
+    minutos_extras_mes = 0
+    if not df_mis_asist.empty:
+        df_mis_asist["dt"] = pd.to_datetime(df_mis_asist["fecha_hora"])
+        for _, grupo_dia in df_mis_asist.groupby("fecha"):
+            _, mins_e, _, _ = calcular_jornada_y_horas_extras(grupo_dia)
+            minutos_extras_mes += mins_e
 
     metricas_p = calcular_metricas_puntualidad(st.session_state.asistencia, user_actual)
 
@@ -1049,8 +1135,8 @@ elif choice == "Mi Dashboard Mensual":
     with k2:
         st.markdown(f'''
             <div class="info-card">
-                <div class="info-label">Ratio Puntualidad</div>
-                <div class="info-value" style="color: {'#00A959' if metricas_p['ratio'] >= 90 else '#EC3237'};">{metricas_p['ratio']}%</div>
+                <div class="info-label">Horas Extras Acumuladas</div>
+                <div class="info-value" style="color: #00A959;">{formatear_horas_minutos(minutos_extras_mes)}</div>
             </div>
         ''', unsafe_allow_html=True)
 
@@ -1087,7 +1173,7 @@ elif choice == "Dashboard General":
     st.markdown("""
         <div class="market-header">
             <h1>Panel de Control General</h1>
-            <p>Vista ejecutiva de la operación en tiempo real</p>
+            <p>Vista ejecutiva de la operación, tardanzas y horas extras en tiempo real</p>
         </div>
     """, unsafe_allow_html=True)
 
@@ -1178,42 +1264,31 @@ elif choice == "Dashboard General":
                 ingresos = grupo_ordenado[grupo_ordenado["tipo"] == "INGRESO"]
                 salidas = grupo_ordenado[grupo_ordenado["tipo"] == "SALIDA"]
                 
-                hora_ingreso = ingresos.iloc[0]["dt"].strftime("%H:%M:%S") if not ingresos.empty else "--:--:--"
+                hora_primer_ingreso = ingresos.iloc[0]["dt"].strftime("%H:%M:%S") if not ingresos.empty else "--:--:--"
+                hora_ultima_salida = salidas.iloc[-1]["dt"].strftime("%H:%M:%S") if not salidas.empty else "--:--:--"
                 ultima_marca = grupo_ordenado.iloc[-1]
                 
                 tardanza_txt = "Puntual"
                 if not ingresos.empty:
-                    mins_t, es_t, turno_p = calcular_tardanza_ingreso(ingresos.iloc[0]["fecha_hora"])
+                    # Se evalúa la puntualidad del primer ingreso regular del día
+                    ing_regulares = ingresos[ingresos["es_extra"].astype(str) != "SI"]
+                    ing_eval = ing_regulares.iloc[0] if not ing_regulares.empty else ingresos.iloc[0]
+                    mins_t, es_t, turno_p = calcular_tardanza_ingreso(ing_eval["fecha_hora"])
                     if es_t:
                         tardanza_txt = f"⚠️ Tardanza ({mins_t} min)"
 
                 if ultima_marca["tipo"] == "INGRESO":
                     estado = "🟢 En Turno"
-                    hora_salida = "--:--:--"
                     en_turno_cnt += 1
-                    dt_ingreso = ingresos.iloc[0]["dt"]
-                    if f_dash_str == obtener_ahora_peru().strftime("%Y-%m-%d"):
-                        ahora = obtener_ahora_peru().replace(tzinfo=None)
-                        segundos = (ahora - dt_ingreso).total_seconds()
-                    else:
-                        segundos = 0
                 else:
                     estado = "⚪ Concluido"
-                    hora_salida = salidas.iloc[-1]["dt"].strftime("%H:%M:%S") if not salidas.empty else "--:--:--"
                     concluido_cnt += 1
-                    dt_ingreso = ingresos.iloc[0]["dt"] if not ingresos.empty else None
-                    dt_salida = salidas.iloc[-1]["dt"] if not salidas.empty else None
-                    segundos = (dt_salida - dt_ingreso).total_seconds() if (dt_ingreso and dt_salida) else 0
-                
-                if segundos > 0:
-                    horas = int(segundos // 3600)
-                    minutos = int((segundos % 3600) // 60)
-                    total_horas_str = f"{horas}h {minutos}m"
-                else:
-                    total_horas_str = "0h 0m"
-                
+
+                # Cálculo de la jornada (5h 45m) y horas extras
+                mins_lab, mins_ext, mins_tot, turnos_adicionales = calcular_jornada_y_horas_extras(grupo_ordenado)
+
                 obs_asistencia = [
-                    f"[{r['tipo']}] {r['observacion']}" 
+                    f"[{r['tipo']} {r['dt'].strftime('%H:%M')}] {r['observacion']}" 
                     for _, r in grupo_ordenado.iterrows() 
                     if str(r.get('observacion', '')).strip() != ""
                 ]
@@ -1236,10 +1311,14 @@ elif choice == "Dashboard General":
 
                 fichas_colaboradores[nombre_colab] = {
                     "estado": estado,
-                    "ingreso": hora_ingreso,
-                    "salida": hora_salida,
-                    "tiempo_total": total_horas_str,
+                    "primer_ingreso": hora_primer_ingreso,
+                    "ultima_salida": hora_ultima_salida,
+                    "tiempo_total_str": formatear_horas_minutos(mins_tot),
+                    "horas_laborales_str": f"{formatear_horas_minutos(mins_lab)} / 5h 45m",
+                    "horas_extras_str": formatear_horas_minutos(mins_ext),
+                    "minutos_extras": mins_ext,
                     "tardanza": tardanza_txt,
+                    "turnos_adicionales": turnos_adicionales,
                     "balance_descuadre": monto_desc_user,
                     "descuadres_detalle": descuadres_user,
                     "obs_asistencia": obs_asistencia
@@ -1270,36 +1349,44 @@ elif choice == "Dashboard General":
     st.markdown("<br>", unsafe_allow_html=True)
 
     if fichas_colaboradores:
-        st.markdown("<h4 style='font-size:1rem; color:#111827; margin-bottom:15px;'>📄 Resumen Operativo por Colaborador</h4>", unsafe_allow_html=True)
+        st.markdown("<h4 style='font-size:1rem; color:#111827; margin-bottom:15px;'>📄 Control Operativo y Horas Extras por Colaborador</h4>", unsafe_allow_html=True)
 
         for nombre_col, datos in fichas_colaboradores.items():
-            with st.expander(f"👤 {nombre_col} — {datos['estado']}", expanded=True):
+            with st.expander(f"👤 {nombre_col} — {datos['estado']} | Total Trab.: {datos['tiempo_total_str']}", expanded=True):
                 fc1, fc2, fc3, fc4, fc5 = st.columns(5)
                 
                 with fc1:
-                    st.caption("🕒 INGRESO")
-                    st.markdown(f"**{datos['ingreso']}**")
+                    st.caption("🕒 1ER INGRESO")
+                    st.markdown(f"**{datos['primer_ingreso']}**")
                 
                 with fc2:
-                    st.caption("🛑 SALIDA")
-                    st.markdown(f"**{datos['salida']}**")
+                    st.caption("🛑 ÚLTIMA SALIDA")
+                    st.markdown(f"**{datos['ultima_salida']}**")
                 
                 with fc3:
-                    st.caption("⏳ TIEMPO")
-                    st.markdown(f"**{datos['tiempo_total']}**")
+                    st.caption("⏱️ JORNADA BASE")
+                    st.markdown(f"**{datos['horas_laborales_str']}**")
 
                 with fc4:
-                    st.caption("⏱️ PUNTUALIDAD")
+                    st.caption("⭐ HORAS EXTRAS")
+                    color_ext = "#00A959" if datos["minutos_extras"] > 0 else "#111827"
+                    st.markdown(f"<span style='color:{color_ext}; font-weight:700;'>{datos['horas_extras_str']}</span>", unsafe_allow_html=True)
+
+                with fc5:
+                    st.caption("⏰ PUNTUALIDAD")
                     color_tard = "#00A959" if "Puntual" in datos["tardanza"] else "#EC3237"
                     st.markdown(f"<span style='color:{color_tard}; font-weight:700;'>{datos['tardanza']}</span>", unsafe_allow_html=True)
 
-                with fc5:
-                    st.caption("💰 DESCUADRE")
-                    color_desc = "#00A959" if datos["balance_descuadre"] >= 0 else "#EC3237"
-                    st.markdown(f"<span style='color:{color_desc}; font-weight:700;'>S/. {datos['balance_descuadre']:.2f}</span>", unsafe_allow_html=True)
-
                 st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
                 
+                # Detalle de Turnos Adicionales
+                if datos["turnos_adicionales"]:
+                    st.markdown("**:alarm_clock: Turnos Adicionales / Coberturas Marcadas:**")
+                    for t_add in datos["turnos_adicionales"]:
+                        st.markdown(f"- **[{t_add['tipo']} - {t_add['hora']}]:** {t_add['detalle']}")
+                else:
+                    st.markdown("**:alarm_clock: Turnos Adicionales:** No registró marcaciones fuera de horario hoy.")
+
                 if datos["descuadres_detalle"]:
                     st.markdown("**:bar_chart: Detalle de Caja / Descuadre:**")
                     for d_item in datos["descuadres_detalle"]:
@@ -1311,7 +1398,7 @@ elif choice == "Dashboard General":
                     st.markdown("**:bar_chart: Detalle de Caja:** Sin descuadres registrados en la fecha.")
 
                 if datos["obs_asistencia"]:
-                    st.markdown("**:speech_balloon: Observaciones en Marcación:**")
+                    st.markdown("**:speech_balloon: Observaciones de Marcación:**")
                     for obs_item in datos["obs_asistencia"]:
                         st.markdown(f"- {obs_item}")
 
@@ -1373,7 +1460,7 @@ elif choice == "Gestión Colaboradores":
             c_emerg_in = e1.text_input("Contacto de Emergencia (Nombre / Parentesco)", placeholder="Ej. Maria Insapillo (Madre)")
             num_emerg_in = e2.text_input("Teléfono de Emergencia", placeholder="Ej. 987654321")
 
-            link_maps_in = st.text_input("Enlace Ubicación Domicilio (Google Maps Link)", placeholder="https://maps.app.glo/...")
+            link_maps_in = st.text_input("Enlace Ubicación Domicilio (Google Maps Link)", placeholder="https://maps.app.goo.gl/...")
 
             st.caption("📌 Nota: La imagen debe guardarse en la carpeta `fotos/` del repositorio como: `<DNI>.png` o `<DNI>.jpg`")
 
