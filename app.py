@@ -396,6 +396,16 @@ st.markdown("""
         color: #6b7280 !important;
         border: 1px solid #e5e7eb !important;
     }
+    .bg-inicio {
+        background-color: #e0f2fe !important;
+        color: #0369a1 !important;
+        border: 1px solid #bae6fd !important;
+    }
+    .bg-cese {
+        background-color: #f3e8ff !important;
+        color: #6b21a8 !important;
+        border: 1px solid #e9d5ff !important;
+    }
     .bg-vacio {
         background-color: transparent !important;
         border: none !important;
@@ -533,7 +543,7 @@ def registrar_marca(dni, nombre, tipo, observacion="", es_extra=False):
                 return False
 
     ahora_peru = obtener_ahora_peru()
-    fecha_h = me = ahora_peru.strftime("%Y-%m-%d %H:%M:%S")
+    fecha_h = ahora_peru.strftime("%Y-%m-%d %H:%M:%S")
     fecha_s = ahora_peru.strftime("%Y-%m-%d")
     
     obs_final = f"[TURNO EXTRA] {observacion}".strip() if es_extra else observacion
@@ -551,12 +561,33 @@ def registrar_marca(dni, nombre, tipo, observacion="", es_extra=False):
     guardar_asistencia_gsheets(dni, nombre, tipo, fecha_h, fecha_s, obs_final, str_extra)
     return True
 
-def obtener_solo_colaboradores():
+def obtener_solo_colaboradores(fecha_eval=None):
     if "rol" in st.session_state.empleados.columns:
-        df_colab = st.session_state.empleados[st.session_state.empleados["rol"] != "admin"]
+        df_colab = st.session_state.empleados[st.session_state.empleados["rol"] != "admin"].copy()
     else:
-        df_colab = st.session_state.empleados[st.session_state.empleados["nombre"] != "Administrador"]
+        df_colab = st.session_state.empleados[st.session_state.empleados["nombre"] != "Administrador"].copy()
+    
+    if fecha_eval is not None:
+        f_eval_str = str(fecha_eval)
+        colabs_validos = []
+        for _, row in df_colab.iterrows():
+            f_cese = str(row.get("fecha_cese", "")).strip()
+            # Si tiene fecha de cese y la fecha evaluada es estrictamente posterior a la fecha de cese, se oculta
+            if f_cese and f_cese != "-" and f_cese != "None":
+                if f_eval_str > f_cese:
+                    continue
+            colabs_validos.append(row["nombre"])
+        return colabs_validos
+        
     return df_colab["nombre"].unique().tolist()
+
+def parsear_fecha_segura(f_str):
+    if not f_str or str(f_str).strip() in ["", "-", "None"]:
+        return None
+    try:
+        return datetime.strptime(str(f_str).split(" ")[0].strip(), "%Y-%m-%d").date()
+    except Exception:
+        return None
 
 # --- DIBUJAR CALENDARIO EJECUTIVO ELEGANTE ---
 def renderizar_calendario_colaborador(nombre_colab, anio, mes):
@@ -567,6 +598,14 @@ def renderizar_calendario_colaborador(nombre_colab, anio, mes):
     if not df_asist.empty:
         df_asist = df_asist[df_asist["nombre"] == nombre_colab]
     
+    # Datos laborales del colaborador para inicio y cese
+    row_emp = st.session_state.empleados[st.session_state.empleados["nombre"] == nombre_colab]
+    f_inicio_lab = None
+    f_cese_lab = None
+    if not row_emp.empty:
+        f_inicio_lab = parsear_fecha_segura(row_emp.iloc[0].get("fecha_inicio", ""))
+        f_cese_lab = parsear_fecha_segura(row_emp.iloc[0].get("fecha_cese", ""))
+
     hoy = obtener_ahora_peru().date()
 
     html = f"""
@@ -607,14 +646,29 @@ def renderizar_calendario_colaborador(nombre_colab, anio, mes):
                     else:
                         df_dia = pd.DataFrame()
 
+                    # Evaluación de marcas de asistencia
                     if not df_dia.empty:
                         tiene_extra = (df_dia["es_extra"].astype(str) == "SI").any() or df_dia["observacion"].str.contains("TURNO EXTRA").any()
                         if tiene_extra:
                             html += f"<td class='bg-extra'><span class='cal-day-num'>{d}</span><span class='cal-sub'>★ Extra</span></td>"
                         else:
-                            html += f"<td class='bg-asistio'><span class='cal-day-num'>{d}</span><span class='cal-sub'>✓ Asistió</span></td>"
+                            sub_txt = "1er Día" if (f_inicio_lab and fecha_dia == f_inicio_lab) else "✓ Asistió"
+                            html += f"<td class='bg-asistio'><span class='cal-day-num'>{d}</span><span class='cal-sub'>{sub_txt}</span></td>"
                     else:
-                        if fecha_dia < hoy:
+                        # Evaluación según fechas de inicio de labores y fecha de cese
+                        if f_inicio_lab and fecha_dia < f_inicio_lab:
+                            # Días previos a su ingreso oficial al trabajo
+                            html += f"<td class='bg-futuro'><span class='cal-day-num'>{d}</span></td>"
+                        elif f_cese_lab and fecha_dia == f_cese_lab:
+                            # Día exacto en el que fue dado de baja
+                            html += f"<td class='bg-cese'><span class='cal-day-num'>{d}</span><span class='cal-sub'>Cese</span></td>"
+                        elif f_cese_lab and fecha_dia > f_cese_lab:
+                            # Días posteriores a su cese
+                            html += f"<td class='bg-futuro'><span class='cal-day-num'>{d}</span></td>"
+                        elif fecha_dia == f_inicio_lab:
+                            # Primer día laborado si no registró marca aún
+                            html += f"<td class='bg-inicio'><span class='cal-day-num'>{d}</span><span class='cal-sub'>1er Día</span></td>"
+                        elif fecha_dia < hoy:
                             html += f"<td class='bg-falta'><span class='cal-day-num'>{d}</span><span class='cal-sub'>✕ Falta</span></td>"
                         else:
                             html += f"<td class='bg-futuro'><span class='cal-day-num'>{d}</span></td>"
@@ -859,34 +913,43 @@ elif choice == "Dashboard General":
                 <span class="legend-badge" style="background-color: #f3f4f6; border: 1px solid #e5e7eb;"></span>
                 <span>Descanso Programado</span>
             </div>
+            <div class="legend-item">
+                <span class="legend-badge" style="background-color: #e0f2fe; border: 1px solid #bae6fd;"></span>
+                <span>Primer Día</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-badge" style="background-color: #f3e8ff; border: 1px solid #e9d5ff;"></span>
+                <span>Cese / Baja</span>
+            </div>
         </div>
     """, unsafe_allow_html=True)
-
-    colaboradores_ops = obtener_solo_colaboradores()
-    
-    if colaboradores_ops:
-        with st.expander("👁️ Ver Calendarios de Asistencia por Trabajador", expanded=True):
-            cols_cal = st.columns(2)
-            for idx, c_nom in enumerate(colaboradores_ops):
-                with cols_cal[idx % 2]:
-                    html_cal = renderizar_calendario_colaborador(c_nom, int(anio_sel), int(mes_sel))
-                    st.markdown(html_cal, unsafe_allow_html=True)
-    else:
-        st.info("No hay colaboradores con rol operativo registrados.")
-
-    st.markdown("---")
 
     st.markdown("##### 🔍 Filtros de Consulta")
     col_f1, col_f2 = st.columns([1.5, 1])
     
     with col_f1:
         fecha_dash = st.date_input("Fecha de Consulta", obtener_ahora_peru(), key="dash_fecha")
+    
+    f_dash_str = str(fecha_dash)
+    colaboradores_ops = obtener_solo_colaboradores(fecha_eval=fecha_dash)
+
     with col_f2:
-        lista_colabs = ["Todos"] + obtener_solo_colaboradores()
+        lista_colabs = ["Todos"] + colaboradores_ops
         colab_dash = st.selectbox("Filtrar Colaborador", lista_colabs, key="dash_colab")
 
-    f_dash_str = str(fecha_dash)
-    
+    if colaboradores_ops:
+        colabs_a_renderizar = colaboradores_ops if colab_dash == "Todos" else [colab_dash]
+        with st.expander("👁️ Ver Calendarios de Asistencia por Trabajador", expanded=True):
+            cols_cal = st.columns(2)
+            for idx, c_nom in enumerate(colabs_a_renderizar):
+                with cols_cal[idx % 2]:
+                    html_cal = renderizar_calendario_colaborador(c_nom, int(anio_sel), int(mes_sel))
+                    st.markdown(html_cal, unsafe_allow_html=True)
+    else:
+        st.info("No hay colaboradores con rol operativo activos para la fecha consultada.")
+
+    st.markdown("---")
+
     df_asist_dash = st.session_state.asistencia.copy()
     df_desc_dash = st.session_state.descuadres.copy()
     
@@ -904,6 +967,9 @@ elif choice == "Dashboard General":
             df_asist_dash["dt"] = pd.to_datetime(df_asist_dash["fecha_hora"])
             
             for nombre_colab, grupo in df_asist_dash.groupby("nombre"):
+                if nombre_colab not in colaboradores_ops:
+                    continue
+
                 grupo_ordenado = grupo.sort_values("dt")
                 
                 ingresos = grupo_ordenado[grupo_ordenado["tipo"] == "INGRESO"]
@@ -982,6 +1048,8 @@ elif choice == "Dashboard General":
         df_desc_dash = df_desc_dash[df_desc_dash["fecha"].astype(str) == f_dash_str]
         if colab_dash != "Todos":
             df_desc_dash = df_desc_dash[df_desc_dash["nombre"] == colab_dash]
+        else:
+            df_desc_dash = df_desc_dash[df_desc_dash["nombre"].isin(colaboradores_ops)]
         total_descuadre_monto = pd.to_numeric(df_desc_dash["monto"], errors="coerce").sum() if not df_desc_dash.empty else 0.0
 
     st.markdown("<br>", unsafe_allow_html=True)
