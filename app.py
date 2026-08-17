@@ -527,6 +527,19 @@ st.markdown("""
         font-weight: 500;
         color: #111827;
     }
+
+    .app-footer {
+        text-align: center;
+        padding: 24px 10px 12px 10px;
+        margin-top: 40px;
+        border-top: 1px solid #E5E7EB;
+        color: #6B7280;
+        font-size: 0.8rem;
+        line-height: 1.5;
+    }
+    .app-footer strong {
+        color: #111827;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -1875,30 +1888,28 @@ elif choice == "Historial de Asistencias":
             with a1:
                 st.markdown(f'<div class="info-card"><div class="info-label">Total Marcaciones</div><div class="info-value">{total_marcas}</div></div>', unsafe_allow_html=True)
             with a2:
-                st.markdown(f'<div class="info-card"><div class="info-label">Jornadas Iniciadas</div><div class="info-value" style="color:#00A959;">{ingresos_cnt}</div></div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="info-card"><div class="info-label">Ingresos Registrados</div><div class="info-value" style="color:#00A959;">{ingresos_cnt}</div></div>', unsafe_allow_html=True)
             with a3:
-                st.markdown(f'<div class="info-card"><div class="info-label">Colaboradores Evaluados</div><div class="info-value">{colabs_unicos}</div></div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="info-card"><div class="info-label">Colaboradores Activos</div><div class="info-value">{colabs_unicos}</div></div>', unsafe_allow_html=True)
 
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.dataframe(df_asist_filtrado, use_container_width=True, hide_index=True)
-        st.download_button("Exportar a Excel", to_excel(df_asist_filtrado), "Asistencias_General.xlsx", use_container_width=True)
-
-        if rol_actual == "admin":
             st.markdown("<br>", unsafe_allow_html=True)
-            with st.expander("Eliminar Registro de Asistencia"):
-                opciones_asist = [f"{i} | {r['fecha_hora']} | {r['nombre']} | {r['tipo']}" for i, r in st.session_state.asistencia.iterrows()]
-                sel_asist_del = st.selectbox("Seleccionar Marcación a Eliminar", opciones_asist)
-                confirm_del_asist = st.checkbox("Confirmar eliminación del registro de asistencia")
-
-                if st.button("Eliminar Registro", type="primary", use_container_width=True):
-                    if confirm_del_asist:
-                        idx_asist = int(sel_asist_del.split(" | ")[0])
-                        st.session_state.asistencia = st.session_state.asistencia.drop(idx_asist).reset_index(drop=True)
-                        actualizar_hoja_completa("Asistencia", st.session_state.asistencia)
-                        st.toast("Marcación eliminada correctamente")
-                        time.sleep(0.3)
-                        st.rerun()
-                    else:
-                        st.warning("Marca la casilla de confirmación antes de eliminar.")
+            st.markdown("##### 📋 Registro Detallado de Asistencias")
+            st.dataframe(
+                df_asist_filtrado,
+                use_container_width=True,
+                hide_index=True
+            )
+            st.download_button("Exportar Asistencias a Excel", to_excel(df_asist_filtrado), "Asistencias_General.xlsx", use_container_width=True)
+        else:
+            st.info("No se encontraron registros de asistencia para los filtros seleccionados.")
     else:
-        st.info("Sin registros de asistencia.")
+        st.info("No hay marcaciones de asistencia registradas en el sistema.")
+
+# --- PIE DE PÁGINA (FOOTER ESTILO WEB/APP) ---
+st.markdown("""
+<div class="app-footer">
+    Desarrollado por <strong>Humberto Atoche Obeso</strong><br>
+    <strong>Tiendas Premium E.I.R.L.</strong> • RUC 20612107786<br>
+    Todos los derechos reservados
+</div>
+""", unsafe_allow_html=True)
