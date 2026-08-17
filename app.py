@@ -1176,7 +1176,11 @@ elif choice == "Dashboard General":
     col_mes, col_anio = st.columns(2)
     
     ahora_p = obtener_ahora_peru()
-    mes_sel = col_mes.selectbox("Mes", list(range(1, 13)), index=ahora_p.month - 1)
+    NOMBRES_MESES = [
+        "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+        "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+    ]
+    mes_sel = col_mes.selectbox("Mes", list(range(1, 13)), index=ahora_p.month - 1, format_func=lambda x: NOMBRES_MESES[x-1])
     anio_sel = col_anio.number_input("Año", min_value=2024, max_value=2030, value=ahora_p.year)
 
     st.markdown("""
@@ -1231,6 +1235,48 @@ elif choice == "Dashboard General":
                     st.markdown(html_cal, unsafe_allow_html=True)
     else:
         st.info("No hay colaboradores con rol operativo activos para la fecha consultada.")
+
+    st.markdown("---")
+
+    # --- CÁLCULO DE HORAS EXTRAS MENSUALES POR TRABAJADOR ---
+    st.markdown(f"##### ⭐ Horas Extras Mensuales del Período ({NOMBRES_MESES[mes_sel-1]} {int(anio_sel)})")
+    
+    df_asist_mes = st.session_state.asistencia.copy()
+    horas_extras_mensuales = {}
+
+    if not df_asist_mes.empty:
+        df_asist_mes["fecha_dt"] = pd.to_datetime(df_asist_mes["fecha"], errors="coerce")
+        df_asist_mes = df_asist_mes[
+            (df_asist_mes["fecha_dt"].dt.month == mes_sel) & 
+            (df_asist_mes["fecha_dt"].dt.year == anio_sel)
+        ]
+
+        colabs_eval_mes = colaboradores_ops if colab_dash == "Todos" else ([colab_dash] if colab_dash in colaboradores_ops else [])
+
+        for nom_col in colabs_eval_mes:
+            df_col_mes = df_asist_mes[df_asist_mes["nombre"] == nom_col].copy()
+            mins_extras_colab = 0
+            if not df_col_mes.empty:
+                df_col_mes["dt"] = pd.to_datetime(df_col_mes["fecha_hora"])
+                for _, grupo_dia in df_col_mes.groupby("fecha"):
+                    _, mins_e, _, _ = calcular_jornada_y_horas_extras(grupo_dia)
+                    mins_extras_colab += mins_e
+            horas_extras_mensuales[nom_col] = mins_extras_colab
+
+    if horas_extras_mensuales:
+        cols_he = st.columns(min(len(horas_extras_mensuales), 4))
+        for idx_he, (nom_he, mins_he) in enumerate(horas_extras_mensuales.items()):
+            col_target = cols_he[idx_he % min(len(horas_extras_mensuales), 4)]
+            with col_target:
+                color_he = "#00A959" if mins_he > 0 else "#6B7280"
+                st.markdown(f'''
+                    <div class="info-card">
+                        <div class="info-label">{nom_he}</div>
+                        <div class="info-value" style="color: {color_he};">{formatear_horas_minutos(mins_he)}</div>
+                    </div>
+                ''', unsafe_allow_html=True)
+    else:
+        st.info(f"No hay registros de horas extras para el mes de {NOMBRES_MESES[mes_sel-1]} {int(anio_sel)}.")
 
     st.markdown("---")
 
