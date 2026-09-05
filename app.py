@@ -1561,7 +1561,7 @@ elif choice == "Dashboard General":
         </div>
     """, unsafe_allow_html=True)
 
-    st.markdown("##### Calendarios Mensuales de Asistencia (Rol Operativo)")
+    st.markdown("##### Calendarios Mensuales de Asistencia")
     col_mes, col_anio = st.columns(2)
     
     ahora_p = obtener_ahora_peru()
@@ -1796,7 +1796,7 @@ elif choice == "Dashboard General":
         st.markdown("<h4 style='font-size:1rem; color:#111827; margin-bottom:15px;'>📄 Control Operativo y Horas Extras por Colaborador</h4>", unsafe_allow_html=True)
 
         for nombre_col, datos in fichas_colaboradores.items():
-            with st.expander(f"👤 {nombre_col} — {datos['estado']} | Total Trab.: {datos['tiempo_total_str']} | Extras: {datos['horas_extras_str']}", expanded=True):
+            with st.expander(f" {nombre_col} — {datos['estado']} | Total Trab.: {datos['tiempo_total_str']} | Extras: {datos['horas_extras_str']}", expanded=True):
                 fc1, fc2, fc3, fc4, fc5 = st.columns(5)
                 
                 with fc1:
@@ -1998,7 +1998,7 @@ elif choice == "Boletas de Pago":
         c_f1, c_f2 = st.columns([1, 2])
         with c_f1:
             with st.form("form_nuevo_feriado", clear_on_submit=True):
-                st.markdown("**➕ Agregar Feriado**")
+                st.markdown("**Agregar Feriado**")
                 f_feriado = st.date_input("Fecha del Feriado", value=obtener_ahora_peru().date())
                 desc_feriado = st.text_input("Descripción / Evento", placeholder="Ej. Fiestas Patrias")
                 if st.form_submit_button("Guardar Feriado", use_container_width=True):
@@ -2282,7 +2282,7 @@ elif choice == "Boletas de Pago":
             </div>
         """, unsafe_allow_html=True)
 
-        st.markdown("##### 📥 Opciones de Exportación")
+        st.markdown("##### Opciones de Exportación")
         col_exp1, col_exp2 = st.columns(2)
 
         excel_data = generar_excel_boleta(datos_boleta)
@@ -2427,7 +2427,7 @@ elif choice == "Historial de Descuadres":
                     color_monto = "#00A959" if monto_total_colab >= 0 else "#EC3237"
                     signo_total = "+" if monto_total_colab > 0 else ""
                     
-                    with st.expander(f"👤 **{nombre_colab}** | Balance Mes de {NOMBRES_MESES[mes_desc_sel-1]}: S/. {monto_total_colab:.2f}", expanded=True):
+                    with st.expander(f" **{nombre_colab}** | Balance Mes de {NOMBRES_MESES[mes_desc_sel-1]}: S/. {monto_total_colab:.2f}", expanded=True):
                         st.markdown(f"<div style='font-size:1.05rem; font-weight:700; color:{color_monto}; margin-bottom:8px;'>Balance Total: {signo_total} S/. {monto_total_colab:.2f}</div>", unsafe_allow_html=True)
                         st.markdown("**Desglose diario del mes:**")
                         
@@ -2443,7 +2443,7 @@ elif choice == "Historial de Descuadres":
                             obs_txt = f" — *Motivo:* {row_d['observacion']}" if str(row_d.get('observacion', '')).strip() != "" else ""
                             st.markdown(f"- **{signo_d}{m_val:.2f} soles** el día {fecha_bonita}{obs_txt}")
                 else:
-                    st.markdown(f"👤 **{nombre_colab}**: *Sin descuadres registrados en {NOMBRES_MESES[mes_desc_sel-1]}.*")
+                    st.markdown(f" **{nombre_colab}**: *Sin descuadres registrados en {NOMBRES_MESES[mes_desc_sel-1]}.*")
         else:
             st.info(f"No hay descuadres registrados en el mes de {NOMBRES_MESES[mes_desc_sel-1]} de {anio_desc_sel}.")
 
@@ -2489,14 +2489,14 @@ elif choice == "Historial de Descuadres":
                 st.markdown(f'<div class="info-card"><div class="info-label">Balance Neto</div><div class="info-value" style="color:{"#00A959" if balance >= 0 else "#EC3237"};">S/. {balance:.2f}</div></div>', unsafe_allow_html=True)
 
             st.markdown("<br>", unsafe_allow_html=True)
-            st.markdown("##### 👤 Balance de Descuadres por Trabajador")
+            st.markdown("#####  Balance de Descuadres por Trabajador")
             
             for nombre_trab, df_trab in df_desc_filtrado.groupby("nombre"):
                 monto_trab_total = df_trab["monto_num"].sum()
                 color_monto = "#00A959" if monto_trab_total >= 0 else "#EC3237"
                 signo_monto = "+" if monto_trab_total > 0 else ""
                 
-                with st.expander(f"👤 **{nombre_trab}** — Balance Neto: {signo_monto} S/. {monto_trab_total:.2f}"):
+                with st.expander(f" **{nombre_trab}** — Balance Neto: {signo_monto} S/. {monto_trab_total:.2f}"):
                     st.markdown(f"<span style='color:{color_monto}; font-weight:700; font-size:1.1rem;'>Total Acumulado: {signo_monto} S/. {monto_trab_total:.2f}</span>", unsafe_allow_html=True)
                     st.markdown("**:bar_chart: Detalle de movimientos:**")
                     
