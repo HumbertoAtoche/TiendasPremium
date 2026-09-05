@@ -223,7 +223,7 @@ def guardar_colaborador_gsheets(dni, nombre, cargo, estado, clave, rol, direccio
                 str(fecha_inicio), str(fecha_cese)
             ])
         except Exception as e:
-            st.error(f"❌ Error al guardar colaborador en Google Sheets: {e}")
+            st.error(f"Error al guardar colaborador en Google Sheets: {e}")
 
 def calcular_edad(fecha_nac):
     if not fecha_nac or str(fecha_nac).strip() in ["", "-", "None"]:
@@ -242,7 +242,7 @@ def guardar_asistencia_gsheets(dni, nombre, tipo, fecha_hora, fecha, observacion
             hoja = doc_sheets.worksheet("Asistencia")
             hoja.append_row([str(dni), nombre, tipo, str(fecha_hora), str(fecha), observacion, es_extra])
         except Exception as e:
-            st.error(f"❌ Error al guardar asistencia: {e}")
+            st.error(f"Error al guardar asistencia: {e}")
 
 def guardar_descuadre_gsheets(fecha, dni, nombre, tipo, monto, observacion, fecha_registro):
     if doc_sheets:
@@ -250,7 +250,7 @@ def guardar_descuadre_gsheets(fecha, dni, nombre, tipo, monto, observacion, fech
             hoja = doc_sheets.worksheet("Descuadres")
             hoja.append_row([str(fecha), str(dni), nombre, tipo, float(monto), observacion, str(fecha_registro)])
         except Exception as e:
-            st.error(f"❌ Error al guardar descuadre: {e}")
+            st.error(f"Error al guardar descuadre: {e}")
 
 def guardar_solicitud_gsheets(id_sol, fecha_reg, dni, nombre, tipo_sol, f_permiso, monto_adel, motivo, estado="Pendiente", respuesta="", requiere_recuperacion="No", fecha_recuperacion=""):
     if doc_sheets:
@@ -263,7 +263,7 @@ def guardar_solicitud_gsheets(id_sol, fecha_reg, dni, nombre, tipo_sol, f_permis
                     encabezados_actuales.append(col)
             hoja.append_row([str(id_sol), str(fecha_reg), str(dni), nombre, tipo_sol, str(f_permiso), float(monto_adel), motivo, estado, respuesta, str(requiere_recuperacion), str(fecha_recuperacion)])
         except Exception as e:
-            st.error(f"❌ Error al guardar solicitud: {e}")
+            st.error(f"Error al guardar solicitud: {e}")
 
 def guardar_feriado_gsheets(fecha, descripcion):
     if doc_sheets:
@@ -275,7 +275,7 @@ def guardar_feriado_gsheets(fecha, descripcion):
                 hoja.append_row(["fecha", "descripcion"])
             hoja.append_row([str(fecha), descripcion])
         except Exception as e:
-            st.error(f"❌ Error al guardar feriado: {e}")
+            st.error(f"Error al guardar feriado: {e}")
 def actualizar_hoja_completa(nombre_hoja, df):
     if doc_sheets:
         try:
@@ -284,7 +284,7 @@ def actualizar_hoja_completa(nombre_hoja, df):
             datos = [df.columns.tolist()] + df.astype(str).values.tolist()
             hoja.update(datos)
         except Exception as e:
-            st.error(f"❌ Error al actualizar {nombre_hoja}: {e}")
+            st.error(f"Error al actualizar {nombre_hoja}: {e}")
 
 # --- CSS MINIMALISTA Y ESTILOS ---
 st.markdown("""
@@ -893,7 +893,7 @@ def registrar_marca(dni, nombre, tipo, observacion="", es_extra=False):
         if not df_hoy_user.empty:
             ultima_marca = df_hoy_user.iloc[0]["tipo"]
             if ultima_marca == tipo:
-                st.warning(f"⚠️ Ya registraste un **{tipo}** continuo en tu jornada.")
+                st.warning(f"Ya registraste un **{tipo}** continuo en tu jornada.")
                 return False
 
     fecha_h = ahora_peru.strftime("%Y-%m-%d %H:%M:%S")
@@ -992,20 +992,20 @@ def renderizar_tarjeta_colaborador(row):
 
         st.markdown("---")
 
-        st.markdown("<div class='profile-field'>📅 PERÍODO LABORAL / TIEMPO TRABAJADO:</div>", unsafe_allow_html=True)
+        st.markdown("<div class='profile-field'>PERÍODO LABORAL / TIEMPO TRABAJADO:</div>", unsafe_allow_html=True)
         if estado_val.lower() in ["desactivado", "dado de baja"]:
             st.markdown(f"<div class='profile-val' style='color:#EC3237; font-weight:600;'>Se retiró de la empresa el {f_cese_val} (Inicio: {f_inicio_val})</div>", unsafe_allow_html=True)
         else:
             st.markdown(f"<div class='profile-val'>Inicio de labores: {f_inicio_val}</div>", unsafe_allow_html=True)
         st.markdown("<div style='height: 6px;'></div>", unsafe_allow_html=True)
         
-        st.markdown("<div class='profile-field'>📍 DIRECCIÓN DE DOMICILIO:</div>", unsafe_allow_html=True)
+        st.markdown("<div class='profile-field'>DIRECCIÓN DE DOMICILIO:</div>", unsafe_allow_html=True)
         if link_domicilio.startswith("http"):
             st.markdown(f"<div class='profile-val'>{direccion_val} — <a href='{link_domicilio}' target='_blank' style='color:#EC3237; text-decoration:none; font-weight:700;'> Ver en Google Maps 🗺️</a></div>", unsafe_allow_html=True)
         else:
             st.markdown(f"<div class='profile-val'>{direccion_val}</div>", unsafe_allow_html=True)
 
-        st.markdown("<div class='profile-field'>🚨 CONTACTO DE EMERGENCIA:</div>", unsafe_allow_html=True)
+        st.markdown("<div class='profile-field'>CONTACTO DE EMERGENCIA:</div>", unsafe_allow_html=True)
         st.markdown(f"<div class='profile-val'>{c_emergencia} ({num_emergencia})</div>", unsafe_allow_html=True)
 
 def renderizar_calendario_colaborador(nombre_colab, anio, mes):
@@ -1172,7 +1172,7 @@ if choice == "Marcar Asistencia":
             st.markdown("<h4 style='margin:0; font-size:1rem; color:#111827;'>Registro de Turno</h4>", unsafe_allow_html=True)
             st.caption("Selecciona el tipo de marcación que deseas realizar:")
             
-            es_turno_extra = st.checkbox("⏰ Marcación Fuera de Horario / Turno Adicional")
+            es_turno_extra = st.checkbox("Marcación Fuera de Horario / Turno Adicional")
             
             motivo_extra = ""
             if es_turno_extra:
@@ -1234,10 +1234,10 @@ if choice == "Marcar Asistencia":
                 mins_lab, mins_ext, mins_tot, _ = calcular_jornada_y_horas_extras(df_mismarcas)
                 
                 st.markdown("---")
-                st.markdown(f"**⏱️ Horas Trabajadas Hoy:** {formatear_horas_minutos(mins_tot)}")
-                st.markdown(f"**📌 Jornada Completa (5h 45m):** {formatear_horas_minutos(mins_lab)} / 5h 45m")
+                st.markdown(f"**Horas Trabajadas Hoy:** {formatear_horas_minutos(mins_tot)}")
+                st.markdown(f"**Jornada Completa (5h 45m):** {formatear_horas_minutos(mins_lab)} / 5h 45m")
                 if mins_ext > 0:
-                    st.markdown(f"**⭐ Horas Extras Generadas:** <span style='color:#00A959; font-weight:700;'>{formatear_horas_minutos(mins_ext)}</span>", unsafe_allow_html=True)
+                    st.markdown(f"**Horas Extras Generadas:** <span style='color:#00A959; font-weight:700;'>{formatear_horas_minutos(mins_ext)}</span>", unsafe_allow_html=True)
             else:
                 st.info("No hay marcaciones registradas la jornada de hoy.")
         else:
@@ -1303,7 +1303,7 @@ elif choice == "Solicitar Permiso / Adelanto":
         </div>
     """, unsafe_allow_html=True)
 
-    t_sol, t_hist = st.tabs(["📝 Nueva Solicitud", "📋 Mi Historial de Solicitudes"])
+    t_sol, t_hist = st.tabs(["Nueva Solicitud", "Mi Historial de Solicitudes"])
 
     with t_sol:
         tipo_sol = st.selectbox("Tipo de Solicitud", ["Permiso Laboral", "Adelanto de Sueldo"])
@@ -1316,16 +1316,16 @@ elif choice == "Solicitar Permiso / Adelanto":
         fecha_recuperacion_sel = None
 
         if tipo_sol == "Permiso Laboral":
-            st.info("ℹ️ **Regla de Permisos:** Toda solicitud de permiso debe realizarse con un mínimo de **7 días de anticipación**.")
+            st.info("**Regla de Permisos:** Toda solicitud de permiso debe realizarse con un mínimo de **7 días de anticipación**.")
             f_permiso_sel = st.date_input("Fecha solicitada para el permiso", value=fecha_minima_permiso, min_value=fecha_minima_permiso, key="fecha_permiso_nueva")
             f_permiso_val = str(f_permiso_sel)
 
-            st.markdown("##### 🔄 Recuperación del día")
+            st.markdown("##### Recuperación del día")
             requiere_recuperacion = st.checkbox("¿Deseas recuperar el día del permiso?", value=False, key="requiere_recuperacion_nueva")
             if requiere_recuperacion:
-                st.success("📅 Selecciona el día en que deseas recuperar el permiso. **Los domingos también están habilitados.**")
+                st.success("Selecciona el día en que deseas recuperar el permiso. **Los domingos también están habilitados.**")
                 fecha_min_rec = f_permiso_sel + timedelta(days=1)
-                fecha_recuperacion_sel = st.date_input("📅 Día a recuperar", value=fecha_min_rec, min_value=fecha_min_rec, key="fecha_recuperacion_nueva", help="Puedes seleccionar cualquier fecha, incluido domingo.")
+                fecha_recuperacion_sel = st.date_input("Día a recuperar", value=fecha_min_rec, min_value=fecha_min_rec, key="fecha_recuperacion_nueva", help="Puedes seleccionar cualquier fecha, incluido domingo.")
                 dias_semana = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
                 st.caption(f"Permiso: **{f_permiso_sel.strftime('%d/%m/%Y')}** | Día a recuperar: **{fecha_recuperacion_sel.strftime('%d/%m/%Y')} ({dias_semana[fecha_recuperacion_sel.weekday()]})**")
 
@@ -1333,7 +1333,7 @@ elif choice == "Solicitar Permiso / Adelanto":
                 motivo_sol = st.text_area("Motivo o Justificación detallada", placeholder="Escribe aquí el motivo de tu solicitud...")
                 enviar_solicitud = st.form_submit_button("Enviar Solicitud", use_container_width=True)
         else:
-            st.info("ℹ️ **Adelanto de Sueldo:** Ingresa el monto total a solicitar y la justificación.")
+            st.info("**Adelanto de Sueldo:** Ingresa el monto total a solicitar y la justificación.")
             with st.form("form_nuevo_adelanto", clear_on_submit=True):
                 monto_adel_val = st.number_input("Monto a Solicitar (S/.)", min_value=10.0, step=10.0, format="%.2f")
                 f_permiso_val = str(hoy_peru)
@@ -1347,12 +1347,12 @@ elif choice == "Solicitar Permiso / Adelanto":
                     if tipo_sol == "Permiso Laboral":
                         diff_dias = (f_permiso_sel - hoy_peru).days
                         if diff_dias < 7:
-                            st.error("❌ Los permisos requieren como mínimo 7 días de anticipación.")
+                            st.error("Los permisos requieren como mínimo 7 días de anticipación.")
                             st.stop()
 
                         if requiere_recuperacion and fecha_recuperacion_sel is not None:
                             if fecha_recuperacion_sel == f_permiso_sel:
-                                st.error("❌ La fecha de recuperación debe ser diferente a la fecha del permiso.")
+                                st.error("La fecha de recuperación debe ser diferente a la fecha del permiso.")
                                 st.stop()
                             fecha_recuperacion_val = str(fecha_recuperacion_sel)
                         else:
@@ -1385,7 +1385,7 @@ elif choice == "Solicitar Permiso / Adelanto":
                         requiere_recuperacion=("Sí" if (tipo_sol == "Permiso Laboral" and requiere_recuperacion) else "No"),
                         fecha_recuperacion=fecha_recuperacion_val
                     )
-                    st.success("✅ Solicitud enviada con éxito. Un administrador la revisará pronto.")
+                    st.success("Solicitud enviada con éxito. Un administrador la revisará pronto.")
                     time.sleep(0.5)
                     st.rerun()
 
@@ -1449,7 +1449,7 @@ elif choice == "Mi Dashboard Mensual":
 
     periodo_dash = f"{NOMBRES_MESES_DASH[mes_dash_sel - 1]} {int(anio_dash_sel)}"
     st.caption(
-        f"📅 Indicadores correspondientes únicamente a **{periodo_dash}**. "
+        f"Indicadores correspondientes únicamente a **{periodo_dash}**. "
         "Las horas extras y demás métricas no acumulan meses anteriores."
     )
 
@@ -1561,7 +1561,7 @@ elif choice == "Dashboard General":
         </div>
     """, unsafe_allow_html=True)
 
-    st.markdown("##### 📅 Calendarios Mensuales de Asistencia (Rol Operativo)")
+    st.markdown("##### Calendarios Mensuales de Asistencia (Rol Operativo)")
     col_mes, col_anio = st.columns(2)
     
     ahora_p = obtener_ahora_peru()
@@ -1613,7 +1613,7 @@ elif choice == "Dashboard General":
         </div>
     """, unsafe_allow_html=True)
 
-    st.markdown("##### 🔍 Filtros de Consulta")
+    st.markdown("##### Filtros de Consulta")
     col_f1, col_f2 = st.columns([1.5, 1])
     
     with col_f1:
@@ -1628,7 +1628,7 @@ elif choice == "Dashboard General":
 
     if colaboradores_ops:
         colabs_a_renderizar = colaboradores_ops if colab_dash == "Todos" else [colab_dash]
-        with st.expander("👁️ Ver Calendarios de Asistencia por Trabajador", expanded=True):
+        with st.expander("Ver Calendarios de Asistencia por Trabajador", expanded=True):
             cols_cal = st.columns(2)
             for idx, c_nom in enumerate(colabs_a_renderizar):
                 with cols_cal[idx % 2]:
@@ -1640,7 +1640,7 @@ elif choice == "Dashboard General":
     st.markdown("---")
 
     # --- CÁLCULO DE HORAS EXTRAS MENSUALES POR TRABAJADOR ---
-    st.markdown(f"##### ⭐ Horas Extras Mensuales del Período ({NOMBRES_MESES[mes_sel-1]} {int(anio_sel)})")
+    st.markdown(f"##### Horas Extras Mensuales del Período ({NOMBRES_MESES[mes_sel-1]} {int(anio_sel)})")
     
     df_asist_mes = st.session_state.asistencia.copy()
     horas_extras_mensuales = {}
@@ -1856,7 +1856,7 @@ elif choice == "Gestión Colaboradores":
         </div>
     """, unsafe_allow_html=True)
 
-    tab_fichas, tab_nuevo, tab_directorio = st.tabs(["📇 Fichas Técnicas", "➕ Registrar Colaborador", "📋 Directorio General"])
+    tab_fichas, tab_nuevo, tab_directorio = st.tabs(["Fichas Técnicas", "Registrar Colaborador", "Directorio General"])
 
     with tab_fichas:
         st.markdown("<h4 style='font-size:1rem; color:#111827; margin-bottom:15px;'>Tarjetas de Identificación del Personal</h4>", unsafe_allow_html=True)
@@ -1905,7 +1905,7 @@ elif choice == "Gestión Colaboradores":
 
             link_maps_in = st.text_input("Enlace Ubicación Domicilio (Google Maps Link)", placeholder="https://maps.app.goo.gl/...")
 
-            st.caption("📌 Nota: La imagen debe guardarse en la carpeta `fotos/` del repositorio como: `<DNI>.png` o `<DNI>.jpg`")
+            st.caption("Nota: La imagen debe guardarse en la carpeta `fotos/` del repositorio como: `<DNI>.png` o `<DNI>.jpg`")
 
             if st.form_submit_button("Guardar Registro", use_container_width=True):
                 if not dni_in or not nom_in or not clave_in:
@@ -1989,7 +1989,7 @@ elif choice == "Boletas de Pago":
         </div>
     """, unsafe_allow_html=True)
 
-    tab_boleta, tab_feriados = st.tabs(["📄 Generar Boleta de Pago", "📅 Gestión de Feriados"])
+    tab_boleta, tab_feriados = st.tabs(["Generar Boleta de Pago", "Gestión de Feriados"])
 
     with tab_feriados:
         st.markdown("<h4 style='font-size:1rem; color:#111827; margin-bottom:12px;'>Días Feriados Registrados</h4>", unsafe_allow_html=True)
@@ -2109,7 +2109,7 @@ elif choice == "Boletas de Pago":
                 descuadre_caja_monto = abs(pd.to_numeric(faltantes["monto"], errors="coerce").sum())
 
         st.markdown("---")
-        st.markdown("##### 🧮 Valores y Conceptos Calculados")
+        st.markdown("##### Valores y Conceptos Calculados")
         
         c_i1, c_i2, c_i3 = st.columns(3)
         sueldo_basico_in = c_i1.number_input("Sueldo Básico (S/.)", min_value=0.0, value=530.0, step=10.0, format="%.2f")
@@ -2140,7 +2140,7 @@ elif choice == "Boletas de Pago":
 
         datos_boleta = {
             "empresa": "TIENDAS PREMIUM E.I.R.L.",
-            "ruc": "20612345678",
+            "ruc": "20612107786",
             "periodo": f"{NOMBRES_MESES_B[mes_b_sel-1].upper()} {anio_b_sel}",
             "colaborador": colab_b_sel,
             "dni": dni_b_val,
@@ -2164,7 +2164,7 @@ elif choice == "Boletas de Pago":
         }
 
         st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown("##### 👁️ Previsualización de la Boleta de Pago")
+        st.markdown("##### Previsualización de la Boleta de Pago")
 
         st.markdown(f"""
             <div class="boleta-container">
@@ -2287,7 +2287,7 @@ elif choice == "Boletas de Pago":
 
         excel_data = generar_excel_boleta(datos_boleta)
         col_exp1.download_button(
-            label="📊 Descargar Boleta en Excel (.xlsx)",
+            label="Descargar Boleta en Excel (.xlsx)",
             data=excel_data,
             file_name=f"Boleta_{colab_b_sel.replace(' ', '_')}_{datos_boleta['periodo']}.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -2297,7 +2297,7 @@ elif choice == "Boletas de Pago":
         pdf_bytes = generar_pdf_boleta(datos_boleta)
         if pdf_bytes:
             col_exp2.download_button(
-                label="📄 Descargar Boleta en PDF (.pdf)",
+                label="Descargar Boleta en PDF (.pdf)",
                 data=pdf_bytes,
                 file_name=f"Boleta_{colab_b_sel.replace(' ', '_')}_{datos_boleta['periodo']}.pdf",
                 mime="application/pdf",
@@ -2388,7 +2388,7 @@ elif choice == "Historial de Descuadres":
     """, unsafe_allow_html=True)
 
     if not st.session_state.descuadres.empty:
-        st.markdown("##### 📅 Resumen Mensual de Descuadres por Trabajador")
+        st.markdown("##### Resumen Mensual de Descuadres por Trabajador")
         
         col_m_desc, col_a_desc = st.columns(2)
         ahora_p_desc = obtener_ahora_peru()
@@ -2449,7 +2449,7 @@ elif choice == "Historial de Descuadres":
 
         st.markdown("---")
 
-        st.markdown("##### 🔍 Filtros de Búsqueda")
+        st.markdown("##### Filtros de Búsqueda")
         f_col1, f_col2 = st.columns([1.5, 1])
         
         with f_col1:
@@ -2509,7 +2509,7 @@ elif choice == "Historial de Descuadres":
                         st.markdown(f"- **El día {r_t['fecha']}:** :{s_color}[{r_t['tipo']} ({signo_item}S/. {m_val:.2f})]{obs_item}")
 
         st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown("##### 📋 Matriz Consolidada de Descuadres")
+        st.markdown("##### Matriz Consolidada de Descuadres")
         st.dataframe(
             df_desc_filtrado.drop(columns=["monto_num"], errors="ignore"),
             use_container_width=True,
@@ -2574,7 +2574,7 @@ elif choice == "Historial de Asistencias":
     """, unsafe_allow_html=True)
 
     if not st.session_state.asistencia.empty:
-        st.markdown("##### 🔍 Filtros de Búsqueda")
+        st.markdown("##### Filtros de Búsqueda")
         fa_col1, fa_col2 = st.columns([1.5, 1])
         
         with fa_col1:
@@ -2613,7 +2613,7 @@ elif choice == "Historial de Asistencias":
                 st.markdown(f'<div class="info-card"><div class="info-label">Colaboradores Activos</div><div class="info-value">{colabs_unicos}</div></div>', unsafe_allow_html=True)
 
             st.markdown("<br>", unsafe_allow_html=True)
-            st.markdown("##### 📋 Registro Detallado de Asistencias")
+            st.markdown("##### Registro Detallado de Asistencias")
             st.dataframe(
                 df_asist_filtrado,
                 use_container_width=True,
