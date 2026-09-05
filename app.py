@@ -2011,116 +2011,114 @@ elif choice == "Boletas de Pago":
         st.markdown("---")
         st.markdown("##### 👁️ Vista Previa de la Boleta de Pago")
 
-        st.markdown(f"""
-            <div class="boleta-container">
-                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #111827; padding-bottom:10px; margin-bottom:15px;">
-                    <div>
-                        <div style="font-size:1.1rem; font-weight:800; color:#EC3237;">{datos_boleta_generada['empresa']}</div>
-                        <div style="font-size:0.75rem; color:#4B5563;">RUC: {datos_boleta_generada['ruc']}</div>
-                    </div>
-                    <div style="text-align:right;">
-                        <div style="font-size:0.95rem; font-weight:700; color:#111827;">BOLETA DE PAGO</div>
-                        <div style="font-size:0.75rem; color:#4B5563;">PERÍODO: <b>{datos_boleta_generada['periodo']}</b></div>
-                    </div>
-                </div>
+        # HTML sin sangrías internas para evitar que Streamlit lo interprete como Codeblock
+        html_boleta = f"""<div style="border: 2px solid #111827; border-radius: 8px; padding: 20px; background-color: #ffffff; font-family: 'Segoe UI', sans-serif; color: #111827; max-width: 900px; margin: 0 auto; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+<div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #111827; padding-bottom: 12px; margin-bottom: 15px;">
+<div>
+<div style="font-size: 1.2rem; font-weight: 800; color: #EC3237;">{datos_boleta_generada['empresa']}</div>
+<div style="font-size: 0.8rem; color: #4B5563;">RUC: {datos_boleta_generada['ruc']}</div>
+</div>
+<div style="text-align: right;">
+<div style="font-size: 1rem; font-weight: 800; color: #111827;">BOLETA DE PAGO</div>
+<div style="font-size: 0.8rem; color: #4B5563;">PERÍODO: <b>{datos_boleta_generada['periodo']}</b></div>
+</div>
+</div>
+<table style="width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 0.85rem;">
+<tr style="border-bottom: 1px solid #E5E7EB;">
+<th style="width: 18%; text-align: left; padding: 6px; background-color: #F9FAFB; color: #374151;">COLABORADOR:</th>
+<td style="width: 32%; padding: 6px;"><b>{datos_boleta_generada['colaborador']}</b></td>
+<th style="width: 18%; text-align: left; padding: 6px; background-color: #F9FAFB; color: #374151;">DNI:</th>
+<td style="width: 32%; padding: 6px;">{datos_boleta_generada['dni']}</td>
+</tr>
+<tr style="border-bottom: 1px solid #E5E7EB;">
+<th style="text-align: left; padding: 6px; background-color: #F9FAFB; color: #374151;">CARGO:</th>
+<td style="padding: 6px;">{datos_boleta_generada['cargo']}</td>
+<th style="text-align: left; padding: 6px; background-color: #F9FAFB; color: #374151;">FECHA INGRESO:</th>
+<td style="padding: 6px;">{datos_boleta_generada['fecha_inicio']}</td>
+</tr>
+<tr style="border-bottom: 1px solid #E5E7EB;">
+<th style="text-align: left; padding: 6px; background-color: #F9FAFB; color: #374151;">DÍAS TRABAJADOS:</th>
+<td style="padding: 6px;">{datos_boleta_generada['dias_trabajados']} días</td>
+<th style="text-align: left; padding: 6px; background-color: #F9FAFB; color: #374151;">DÍAS FALTAS:</th>
+<td style="padding: 6px;">{datos_boleta_generada['dias_faltas']} días</td>
+</tr>
+<tr>
+<th style="text-align: left; padding: 6px; background-color: #F9FAFB; color: #374151;">FERIADOS TRAB.:</th>
+<td style="padding: 6px;">{datos_boleta_generada['feriados_trabajados']} días</td>
+<th style="text-align: left; padding: 6px; background-color: #F9FAFB; color: #374151;">HORAS EXTRAS:</th>
+<td style="padding: 6px;">{datos_boleta_generada['horas_extras_hrs']:.2f} hrs</td>
+</tr>
+</table>
+<table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+<thead>
+<tr style="background-color: #111827; color: #ffffff;">
+<th style="padding: 8px; text-align: left;">CONCEPTO / RUBRO</th>
+<th style="padding: 8px; text-align: center;">CANTIDAD</th>
+<th style="padding: 8px; text-align: right;">INGRESOS (S/.)</th>
+<th style="padding: 8px; text-align: right;">DESCUENTOS (S/.)</th>
+</tr>
+</thead>
+<tbody>
+<tr style="border-bottom: 1px solid #E5E7EB;">
+<td style="padding: 8px;">SUELDO BÁSICO</td>
+<td style="padding: 8px; text-align: center;">{datos_boleta_generada['dias_trabajados']} días</td>
+<td style="padding: 8px; text-align: right;">S/. {datos_boleta_generada['sueldo_basico']:.2f}</td>
+<td style="padding: 8px; text-align: right;">S/. 0.00</td>
+</tr>
+<tr style="border-bottom: 1px solid #E5E7EB;">
+<td style="padding: 8px;">PAGO FERIADOS TRABAJADOS (DOBLE)</td>
+<td style="padding: 8px; text-align: center;">{datos_boleta_generada['feriados_trabajados']} días</td>
+<td style="padding: 8px; text-align: right;">S/. {datos_boleta_generada['monto_feriados']:.2f}</td>
+<td style="padding: 8px; text-align: right;">S/. 0.00</td>
+</tr>
+<tr style="border-bottom: 1px solid #E5E7EB;">
+<td style="padding: 8px;">HORAS EXTRAS TRABAJADAS</td>
+<td style="padding: 8px; text-align: center;">{datos_boleta_generada['horas_extras_hrs']:.2f} hrs</td>
+<td style="padding: 8px; text-align: right;">S/. {datos_boleta_generada['monto_horas_extras']:.2f}</td>
+<td style="padding: 8px; text-align: right;">S/. 0.00</td>
+</tr>
+<tr style="border-bottom: 1px solid #E5E7EB;">
+<td style="padding: 8px;">ADELANTO DE SUELDO</td>
+<td style="padding: 8px; text-align: center;">-</td>
+<td style="padding: 8px; text-align: right;">S/. 0.00</td>
+<td style="padding: 8px; text-align: right;">S/. {datos_boleta_generada['adelanto_sueldo']:.2f}</td>
+</tr>
+<tr style="border-bottom: 1px solid #E5E7EB;">
+<td style="padding: 8px;">DESCUENTO POR FALTAS</td>
+<td style="padding: 8px; text-align: center;">{datos_boleta_generada['dias_faltas']} días</td>
+<td style="padding: 8px; text-align: right;">S/. 0.00</td>
+<td style="padding: 8px; text-align: right;">S/. {datos_boleta_generada['monto_faltas']:.2f}</td>
+</tr>
+<tr style="border-bottom: 1px solid #E5E7EB;">
+<td style="padding: 8px;">DESCUADRE / FALTANTE DE CAJA</td>
+<td style="padding: 8px; text-align: center;">-</td>
+<td style="padding: 8px; text-align: right;">S/. 0.00</td>
+<td style="padding: 8px; text-align: right;">S/. {datos_boleta_generada['descuadre_caja']:.2f}</td>
+</tr>
+<tr style="background-color: #F3F4F6; font-weight: 700; border-bottom: 2px solid #111827;">
+<td colspan="2" style="padding: 8px;">TOTALES</td>
+<td style="padding: 8px; text-align: right; color: #111827;">S/. {datos_boleta_generada['total_ingresos']:.2f}</td>
+<td style="padding: 8px; text-align: right; color: #DC2626;">S/. {datos_boleta_generada['total_descuentos']:.2f}</td>
+</tr>
+<tr style="background-color: #DCFCE7; font-weight: 800; font-size: 0.95rem;">
+<td colspan="2" style="padding: 10px; color: #15803D;">NETO A PAGAR</td>
+<td colspan="2" style="padding: 10px; text-align: right; color: #15803D; font-size: 1.1rem;">S/. {datos_boleta_generada['neto_pagar']:.2f}</td>
+</tr>
+</tbody>
+</table>
+<div style="margin-top: 40px; display: flex; justify-content: space-around; text-align: center; font-size: 0.75rem; color: #374151;">
+<div>
+___________________________________<br>
+<b>EMPLEADOR / TIENDAS PREMIUM</b>
+</div>
+<div>
+___________________________________<br>
+<b>RECIBÍ CONFORME (TRABAJADOR)</b>
+</div>
+</div>
+</div>"""
 
-                <table class="boleta-table" style="width:100%; margin-bottom:15px;">
-                    <tr>
-                        <th style="width:15%;">COLABORADOR:</th>
-                        <td style="width:35%;"><b>{datos_boleta_generada['colaborador']}</b></td>
-                        <th style="width:15%;">DNI:</th>
-                        <td style="width:35%;">{datos_boleta_generada['dni']}</td>
-                    </tr>
-                    <tr>
-                        <th>CARGO:</th>
-                        <td>{datos_boleta_generada['cargo']}</td>
-                        <th>FECHA INGRESO:</th>
-                        <td>{datos_boleta_generada['fecha_inicio']}</td>
-                    </tr>
-                    <tr>
-                        <th>DÍAS TRABAJADOS:</th>
-                        <td>{datos_boleta_generada['dias_trabajados']} días</td>
-                        <th>DÍAS FALTAS:</th>
-                        <td>{datos_boleta_generada['dias_faltas']} días</td>
-                    </tr>
-                    <tr>
-                        <th>FERIADOS TRAB.:</th>
-                        <td>{datos_boleta_generada['feriados_trabajados']} días</td>
-                        <th>HORAS EXTRAS:</th>
-                        <td>{datos_boleta_generada['horas_extras_hrs']:.2f} hrs</td>
-                    </tr>
-                </table>
-
-                <table class="boleta-table" style="width:100%;">
-                    <thead>
-                        <tr style="background-color:#f3f4f6;">
-                            <th>CONCEPTO / RUBRO</th>
-                            <th style="text-align:center;">CANTIDAD</th>
-                            <th style="text-align:right;">INGRESOS (S/.)</th>
-                            <th style="text-align:right;">DESCUENTOS (S/.)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>SUELDO BÁSICO</td>
-                            <td style="text-align:center;">{datos_boleta_generada['dias_trabajados']} días</td>
-                            <td style="text-align:right;">S/. {datos_boleta_generada['sueldo_basico']:.2f}</td>
-                            <td style="text-align:right;">S/. 0.00</td>
-                        </tr>
-                        <tr>
-                            <td>PAGO FERIADOS TRABAJADOS (DOBLE)</td>
-                            <td style="text-align:center;">{datos_boleta_generada['feriados_trabajados']} días</td>
-                            <td style="text-align:right;">S/. {datos_boleta_generada['monto_feriados']:.2f}</td>
-                            <td style="text-align:right;">S/. 0.00</td>
-                        </tr>
-                        <tr>
-                            <td>HORAS EXTRAS TRABAJADAS</td>
-                            <td style="text-align:center;">{datos_boleta_generada['horas_extras_hrs']:.2f} hrs</td>
-                            <td style="text-align:right;">S/. {datos_boleta_generada['monto_horas_extras']:.2f}</td>
-                            <td style="text-align:right;">S/. 0.00</td>
-                        </tr>
-                        <tr>
-                            <td>ADELANTO DE SUELDO</td>
-                            <td style="text-align:center;">-</td>
-                            <td style="text-align:right;">S/. 0.00</td>
-                            <td style="text-align:right;">S/. {datos_boleta_generada['adelanto_sueldo']:.2f}</td>
-                        </tr>
-                        <tr>
-                            <td>DESCUENTO POR FALTAS</td>
-                            <td style="text-align:center;">{datos_boleta_generada['dias_faltas']} días</td>
-                            <td style="text-align:right;">S/. 0.00</td>
-                            <td style="text-align:right;">S/. {datos_boleta_generada['monto_faltas']:.2f}</td>
-                        </tr>
-                        <tr>
-                            <td>DESCUADRE / FALTANTE DE CAJA</td>
-                            <td style="text-align:center;">-</td>
-                            <td style="text-align:right;">S/. 0.00</td>
-                            <td style="text-align:right;">S/. {datos_boleta_generada['descuadre_caja']:.2f}</td>
-                        </tr>
-                        <tr style="background-color:#f9fafb; font-weight:700;">
-                            <td colspan="2">TOTALES</td>
-                            <td style="text-align:right; color:#111827;">S/. {datos_boleta_generada['total_ingresos']:.2f}</td>
-                            <td style="text-align:right; color:#EC3237;">S/. {datos_boleta_generada['total_descuentos']:.2f}</td>
-                        </tr>
-                        <tr style="background-color:#f0fdf4; font-weight:800; font-size:0.95rem;">
-                            <td colspan="2" style="color:#15803d;">NETO A PAGAR</td>
-                            <td colspan="2" style="text-align:right; color:#15803d; font-size:1.05rem;">S/. {datos_boleta_generada['neto_pagar']:.2f}</td>
-                        </tr>
-                    </tbody>
-                </table>
-
-                <div style="margin-top:35px; display:flex; justify-content:space-around; text-align:center; font-size:0.75rem; color:#374151;">
-                    <div>
-                        ___________________________________<br>
-                        <b>EMPLEADOR / TIENDAS PREMIUM</b>
-                    </div>
-                    <div>
-                        ___________________________________<br>
-                        <b>RECIBÍ CONFORME (TRABAJADOR)</b>
-                    </div>
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
+        st.markdown(html_boleta, unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
         col_d1, col_d2 = st.columns(2)
@@ -2148,7 +2146,7 @@ elif choice == "Boletas de Pago":
                     )
             else:
                 st.warning("⚠️ Módulo `reportlab` no instalado. Para habilitar PDF instala: `pip install reportlab`")
-
+                
 elif choice == "Solicitudes y Permisos":
     st.markdown("""
         <div class="market-header">
