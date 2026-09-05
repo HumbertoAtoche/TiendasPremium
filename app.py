@@ -252,17 +252,10 @@ def guardar_descuadre_gsheets(fecha, dni, nombre, tipo, monto, observacion, fech
         except Exception as e:
             st.error(f"❌ Error al guardar descuadre: {e}")
 
-def guardar_solicitud_gsheets(id_sol, fecha_reg, dni, nombre, tipo_sol, f_permiso, monto_adel, motivo, estado="Pendiente", respuesta="", requiere_recuperacion="NO", fecha_recuperacion=""):
+def guardar_solicitud_gsheets(id_sol, fecha_reg, dni, nombre, tipo_sol, f_permiso, monto_adel, motivo, estado="Pendiente", respuesta="", requiere_recuperacion="No", fecha_recuperacion=""):
     if doc_sheets:
         try:
             hoja = doc_sheets.worksheet("Solicitudes")
-            encabezados_actuales = hoja.row_values(1)
-            nuevas_columnas = ["requiere_recuperacion", "fecha_recuperacion"]
-            for col in nuevas_columnas:
-                if col not in encabezados_actuales:
-                    hoja.update_cell(1, len(encabezados_actuales) + 1, col)
-                    encabezados_actuales.append(col)
-
             hoja.append_row([
                 str(id_sol), str(fecha_reg), str(dni), nombre, tipo_sol,
                 str(f_permiso), float(monto_adel), motivo, estado, respuesta,
@@ -1323,14 +1316,42 @@ elif choice == "Solicitar Permiso / Adelanto":
             f_permiso_val = ""
             monto_adel_val = 0.0
 
+            requiere_recuperacion = False
+            fecha_recuperacion_sel = None
+
             if tipo_sol == "Permiso Laboral":
                 st.info("ℹ️ **Regla de Permisos:** Toda solicitud de permiso debe realizarse con un mínimo de **7 días de anticipación**.")
                 f_permiso_sel = st.date_input(
-                    "Fecha solicitada para el permiso", 
-                    value=fecha_minima_permiso, 
-                    min_value=fecha_minima_permiso
+                    "Fecha solicitada para el permiso",
+                    value=fecha_minima_permiso,
+                    min_value=fecha_minima_permiso,
+                    key="fecha_permiso_nueva"
                 )
                 f_permiso_val = str(f_permiso_sel)
+
+                st.markdown("##### 🔄 Recuperación del día")
+                requiere_recuperacion = st.checkbox(
+                    "¿Deseas recuperar el día del permiso?",
+                    value=False,
+                    key="requiere_recuperacion_nueva"
+                )
+
+                if requiere_recuperacion:
+                    fecha_min_rec = f_permiso_sel + timedelta(days=1)
+                    st.success("Selecciona la fecha de recuperación. **Los domingos también están habilitados.**")
+                    fecha_recuperacion_sel = st.date_input(
+                        "📅 Fecha de recuperación",
+                        value=fecha_min_rec,
+                        min_value=fecha_min_rec,
+                        key="fecha_recuperacion_nueva",
+                        help="Puedes seleccionar cualquier fecha, incluido domingo."
+                    )
+                    dias_semana = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
+                    st.caption(
+                        f"Permiso: **{f_permiso_sel.strftime('%d/%m/%Y')}** | "
+                        f"Recuperación: **{fecha_recuperacion_sel.strftime('%d/%m/%Y')} "
+                        f"({dias_semana[fecha_recuperacion_sel.weekday()]})**"
+                    )
             else:
                 st.info("ℹ️ **Adelanto de Sueldo:** Ingresa el monto total a solicitar y la justificación.")
                 monto_adel_val = st.number_input("Monto a Solicitar (S/.)", min_value=10.0, step=10.0, format="%.2f")
@@ -1348,6 +1369,16 @@ elif choice == "Solicitar Permiso / Adelanto":
                             st.error("❌ Los permisos requieren como mínimo 7 días de anticipación.")
                             st.stop()
 
+                        if requiere_recuperacion and fecha_recuperacion_sel is not None:
+                            if fecha_recuperacion_sel == f_permiso_sel:
+                                st.error("❌ La fecha de recuperación debe ser diferente a la fecha del permiso.")
+                                st.stop()
+                            fecha_recuperacion_val = str(fecha_recuperacion_sel)
+                        else:
+                            fecha_recuperacion_val = ""
+                    else:
+                        fecha_recuperacion_val = ""
+
                     id_nuevo = f"SOL-{int(time.time())}"
                     f_reg_now = obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -1361,11 +1392,18 @@ elif choice == "Solicitar Permiso / Adelanto":
                         "monto_adelanto": monto_adel_val,
                         "motivo": motivo_sol.strip(),
                         "estado": "Pendiente",
-                        "respuesta_admin": ""
+                        "respuesta_admin": "",
+                        "requiere_recuperacion": "Sí" if (tipo_sol == "Permiso Laboral" and requiere_recuperacion) else "No",
+                        "fecha_recuperacion": fecha_recuperacion_val
                     }
 
                     st.session_state.solicitudes = pd.concat([pd.DataFrame([nueva_peticion]), st.session_state.solicitudes], ignore_index=True)
-                    guardar_solicitud_gsheets(id_nuevo, f_reg_now, dni_actual, user_actual, tipo_sol, f_permiso_val, monto_adel_val, motivo_sol.strip())
+                    guardar_solicitud_gsheets(
+                        id_nuevo, f_reg_now, dni_actual, user_actual, tipo_sol,
+                        f_permiso_val, monto_adel_val, motivo_sol.strip(),
+                        requiere_recuperacion=("Sí" if (tipo_sol == "Permiso Laboral" and requiere_recuperacion) else "No"),
+                        fecha_recuperacion=fecha_recuperacion_val
+                    )
                     st.success("✅ Solicitud enviada con éxito. Un administrador la revisará pronto.")
                     time.sleep(0.5)
                     st.rerun()
@@ -1386,6 +1424,11 @@ elif choice == "Solicitar Permiso / Adelanto":
                     st.markdown(f"<span style='background-color:{badge_c}; color:#fff; padding:3px 10px; border-radius:12px; font-size:0.75rem; font-weight:700;'>{est}</span>", unsafe_allow_html=True)
                     st.markdown(f"<br>{det_txt}", unsafe_allow_html=True)
                     st.markdown(f"**Motivo:** {r_sol['motivo']}")
+                    if r_sol['tipo_solicitud'] == "Permiso Laboral":
+                        _req_rec = str(r_sol.get("requiere_recuperacion", "No")).strip().lower()
+                        _f_rec = str(r_sol.get("fecha_recuperacion", "")).strip()
+                        if _req_rec in ["sí", "si", "yes", "true", "1"] and _f_rec:
+                            st.markdown(f"**Recuperación:** {_f_rec}")
                     if str(r_sol.get('respuesta_admin', '')).strip():
                         st.markdown(f"**Respuesta Admin:** {r_sol['respuesta_admin']}")
         else:
