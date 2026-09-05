@@ -252,11 +252,22 @@ def guardar_descuadre_gsheets(fecha, dni, nombre, tipo, monto, observacion, fech
         except Exception as e:
             st.error(f"❌ Error al guardar descuadre: {e}")
 
-def guardar_solicitud_gsheets(id_sol, fecha_reg, dni, nombre, tipo_sol, f_permiso, monto_adel, motivo, estado="Pendiente", respuesta=""):
+def guardar_solicitud_gsheets(id_sol, fecha_reg, dni, nombre, tipo_sol, f_permiso, monto_adel, motivo, estado="Pendiente", respuesta="", requiere_recuperacion="NO", fecha_recuperacion=""):
     if doc_sheets:
         try:
             hoja = doc_sheets.worksheet("Solicitudes")
-            hoja.append_row([str(id_sol), str(fecha_reg), str(dni), nombre, tipo_sol, str(f_permiso), float(monto_adel), motivo, estado, respuesta])
+            encabezados_actuales = hoja.row_values(1)
+            nuevas_columnas = ["requiere_recuperacion", "fecha_recuperacion"]
+            for col in nuevas_columnas:
+                if col not in encabezados_actuales:
+                    hoja.update_cell(1, len(encabezados_actuales) + 1, col)
+                    encabezados_actuales.append(col)
+
+            hoja.append_row([
+                str(id_sol), str(fecha_reg), str(dni), nombre, tipo_sol,
+                str(f_permiso), float(monto_adel), motivo, estado, respuesta,
+                str(requiere_recuperacion), str(fecha_recuperacion)
+            ])
         except Exception as e:
             st.error(f"❌ Error al guardar solicitud: {e}")
 
@@ -469,6 +480,21 @@ st.markdown("""
         color: #b91c1c !important;
         border: 1px solid #fca5a5 !important;
     }
+    .bg-permiso {
+        background-color: #ede9fe !important;
+        color: #6d28d9 !important;
+        border: 1px solid #c4b5fd !important;
+    }
+    .bg-permiso-pendiente {
+        background-color: #fef3c7 !important;
+        color: #92400e !important;
+        border: 1px solid #fcd34d !important;
+    }
+    .bg-recuperacion {
+        background-color: #cffafe !important;
+        color: #0e7490 !important;
+        border: 1px solid #67e8f9 !important;
+    }
     .bg-extra {
         background-color: #fef9c3 !important;
         color: #a16207 !important;
@@ -635,14 +661,23 @@ if "descuadres" not in st.session_state:
         st.session_state.descuadres = pd.DataFrame(columns=["fecha", "dni", "nombre", "tipo", "monto", "observacion", "fecha_registro"])
 
 if "solicitudes" not in st.session_state:
+    columnas_solicitudes = [
+        "id_solicitud", "fecha_registro", "dni", "nombre", "tipo_solicitud",
+        "fecha_permiso", "monto_adelanto", "motivo", "estado", "respuesta_admin",
+        "requiere_recuperacion", "fecha_recuperacion"
+    ]
     if doc_sheets:
         try:
             data_sol = doc_sheets.worksheet("Solicitudes").get_all_records()
             st.session_state.solicitudes = pd.DataFrame(data_sol)
         except Exception:
-            st.session_state.solicitudes = pd.DataFrame(columns=["id_solicitud", "fecha_registro", "dni", "nombre", "tipo_solicitud", "fecha_permiso", "monto_adelanto", "motivo", "estado", "respuesta_admin"])
+            st.session_state.solicitudes = pd.DataFrame(columns=columnas_solicitudes)
     else:
-        st.session_state.solicitudes = pd.DataFrame(columns=["id_solicitud", "fecha_registro", "dni", "nombre", "tipo_solicitud", "fecha_permiso", "monto_adelanto", "motivo", "estado", "respuesta_admin"])
+        st.session_state.solicitudes = pd.DataFrame(columns=columnas_solicitudes)
+
+    for col_sol in columnas_solicitudes:
+        if col_sol not in st.session_state.solicitudes.columns:
+            st.session_state.solicitudes[col_sol] = ""
 
 if "feriados" not in st.session_state:
     if doc_sheets:
@@ -982,11 +1017,36 @@ def renderizar_tarjeta_colaborador(row):
 def renderizar_calendario_colaborador(nombre_colab, anio, mes):
     cal = calendar.Calendar(firstweekday=0)
     mes_dias = cal.monthdayscalendar(anio, mes)
-    
+
     df_asist = st.session_state.asistencia.copy()
     if not df_asist.empty:
         df_asist = df_asist[df_asist["nombre"] == nombre_colab]
-    
+
+    # Solicitudes de permiso/recovery del colaborador.
+    # Se muestran las solicitudes Pendientes y Aprobadas; las Rechazadas no se pintan.
+    df_sol_colab = pd.DataFrame()
+    if "solicitudes" in st.session_state and not st.session_state.solicitudes.empty:
+        df_sol_colab = st.session_state.solicitudes.copy()
+        if "nombre" in df_sol_colab.columns:
+            df_sol_colab = df_sol_colab[df_sol_colab["nombre"].astype(str) == str(nombre_colab)]
+        if "estado" in df_sol_colab.columns:
+            df_sol_colab = df_sol_colab[df_sol_colab["estado"].astype(str).isin(["Pendiente", "Aprobado"])]
+
+    permisos = {}
+    recuperaciones = {}
+    if not df_sol_colab.empty:
+        for _, sol in df_sol_colab.iterrows():
+            if str(sol.get("tipo_solicitud", "")).strip() != "Permiso Laboral":
+                continue
+
+            fecha_perm = parsear_fecha_segura(sol.get("fecha_permiso", ""))
+            if fecha_perm and fecha_perm.month == mes and fecha_perm.year == anio:
+                permisos[fecha_perm] = str(sol.get("estado", "Pendiente"))
+
+            fecha_rec = parsear_fecha_segura(sol.get("fecha_recuperacion", ""))
+            if fecha_rec and fecha_rec.month == mes and fecha_rec.year == anio:
+                recuperaciones[fecha_rec] = str(sol.get("estado", "Pendiente"))
+
     row_emp = st.session_state.empleados[st.session_state.empleados["nombre"] == nombre_colab]
     f_inicio_lab = None
     f_cese_lab = None
@@ -1004,13 +1064,8 @@ def renderizar_calendario_colaborador(nombre_colab, anio, mes):
         <table class='cal-table'>
             <thead>
                 <tr>
-                    <th>Lun</th>
-                    <th>Mar</th>
-                    <th>Mié</th>
-                    <th>Jue</th>
-                    <th>Vie</th>
-                    <th>Sáb</th>
-                    <th>Dom</th>
+                    <th>Lun</th><th>Mar</th><th>Mié</th><th>Jue</th>
+                    <th>Vie</th><th>Sáb</th><th>Dom</th>
                 </tr>
             </thead>
             <tbody>
@@ -1024,8 +1079,23 @@ def renderizar_calendario_colaborador(nombre_colab, anio, mes):
             else:
                 fecha_dia = date(anio, mes, d)
                 f_str = fecha_dia.strftime("%Y-%m-%d")
-                
-                if i == 6:
+
+                # 1. Recuperación: tiene prioridad incluso si cae domingo.
+                if fecha_dia in recuperaciones:
+                    estado_rec = recuperaciones[fecha_dia]
+                    txt_rec = "↻ Recuperación" if estado_rec == "Aprobado" else "↻ Recup. solicitada"
+                    html += f"<td class='bg-recuperacion'><span class='cal-day-num'>{d}</span><span class='cal-sub'>{txt_rec}</span></td>"
+
+                # 2. Permiso: tiene prioridad sobre Falta/Descanso.
+                elif fecha_dia in permisos:
+                    estado_perm = permisos[fecha_dia]
+                    if estado_perm == "Aprobado":
+                        html += f"<td class='bg-permiso'><span class='cal-day-num'>{d}</span><span class='cal-sub'>✓ Permiso</span></td>"
+                    else:
+                        html += f"<td class='bg-permiso-pendiente'><span class='cal-day-num'>{d}</span><span class='cal-sub'>⌛ Permiso</span></td>"
+
+                # 3. Asistencia real.
+                elif i == 6:
                     html += f"<td class='bg-descanso'><span class='cal-day-num'>{d}</span><span class='cal-sub'>Descanso</span></td>"
                 else:
                     if not df_asist.empty:
@@ -1034,7 +1104,10 @@ def renderizar_calendario_colaborador(nombre_colab, anio, mes):
                         df_dia = pd.DataFrame()
 
                     if not df_dia.empty:
-                        tiene_extra = (df_dia["es_extra"].astype(str) == "SI").any() or df_dia["observacion"].str.contains("TURNO EXTRA").any()
+                        tiene_extra = (
+                            (df_dia["es_extra"].astype(str) == "SI").any()
+                            or df_dia["observacion"].astype(str).str.contains("TURNO EXTRA", case=False, na=False).any()
+                        )
                         if tiene_extra:
                             html += f"<td class='bg-extra'><span class='cal-day-num'>{d}</span><span class='cal-sub'>★ Extra</span></td>"
                         else:
@@ -1319,77 +1392,140 @@ elif choice == "Solicitar Permiso / Adelanto":
             st.info("No registras solicitudes en tu historial.")
 
 elif choice == "Mi Dashboard Mensual":
+    ahora_dash = obtener_ahora_peru()
+
+    NOMBRES_MESES_DASH = [
+        "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+        "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+    ]
+
     st.markdown(f"""
         <div class="market-header">
             <h1>Rendimiento Mensual</h1>
-            <p>Resumen acumulado para <b>{user_actual}</b></p>
+            <p>Resumen del período seleccionado para <b>{user_actual}</b></p>
         </div>
     """, unsafe_allow_html=True)
+
+    col_mes_dash, col_anio_dash = st.columns(2)
+    mes_dash_sel = col_mes_dash.selectbox(
+        "Seleccionar Mes",
+        list(range(1, 13)),
+        index=ahora_dash.month - 1,
+        format_func=lambda x: NOMBRES_MESES_DASH[x - 1],
+        key="mes_mi_dashboard"
+    )
+    anio_dash_sel = col_anio_dash.number_input(
+        "Seleccionar Año",
+        min_value=2024,
+        max_value=2030,
+        value=ahora_dash.year,
+        step=1,
+        key="anio_mi_dashboard"
+    )
+
+    periodo_dash = f"{NOMBRES_MESES_DASH[mes_dash_sel - 1]} {int(anio_dash_sel)}"
+    st.caption(
+        f"📅 Indicadores correspondientes únicamente a **{periodo_dash}**. "
+        "Las horas extras y demás métricas no acumulan meses anteriores."
+    )
 
     df_mis_desc = pd.DataFrame()
     df_mis_asist = pd.DataFrame()
 
     if not st.session_state.descuadres.empty:
-        df_mis_desc = st.session_state.descuadres[st.session_state.descuadres["dni"].astype(str) == str(dni_actual)]
-    
-    if not st.session_state.asistencia.empty:
-        df_mis_asist = st.session_state.asistencia[st.session_state.asistencia["dni"].astype(str) == str(dni_actual)].copy()
+        df_mis_desc = st.session_state.descuadres[
+            st.session_state.descuadres["dni"].astype(str) == str(dni_actual)
+        ].copy()
 
-    monto_total = pd.to_numeric(df_mis_desc["monto"]).sum() if not df_mis_desc.empty else 0.0
-    dias_trabajados = df_mis_asist["fecha"].nunique() if not df_mis_asist.empty else 0
+        if not df_mis_desc.empty:
+            df_mis_desc["fecha_dt"] = pd.to_datetime(df_mis_desc["fecha"], errors="coerce")
+            df_mis_desc = df_mis_desc[
+                (df_mis_desc["fecha_dt"].dt.month == mes_dash_sel) &
+                (df_mis_desc["fecha_dt"].dt.year == int(anio_dash_sel))
+            ]
+
+    if not st.session_state.asistencia.empty:
+        df_mis_asist = st.session_state.asistencia[
+            st.session_state.asistencia["dni"].astype(str) == str(dni_actual)
+        ].copy()
+
+        if not df_mis_asist.empty:
+            df_mis_asist["fecha_dt"] = pd.to_datetime(df_mis_asist["fecha"], errors="coerce")
+            df_mis_asist = df_mis_asist[
+                (df_mis_asist["fecha_dt"].dt.month == mes_dash_sel) &
+                (df_mis_asist["fecha_dt"].dt.year == int(anio_dash_sel))
+            ]
+
+    monto_total = (
+        pd.to_numeric(df_mis_desc["monto"], errors="coerce").sum()
+        if not df_mis_desc.empty else 0.0
+    )
+
+    dias_trabajados = (
+        df_mis_asist["fecha"].nunique()
+        if not df_mis_asist.empty else 0
+    )
 
     minutos_extras_mes = 0
     if not df_mis_asist.empty:
-        df_mis_asist["dt"] = pd.to_datetime(df_mis_asist["fecha_hora"])
+        df_mis_asist["dt"] = pd.to_datetime(df_mis_asist["fecha_hora"], errors="coerce")
         for _, grupo_dia in df_mis_asist.groupby("fecha"):
             _, mins_e, _, _ = calcular_jornada_y_horas_extras(grupo_dia)
             minutos_extras_mes += mins_e
 
-    metricas_p = calcular_metricas_puntualidad(st.session_state.asistencia, user_actual)
+    metricas_p = calcular_metricas_puntualidad(df_mis_asist, user_actual)
 
     k1, k2, k3, k4 = st.columns(4)
+
     with k1:
-        st.markdown(f'''
+        st.markdown(f"""
             <div class="info-card">
                 <div class="info-label">Días Trabajados</div>
                 <div class="info-value">{dias_trabajados}</div>
             </div>
-        ''', unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
 
     with k2:
-        st.markdown(f'''
+        st.markdown(f"""
             <div class="info-card">
                 <div class="info-label">Horas Extras Acumuladas</div>
                 <div class="info-value" style="color: #00A959;">{formatear_horas_minutos(minutos_extras_mes)}</div>
             </div>
-        ''', unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
 
     with k3:
-        st.markdown(f'''
+        st.markdown(f"""
             <div class="info-card">
                 <div class="info-label">Minutos Tardanza</div>
                 <div class="info-value" style="color: {'#111827' if metricas_p['minutos_acumulados'] == 0 else '#EC3237'};">{metricas_p['minutos_acumulados']} m</div>
             </div>
-        ''', unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
 
     with k4:
-        st.markdown(f'''
+        st.markdown(f"""
             <div class="info-card">
                 <div class="info-label">Balance Descuadres</div>
                 <div class="info-value" style="color: {'#00A959' if monto_total >= 0 else '#EC3237'};">S/. {monto_total:.2f}</div>
             </div>
-        ''', unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
 
-    st.markdown("<h4 style='font-size:1rem; color:#111827; margin-top:10px;'>Historial Personal</h4>", unsafe_allow_html=True)
+    st.markdown(
+        f"<h4 style='font-size:1rem; color:#111827; margin-top:10px;'>"
+        f"Historial Personal — {periodo_dash}</h4>",
+        unsafe_allow_html=True
+    )
+
     if not df_mis_desc.empty:
         st.dataframe(
             df_mis_desc[["fecha", "tipo", "monto", "observacion"]],
             use_container_width=True,
             hide_index=True,
-            column_config={"monto": st.column_config.NumberColumn("MONTO", format="S/. %.2f")}
+            column_config={
+                "monto": st.column_config.NumberColumn("MONTO", format="S/. %.2f")
+            }
         )
     else:
-        st.info("Sin registros de descuadres en el período.")
+        st.info(f"Sin registros de descuadres en {periodo_dash}.")
 
 # -------------------- MÓDULOS ADMIN --------------------
 
@@ -1437,6 +1573,18 @@ elif choice == "Dashboard General":
             <div class="legend-item">
                 <span class="legend-badge" style="background-color: #f3e8ff; border: 1px solid #e9d5ff;"></span>
                 <span>Cese / Baja</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-badge" style="background-color: #ede9fe; border: 1px solid #c4b5fd;"></span>
+                <span>Permiso Aprobado</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-badge" style="background-color: #fef3c7; border: 1px solid #fcd34d;"></span>
+                <span>Permiso Pendiente</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-badge" style="background-color: #cffafe; border: 1px solid #67e8f9;"></span>
+                <span>Recuperación</span>
             </div>
         </div>
     """, unsafe_allow_html=True)
@@ -2166,6 +2314,13 @@ elif choice == "Solicitudes y Permisos":
                     st.markdown(f"**Tipo de Solicitud:** {tipo_s}")
                     if tipo_s == "Permiso Laboral":
                         st.markdown(f"**Fecha Solicitada:** {row_sol['fecha_permiso']}")
+                        fecha_rec_admin = str(row_sol.get("fecha_recuperacion", "")).strip()
+                        if fecha_rec_admin:
+                            st.markdown(f"**Fecha de Recuperación:** {fecha_rec_admin}")
+                            if pd.notna(pd.to_datetime(fecha_rec_admin, errors="coerce")):
+                                fecha_rec_dt = pd.to_datetime(fecha_rec_admin, errors="coerce")
+                                if fecha_rec_dt.dayofweek == 6:
+                                    st.caption("🟢 La recuperación está programada para domingo.")
                     else:
                         st.markdown(f"**Monto Solicitado:** S/. {float(row_sol['monto_adelanto']):.2f}")
                     st.markdown(f"**Motivo:** {row_sol['motivo']}")
