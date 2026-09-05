@@ -7,16 +7,6 @@ import io
 import time
 import gspread
 
-# --- INTENTO DE IMPORTAR REPORTLAB PARA PDF (CON FALLBACK INTEGRADO) ---
-try:
-    from reportlab.lib.pagesizes import letter
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
-    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-    from reportlab.lib import colors
-    REPORTLAB_AVAILABLE = True
-except ImportError:
-    REPORTLAB_AVAILABLE = False
-
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(
     page_title="Tiendas Premium EIRL",
@@ -71,11 +61,6 @@ def calcular_jornada_y_horas_extras(df_marcas_dia):
     """
     Calcula el tiempo total laborado en el día procesando pares (INGRESO -> SALIDA).
     Compara con la jornada requerida de 5h 45m (345 min).
-    Retorna:
-      - minutos_laborales: Minutos aplicados a la jornada normal (máx 345 min)
-      - minutos_extras: Minutos laborados por encima de los 345 min
-      - minutos_totales: Tiempo total trabajado en el día
-      - turnos_adicionales: Lista con detalles de marcaciones o coberturas extras
     """
     if df_marcas_dia.empty:
         return 0, 0, 0, []
@@ -261,18 +246,6 @@ def guardar_solicitud_gsheets(id_sol, fecha_reg, dni, nombre, tipo_sol, f_permis
         except Exception as e:
             st.error(f"❌ Error al guardar solicitud: {e}")
 
-def guardar_feriado_gsheets(fecha, descripcion):
-    if doc_sheets:
-        try:
-            try:
-                hoja = doc_sheets.worksheet("Feriados")
-            except Exception:
-                hoja = doc_sheets.add_worksheet(title="Feriados", rows="100", cols="5")
-                hoja.append_row(["fecha", "descripcion"])
-            hoja.append_row([str(fecha), descripcion])
-        except Exception as e:
-            st.error(f"❌ Error al guardar feriado: {e}")
-
 def actualizar_hoja_completa(nombre_hoja, df):
     if doc_sheets:
         try:
@@ -286,7 +259,7 @@ def actualizar_hoja_completa(nombre_hoja, df):
 # --- CSS MINIMALISTA Y ESTILOS ---
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap');
 
     html, body, [class*="css"], .stMarkdown, div, button, input, select, textarea {
         font-family: 'Montserrat', sans-serif !important;
@@ -550,6 +523,31 @@ st.markdown("""
         color: #111827;
     }
 
+    /* ESTILOS PARA BOLETA DE PAGO */
+    .boleta-container {
+        background-color: #FFFFFF;
+        border: 1px solid #E5E7EB;
+        border-radius: 8px;
+        padding: 24px;
+        margin-top: 15px;
+    }
+    .boleta-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 15px;
+        font-size: 0.82rem;
+    }
+    .boleta-table th, .boleta-table td {
+        border: 1px solid #E5E7EB;
+        padding: 8px 12px;
+        color: #111827;
+    }
+    .boleta-table th {
+        background-color: #f9fafb;
+        font-weight: 700;
+        text-align: left;
+    }
+
     .app-footer {
         text-align: center;
         padding: 24px 10px 12px 10px;
@@ -561,42 +559,6 @@ st.markdown("""
     }
     .app-footer strong {
         color: #111827;
-    }
-
-    /* ESTILOS DE BOLETA DE PAGO */
-    .boleta-container {
-        background-color: #ffffff;
-        border: 2px solid #111827;
-        padding: 24px;
-        border-radius: 6px;
-        max-width: 850px;
-        margin: 0 auto 20px auto;
-        color: #111827;
-        font-family: 'Montserrat', sans-serif;
-    }
-    .boleta-header-title {
-        text-align: center;
-        font-size: 1.2rem;
-        font-weight: 800;
-        letter-spacing: 1px;
-        border-bottom: 2px solid #111827;
-        padding-bottom: 8px;
-        margin-bottom: 15px;
-    }
-    .boleta-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-bottom: 12px;
-        font-size: 0.82rem;
-    }
-    .boleta-table th, .boleta-table td {
-        border: 1px solid #000;
-        padding: 6px 8px;
-        text-align: left;
-    }
-    .boleta-table th {
-        background-color: #f3f4f6;
-        font-weight: 700;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -646,46 +608,6 @@ if "solicitudes" not in st.session_state:
     else:
         st.session_state.solicitudes = pd.DataFrame(columns=["id_solicitud", "fecha_registro", "dni", "nombre", "tipo_solicitud", "fecha_permiso", "monto_adelanto", "motivo", "estado", "respuesta_admin"])
 
-if "feriados" not in st.session_state:
-    if doc_sheets:
-        try:
-            data_fer = doc_sheets.worksheet("Feriados").get_all_records()
-            st.session_state.feriados = pd.DataFrame(data_fer)
-        except Exception:
-            st.session_state.feriados = pd.DataFrame([
-                {"fecha": "2026-01-01", "descripcion": "Año Nuevo"},
-                {"fecha": "2026-04-02", "descripcion": "Jueves Santo"},
-                {"fecha": "2026-04-03", "descripcion": "Viernes Santo"},
-                {"fecha": "2026-05-01", "descripcion": "Día del Trabajo"},
-                {"fecha": "2026-06-29", "descripcion": "San Pedro y San Pablo"},
-                {"fecha": "2026-07-28", "descripcion": "Fiestas Patrias"},
-                {"fecha": "2026-07-29", "descripcion": "Fiestas Patrias"},
-                {"fecha": "2026-08-06", "descripcion": "Batalla de Junín"},
-                {"fecha": "2026-08-30", "descripcion": "Santa Rosa de Lima"},
-                {"fecha": "2026-10-08", "descripcion": "Combate de Angamos"},
-                {"fecha": "2026-11-01", "descripcion": "Día de Todos los Santos"},
-                {"fecha": "2026-12-08", "descripcion": "Inmaculada Concepción"},
-                {"fecha": "2026-12-09", "descripcion": "Batalla de Ayacucho"},
-                {"fecha": "2026-12-25", "descripcion": "Navidad"}
-            ])
-    else:
-        st.session_state.feriados = pd.DataFrame([
-            {"fecha": "2026-01-01", "descripcion": "Año Nuevo"},
-            {"fecha": "2026-04-02", "descripcion": "Jueves Santo"},
-            {"fecha": "2026-04-03", "descripcion": "Viernes Santo"},
-            {"fecha": "2026-05-01", "descripcion": "Día del Trabajo"},
-            {"fecha": "2026-06-29", "descripcion": "San Pedro y San Pablo"},
-            {"fecha": "2026-07-28", "descripcion": "Fiestas Patrias"},
-            {"fecha": "2026-07-29", "descripcion": "Fiestas Patrias"},
-            {"fecha": "2026-08-06", "descripcion": "Batalla de Junín"},
-            {"fecha": "2026-08-30", "descripcion": "Santa Rosa de Lima"},
-            {"fecha": "2026-10-08", "descripcion": "Combate de Angamos"},
-            {"fecha": "2026-11-01", "descripcion": "Día de Todos los Santos"},
-            {"fecha": "2026-12-08", "descripcion": "Inmaculada Concepción"},
-            {"fecha": "2026-12-09", "descripcion": "Batalla de Ayacucho"},
-            {"fecha": "2026-12-25", "descripcion": "Navidad"}
-        ])
-
 USUARIOS = {}
 for _, row in st.session_state.empleados.iterrows():
     if str(row.get("estado", "")).lower() == "activo":
@@ -732,115 +654,9 @@ def to_excel(df):
         df.to_excel(writer, index=False)
     return output.getvalue()
 
-def generar_excel_boleta(datos_b):
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
-        df_emp = pd.DataFrame([{
-            "EMPRESA": datos_b["empresa"],
-            "RUC": datos_b["ruc"],
-            "PERÍODO": datos_b["periodo"],
-            "COLABORADOR": datos_b["colaborador"],
-            "DNI": datos_b["dni"],
-            "CARGO": datos_b["cargo"],
-            "FECHA INGRESO": datos_b["fecha_inicio"]
-        }])
-        df_emp.to_excel(writer, sheet_name="Boleta de Pago", index=False, startrow=0)
-
-        df_calc = pd.DataFrame([
-            {"CONCEPTO": "SUELDO BÁSICO", "CANTIDAD": f"{datos_b['dias_trabajados']} Días", "INGRESOS (S/.)": datos_b["sueldo_basico"], "DESCUENTOS (S/.)": 0.0},
-            {"CONCEPTO": "PAGO FERIADOS TRABAJADOS (DOBLE)", "CANTIDAD": f"{datos_b['feriados_trabajados']} Días", "INGRESOS (S/.)": datos_b["monto_feriados"], "DESCUENTOS (S/.)": 0.0},
-            {"CONCEPTO": "HORAS EXTRAS TRABAJADAS", "CANTIDAD": f"{datos_b['horas_extras_hrs']:.2f} Hrs", "INGRESOS (S/.)": datos_b["monto_horas_extras"], "DESCUENTOS (S/.)": 0.0},
-            {"CONCEPTO": "ADELANTO DE SUELDO", "CANTIDAD": "-", "INGRESOS (S/.)": 0.0, "DESCUENTOS (S/.)": datos_b["adelanto_sueldo"]},
-            {"CONCEPTO": "DESCUENTOS POR FALTAS", "CANTIDAD": f"{datos_b['dias_faltas']} Días", "INGRESOS (S/.)": 0.0, "DESCUENTOS (S/.)": datos_b["monto_faltas"]},
-            {"CONCEPTO": "DESCUADRES / FALTANTE DE CAJA", "CANTIDAD": "-", "INGRESOS (S/.)": 0.0, "DESCUENTOS (S/.)": datos_b["descuadre_caja"]},
-            {"CONCEPTO": "TOTALES", "CANTIDAD": "", "INGRESOS (S/.)": datos_b["total_ingresos"], "DESCUENTOS (S/.)": datos_b["total_descuentos"]},
-            {"CONCEPTO": "NETO A PAGAR", "CANTIDAD": "", "INGRESOS (S/.)": datos_b["neto_pagar"], "DESCUENTOS (S/.)": 0.0}
-        ])
-        df_calc.to_excel(writer, sheet_name="Boleta de Pago", index=False, startrow=10)
-    return output.getvalue()
-
-def generar_pdf_boleta(datos_b):
-    if not REPORTLAB_AVAILABLE:
-        return None
-
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36)
-    story = []
-
-    styles = getSampleStyleSheet()
-    title_style = ParagraphStyle(
-        'TitleStyle',
-        parent=styles['Heading1'],
-        fontName='Helvetica-Bold',
-        fontSize=14,
-        alignment=1,
-        spaceAfter=10
-    )
-    bold_style = ParagraphStyle('BoldStyle', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=9)
-    normal_style = ParagraphStyle('NormalStyle', parent=styles['Normal'], fontName='Helvetica', fontSize=9)
-
-    story.append(Paragraph(f"<b>{datos_b['empresa']}</b>", title_style))
-    story.append(Paragraph(f"RUC: {datos_b['ruc']} | PERÍODO DE PAGO: {datos_b['periodo']}", ParagraphStyle('Sub', alignment=1, fontSize=10, fontName='Helvetica-Bold')))
-    story.append(Spacer(1, 10))
-    story.append(HRFlowable(width="100%", thickness=1.5, color=colors.black, spaceAfter=15))
-
-    info_data = [
-        [Paragraph("<b>COLABORADOR:</b>", bold_style), Paragraph(datos_b['colaborador'], normal_style), Paragraph("<b>DNI:</b>", bold_style), Paragraph(datos_b['dni'], normal_style)],
-        [Paragraph("<b>CARGO:</b>", bold_style), Paragraph(datos_b['cargo'], normal_style), Paragraph("<b>FECHA INGRESO:</b>", bold_style), Paragraph(datos_b['fecha_inicio'], normal_style)],
-        [Paragraph("<b>DÍAS LABORADOS:</b>", bold_style), Paragraph(str(datos_b['dias_trabajados']), normal_style), Paragraph("<b>DÍAS FALTAS:</b>", bold_style), Paragraph(str(datos_b['dias_faltas']), normal_style)],
-        [Paragraph("<b>FERIADOS TRAB.:</b>", bold_style), Paragraph(str(datos_b['feriados_trabajados']), normal_style), Paragraph("<b>HORAS EXTRAS:</b>", bold_style), Paragraph(f"{datos_b['horas_extras_hrs']:.2f} hrs", normal_style)]
-    ]
-    t_info = Table(info_data, colWidths=[110, 160, 110, 160])
-    t_info.setStyle(TableStyle([
-        ('GRID', (0,0), (-1,-1), 0.5, colors.gray),
-        ('BACKGROUND', (0,0), (0,-1), colors.whitesmoke),
-        ('BACKGROUND', (2,0), (2,-1), colors.whitesmoke),
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('PADDING', (0,0), (-1,-1), 5),
-    ]))
-    story.append(t_info)
-    story.append(Spacer(1, 15))
-
-    calc_data = [
-        [Paragraph("<b>CONCEPTO / RUBRO</b>", bold_style), Paragraph("<b>CANTIDAD</b>", bold_style), Paragraph("<b>INGRESOS (S/.)</b>", bold_style), Paragraph("<b>DESCUENTOS (S/.)</b>", bold_style)],
-        [Paragraph("SUELDO BÁSICO", normal_style), Paragraph(f"{datos_b['dias_trabajados']} días", normal_style), Paragraph(f"{datos_b['sueldo_basico']:.2f}", normal_style), Paragraph("0.00", normal_style)],
-        [Paragraph("PAGO FERIADOS TRABAJADOS (DOBLE)", normal_style), Paragraph(f"{datos_b['feriados_trabajados']} días", normal_style), Paragraph(f"{datos_b['monto_feriados']:.2f}", normal_style), Paragraph("0.00", normal_style)],
-        [Paragraph("HORAS EXTRAS TRABAJADAS", normal_style), Paragraph(f"{datos_b['horas_extras_hrs']:.2f} hrs", normal_style), Paragraph(f"{datos_b['monto_horas_extras']:.2f}", normal_style), Paragraph("0.00", normal_style)],
-        [Paragraph("ADELANTO DE SUELDO", normal_style), Paragraph("-", normal_style), Paragraph("0.00", normal_style), Paragraph(f"{datos_b['adelanto_sueldo']:.2f}", normal_style)],
-        [Paragraph("DESCUENTO POR FALTAS", normal_style), Paragraph(f"{datos_b['dias_faltas']} días", normal_style), Paragraph("0.00", normal_style), Paragraph(f"{datos_b['monto_faltas']:.2f}", normal_style)],
-        [Paragraph("DESCUADRE / FALTANTE DE CAJA", normal_style), Paragraph("-", normal_style), Paragraph("0.00", normal_style), Paragraph(f"{datos_b['descuadre_caja']:.2f}", normal_style)],
-        [Paragraph("<b>TOTALES</b>", bold_style), Paragraph("", normal_style), Paragraph(f"<b>S/. {datos_b['total_ingresos']:.2f}</b>", bold_style), Paragraph(f"<b>S/. {datos_b['total_descuentos']:.2f}</b>", bold_style)],
-        [Paragraph("<b>NETO A PAGAR</b>", ParagraphStyle('Neto', parent=bold_style, fontSize=11, textColor=colors.HexColor('#00A959'))), Paragraph("", normal_style), Paragraph(f"<b>S/. {datos_b['neto_pagar']:.2f}</b>", ParagraphStyle('NetoVal', parent=bold_style, fontSize=11, textColor=colors.HexColor('#00A959'))), Paragraph("", normal_style)]
-    ]
-
-    t_calc = Table(calc_data, colWidths=[200, 100, 120, 120])
-    t_calc.setStyle(TableStyle([
-        ('GRID', (0,0), (-1,-1), 0.5, colors.black),
-        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#E5E7EB')),
-        ('BACKGROUND', (0,-2), (-1,-2), colors.whitesmoke),
-        ('BACKGROUND', (0,-1), (-1,-1), colors.HexColor('#F3F4F6')),
-        ('SPAN', (0,-1), (1,-1)),
-        ('SPAN', (2,-1), (3,-1)),
-        ('ALIGN', (2,0), (-1,-1), 'RIGHT'),
-        ('PADDING', (0,0), (-1,-1), 6),
-    ]))
-
-    story.append(t_calc)
-    story.append(Spacer(1, 40))
-
-    firmas = [
-        [Paragraph("_______________________________<br><b>EMPLEADOR / TIENDAS PREMIUM</b>", ParagraphStyle('F1', alignment=1, fontSize=8)), Paragraph("_______________________________<br><b>RECIBÍ CONFORME (TRABAJADOR)</b>", ParagraphStyle('F2', alignment=1, fontSize=8))]
-    ]
-    t_firmas = Table(firmas, colWidths=[270, 270])
-    t_firmas.setStyle(TableStyle([('ALIGN', (0,0), (-1,-1), 'CENTER')]))
-    story.append(t_firmas)
-
-    doc.build(story)
-    return buffer.getvalue()
-
 def registrar_marca(dni, nombre, tipo, observacion="", es_extra=False):
     ahora_peru = obtener_ahora_peru()
-    hoy_str = me_hoy = ahora_peru.strftime("%Y-%m-%d")
+    hoy_str = ahora_peru.strftime("%Y-%m-%d")
     str_extra = "SI" if es_extra else "NO"
 
     if not st.session_state.asistencia.empty and not es_extra:
@@ -1063,7 +879,7 @@ st.sidebar.markdown(f"""
 """, unsafe_allow_html=True)
 
 if rol_actual == "admin":
-    menu = ["Dashboard General", "Gestión Colaboradores", "Boletas de Pago", "Solicitudes y Permisos", "Historial de Descuadres", "Historial de Asistencias"]
+    menu = ["Dashboard General", "Boletas de Pago", "Gestión Colaboradores", "Solicitudes y Permisos", "Historial de Descuadres", "Historial de Asistencias"]
 else:
     menu = ["Marcar Asistencia", "Registrar Descuadre", "Mi Ficha Técnica", "Solicitar Permiso / Adelanto", "Mi Dashboard Mensual"]
 
@@ -1664,6 +1480,202 @@ elif choice == "Dashboard General":
     else:
         st.info(f"No hay registros de marcación para la fecha {f_dash_str}.")
 
+elif choice == "Boletas de Pago":
+    st.markdown("""
+        <div class="market-header">
+            <h1>Generación de Boletas de Pago</h1>
+            <p>Liquidación de sueldos, cálculo de asistencias, descuadres y horas extras</p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    NOMBRES_MESES = [
+        "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+        "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+    ]
+    ahora_p = obtener_ahora_peru()
+
+    c_b1, c_b2, c_b3 = st.columns([1, 1, 1.5])
+    mes_boleta = c_b1.selectbox("Mes de Boleta", list(range(1, 13)), index=ahora_p.month - 1, format_func=lambda x: NOMBRES_MESES[x-1])
+    anio_boleta = c_b2.number_input("Año Boleta", min_value=2024, max_value=2030, value=ahora_p.year)
+
+    colabs_ops = obtener_solo_colaboradores()
+    colab_boleta_sel = c_b3.selectbox("Seleccionar Colaborador", colabs_ops)
+
+    if colab_boleta_sel:
+        emp_info = st.session_state.empleados[st.session_state.empleados["nombre"] == colab_boleta_sel]
+        
+        if not emp_info.empty:
+            emp_row = emp_info.iloc[0]
+            dni_boleta = str(emp_row.get("dni", "")).strip()
+            cargo_boleta = str(emp_row.get("cargo", "Colaborador")).strip()
+            f_inicio_boleta = str(emp_row.get("fecha_inicio", "-")).strip() or "-"
+
+            # Cálculo de Asistencias y Horas Extras
+            df_asist_b = st.session_state.asistencia.copy()
+            dias_laborados = 0
+            horas_extras_hrs = 0.0
+
+            if not df_asist_b.empty:
+                df_asist_b["fecha_dt"] = pd.to_datetime(df_asist_b["fecha"], errors="coerce")
+                df_asist_b = df_asist_b[
+                    (df_asist_b["nombre"] == colab_boleta_sel) & 
+                    (df_asist_b["fecha_dt"].dt.month == mes_boleta) & 
+                    (df_asist_b["fecha_dt"].dt.year == anio_boleta)
+                ]
+
+                if not df_asist_b.empty:
+                    dias_laborados = df_asist_b["fecha"].nunique()
+                    df_asist_b["dt"] = pd.to_datetime(df_asist_b["fecha_hora"])
+                    
+                    min_extras_tot = 0
+                    for _, grupo_dia in df_asist_b.groupby("fecha"):
+                        _, mins_e, _, _ = calcular_jornada_y_horas_extras(grupo_dia)
+                        min_extras_tot += mins_e
+                    
+                    horas_extras_hrs = round(min_extras_tot / 60, 2)
+
+            # Estimación de días faltas (días transcurridos o hábiles del mes)
+            cal_boleta = calendar.Calendar(firstweekday=0)
+            dias_habiles_mes = sum(1 for d, wd in cal_boleta.itermonthdays2(int(anio_boleta), int(mes_boleta)) if d != 0 and wd != 6)
+            
+            dias_faltas = max(0, dias_habiles_mes - dias_laborados) if dias_laborados > 0 else 0
+
+            # Cálculo de Descuadres y Faltantes
+            df_desc_b = st.session_state.descuadres.copy()
+            monto_faltante_caja = 0.0
+
+            if not df_desc_b.empty:
+                df_desc_b["fecha_dt"] = pd.to_datetime(df_desc_b["fecha"], errors="coerce")
+                df_desc_b["monto_num"] = pd.to_numeric(df_desc_b["monto"], errors="coerce").fillna(0)
+                
+                df_desc_b = df_desc_b[
+                    (df_desc_b["nombre"] == colab_boleta_sel) & 
+                    (df_desc_b["fecha_dt"].dt.month == mes_boleta) & 
+                    (df_desc_b["fecha_dt"].dt.year == anio_boleta)
+                ]
+                
+                if not df_desc_b.empty:
+                    faltantes_solo = df_desc_b[df_desc_b["monto_num"] < 0]["monto_num"].sum()
+                    monto_faltante_caja = abs(faltantes_solo)
+
+            # Ajustes de Parámetros Económicos de Boleta
+            c_p1, c_p2 = st.columns(2)
+            sueldo_basico_mes = c_p1.number_input("Sueldo Básico Mensual (S/.)", min_value=0.0, value=530.00, step=10.0)
+            monto_adelanto = c_p2.number_input("Adelantos de Sueldo (S/.)", min_value=0.0, value=0.00, step=5.0)
+
+            # Cálculos de Rubros
+            monto_horas_extras = round(horas_extras_hrs * 1.53, 2)
+            monto_descuento_faltas = round((sueldo_basico_mes / 30) * dias_faltas, 2) if dias_faltas > 0 else 0.00
+            
+            total_ingresos = round(sueldo_basico_mes + monto_horas_extras, 2)
+            total_descuentos = round(monto_adelanto + monto_descuento_faltas + monto_faltante_caja, 2)
+            neto_pagar = round(total_ingresos - total_descuentos, 2)
+
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown("### 📜 Boleta de Pago Generada")
+
+            html_boleta = f"""
+            <div class="boleta-container">
+                <table class="boleta-table">
+                    <tr>
+                        <td style="background-color:#f9fafb; font-weight:700; width:20%;">TRABAJADOR:</td>
+                        <td style="width:30%;">{colab_boleta_sel}</td>
+                        <td style="background-color:#f9fafb; font-weight:700; width:20%;">DNI:</td>
+                        <td style="width:30%;">{dni_boleta}</td>
+                    </tr>
+                    <tr>
+                        <td style="background-color:#f9fafb; font-weight:700;">CARGO:</td>
+                        <td>{cargo_boleta}</td>
+                        <td style="background-color:#f9fafb; font-weight:700;">FECHA INGRESO:</td>
+                        <td>{f_inicio_boleta}</td>
+                    </tr>
+                    <tr>
+                        <td style="background-color:#f9fafb; font-weight:700;">DÍAS LABORADOS:</td>
+                        <td>{dias_laborados} días</td>
+                        <td style="background-color:#f9fafb; font-weight:700;">DÍAS FALTAS:</td>
+                        <td>{dias_faltas} días</td>
+                    </tr>
+                    <tr>
+                        <td style="background-color:#f9fafb; font-weight:700;">FERIADOS TRAB.:</td>
+                        <td>0 días</td>
+                        <td style="background-color:#f9fafb; font-weight:700;">HORAS EXTRAS:</td>
+                        <td>{horas_extras_hrs} hrs</td>
+                    </tr>
+                </table>
+
+                <table class="boleta-table">
+                    <thead>
+                        <tr>
+                            <th>CONCEPTO / RUBRO</th>
+                            <th>CANTIDAD</th>
+                            <th style="text-align:right;">INGRESOS (S/.)</th>
+                            <th style="text-align:right;">DESCUENTOS (S/.)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>SUELDO BÁSICO MENSUAL</td>
+                            <td>{dias_laborados} Días</td>
+                            <td style="text-align:right;">S/. {sueldo_basico_mes:.2f}</td>
+                            <td style="text-align:right;">S/. 0.00</td>
+                        </tr>
+                        <tr>
+                            <td>PAGO FERIADOS TRABAJADOS (DOBLE)</td>
+                            <td>0 Días</td>
+                            <td style="text-align:right;">S/. 0.00</td>
+                            <td style="text-align:right;">S/. 0.00</td>
+                        </tr>
+                        <tr>
+                            <td>HORAS EXTRAS TRABAJADAS</td>
+                            <td>{horas_extras_hrs} Hrs</td>
+                            <td style="text-align:right;">S/. {monto_horas_extras:.2f}</td>
+                            <td style="text-align:right;">S/. 0.00</td>
+                        </tr>
+                        <tr>
+                            <td>ADELANTO DE SUELDO</td>
+                            <td>-</td>
+                            <td style="text-align:right;">S/. 0.00</td>
+                            <td style="text-align:right;">S/. {monto_adelanto:.2f}</td>
+                        </tr>
+                        <tr>
+                            <td>DESCUENTO POR FALTAS</td>
+                            <td>{dias_faltas} Días</td>
+                            <td style="text-align:right;">S/. 0.00</td>
+                            <td style="text-align:right;">S/. {monto_descuento_faltas:.2f}</td>
+                        </tr>
+                        <tr>
+                            <td>DESCUADRES / FALTANTE DE CAJA</td>
+                            <td>-</td>
+                            <td style="text-align:right;">S/. 0.00</td>
+                            <td style="text-align:right;">S/. {monto_faltante_caja:.2f}</td>
+                        </tr>
+                        <tr style="background-color:#f3f4f6; font-weight:700;">
+                            <td>TOTALES</td>
+                            <td>-</td>
+                            <td style="text-align:right; color:#111827;">S/. {total_ingresos:.2f}</td>
+                            <td style="text-align:right; color:#EC3237;">S/. {total_descuentos:.2f}</td>
+                        </tr>
+                        <tr style="background-color:#dcfce7; font-weight:800; font-size:0.95rem;">
+                            <td colspan="2" style="color:#15803d;">NETO A PAGAR EN CUENTA / EFECTIVO</td>
+                            <td colspan="2" style="text-align:right; color:#15803d;">S/. {neto_pagar:.2f}</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <br><br>
+                <table style="width:100%; border:none; margin-top:20px; font-size:0.75rem;">
+                    <tr>
+                        <td style="border:none; text-align:center; width:50%;">
+                            ________________________________________<br><b>EMPLEADOR / TIENDAS PREMIUM E.I.R.L.</b>
+                        </td>
+                        <td style="border:none; text-align:center; width:50%;">
+                            ________________________________________<br><b>RECIBÍ CONFORME (TRABAJADOR)</b>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            """
+            st.markdown(html_boleta, unsafe_allow_html=True)
+
 elif choice == "Gestión Colaboradores":
     st.markdown("""
         <div class="market-header">
@@ -1795,349 +1807,6 @@ elif choice == "Gestión Colaboradores":
                             st.warning("Marca la casilla de confirmación antes de dar de baja.")
                 else:
                     st.info("No hay colaboradores activos para dar de baja.")
-
-# --- MÓDULO NUEVO: BOLETAS DE PAGO & FERIADOS (SOLO ADMIN) ---
-elif choice == "Boletas de Pago":
-    st.markdown("""
-        <div class="market-header">
-            <h1>Generación de Boletas de Pago</h1>
-            <p>Emisión, cálculo automático y descarga de boletas de pago para colaboradores</p>
-        </div>
-    """, unsafe_allow_html=True)
-
-    tab_boleta, tab_feriados = st.tabs(["📄 Generar Boleta de Pago", "📅 Gestión de Feriados"])
-
-    with tab_feriados:
-        st.markdown("<h4 style='font-size:1rem; color:#111827; margin-bottom:12px;'>Días Feriados Registrados</h4>", unsafe_allow_html=True)
-        st.caption("Los feriados trabajados se pagan doble (Costo Diario x 2 = S/. 35.33 sobre base S/. 530.00).")
-        
-        c_f1, c_f2 = st.columns([1, 2])
-        with c_f1:
-            with st.form("form_nuevo_feriado", clear_on_submit=True):
-                st.markdown("**➕ Agregar Feriado**")
-                f_feriado = st.date_input("Fecha del Feriado", value=obtener_ahora_peru().date())
-                desc_feriado = st.text_input("Descripción / Evento", placeholder="Ej. Fiestas Patrias")
-                if st.form_submit_button("Guardar Feriado", use_container_width=True):
-                    if not desc_feriado.strip():
-                        st.error("Ingresa una descripción para el feriado.")
-                    else:
-                        str_f_fer = str(f_feriado)
-                        if not st.session_state.feriados.empty and str_f_fer in st.session_state.feriados["fecha"].astype(str).values:
-                            st.warning("Esa fecha ya se encuentra registrada como feriado.")
-                        else:
-                            nuevo_f = {"fecha": str_f_fer, "descripcion": desc_feriado.strip()}
-                            st.session_state.feriados = pd.concat([st.session_state.feriados, pd.DataFrame([nuevo_f])], ignore_index=True)
-                            guardar_feriado_gsheets(str_f_fer, desc_feriado.strip())
-                            st.toast("Feriado agregado con éxito")
-                            time.sleep(0.3)
-                            st.rerun()
-
-        with c_f2:
-            if not st.session_state.feriados.empty:
-                df_fer_ord = st.session_state.feriados.sort_values("fecha").reset_index(drop=True)
-                st.dataframe(df_fer_ord, use_container_width=True, hide_index=True)
-            else:
-                st.info("No hay feriados registrados.")
-
-    with tab_boleta:
-        st.markdown("<h4 style='font-size:1rem; color:#111827; margin-bottom:12px;'>Parámetros y Selección de Trabajador</h4>", unsafe_allow_html=True)
-        
-        b_c1, b_c2, b_c3 = st.columns([1.5, 1, 1])
-        colabs_list = obtener_solo_colaboradores()
-        
-        if not colabs_list:
-            st.warning("No hay colaboradores disponibles para emitir boletas.")
-            st.stop()
-
-        colab_b_sel = b_c1.selectbox("Colaborador", colabs_list, key="boleta_colab_sel")
-        
-        ahora_p_b = obtener_ahora_peru()
-        NOMBRES_MESES_B = [
-            "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-            "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
-        ]
-        mes_b_sel = b_c2.selectbox("Mes de Boleta", list(range(1, 13)), index=ahora_p_b.month - 1, format_func=lambda x: NOMBRES_MESES_B[x-1], key="boleta_mes_sel")
-        anio_b_sel = b_c3.number_input("Año", min_value=2024, max_value=2030, value=ahora_p_b.year, key="boleta_anio_sel")
-
-        row_trab = st.session_state.empleados[st.session_state.empleados["nombre"] == colab_b_sel]
-        dni_b_val = row_trab.iloc[0]["dni"] if not row_trab.empty else "-"
-        cargo_b_val = row_trab.iloc[0]["cargo"] if not row_trab.empty else "Cajero"
-        finicio_b_val = row_trab.iloc[0]["fecha_inicio"] if not row_trab.empty else "-"
-
-        # --- CÁLCULOS AUTOMÁTICOS BASE DE LA BOLETA ---
-        num_dias_mes = calendar.monthrange(int(anio_b_sel), int(mes_b_sel))[1]
-        f_inicio_mes = date(int(anio_b_sel), int(mes_b_sel), 1)
-        f_fin_mes = date(int(anio_b_sel), int(mes_b_sel), num_dias_mes)
-
-        # 1. Asistencias y Horas Extras en el Mes
-        mins_extras_auto = 0
-        dias_asistidos_auto = 0
-        feriados_trabajados_auto = 0
-
-        lista_feriados_str = st.session_state.feriados["fecha"].astype(str).tolist() if not st.session_state.feriados.empty else []
-
-        if not st.session_state.asistencia.empty:
-            df_asist_b = st.session_state.asistencia[st.session_state.asistencia["nombre"] == colab_b_sel].copy()
-            if not df_asist_b.empty:
-                df_asist_b["fecha_dt"] = pd.to_datetime(df_asist_b["fecha"], errors="coerce")
-                df_asist_b = df_asist_b[
-                    (df_asist_b["fecha_dt"].dt.month == mes_b_sel) & 
-                    (df_asist_b["fecha_dt"].dt.year == anio_b_sel)
-                ]
-                
-                if not df_asist_b.empty:
-                    df_asist_b["dt"] = pd.to_datetime(df_asist_b["fecha_hora"])
-                    dias_asistidos_set = set()
-                    
-                    for f_str_grp, grupo_dia in df_asist_b.groupby("fecha"):
-                        dias_asistidos_set.add(f_str_grp)
-                        _, mins_e, _, _ = calcular_jornada_y_horas_extras(grupo_dia)
-                        mins_extras_auto += mins_e
-                        
-                        if str(f_str_grp) in lista_feriados_str:
-                            feriados_trabajados_auto += 1
-
-                    dias_asistidos_auto = len(dias_asistidos_set)
-
-        # 2. Faltas proyectadas a la fecha o mes
-        hoy_peru_b = obtener_ahora_peru().date()
-        limite_eval_dias = min(f_fin_mes, hoy_peru_b) if (int(anio_b_sel) == hoy_peru_b.year and int(mes_b_sel) == hoy_peru_b.month) else f_fin_mes
-        
-        dias_hábiles_esperados = 0
-        curr_d = f_inicio_mes
-        while curr_d <= limite_eval_dias:
-            if curr_d.weekday() != 6: # No domingo
-                dias_hábiles_esperados += 1
-            curr_d += timedelta(days=1)
-
-        dias_faltas_auto = max(0, dias_hábiles_esperados - dias_asistidos_auto)
-
-        # 3. Adelantos de Sueldo Aprobados en el Mes
-        adelantos_auto = 0.0
-        if not st.session_state.solicitudes.empty:
-            df_sol_b = st.session_state.solicitudes[
-                (st.session_state.solicitudes["nombre"] == colab_b_sel) & 
-                (st.session_state.solicitudes["tipo_solicitud"] == "Adelanto de Sueldo") & 
-                (st.session_state.solicitudes["estado"] == "Aprobado")
-            ].copy()
-            
-            if not df_sol_b.empty:
-                df_sol_b["fecha_dt"] = pd.to_datetime(df_sol_b["fecha_permiso"], errors="coerce")
-                df_sol_b = df_sol_b[
-                    (df_sol_b["fecha_dt"].dt.month == mes_b_sel) & 
-                    (df_sol_b["fecha_dt"].dt.year == anio_b_sel)
-                ]
-                adelantos_auto = float(df_sol_b["monto_adelanto"].astype(float).sum()) if not df_sol_b.empty else 0.0
-
-        # 4. Balance de Descuadres en el Mes (Faltantes)
-        descuadre_auto = 0.0
-        if not st.session_state.descuadres.empty:
-            df_desc_b = st.session_state.descuadres[st.session_state.descuadres["nombre"] == colab_b_sel].copy()
-            if not df_desc_b.empty:
-                df_desc_b["fecha_dt"] = pd.to_datetime(df_desc_b["fecha"], errors="coerce")
-                df_desc_b = df_desc_b[
-                    (df_desc_b["fecha_dt"].dt.month == mes_b_sel) & 
-                    (df_desc_b["fecha_dt"].dt.year == anio_b_sel)
-                ]
-                if not df_desc_b.empty:
-                    m_tot_b = pd.to_numeric(df_desc_b["monto"], errors="coerce").sum()
-                    if m_tot_b < 0:
-                        descuadre_auto = abs(float(m_tot_b))
-
-        hrs_extras_auto = float(mins_extras_auto / 60.0)
-
-        st.markdown("---")
-        st.markdown("##### ✏️ Edición de Valores para la Boleta")
-        st.caption("Los datos fueron jalados automáticamente desde el sistema, pero puedes modificarlos libremente si lo consideras necesario:")
-
-        ed_c1, ed_c2, ed_c3, ed_c4 = st.columns(4)
-        
-        sueldo_mensual = ed_c1.number_input("Sueldo Mensual Base (S/.)", value=530.00, step=10.00, format="%.2f")
-        costo_dia_base = sueldo_mensual / 30.0  # 17.67 soles/día
-        costo_hora_base = sueldo_mensual / 30.0 / 11.5  # Turnos 8:45-2:30 + 3:15-9:00 = 11.5 hrs/día => 1.53 soles/hora
-
-        dias_lab_edit = ed_c2.number_input("Días Laborados", value=int(dias_asistidos_auto), min_value=0, max_value=31)
-        dias_faltas_edit = ed_c3.number_input("Días de Falta", value=int(dias_faltas_auto), min_value=0, max_value=31)
-        feriados_edit = ed_c4.number_input("Feriados Trab. (Doble)", value=int(feriados_trabajados_auto), min_value=0, max_value=15)
-
-        ed_c5, ed_c6, ed_c7 = st.columns(3)
-        hrs_extras_edit = ed_c5.number_input("Horas Extras Trabaljadas (Hrs)", value=float(hrs_extras_auto), min_value=0.0, step=0.5, format="%.2f")
-        adelanto_edit = ed_c6.number_input("Adelantos de Sueldo (S/.)", value=float(adelantos_auto), min_value=0.0, step=5.0, format="%.2f")
-        descuadre_edit = ed_c7.number_input("Descuadres / Faltantes (S/.)", value=float(descuadre_auto), min_value=0.0, step=1.0, format="%.2f")
-
-        # CALCULOS FINALES EDITADOS
-        pago_feriados_monto = feriados_edit * (costo_dia_base * 2.0)  # 35.33 soles por feriado
-        pago_hrs_extras_monto = hrs_extras_edit * costo_hora_base
-        descuento_faltas_monto = dias_faltas_edit * costo_dia_base
-
-        total_ingresos = sueldo_mensual + pago_feriados_monto + pago_hrs_extras_monto
-        total_descuentos = adelanto_edit + descuadre_edit + descuento_faltas_monto
-        neto_pagar = total_ingresos - total_descuentos
-
-        datos_boleta_final = {
-            "empresa": "TIENDAS PREMIUM E.I.R.L.",
-            "ruc": "20612107786",
-            "periodo": f"{NOMBRES_MESES_B[mes_b_sel-1]} {int(anio_b_sel)}",
-            "colaborador": colab_b_sel,
-            "dni": dni_b_val,
-            "cargo": cargo_b_val,
-            "fecha_inicio": finicio_b_val,
-            "dias_trabajados": dias_lab_edit,
-            "dias_faltas": dias_faltas_edit,
-            "feriados_trabajados": feriados_edit,
-            "horas_extras_hrs": hrs_extras_edit,
-            "sueldo_basico": sueldo_mensual,
-            "monto_feriados": pago_feriados_monto,
-            "monto_horas_extras": pago_hrs_extras_monto,
-            "adelanto_sueldo": adelanto_edit,
-            "monto_faltas": descuento_faltas_monto,
-            "descuadre_caja": descuadre_edit,
-            "total_ingresos": total_ingresos,
-            "total_descuentos": total_descuentos,
-            "neto_pagar": neto_pagar
-        }
-
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown("##### 👁️ Vista Previa de la Boleta de Pago")
-
-        # RENDERIZADO VISUAL EN HTML
-        html_boleta = f"""
-        <div class="boleta-container">
-            <div class="boleta-header-title">TIENDAS PREMIUM E.I.R.L.</div>
-            <div style="text-align:center; font-size:0.85rem; font-weight:700; margin-bottom:15px;">
-                RUC: 20612107786 | BOLETA DE PAGO — PERÍODO: {datos_boleta_final['periodo'].upper()}
-            </div>
-            
-            <table class="boleta-table">
-                <tr>
-                    <td style="background-color:#f9fafb; font-weight:700; width:20%;">TRABAJADOR:</td>
-                    <td style="width:30%;">{datos_boleta_final['colaborador']}</td>
-                    <td style="background-color:#f9fafb; font-weight:700; width:20%;">DNI:</td>
-                    <td style="width:30%;">{datos_boleta_final['dni']}</td>
-                </tr>
-                <tr>
-                    <td style="background-color:#f9fafb; font-weight:700;">CARGO:</td>
-                    <td>{datos_boleta_final['cargo']}</td>
-                    <td style="background-color:#f9fafb; font-weight:700;">FECHA INGRESO:</td>
-                    <td>{datos_boleta_final['fecha_inicio']}</td>
-                </tr>
-                <tr>
-                    <td style="background-color:#f9fafb; font-weight:700;">DÍAS LABORADOS:</td>
-                    <td>{datos_boleta_final['dias_trabajados']} días</td>
-                    <td style="background-color:#f9fafb; font-weight:700;">DÍAS FALTAS:</td>
-                    <td>{datos_boleta_final['dias_faltas']} días</td>
-                </tr>
-                <tr>
-                    <td style="background-color:#f9fafb; font-weight:700;">FERIADOS TRAB.:</td>
-                    <td>{datos_boleta_final['feriados_trabajados']} días</td>
-                    <td style="background-color:#f9fafb; font-weight:700;">HORAS EXTRAS:</td>
-                    <td>{datos_boleta_final['horas_extras_hrs']:.2f} hrs</td>
-                </tr>
-            </table>
-
-            <table class="boleta-table">
-                <thead>
-                    <tr>
-                        <th>CONCEPTO / RUBRO</th>
-                        <th>CANTIDAD</th>
-                        <th style="text-align:right;">INGRESOS (S/.)</th>
-                        <th style="text-align:right;">DESCUENTOS (S/.)</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>SUELDO BÁSICO MENSUAL</td>
-                        <td>{datos_boleta_final['dias_trabajados']} Días</td>
-                        <td style="text-align:right;">S/. {datos_boleta_final['sueldo_basico']:.2f}</td>
-                        <td style="text-align:right;">S/. 0.00</td>
-                    </tr>
-                    <tr>
-                        <td>PAGO FERIADOS TRABAJADOS (DOBLE)</td>
-                        <td>{datos_boleta_final['feriados_trabajados']} Días</td>
-                        <td style="text-align:right;">S/. {datos_boleta_final['monto_feriados']:.2f}</td>
-                        <td style="text-align:right;">S/. 0.00</td>
-                    </tr>
-                    <tr>
-                        <td>HORAS EXTRAS TRABAJADAS</td>
-                        <td>{datos_boleta_final['horas_extras_hrs']:.2f} Hrs</td>
-                        <td style="text-align:right;">S/. {datos_boleta_final['monto_horas_extras']:.2f}</td>
-                        <td style="text-align:right;">S/. 0.00</td>
-                    </tr>
-                    <tr>
-                        <td>ADELANTO DE SUELDO</td>
-                        <td>-</td>
-                        <td style="text-align:right;">S/. 0.00</td>
-                        <td style="text-align:right;">S/. {datos_boleta_final['adelanto_sueldo']:.2f}</td>
-                    </tr>
-                    <tr>
-                        <td>DESCUENTO POR FALTAS</td>
-                        <td>{datos_boleta_final['dias_faltas']} Días</td>
-                        <td style="text-align:right;">S/. 0.00</td>
-                        <td style="text-align:right;">S/. {datos_boleta_final['monto_faltas']:.2f}</td>
-                    </tr>
-                    <tr>
-                        <td>DESCUADRES / FALTANTE DE CAJA</td>
-                        <td>-</td>
-                        <td style="text-align:right;">S/. 0.00</td>
-                        <td style="text-align:right;">S/. {datos_boleta_final['descuadre_caja']:.2f}</td>
-                    </tr>
-                    <tr style="background-color:#f3f4f6; font-weight:700;">
-                        <td>TOTALES</td>
-                        <td>-</td>
-                        <td style="text-align:right; color:#111827;">S/. {datos_boleta_final['total_ingresos']:.2f}</td>
-                        <td style="text-align:right; color:#EC3237;">S/. {datos_boleta_final['total_descuentos']:.2f}</td>
-                    </tr>
-                    <tr style="background-color:#dcfce7; font-weight:800; font-size:0.95rem;">
-                        <td colspan="2" style="color:#15803d;">NETO A PAGAR EN CUENTA / EFECTIVO</td>
-                        <td colspan="2" style="text-align:right; color:#15803d;">S/. {datos_boleta_final['neto_pagar']:.2f}</td>
-                    </tr>
-                </tbody>
-            </table>
-
-            <br><br>
-            <table style="width:100%; border:none; margin-top:20px; font-size:0.75rem;">
-                <tr>
-                    <td style="border:none; text-align:center; width:50%;">
-                        ________________________________________<br><b>EMPLEADOR / TIENDAS PREMIUM E.I.R.L.</b>
-                    </td>
-                    <td style="border:none; text-align:center; width:50%;">
-                        ________________________________________<br><b>RECIBÍ CONFORME (TRABAJADOR)</b>
-                    </td>
-                </tr>
-            </table>
-        </div>
-        """
-        st.markdown(html_boleta, unsafe_allow_html=True)
-
-        st.markdown("<br>", unsafe_allow_html=True)
-        btn_d1, btn_d2 = st.columns(2)
-
-        excel_bytes = generar_excel_boleta(datos_boleta_final)
-        btn_d1.download_button(
-            label="📥 Descargar Boleta en Excel",
-            data=excel_bytes,
-            file_name=f"Boleta_{colab_b_sel.replace(' ', '_')}_{NOMBRES_MESES_B[mes_b_sel-1]}_{anio_b_sel}.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            use_container_width=True
-        )
-
-        pdf_bytes = generar_pdf_boleta(datos_boleta_final) if REPORTLAB_AVAILABLE else None
-        if pdf_bytes:
-            btn_d2.download_button(
-                label="📄 Descargar Boleta en PDF",
-                data=pdf_bytes,
-                file_name=f"Boleta_{colab_b_sel.replace(' ', '_')}_{NOMBRES_MESES_B[mes_b_sel-1]}_{anio_b_sel}.pdf",
-                mime="application/pdf",
-                use_container_width=True
-            )
-        else:
-            btn_d2.download_button(
-                label="📄 Descargar Boleta Formato Impresión (HTML)",
-                data=html_boleta,
-                file_name=f"Boleta_{colab_b_sel.replace(' ', '_')}_{NOMBRES_MESES_B[mes_b_sel-1]}_{anio_b_sel}.html",
-                mime="text/html",
-                use_container_width=True
-            )
 
 elif choice == "Solicitudes y Permisos":
     st.markdown("""
@@ -2426,37 +2095,19 @@ elif choice == "Historial de Asistencias":
         if colab_asist_sel != "Todos":
             df_asist_filtrado = df_asist_filtrado[df_asist_filtrado["nombre"] == colab_asist_sel]
 
-        if not df_asist_filtrado.empty:
-            total_marcas = len(df_asist_filtrado)
-            ingresos_cnt = len(df_asist_filtrado[df_asist_filtrado["tipo"] == "INGRESO"])
-            colabs_unicos = df_asist_filtrado["nombre"].nunique()
-
-            a1, a2, a3 = st.columns(3)
-            with a1:
-                st.markdown(f'<div class="info-card"><div class="info-label">Total Marcaciones</div><div class="info-value">{total_marcas}</div></div>', unsafe_allow_html=True)
-            with a2:
-                st.markdown(f'<div class="info-card"><div class="info-label">Ingresos Registrados</div><div class="info-value" style="color:#00A959;">{ingresos_cnt}</div></div>', unsafe_allow_html=True)
-            with a3:
-                st.markdown(f'<div class="info-card"><div class="info-label">Colaboradores Activos</div><div class="info-value">{colabs_unicos}</div></div>', unsafe_allow_html=True)
-
-            st.markdown("<br>", unsafe_allow_html=True)
-            st.markdown("##### 📋 Registro Detallado de Asistencias")
-            st.dataframe(
-                df_asist_filtrado,
-                use_container_width=True,
-                hide_index=True
-            )
-            st.download_button("Exportar Asistencias a Excel", to_excel(df_asist_filtrado), "Asistencias_General.xlsx", use_container_width=True)
-        else:
-            st.info("No se encontraron registros de asistencia para los filtros seleccionados.")
+        st.dataframe(
+            df_asist_filtrado,
+            use_container_width=True,
+            hide_index=True
+        )
+        st.download_button("Exportar Asistencias", to_excel(df_asist_filtrado), "Asistencias_General.xlsx", use_container_width=True)
     else:
-        st.info("No hay marcaciones de asistencia registradas en el sistema.")
+        st.info("No hay marcaciones de asistencia registradas.")
 
-# --- PIE DE PÁGINA (FOOTER ESTILO WEB/APP) ---
+# --- FOOTER ---
 st.markdown("""
-<div class="app-footer">
-    Desarrollado por <strong>Humberto Atoche Obeso</strong><br>
-    <strong>Tiendas Premium E.I.R.L.</strong> • RUC 20612107786<br>
-    Todos los derechos reservados
-</div>
+    <div class="app-footer">
+        <strong>Tiendas Premium E.I.R.L.</strong> — Sistema de Control Interno v2.5<br>
+        Desarrollado para la gestión eficiente de personal, asistencias y caja.
+    </div>
 """, unsafe_allow_html=True)
