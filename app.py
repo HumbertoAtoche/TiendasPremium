@@ -256,11 +256,12 @@ def guardar_solicitud_gsheets(id_sol, fecha_reg, dni, nombre, tipo_sol, f_permis
     if doc_sheets:
         try:
             hoja = doc_sheets.worksheet("Solicitudes")
-            hoja.append_row([
-                str(id_sol), str(fecha_reg), str(dni), nombre, tipo_sol,
-                str(f_permiso), float(monto_adel), motivo, estado, respuesta,
-                str(requiere_recuperacion), str(fecha_recuperacion)
-            ])
+            encabezados_actuales = hoja.row_values(1)
+            for col in ["requiere_recuperacion", "fecha_recuperacion"]:
+                if col not in encabezados_actuales:
+                    hoja.update_cell(1, len(encabezados_actuales) + 1, col)
+                    encabezados_actuales.append(col)
+            hoja.append_row([str(id_sol), str(fecha_reg), str(dni), nombre, tipo_sol, str(f_permiso), float(monto_adel), motivo, estado, respuesta, str(requiere_recuperacion), str(fecha_recuperacion)])
         except Exception as e:
             st.error(f"❌ Error al guardar solicitud: {e}")
 
@@ -1307,59 +1308,39 @@ elif choice == "Solicitar Permiso / Adelanto":
     with t_sol:
         tipo_sol = st.selectbox("Tipo de Solicitud", ["Permiso Laboral", "Adelanto de Sueldo"])
 
-        with st.form("form_nueva_solicitud", clear_on_submit=True):
-            st.markdown("<h4 style='margin:0; font-size:1rem; color:#111827; margin-bottom:12px;'>Formulario de Petición</h4>", unsafe_allow_html=True)
-            
-            hoy_peru = obtener_ahora_peru().date()
-            fecha_minima_permiso = hoy_peru + timedelta(days=7)
-            
-            f_permiso_val = ""
-            monto_adel_val = 0.0
+        hoy_peru = obtener_ahora_peru().date()
+        fecha_minima_permiso = hoy_peru + timedelta(days=7)
+        f_permiso_val = ""
+        monto_adel_val = 0.0
+        requiere_recuperacion = False
+        fecha_recuperacion_sel = None
 
-            requiere_recuperacion = False
-            fecha_recuperacion_sel = None
+        if tipo_sol == "Permiso Laboral":
+            st.info("ℹ️ **Regla de Permisos:** Toda solicitud de permiso debe realizarse con un mínimo de **7 días de anticipación**.")
+            f_permiso_sel = st.date_input("Fecha solicitada para el permiso", value=fecha_minima_permiso, min_value=fecha_minima_permiso, key="fecha_permiso_nueva")
+            f_permiso_val = str(f_permiso_sel)
 
-            if tipo_sol == "Permiso Laboral":
-                st.info("ℹ️ **Regla de Permisos:** Toda solicitud de permiso debe realizarse con un mínimo de **7 días de anticipación**.")
-                f_permiso_sel = st.date_input(
-                    "Fecha solicitada para el permiso",
-                    value=fecha_minima_permiso,
-                    min_value=fecha_minima_permiso,
-                    key="fecha_permiso_nueva"
-                )
-                f_permiso_val = str(f_permiso_sel)
+            st.markdown("##### 🔄 Recuperación del día")
+            requiere_recuperacion = st.checkbox("¿Deseas recuperar el día del permiso?", value=False, key="requiere_recuperacion_nueva")
+            if requiere_recuperacion:
+                st.success("📅 Selecciona el día en que deseas recuperar el permiso. **Los domingos también están habilitados.**")
+                fecha_min_rec = f_permiso_sel + timedelta(days=1)
+                fecha_recuperacion_sel = st.date_input("📅 Día a recuperar", value=fecha_min_rec, min_value=fecha_min_rec, key="fecha_recuperacion_nueva", help="Puedes seleccionar cualquier fecha, incluido domingo.")
+                dias_semana = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
+                st.caption(f"Permiso: **{f_permiso_sel.strftime('%d/%m/%Y')}** | Día a recuperar: **{fecha_recuperacion_sel.strftime('%d/%m/%Y')} ({dias_semana[fecha_recuperacion_sel.weekday()]})**")
 
-                st.markdown("##### 🔄 Recuperación del día")
-                requiere_recuperacion = st.checkbox(
-                    "¿Deseas recuperar el día del permiso?",
-                    value=False,
-                    key="requiere_recuperacion_nueva"
-                )
-
-                if requiere_recuperacion:
-                    fecha_min_rec = f_permiso_sel + timedelta(days=1)
-                    st.success("Selecciona la fecha de recuperación. **Los domingos también están habilitados.**")
-                    fecha_recuperacion_sel = st.date_input(
-                        "📅 Fecha de recuperación",
-                        value=fecha_min_rec,
-                        min_value=fecha_min_rec,
-                        key="fecha_recuperacion_nueva",
-                        help="Puedes seleccionar cualquier fecha, incluido domingo."
-                    )
-                    dias_semana = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
-                    st.caption(
-                        f"Permiso: **{f_permiso_sel.strftime('%d/%m/%Y')}** | "
-                        f"Recuperación: **{fecha_recuperacion_sel.strftime('%d/%m/%Y')} "
-                        f"({dias_semana[fecha_recuperacion_sel.weekday()]})**"
-                    )
-            else:
-                st.info("ℹ️ **Adelanto de Sueldo:** Ingresa el monto total a solicitar y la justificación.")
+            with st.form("form_nuevo_permiso", clear_on_submit=True):
+                motivo_sol = st.text_area("Motivo o Justificación detallada", placeholder="Escribe aquí el motivo de tu solicitud...")
+                enviar_solicitud = st.form_submit_button("Enviar Solicitud", use_container_width=True)
+        else:
+            st.info("ℹ️ **Adelanto de Sueldo:** Ingresa el monto total a solicitar y la justificación.")
+            with st.form("form_nuevo_adelanto", clear_on_submit=True):
                 monto_adel_val = st.number_input("Monto a Solicitar (S/.)", min_value=10.0, step=10.0, format="%.2f")
                 f_permiso_val = str(hoy_peru)
+                motivo_sol = st.text_area("Motivo o Justificación detallada", placeholder="Escribe aquí el motivo de tu solicitud...")
+                enviar_solicitud = st.form_submit_button("Enviar Solicitud", use_container_width=True)
 
-            motivo_sol = st.text_area("Motivo o Justificación detallada", placeholder="Escribe aquí el motivo de tu solicitud...")
-
-            if st.form_submit_button("Enviar Solicitud", use_container_width=True):
+        if enviar_solicitud:
                 if not motivo_sol.strip():
                     st.error("Por favor ingresa un motivo para tu solicitud.")
                 else:
