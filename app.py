@@ -253,19 +253,17 @@ def guardar_descuadre_gsheets(fecha, dni, nombre, tipo, monto, observacion, fech
         except Exception as e:
             st.error(f"❌ Error al guardar descuadre: {e}")
 
-def guardar_solicitud_gsheets(id_sol, fecha_reg, dni, nombre, tipo_sol, f_permiso, monto_adel, motivo, estado="Pendiente", respuesta="", quiere_recuperar="NO", fecha_recuperacion=""):
+def guardar_solicitud_gsheets(id_sol, fecha_reg, dni, nombre, tipo_sol, f_permiso, monto_adel, motivo, estado="Pendiente", respuesta="", desea_recuperar="NO", fecha_recuperacion=""):
     if doc_sheets:
         try:
-            hoja = doc_sheets.worksheet("Solicitudes")
-            # Verificar si las columnas existen o añadir campos de recuperación
-            row_data = [str(id_sol), str(fecha_reg), str(dni), nombre, tipo_sol, str(f_permiso), float(monto_adel), motivo, estado, respuesta, str(quiere_recuperar), str(fecha_recuperacion)]
-            hoja.append_row(row_data)
-        except Exception as e:
-            # Fallback si la hoja no tiene las nuevas columnas aún
             try:
-                hoja.append_row([str(id_sol), str(fecha_reg), str(dni), nombre, tipo_sol, str(f_permiso), float(monto_adel), motivo, estado, respuesta])
-            except Exception as e2:
-                st.error(f"❌ Error al guardar solicitud: {e2}")
+                hoja = doc_sheets.worksheet("Solicitudes")
+            except Exception:
+                hoja = doc_sheets.add_worksheet(title="Solicitudes", rows="100", cols="12")
+                hoja.append_row(["id_solicitud", "fecha_registro", "dni", "nombre", "tipo_solicitud", "fecha_permiso", "monto_adelanto", "motivo", "estado", "respuesta_admin", "desea_recuperar", "fecha_recuperacion"])
+            hoja.append_row([str(id_sol), str(fecha_reg), str(dni), nombre, tipo_sol, str(f_permiso), float(monto_adel), motivo, estado, respuesta, str(desea_recuperar), str(fecha_recuperacion)])
+        except Exception as e:
+            st.error(f"❌ Error al guardar solicitud: {e}")
 
 def guardar_feriado_gsheets(fecha, descripcion):
     if doc_sheets:
@@ -499,13 +497,13 @@ st.markdown("""
     }
     .bg-permiso {
         background-color: #dbeafe !important;
-        color: #1e40af !important;
-        border: 1px solid #93c5fd !important;
+        color: #1d4ed8 !important;
+        border: 1px solid #bfdbfe !important;
     }
     .bg-recuperacion {
-        background-color: #fef3c7 !important;
-        color: #b45309 !important;
-        border: 1px solid #fde68a !important;
+        background-color: #fef08a !important;
+        color: #854d0e !important;
+        border: 1px solid #fde047 !important;
     }
     .bg-vacio {
         background-color: transparent !important;
@@ -656,11 +654,11 @@ if "solicitudes" not in st.session_state:
             data_sol = doc_sheets.worksheet("Solicitudes").get_all_records()
             st.session_state.solicitudes = pd.DataFrame(data_sol)
         except Exception:
-            st.session_state.solicitudes = pd.DataFrame(columns=["id_solicitud", "fecha_registro", "dni", "nombre", "tipo_solicitud", "fecha_permiso", "monto_adelanto", "motivo", "estado", "respuesta_admin", "quiere_recuperar", "fecha_recuperacion"])
+            st.session_state.solicitudes = pd.DataFrame(columns=["id_solicitud", "fecha_registro", "dni", "nombre", "tipo_solicitud", "fecha_permiso", "monto_adelanto", "motivo", "estado", "respuesta_admin", "desea_recuperar", "fecha_recuperacion"])
     else:
-        st.session_state.solicitudes = pd.DataFrame(columns=["id_solicitud", "fecha_registro", "dni", "nombre", "tipo_solicitud", "fecha_permiso", "monto_adelanto", "motivo", "estado", "respuesta_admin", "quiere_recuperar", "fecha_recuperacion"])
+        st.session_state.solicitudes = pd.DataFrame(columns=["id_solicitud", "fecha_registro", "dni", "nombre", "tipo_solicitud", "fecha_permiso", "monto_adelanto", "motivo", "estado", "respuesta_admin", "desea_recuperar", "fecha_recuperacion"])
 
-for col in ["quiere_recuperar", "fecha_recuperacion"]:
+for col in ["desea_recuperar", "fecha_recuperacion"]:
     if col not in st.session_state.solicitudes.columns:
         st.session_state.solicitudes[col] = ""
 
@@ -1006,24 +1004,23 @@ def renderizar_calendario_colaborador(nombre_colab, anio, mes):
     if not df_asist.empty:
         df_asist = df_asist[df_asist["nombre"] == nombre_colab]
     
-    # Obtener solicitudes aprobadas de permisos y recuperaciones para este colaborador
-    permisos_dict = {}
-    recuperaciones_dict = {}
+    # Obtener permisos aprobados para este colaborador
+    permisos_aprobados = []
+    recuperaciones = []
     if not st.session_state.solicitudes.empty:
-        df_sol_aprob = st.session_state.solicitudes[
+        df_sol_user = st.session_state.solicitudes[
             (st.session_state.solicitudes["nombre"] == nombre_colab) & 
-            (st.session_state.solicitudes["estado"] == "Aprobado") &
-            (st.session_state.solicitudes["tipo_solicitud"] == "Permiso Laboral")
+            (st.session_state.solicitudes["tipo_solicitud"] == "Permiso Laboral") & 
+            (st.session_state.solicitudes["estado"] == "Aprobado")
         ]
-        for _, s_row in df_sol_aprob.iterrows():
+        for _, s_row in df_sol_user.iterrows():
             f_perm = str(s_row.get("fecha_permiso", "")).strip()
             if f_perm:
-                permisos_dict[f_perm] = "Permiso"
-            quiere_rec = str(s_row.get("quiere_recuperar", "NO")).strip().upper()
-            if quiere_rec == "SI":
+                permisos_aprobados.append(f_perm)
+            if str(s_row.get("desea_recuperar", "")).upper() == "SI":
                 f_rec = str(s_row.get("fecha_recuperacion", "")).strip()
                 if f_rec:
-                    recuperaciones_dict[f_rec] = "Recuperación"
+                    recuperaciones.append(f_rec)
 
     row_emp = st.session_state.empleados[st.session_state.empleados["nombre"] == nombre_colab]
     f_inicio_lab = None
@@ -1063,40 +1060,40 @@ def renderizar_calendario_colaborador(nombre_colab, anio, mes):
                 fecha_dia = date(anio, mes, d)
                 f_str = fecha_dia.strftime("%Y-%m-%d")
                 
-                # Verificar permisos o recuperaciones aprobadas primero
-                if f_str in permisos_dict:
-                    html += f"<td class='bg-permiso'><span class='cal-day-num'>{d}</span><span class='cal-sub'>Permiso</span></td>"
-                elif f_str in recuperaciones_dict:
+                # Comprobar si es día de recuperación
+                if f_str in recuperaciones:
                     html += f"<td class='bg-recuperacion'><span class='cal-day-num'>{d}</span><span class='cal-sub'>Recup.</span></td>"
+                # Comprobar si tiene permiso aprobado (prioridad visual antes de faltas/descansos)
+                elif f_str in permisos_aprobados:
+                    html += f"<td class='bg-permiso'><span class='cal-day-num'>{d}</span><span class='cal-sub'>Permiso</span></td>"
+                elif i == 6:
+                    html += f"<td class='bg-descanso'><span class='cal-day-num'>{d}</span><span class='cal-sub'>Descanso</span></td>"
                 else:
-                    if i == 6:
-                        html += f"<td class='bg-descanso'><span class='cal-day-num'>{d}</span><span class='cal-sub'>Descanso</span></td>"
+                    if not df_asist.empty:
+                        df_dia = df_asist[df_asist["fecha"].astype(str) == f_str]
                     else:
-                        if not df_asist.empty:
-                            df_dia = df_asist[df_asist["fecha"].astype(str) == f_str]
-                        else:
-                            df_dia = pd.DataFrame()
+                        df_dia = pd.DataFrame()
 
-                        if not df_dia.empty:
-                            tiene_extra = (df_dia["es_extra"].astype(str) == "SI").any() or df_dia["observacion"].str.contains("TURNO EXTRA").any()
-                            if tiene_extra:
-                                html += f"<td class='bg-extra'><span class='cal-day-num'>{d}</span><span class='cal-sub'>★ Extra</span></td>"
-                            else:
-                                sub_txt = "1er Día" if (f_inicio_lab and fecha_dia == f_inicio_lab) else "✓ Asistió"
-                                html += f"<td class='bg-asistio'><span class='cal-day-num'>{d}</span><span class='cal-sub'>{sub_txt}</span></td>"
+                    if not df_dia.empty:
+                        tiene_extra = (df_dia["es_extra"].astype(str) == "SI").any() or df_dia["observacion"].str.contains("TURNO EXTRA").any()
+                        if tiene_extra:
+                            html += f"<td class='bg-extra'><span class='cal-day-num'>{d}</span><span class='cal-sub'>★ Extra</span></td>"
                         else:
-                            if f_inicio_lab and fecha_dia < f_inicio_lab:
-                                html += f"<td class='bg-futuro'><span class='cal-day-num'>{d}</span></td>"
-                            elif f_cese_lab and fecha_dia == f_cese_lab:
-                                html += f"<td class='bg-cese'><span class='cal-day-num'>{d}</span><span class='cal-sub'>Cese</span></td>"
-                            elif f_cese_lab and fecha_dia > f_cese_lab:
-                                html += f"<td class='bg-futuro'><span class='cal-day-num'>{d}</span></td>"
-                            elif fecha_dia == f_inicio_lab:
-                                html += f"<td class='bg-inicio'><span class='cal-day-num'>{d}</span><span class='cal-sub'>1er Día</span></td>"
-                            elif fecha_dia < hoy:
-                                html += f"<td class='bg-falta'><span class='cal-day-num'>{d}</span><span class='cal-sub'>✕ Falta</span></td>"
-                            else:
-                                html += f"<td class='bg-futuro'><span class='cal-day-num'>{d}</span></td>"
+                            sub_txt = "1er Día" if (f_inicio_lab and fecha_dia == f_inicio_lab) else "✓ Asistió"
+                            html += f"<td class='bg-asistio'><span class='cal-day-num'>{d}</span><span class='cal-sub'>{sub_txt}</span></td>"
+                    else:
+                        if f_inicio_lab and fecha_dia < f_inicio_lab:
+                            html += f"<td class='bg-futuro'><span class='cal-day-num'>{d}</span></td>"
+                        elif f_cese_lab and fecha_dia == f_cese_lab:
+                            html += f"<td class='bg-cese'><span class='cal-day-num'>{d}</span><span class='cal-sub'>Cese</span></td>"
+                        elif f_cese_lab and fecha_dia > f_cese_lab:
+                            html += f"<td class='bg-futuro'><span class='cal-day-num'>{d}</span></td>"
+                        elif fecha_dia == f_inicio_lab:
+                            html += f"<td class='bg-inicio'><span class='cal-day-num'>{d}</span><span class='cal-sub'>1er Día</span></td>"
+                        elif fecha_dia < hoy:
+                            html += f"<td class='bg-falta'><span class='cal-day-num'>{d}</span><span class='cal-sub'>✕ Falta</span></td>"
+                        else:
+                            html += f"<td class='bg-futuro'><span class='cal-day-num'>{d}</span></td>"
         html += "</tr>"
     html += "</tbody></table></div>"
     return html
@@ -1293,8 +1290,8 @@ elif choice == "Solicitar Permiso / Adelanto":
             
             f_permiso_val = ""
             monto_adel_val = 0.0
-            quiere_recuperar_val = "NO"
-            fecha_recup_val = ""
+            desea_recup_val = "NO"
+            f_recup_val = ""
 
             if tipo_sol == "Permiso Laboral":
                 st.info("ℹ️ **Regla de Permisos:** Toda solicitud de permiso debe realizarse con un mínimo de **7 días de anticipación**.")
@@ -1305,13 +1302,12 @@ elif choice == "Solicitar Permiso / Adelanto":
                 )
                 f_permiso_val = str(f_permiso_sel)
                 
-                st.markdown("---")
-                quiere_recuperar = st.checkbox("¿Deseas recuperar este día?")
-                if quiere_recuperar:
-                    quiere_recuperar_val = "SI"
-                    st.info("📅 Puedes seleccionar un domingo como día de recuperación (normalmente considerado descanso).")
-                    fecha_recup_sel = st.date_input("Selecciona el día de recuperación", value=f_permiso_sel + timedelta(days=4))
-                    fecha_recup_val = str(fecha_recup_sel)
+                st.markdown("<br>", unsafe_allow_html=True)
+                desea_recup_bool = st.checkbox("¿Deseas recuperar este día?")
+                if desea_recup_bool:
+                    desea_recup_val = "SI"
+                    f_recup_sel = st.date_input("Selecciona el día de recuperación (los domingos están permitidos)", value=f_permiso_sel + timedelta(days=1))
+                    f_recup_val = str(f_recup_sel)
             else:
                 st.info("ℹ️ **Adelanto de Sueldo:** Ingresa el monto total a solicitar y la justificación.")
                 monto_adel_val = st.number_input("Monto a Solicitar (S/.)", min_value=10.0, step=10.0, format="%.2f")
@@ -1343,12 +1339,12 @@ elif choice == "Solicitar Permiso / Adelanto":
                         "motivo": motivo_sol.strip(),
                         "estado": "Pendiente",
                         "respuesta_admin": "",
-                        "quiere_recuperar": quiere_recuperar_val,
-                        "fecha_recuperacion": fecha_recup_val
+                        "desea_recuperar": desea_recup_val,
+                        "fecha_recuperacion": f_recup_val
                     }
 
                     st.session_state.solicitudes = pd.concat([pd.DataFrame([nueva_peticion]), st.session_state.solicitudes], ignore_index=True)
-                    guardar_solicitud_gsheets(id_nuevo, f_reg_now, dni_actual, user_actual, tipo_sol, f_permiso_val, monto_adel_val, motivo_sol.strip(), "Pendiente", "", quiere_recuperar_val, fecha_recup_val)
+                    guardar_solicitud_gsheets(id_nuevo, f_reg_now, dni_actual, user_actual, tipo_sol, f_permiso_val, monto_adel_val, motivo_sol.strip(), "Pendiente", "", desea_recup_val, f_recup_val)
                     st.success("✅ Solicitud enviada con éxito. Un administrador la revisará pronto.")
                     time.sleep(0.5)
                     st.rerun()
@@ -1364,12 +1360,11 @@ elif choice == "Solicitar Permiso / Adelanto":
                 badge_c = "#EAB308" if est == "Pendiente" else ("#00A959" if est == "Aprobado" else "#EC3237")
                 
                 det_txt = f"**Fecha Permiso:** {r_sol['fecha_permiso']}" if r_sol['tipo_solicitud'] == "Permiso Laboral" else f"**Monto Solicitado:** S/. {float(r_sol['monto_adelanto']):.2f}"
-                if r_sol['tipo_solicitud'] == "Permiso Laboral" and str(r_sol.get("quiere_recuperar", "")).upper() == "SI":
-                    det_txt += f" | **Recuperación:** {r_sol.get('fecha_recuperacion', '-')}"
+                recup_info = f"<br><b>Recuperación:</b> {r_sol['fecha_recuperacion']}" if str(r_sol.get('desea_recuperar', '')).upper() == "SI" else ""
                 
                 with st.expander(f"📌 {r_sol['tipo_solicitud']} — {r_sol['fecha_registro']} [{est}]"):
                     st.markdown(f"<span style='background-color:{badge_c}; color:#fff; padding:3px 10px; border-radius:12px; font-size:0.75rem; font-weight:700;'>{est}</span>", unsafe_allow_html=True)
-                    st.markdown(f"<br>{det_txt}", unsafe_allow_html=True)
+                    st.markdown(f"<br>{det_txt}{recup_info}", unsafe_allow_html=True)
                     st.markdown(f"**Motivo:** {r_sol['motivo']}")
                     if str(r_sol.get('respuesta_admin', '')).strip():
                         st.markdown(f"**Respuesta Admin:** {r_sol['respuesta_admin']}")
@@ -1380,42 +1375,40 @@ elif choice == "Mi Dashboard Mensual":
     st.markdown(f"""
         <div class="market-header">
             <h1>Rendimiento Mensual</h1>
-            <p>Resumen exclusivo para el período seleccionado de <b>{user_actual}</b></p>
+            <p>Resumen y métricas para <b>{user_actual}</b></p>
         </div>
     """, unsafe_allow_html=True)
 
-    # Selector de Período Mensual
-    NOMBRES_MESES = [
+    NOMBRES_MESES_DB = [
         "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
         "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
     ]
-    ahora_p = obtener_ahora_peru()
-    
-    col_per1, col_per2 = st.columns(2)
-    mes_sel_mi = col_per1.selectbox("📅 Mes", list(range(1, 13)), index=ahora_p.month - 1, format_func=lambda x: NOMBRES_MESES[x-1], key="mes_mi_dash")
-    anio_sel_mi = col_per2.number_input("Año", min_value=2024, max_value=2030, value=ahora_p.year, key="anio_mi_dash")
+    ahora_peru_db = obtener_ahora_peru()
 
-    st.markdown(f"<div style='font-size:0.85rem; color:#6B7280; margin-bottom:15px;'>Período de consulta: <b>{NOMBRES_MESES[mes_sel_mi-1]} {anio_sel_mi}</b></div>", unsafe_allow_html=True)
+    st.markdown("##### 📅 Período de consulta")
+    c_m_sel, c_y_sel = st.columns(2)
+    mes_sel_user = c_m_sel.selectbox("Mes", list(range(1, 13)), index=ahora_peru_db.month - 1, format_func=lambda x: NOMBRES_MESES_DB[x-1], key="user_mes_sel")
+    anio_sel_user = c_y_sel.number_input("Año", min_value=2024, max_value=2030, value=ahora_peru_db.year, key="user_anio_sel")
 
     df_mis_desc = pd.DataFrame()
     df_mis_asist = pd.DataFrame()
 
     if not st.session_state.descuadres.empty:
-        df_d_all = st.session_state.descuadres[st.session_state.descuadres["dni"].astype(str) == str(dni_actual)].copy()
-        if not df_d_all.empty:
-            df_d_all["fecha_dt"] = pd.to_datetime(df_d_all["fecha"], errors="coerce")
-            df_mis_desc = df_d_all[
-                (df_d_all["fecha_dt"].dt.month == mes_sel_mi) & 
-                (df_d_all["fecha_dt"].dt.year == anio_sel_mi)
+        df_mis_desc = st.session_state.descuadres[st.session_state.descuadres["dni"].astype(str) == str(dni_actual)].copy()
+        if not df_mis_desc.empty:
+            df_mis_desc["fecha_dt"] = pd.to_datetime(df_mis_desc["fecha"], errors="coerce")
+            df_mis_desc = df_mis_desc[
+                (df_mis_desc["fecha_dt"].dt.month == mes_sel_user) & 
+                (df_mis_desc["fecha_dt"].dt.year == anio_sel_user)
             ]
     
     if not st.session_state.asistencia.empty:
-        df_a_all = st.session_state.asistencia[st.session_state.asistencia["dni"].astype(str) == str(dni_actual)].copy()
-        if not df_a_all.empty:
-            df_a_all["fecha_dt"] = pd.to_datetime(df_a_all["fecha"], errors="coerce")
-            df_mis_asist = df_a_all[
-                (df_a_all["fecha_dt"].dt.month == mes_sel_mi) & 
-                (df_a_all["fecha_dt"].dt.year == anio_sel_mi)
+        df_mis_asist = st.session_state.asistencia[st.session_state.asistencia["dni"].astype(str) == str(dni_actual)].copy()
+        if not df_mis_asist.empty:
+            df_mis_asist["fecha_dt"] = pd.to_datetime(df_mis_asist["fecha"], errors="coerce")
+            df_mis_asist = df_mis_asist[
+                (df_mis_asist["fecha_dt"].dt.month == mes_sel_user) & 
+                (df_mis_asist["fecha_dt"].dt.year == anio_sel_user)
             ]
 
     monto_total = pd.to_numeric(df_mis_desc["monto"]).sum() if not df_mis_desc.empty else 0.0
@@ -1427,15 +1420,15 @@ elif choice == "Mi Dashboard Mensual":
             _, mins_e, _, _ = calcular_jornada_y_horas_extras(grupo_dia)
             minutos_extras_mes += mins_e
 
-    # Filtrar también asistencia general para métricas de puntualidad del mes
-    df_asist_global = st.session_state.asistencia.copy()
-    if not df_asist_global.empty:
-        df_asist_global["fecha_dt"] = pd.to_datetime(df_asist_global["fecha"], errors="coerce")
-        df_asist_global = df_asist_global[
-            (df_asist_global["fecha_dt"].dt.month == mes_sel_mi) & 
-            (df_asist_global["fecha_dt"].dt.year == anio_sel_mi)
+    # Filtrar puntualidad para el mes y año seleccionados
+    df_asist_punt = st.session_state.asistencia.copy()
+    if not df_asist_punt.empty:
+        df_asist_punt["fecha_dt"] = pd.to_datetime(df_asist_punt["fecha"], errors="coerce")
+        df_asist_punt = df_asist_punt[
+            (df_asist_punt["fecha_dt"].dt.month == mes_sel_user) & 
+            (df_asist_punt["fecha_dt"].dt.year == anio_sel_user)
         ]
-    metricas_p = calcular_metricas_puntualidad(df_asist_global, user_actual)
+    metricas_p = calcular_metricas_puntualidad(df_asist_punt, user_actual)
 
     k1, k2, k3, k4 = st.columns(4)
     with k1:
@@ -1470,7 +1463,7 @@ elif choice == "Mi Dashboard Mensual":
             </div>
         ''', unsafe_allow_html=True)
 
-    st.markdown(f"<h4 style='font-size:1rem; color:#111827; margin-top:20px;'>Historial Personal ({NOMBRES_MESES[mes_sel_mi-1]} {anio_sel_mi})</h4>", unsafe_allow_html=True)
+    st.markdown(f"<h4 style='font-size:1rem; color:#111827; margin-top:10px;'>Historial Personal ({NOMBRES_MESES_DB[mes_sel_user-1]} {anio_sel_user})</h4>", unsafe_allow_html=True)
     if not df_mis_desc.empty:
         st.dataframe(
             df_mis_desc[["fecha", "tipo", "monto", "observacion"]],
@@ -1479,7 +1472,7 @@ elif choice == "Mi Dashboard Mensual":
             column_config={"monto": st.column_config.NumberColumn("MONTO", format="S/. %.2f")}
         )
     else:
-        st.info(f"Sin registros de descuadres para el período {NOMBRES_MESES[mes_sel_mi-1]} {anio_sel_mi}.")
+        st.info("Sin registros de descuadres en el período seleccionado.")
 
 # -------------------- MÓDULOS ADMIN --------------------
 
@@ -1487,7 +1480,7 @@ elif choice == "Dashboard General":
     st.markdown("""
         <div class="market-header">
             <h1>Panel de Control General</h1>
-            <p>Vista ejecutiva de la operación, tardanzas, horas extras y permisos en tiempo real</p>
+            <p>Vista ejecutiva de la operación, tardanzas y horas extras en tiempo real</p>
         </div>
     """, unsafe_allow_html=True)
 
@@ -1521,12 +1514,12 @@ elif choice == "Dashboard General":
                 <span>Descanso Programado</span>
             </div>
             <div class="legend-item">
-                <span class="legend-badge" style="background-color: #dbeafe; border: 1px solid #93c5fd;"></span>
+                <span class="legend-badge" style="background-color: #dbeafe; border: 1px solid #bfdbfe;"></span>
                 <span>Permiso Laboral</span>
             </div>
             <div class="legend-item">
-                <span class="legend-badge" style="background-color: #fef3c7; border: 1px solid #fde68a;"></span>
-                <span>Recuperación de Permiso</span>
+                <span class="legend-badge" style="background-color: #fef08a; border: 1px solid #fde047;"></span>
+                <span>Recuperación de permiso</span>
             </div>
             <div class="legend-item">
                 <span class="legend-badge" style="background-color: #e0f2fe; border: 1px solid #bae6fd;"></span>
@@ -1565,7 +1558,6 @@ elif choice == "Dashboard General":
 
     st.markdown("---")
 
-    # --- CÁLCULO DE HORAS EXTRAS MENSUALES POR TRABAJADOR ---
     st.markdown(f"##### ⭐ Horas Extras Mensuales del Período ({NOMBRES_MESES[mes_sel-1]} {int(anio_sel)})")
     
     df_asist_mes = st.session_state.asistencia.copy()
@@ -1889,287 +1881,306 @@ elif choice == "Gestión Colaboradores":
                 if colabs_activos:
                     colab_a_desactivar = st.selectbox("Seleccionar colaborador a dar de baja", colabs_activos)
                     f_cese_input = st.date_input("Fecha de Salida / Cese", value=obtener_ahora_peru().date())
-                    confirm_desactivar = st.checkbox(f"Confirmar baja del colaborador {colab_a_desactivar}")
+                    confirm_desactivar = st.checkbox("Confirmo que deseo dar de baja a este colaborador")
                     
-                    if st.button("Dar de Baja al Colaborador", type="primary", use_container_width=True):
+                    if st.button("Ejecutar Cese / Baja"):
                         if confirm_desactivar:
-                            idx = st.session_state.empleados[st.session_state.empleados["nombre"] == colab_a_desactivar].index
-                            if not idx.empty:
-                                st.session_state.empleados.loc[idx, "estado"] = "Desactivado"
-                                st.session_state.empleados.loc[idx, "fecha_cese"] = str(f_cese_input)
-                                actualizar_hoja_completa("Colaboradores", st.session_state.empleados)
-                                st.toast(f"Colaborador {colab_a_desactivar} desactivado correctamente")
-                                time.sleep(0.3)
-                                st.rerun()
+                            f_cese_str = str(f_cese_input)
+                            st.session_state.empleados.loc[st.session_state.empleados["nombre"] == colab_a_desactivar, "estado"] = "Dado de Baja"
+                            st.session_state.empleados.loc[st.session_state.empleados["nombre"] == colab_a_desactivar, "fecha_cese"] = f_cese_str
+                            actualizar_hoja_completa("Colaboradores", st.session_state.empleados)
+                            st.success(f"Colaborador {colab_a_desactivar} dado de baja correctamente.")
+                            time.sleep(0.5)
+                            st.rerun()
                         else:
-                            st.warning("Marca la casilla de confirmación antes de dar de baja.")
+                            st.warning("Debe confirmar la casilla para proceder.")
                 else:
                     st.info("No hay colaboradores activos para dar de baja.")
+
+elif choice == "Boletas de Pago":
+    st.markdown("""
+        <div class="market-header">
+            <h1>Generador de Boletas de Pago</h1>
+            <p>Cálculo de haberes, horas extras, feriados y deducciones</p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    c_b1, c_b2, c_b3 = st.columns(3)
+    colab_sel_b = c_b1.selectbox("Colaborador", obtener_solo_colaboradores(), key="boleta_colab")
+    
+    ahora_b = obtener_ahora_peru()
+    mes_sel_b = c_b2.selectbox("Mes de Pago", list(range(1, 13)), index=ahora_b.month - 1, format_func=lambda x: NOMBRES_MESES[x-1] if 'NOMBRES_MESES' in locals() else str(x), key="boleta_mes")
+    anio_sel_b = c_b3.number_input("Año de Pago", min_value=2024, max_value=2030, value=ahora_b.year, key="boleta_anio")
+
+    row_colab_b = st.session_state.empleados[st.session_state.empleados["nombre"] == colab_sel_b]
+    dni_colab_b = row_colab_b.iloc[0]["dni"] if not row_colab_b.empty else ""
+    cargo_colab_b = row_colab_b.iloc[0]["cargo"] if not row_colab_b.empty else "-"
+    f_inicio_b = row_colab_b.iloc[0]["fecha_inicio"] if not row_colab_b.empty else "-"
+
+    sueldo_base_mensual = st.number_input("Sueldo Básico Referencial Mensual (S/.)", min_value=0.0, value=1025.0, step=50.0)
+
+    # Filtrar asistencia del mes para el colaborador
+    df_asist_b = st.session_state.asistencia.copy()
+    dias_trabajados_b = 0
+    horas_extras_hrs_b = 0.0
+    
+    if not df_asist_b.empty:
+        df_asist_b["fecha_dt"] = pd.to_datetime(df_asist_b["fecha"], errors="coerce")
+        df_asist_b_col = df_asist_b[
+            (df_asist_b["nombre"] == colab_sel_b) & 
+            (df_asist_b["fecha_dt"].dt.month == mes_sel_b) & 
+            (df_asist_b["fecha_dt"].dt.year == anio_sel_b)
+        ]
+        if not df_asist_b_col.empty:
+            dias_trabajados_b = df_asist_b_col["fecha"].nunique()
+            mins_tot_ext_b = 0
+            for _, g_dia in df_asist_b_col.groupby("fecha"):
+                _, m_ext, _, _ = calcular_jornada_y_horas_extras(g_dia)
+                mins_tot_ext_b += m_ext
+            horas_extras_hrs_b = mins_tot_ext_b / 60.0
+
+    feriados_trabajados_b = st.number_input("Feriados Laborados (Días)", min_value=0, value=0, step=1)
+    dias_faltas_b = st.number_input("Faltas Injustificadas (Días)", min_value=0, value=0, step=1)
+    adelantos_b = st.number_input("Adelantos de Sueldo Registrados (S/.)", min_value=0.0, value=0.0, step=10.0)
+    descuadre_caja_b = st.number_input("Descuadre / Faltante de Caja (S/.)", min_value=0.0, value=0.0, step=5.0)
+    descuadre_inv_b = st.number_input("Descuadre de Inventario (S/.)", min_value=0.0, value=0.0, step=5.0)
+    consumos_pagar_b = st.number_input("Consumos por Pagar (S/.)", min_value=0.0, value=0.0, step=5.0)
+
+    # Cálculos financieros de la boleta
+    valor_dia = sueldo_base_mensual / 30.0 if sueldo_base_mensual > 0 else 34.17
+    sueldo_calculado = dias_trabajados_b * valor_dia
+    monto_feriados_b = feriados_trabajados_b * valor_dia * 2.0  # Feriado laborado pago doble
+    valor_hora = (sueldo_base_mensual / 30.0 / 5.75) if sueldo_base_mensual > 0 else 5.94
+    monto_horas_extras_b = horas_extras_hrs_b * valor_hora * 1.25 # 25% recargo HE
+    monto_faltas_b = dias_faltas_b * valor_dia
+
+    total_ingresos_b = sueldo_calculado + monto_feriados_b + monto_horas_extras_b
+    total_descuentos_b = adelantos_b + monto_faltas_b + descuadre_caja_b + descuadre_inv_b + consumos_pagar_b
+    neto_pagar_b = max(0.0, total_ingresos_b - total_descuentos_b)
+
+    datos_boleta = {
+        "empresa": "TIENDAS PREMIUM E.I.R.L.",
+        "ruc": "20608492011",
+        "periodo": f"{NOMBRES_MESES[mes_sel_b-1].upper()} {anio_sel_b}",
+        "colaborador": colab_sel_b,
+        "dni": dni_colab_b,
+        "cargo": cargo_colab_b,
+        "fecha_inicio": f_inicio_b,
+        "dias_trabajados": dias_trabajados_b,
+        "dias_faltas": dias_faltas_b,
+        "feriados_trabajados": feriados_trabajados_b,
+        "horas_extras_hrs": horas_extras_hrs_b,
+        "sueldo_basico": round(sueldo_calculado, 2),
+        "monto_feriados": round(monto_feriados_b, 2),
+        "monto_horas_extras": round(monto_horas_extras_b, 2),
+        "adelanto_sueldo": round(adelantos_b, 2),
+        "monto_faltas": round(monto_faltas_b, 2),
+        "descuadre_caja": round(descuadre_caja_b, 2),
+        "descuadre_inventario": round(descuadre_inv_b, 2),
+        "consumos_pagar": round(consumos_pagar_b, 2),
+        "total_ingresos": round(total_ingresos_b, 2),
+        "total_descuentos": round(total_descuentos_b, 2),
+        "neto_pagar": round(neto_pagar_b, 2)
+    }
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    if st.button("📄 Generar Vista Previa de Boleta", use_container_width=True):
+        st.markdown(f"""
+            <div class="boleta-container">
+                <div class="boleta-header-title">TIENDAS PREMIUM E.I.R.L. — BOLETA DE PAGO</div>
+                <table class="boleta-table">
+                    <tr>
+                        <td><b>Colaborador:</b> {colab_sel_b}</td>
+                        <td><b>DNI:</b> {dni_colab_b}</td>
+                        <td><b>Cargo:</b> {cargo_colab_b}</td>
+                    </tr>
+                    <tr>
+                        <td><b>Período:</b> {NOMBRES_MESES[mes_sel_b-1]} {anio_sel_b}</td>
+                        <td><b>Fecha Ingreso:</b> {f_inicio_b}</td>
+                        <td><b>Días Asistidos:</b> {dias_trabajados_b}</td>
+                    </tr>
+                </table>
+                <table class="boleta-table">
+                    <tr>
+                        <th>Concepto / Rubro</th>
+                        <th>Cantidad</th>
+                        <th>Ingresos (S/.)</th>
+                        <th>Descuentos (S/.)</th>
+                    </tr>
+                    <tr>
+                        <td>Sueldo Básico Proporcional</td>
+                        <td>{dias_trabajados_b} días</td>
+                        <td>S/. {sueldo_calculado:.2f}</td>
+                        <td>0.00</td>
+                    </tr>
+                    <tr>
+                        <td>Pago Feriados Laborados (Adicional)</td>
+                        <td>{feriados_trabajados_b} días</td>
+                        <td>S/. {monto_feriados_b:.2f}</td>
+                        <td>0.00</td>
+                    </tr>
+                    <tr>
+                        <td>Horas Extras Trabajadas</td>
+                        <td>{horas_extras_hrs_b:.2f} hrs</td>
+                        <td>S/. {monto_horas_extras_b:.2f}</td>
+                        <td>0.00</td>
+                    </tr>
+                    <tr>
+                        <td>Adelanto de Sueldo</td>
+                        <td>-</td>
+                        <td>0.00</td>
+                        <td>S/. {adelantos_b:.2f}</td>
+                    </tr>
+                    <tr>
+                        <td>Descuentos por Faltas Injustificadas</td>
+                        <td>{dias_faltas_b} días</td>
+                        <td>0.00</td>
+                        <td>S/. {monto_faltas_b:.2f}</td>
+                    </tr>
+                    <tr>
+                        <td>Descuadre / Faltante de Caja</td>
+                        <td>-</td>
+                        <td>0.00</td>
+                        <td>S/. {descuadre_caja_b:.2f}</td>
+                    </tr>
+                    <tr>
+                        <td>Descuadres de Inventario</td>
+                        <td>-</td>
+                        <td>0.00</td>
+                        <td>S/. {descuadre_inv_b:.2f}</td>
+                    </tr>
+                    <tr>
+                        <td>Consumos por Pagar</td>
+                        <td>-</td>
+                        <td>0.00</td>
+                        <td>S/. {consumos_pagar_b:.2f}</td>
+                    </tr>
+                    <tr style="background-color: #f3f4f6; font-weight: bold;">
+                        <td>TOTALES</td>
+                        <td>-</td>
+                        <td>S/. {total_ingresos_b:.2f}</td>
+                        <td>S/. {total_descuentos_b:.2f}</td>
+                    </tr>
+                    <tr style="background-color: #e5e7eb; font-weight: bold; font-size: 1rem;">
+                        <td colspan="2">NETO A PAGAR</td>
+                        <td colspan="2" style="text-align: right; color: #EC3237;">S/. {neto_pagar_b:.2f}</td>
+                    </tr>
+                </table>
+            </div>
+        """, unsafe_allow_html=True)
+
+        col_dl1, col_dl2 = st.columns(2)
+        excel_bytes = generar_excel_boleta(datos_boleta)
+        col_dl1.download_button(
+            "📥 Descargar Boleta en Excel",
+            data=excel_bytes,
+            file_name=f"Boleta_{colab_sel_b}_{NOMBRES_MESES[mes_sel_b-1]}_{anio_sel_b}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True
+        )
+
+        if REPORTLAB_AVAILABLE:
+            pdf_bytes = generar_pdf_boleta(datos_boleta)
+            if pdf_bytes:
+                col_dl2.download_button(
+                    "📄 Descargar Boleta en PDF",
+                    data=pdf_bytes,
+                    file_name=f"Boleta_{colab_sel_b}_{NOMBRES_MESES[mes_sel_b-1]}_{anio_sel_b}.pdf",
+                    mime="application/pdf",
+                    use_container_width=True
+                )
+        else:
+            col_dl2.info("ReportLab no disponible para exportación PDF directa.")
 
 elif choice == "Solicitudes y Permisos":
     st.markdown("""
         <div class="market-header">
             <h1>Gestión de Solicitudes y Permisos</h1>
-            <p>Aprobación o rechazo de solicitudes de permisos laborales y adelantos de sueldo</p>
+            <p>Aprobación o rechazo de peticiones de colaboradores</p>
         </div>
     """, unsafe_allow_html=True)
 
-    if not st.session_state.solicitudes.empty:
-        df_sol = st.session_state.solicitudes.copy()
-        
-        # Filtro por estado
-        filtro_estado = st.selectbox("Filtrar por Estado", ["Todos", "Pendiente", "Aprobado", "Rechazado"])
-        if filtro_estado != "Todos":
-            df_sol = df_sol[df_sol["estado"] == filtro_estado]
-
-        if not df_sol.empty:
-            for idx, row_s in df_sol.iterrows():
-                est_s = row_s["estado"]
-                color_badge = "#EAB308" if est_s == "Pendiente" else ("#00A959" if est_s == "Aprobado" else "#EC3237")
-                
-                detalles_extra = f"**Fecha Permiso:** {row_s['fecha_permiso']}" if row_s['tipo_solicitud'] == "Permiso Laboral" else f"**Monto Adelanto:** S/. {float(row_s['monto_adelanto']):.2f}"
-                if row_s['tipo_solicitud'] == "Permiso Laboral" and str(row_s.get("quiere_recuperar", "")).upper() == "SI":
-                    detalles_extra += f" | **Día Recuperación:** {row_s.get('fecha_recuperacion', '-')}"
-
-                with st.expander(f"📌 [{row_s['tipo_solicitud']}] {row_s['nombre']} — {row_s['fecha_registro']} ({est_s})"):
-                    st.markdown(f"<span style='background-color:{color_badge}; color:#fff; padding:3px 10px; border-radius:12px; font-size:0.75rem; font-weight:700;'>{est_s}</span>", unsafe_allow_html=True)
-                    st.markdown(f"<br>{detalles_extra}", unsafe_allow_html=True)
-                    st.markdown(f"**Motivo:** {row_s['motivo']}")
-                    
-                    if est_s == "Pendiente":
-                        resp_admin = st.text_input("Comentario / Respuesta Admin", key=f"resp_{row_s['id_solicitud']}")
-                        c_bt1, c_bt2 = st.columns(2)
-                        if c_bt1.button("✅ Aprobar Solicitud", key=f"apr_{row_s['id_solicitud']}", use_container_width=True):
-                            st.session_state.solicitudes.loc[st.session_state.solicitudes["id_solicitud"] == row_s["id_solicitud"], "estado"] = "Aprobado"
-                            st.session_state.solicitudes.loc[st.session_state.solicitudes["id_solicitud"] == row_s["id_solicitud"], "respuesta_admin"] = resp_admin
-                            actualizar_hoja_completa("Solicitudes", st.session_state.solicitudes)
-                            st.success("Solicitud aprobada correctamente.")
-                            time.sleep(0.3)
-                            st.rerun()
-                        if c_bt2.button("❌ Rechazar Solicitud", key=f"rec_{row_s['id_solicitud']}", use_container_width=True):
-                            st.session_state.solicitudes.loc[st.session_state.solicitudes["id_solicitud"] == row_s["id_solicitud"], "estado"] = "Rechazado"
-                            st.session_state.solicitudes.loc[st.session_state.solicitudes["id_solicitud"] == row_s["id_solicitud"], "respuesta_admin"] = resp_admin
-                            actualizar_hoja_completa("Solicitudes", st.session_state.solicitudes)
-                            st.warning("Solicitud rechazada.")
-                            time.sleep(0.3)
-                            st.rerun()
+    df_sol_admin = st.session_state.solicitudes.copy()
+    if not df_sol_admin.empty:
+        for idx, row_s in df_sol_admin.iterrows():
+            est = row_s["estado"]
+            badge_color = "#EAB308" if est == "Pendiente" else ("#00A959" if est == "Aprobado" else "#EC3237")
+            
+            with st.expander(f"📌 [{row_s['tipo_solicitud']}] {row_s['nombre']} — {row_s['fecha_registro']} [{est}]"):
+                col_info1, col_info2 = st.columns(2)
+                with col_info1:
+                    st.markdown(f"**Colaborador:** {row_s['nombre']} (DNI: {row_s['dni']})")
+                    st.markdown(f"**Tipo:** {row_s['tipo_solicitud']}")
+                    if row_s['tipo_solicitud'] == "Permiso Laboral":
+                        st.markdown(f"**Fecha Solicitada:** {row_s['fecha_permiso']}")
+                        if str(row_s.get('desea_recuperar', '')).upper() == "SI":
+                            st.markdown(f"**Desea recuperar:** Sí (Fecha: {row_s.get('fecha_recuperacion', '-')})")
+                        else:
+                            st.markdown("**Desea recuperar:** No")
                     else:
-                        if str(row_s.get("respuesta_admin", "")).strip():
-                            st.markdown(f"**Respuesta:** {row_s['respuesta_admin']}")
-        else:
-            st.info("No hay solicitudes con el filtro seleccionado.")
+                        st.markdown(f"**Monto Adelanto:** S/. {float(row_s['monto_adelanto']):.2f}")
+                with col_info2:
+                    st.markdown(f"**Motivo:** {row_s['motivo']}")
+                    st.markdown(f"**Estado Actual:** <span style='background-color:{badge_color}; color:#fff; padding:2px 8px; border-radius:10px; font-size:0.75rem; font-weight:700;'>{est}</span>", unsafe_allow_html=True)
+
+                if est == "Pendiente":
+                    st.markdown("---")
+                    resp_admin = st.text_input("Observación / Respuesta Admin", key=f"resp_{row_s['id_solicitud']}")
+                    
+                    cA, cR = st.columns(2)
+                    if cA.button("✅ Aprobar Solicitud", key=f"aprobar_{row_s['id_solicitud']}", use_container_width=True):
+                        st.session_state.solicitudes.loc[st.session_state.solicitudes["id_solicitud"] == row_s["id_solicitud"], "estado"] = "Aprobado"
+                        st.session_state.solicitudes.loc[st.session_state.solicitudes["id_solicitud"] == row_s["id_solicitud"], "respuesta_admin"] = resp_admin
+                        actualizar_hoja_completa("Solicitudes", st.session_state.solicitudes)
+                        st.success("Solicitud aprobada correctamente.")
+                        time.sleep(0.3)
+                        st.rerun()
+
+                    if cR.button("❌ Rechazar Solicitud", key=f"rechazar_{row_s['id_solicitud']}", use_container_width=True):
+                        st.session_state.solicitudes.loc[st.session_state.solicitudes["id_solicitud"] == row_s["id_solicitud"], "estado"] = "Rechazado"
+                        st.session_state.solicitudes.loc[st.session_state.solicitudes["id_solicitud"] == row_s["id_solicitud"], "respuesta_admin"] = resp_admin
+                        actualizar_hoja_completa("Solicitudes", st.session_state.solicitudes)
+                        st.warning("Solicitud rechazada.")
+                        time.sleep(0.3)
+                        st.rerun()
     else:
         st.info("No hay solicitudes registradas en el sistema.")
 
 elif choice == "Historial de Descuadres":
     st.markdown("""
         <div class="market-header">
-            <h1>Historial de Descuadres de Caja</h1>
-            <p>Registro consolidado de faltantes y sobrantes reportados</p>
+            <h1>Historial Consolidado de Descuadres</h1>
+            <p>Registro histórico de faltantes y sobrantes reportados por caja</p>
         </div>
     """, unsafe_allow_html=True)
-    
-    if not st.session_state.descuadres.empty:
-        st.dataframe(st.session_state.descuadres, use_container_width=True, hide_index=True)
+
+    df_desc_all = st.session_state.descuadres.copy()
+    if not df_desc_all.empty:
+        st.dataframe(
+            df_desc_all,
+            use_container_width=True,
+            hide_index=True,
+            column_config={"monto": st.column_config.NumberColumn("MONTO (S/.)", format="S/. %.2f")}
+        )
+        st.download_button("📥 Descargar Reporte en Excel", data=to_excel(df_desc_all), file_name="Descuadres_Consolidado.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     else:
-        st.info("No hay registros de descuadres.")
+        st.info("No hay registros de descuadres en el sistema.")
 
 elif choice == "Historial de Asistencias":
     st.markdown("""
         <div class="market-header">
-            <h1>Historial General de Asistencias</h1>
-            <p>Registro histórico completo de entradas y salidas</p>
+            <h1>Historial Consolidado de Asistencias</h1>
+            <p>Registro completo de marcaciones de ingreso, salida y turnos extras</p>
         </div>
     """, unsafe_allow_html=True)
-    
-    if not st.session_state.asistencia.empty:
-        st.dataframe(st.session_state.asistencia, use_container_width=True, hide_index=True)
+
+    df_asist_all = st.session_state.asistencia.copy()
+    if not df_asist_all.empty:
+        st.dataframe(
+            df_asist_all,
+            use_container_width=True,
+            hide_index=True
+        )
+        st.download_button("📥 Descargar Reporte en Excel", data=to_excel(df_asist_all), file_name="Asistencias_Consolidado.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     else:
-        st.info("No hay registros de asistencia.")
-
-elif choice == "Boletas de Pago":
-    st.markdown("""
-        <div class="market-header">
-            <h1>Generación de Boletas de Pago</h1>
-            <p>Emisión, cálculo automático y descarga de boletas de pago para colaboradores</p>
-        </div>
-    """, unsafe_allow_html=True)
-
-    tab_boleta, tab_feriados = st.tabs(["📄 Generar Boleta de Pago", "📅 Gestión de Feriados"])
-
-    with tab_feriados:
-        st.markdown("<h4 style='font-size:1rem; color:#111827; margin-bottom:12px;'>Días Feriados Registrados</h4>", unsafe_allow_html=True)
-        st.caption("Los feriados trabajados de Lunes a Sábado se pagan con recargo adicional (17.66 / día sobre base S/. 530.00). Los feriados en domingo no aplican por ser día de descanso.")
-        
-        c_f1, c_f2 = st.columns([1, 2])
-        with c_f1:
-            with st.form("form_nuevo_feriado", clear_on_submit=True):
-                st.markdown("**➕ Agregar Feriado**")
-                f_feriado = st.date_input("Fecha del Feriado", value=obtener_ahora_peru().date())
-                desc_feriado = st.text_input("Descripción / Evento", placeholder="Ej. Fiestas Patrias")
-                if st.form_submit_button("Guardar Feriado", use_container_width=True):
-                    if not desc_feriado.strip():
-                        st.error("Ingresa una descripción para el feriado.")
-                    else:
-                        str_f_fer = str(f_feriado)
-                        if not st.session_state.feriados.empty and str_f_fer in st.session_state.feriados["fecha"].astype(str).values:
-                            st.warning("Esa fecha ya se encuentra registrada como feriado.")
-                        else:
-                            nuevo_f = {"fecha": str_f_fer, "descripcion": desc_feriado.strip()}
-                            st.session_state.feriados = pd.concat([st.session_state.feriados, pd.DataFrame([nuevo_f])], ignore_index=True)
-                            guardar_feriado_gsheets(str_f_fer, desc_feriado.strip())
-                            st.toast("Feriado agregado con éxito")
-                            time.sleep(0.3)
-                            st.rerun()
-
-        with c_f2:
-            if not st.session_state.feriados.empty:
-                df_fer_ord = st.session_state.feriados.sort_values("fecha").reset_index(drop=True)
-                st.dataframe(df_fer_ord, use_container_width=True, hide_index=True)
-            else:
-                st.info("No hay feriados registrados.")
-
-    with tab_boleta:
-        st.markdown("<h4 style='font-size:1rem; color:#111827; margin-bottom:12px;'>Parámetros y Selección de Trabajador</h4>", unsafe_allow_html=True)
-        
-        col_bp1, col_bp2, col_bp3 = st.columns(3)
-        colabs_op_b = obtener_solo_colaboradores()
-        
-        if colabs_op_b:
-            colab_sel_b = col_bp1.selectbox("Colaborador", colabs_op_b)
-            mes_sel_b = col_bp2.selectbox("Mes de Pago", list(range(1, 13)), index=ahora_p.month - 1, format_func=lambda x: NOMBRES_MESES[x-1])
-            anio_sel_b = col_bp3.number_input("Año de Pago", min_value=2024, max_value=2030, value=ahora_p.year)
-
-            if st.button("Calcular y Generar Boleta", type="primary", use_container_width=True):
-                # Datos del colaborador
-                row_emp_b = st.session_state.empleados[st.session_state.empleados["nombre"] == colab_sel_b]
-                dni_b = row_emp_b.iloc[0]["dni"] if not row_emp_b.empty else "-"
-                cargo_b = row_emp_b.iloc[0]["cargo"] if not row_emp_b.empty else "-"
-                f_inicio_b = row_emp_b.iloc[0]["fecha_inicio"] if not row_emp_b.empty else "-"
-
-                # Cálculos básicos del mes
-                df_asist_b = st.session_state.asistencia.copy()
-                dias_trab_cnt = 0
-                horas_extras_hrs = 0.0
-                feriados_trab_cnt = 0
-                
-                if not df_asist_b.empty:
-                    df_asist_b["fecha_dt"] = pd.to_datetime(df_asist_b["fecha"], errors="coerce")
-                    df_asist_b = df_asist_b[
-                        (df_asist_b["nombre"] == colab_sel_b) & 
-                        (df_asist_b["fecha_dt"].dt.month == mes_sel_b) & 
-                        (df_asist_b["fecha_dt"].dt.year == anio_sel_b)
-                    ]
-                    dias_trab_cnt = df_asist_b["fecha"].nunique()
-                    
-                    for _, grupo_d in df_asist_b.groupby("fecha"):
-                        _, mins_e, _, _ = calcular_jornada_y_horas_extras(grupo_d)
-                        horas_extras_hrs += (mins_e / 60.0)
-
-                # Descuadres del mes
-                descuadre_caja_val = 0.0
-                if not st.session_state.descuadres.empty:
-                    df_desc_b = st.session_state.descuadres.copy()
-                    df_desc_b["fecha_dt"] = pd.to_datetime(df_desc_b["fecha"], errors="coerce")
-                    df_desc_b = df_desc_b[
-                        (df_desc_b["nombre"] == colab_sel_b) & 
-                        (df_desc_b["fecha_dt"].dt.month == mes_sel_b) & 
-                        (df_desc_b["fecha_dt"].dt.year == anio_sel_b)
-                    ]
-                    descuadre_caja_val = abs(pd.to_numeric(df_desc_b["monto"], errors="coerce").sum())
-
-                # Adelantos aprobados del mes
-                adelanto_val = 0.0
-                if not st.session_state.solicitudes.empty:
-                    df_sol_b = st.session_state.solicitudes.copy()
-                    df_sol_b["fecha_dt"] = pd.to_datetime(df_sol_b["fecha_registro"], errors="coerce")
-                    df_sol_b = df_sol_b[
-                        (df_sol_b["nombre"] == colab_sel_b) & 
-                        (df_sol_b["tipo_solicitud"] == "Adelanto de Sueldo") & 
-                        (df_sol_b["estado"] == "Aprobado") &
-                        (df_sol_b["fecha_dt"].dt.month == mes_sel_b) & 
-                        (df_sol_b["fecha_dt"].dt.year == anio_sel_b)
-                    ]
-                    adelanto_val = pd.to_numeric(df_sol_b["monto_adelanto"], errors="coerce").sum()
-
-                sueldo_basico = 1500.0  # Base estándar o configurable
-                monto_feriados = feriados_trab_cnt * 17.66
-                monto_horas_extras = horas_extras_hrs * 12.0
-                dias_faltas = max(0, 26 - dias_trab_cnt)
-                monto_faltas = dias_faltas * (sueldo_basico / 30.0)
-
-                total_ingresos = sueldo_basico + monto_feriados + monto_horas_extras
-                total_descuentos = adelanto_val + monto_faltas + descuadre_caja_val
-                neto_pagar = total_ingresos - total_descuentos
-
-                datos_boleta = {
-                    "empresa": "TIENDAS PREMIUM E.I.R.L.",
-                    "ruc": "20601234567",
-                    "periodo": f"{NOMBRES_MESES[mes_sel_b-1]} {anio_sel_b}",
-                    "colaborador": colab_sel_b,
-                    "dni": dni_b,
-                    "cargo": cargo_b,
-                    "fecha_inicio": f_inicio_b,
-                    "dias_trabajados": dias_trab_cnt,
-                    "dias_faltas": dias_faltas,
-                    "feriados_trabajados": feriados_trab_cnt,
-                    "horas_extras_hrs": horas_extras_hrs,
-                    "sueldo_basico": sueldo_basico,
-                    "monto_feriados": monto_feriados,
-                    "monto_horas_extras": monto_horas_extras,
-                    "adelanto_sueldo": adelanto_val,
-                    "monto_faltas": monto_faltas,
-                    "descuadre_caja": descuadre_caja_val,
-                    "descuadre_inventario": 0.0,
-                    "consumos_pagar": 0.0,
-                    "total_ingresos": total_ingresos,
-                    "total_descuentos": total_descuentos,
-                    "neto_pagar": neto_pagar
-                }
-
-                st.markdown("---")
-                st.markdown(f"""
-                <div class="boleta-container">
-                    <div class="boleta-header-title">BOLETA DE PAGO — {datos_boleta['empresa']}</div>
-                    <table class="boleta-table">
-                        <tr><td><b>Colaborador:</b> {colab_sel_b}</td><td><b>DNI:</b> {dni_b}</td></tr>
-                        <tr><td><b>Cargo:</b> {cargo_b}</td><td><b>Período:</b> {datos_boleta['periodo']}</td></tr>
-                        <tr><td><b>Días Laborados:</b> {dias_trab_cnt}</td><td><b>Faltas:</b> {dias_faltas}</td></tr>
-                    </table>
-                    <table class="boleta-table">
-                        <tr><th>Concepto</th><th>Cantidad</th><th>Ingresos (S/.)</th><th>Descuentos (S/.)</th></tr>
-                        <tr><td>Sueldo Básico</td><td>{dias_trab_cnt} días</td><td>{sueldo_basico:.2f}</td><td>0.00</td></tr>
-                        <tr><td>Horas Extras</td><td>{horas_extras_hrs:.2f} hrs</td><td>{monto_horas_extras:.2f}</td><td>0.00</td></tr>
-                        <tr><td>Adelanto de Sueldo</td><td>-</td><td>0.00</td><td>{adelanto_val:.2f}</td></tr>
-                        <tr><td>Descuento Faltas</td><td>{dias_faltas} días</td><td>0.00</td><td>{monto_faltas:.2f}</td></tr>
-                        <tr><td>Descuadres de Caja</td><td>-</td><td>0.00</td><td>{descuadre_caja_val:.2f}</td></tr>
-                        <tr style="background:#f3f4f6;"><td><b>TOTALES</b></td><td></td><td><b>S/. {total_ingresos:.2f}</b></td><td><b>S/. {total_descuentos:.2f}</b></td></tr>
-                        <tr style="background:#e5e7eb;"><td colspan="2"><b>NETO A PAGAR</b></td><td colspan="2" style="text-align:right;"><b>S/. {neto_pagar:.2f}</b></td></tr>
-                    </table>
-                </div>
-                """, unsafe_allow_html=True)
-
-                col_dl1, col_dl2 = st.columns(2)
-                excel_b = generar_excel_boleta(datos_boleta)
-                col_dl1.download_button(
-                    label="📥 Descargar Boleta en Excel (.xlsx)",
-                    data=excel_b,
-                    file_name=f"Boleta_{colab_sel_b}_{NOMBRES_MESES[mes_sel_b-1]}_{anio_sel_b}.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    use_container_width=True
-                )
-
-                if REPORTLAB_AVAILABLE:
-                    pdf_b = generar_pdf_boleta(datos_boleta)
-                    if pdf_b:
-                        col_dl2.download_button(
-                            label="📥 Descargar Boleta en PDF (.pdf)",
-                            data=pdf_b,
-                            file_name=f"Boleta_{colab_sel_b}_{NOMBRES_MESES[mes_sel_b-1]}_{anio_sel_b}.pdf",
-                            mime="application/pdf",
-                            use_container_width=True
-                        )
-                else:
-                    col_dl2.info("ReportLab no disponible para exportar PDF.")
-        else:
-                    st.info("No hay colaboradores operativos para generar boletas.")
+        st.info("No hay registros de asistencia en el sistema.")
