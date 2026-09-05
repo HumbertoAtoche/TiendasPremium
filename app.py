@@ -1793,7 +1793,7 @@ elif choice == "Dashboard General":
     st.markdown("<br>", unsafe_allow_html=True)
 
     if fichas_colaboradores:
-        st.markdown("<h4 style='font-size:1rem; color:#111827; margin-bottom:15px;'>📄 Control Operativo y Horas Extras por Colaborador</h4>", unsafe_allow_html=True)
+        st.markdown("<h4 style='font-size:1rem; color:#111827; margin-bottom:15px;'> Control Operativo y Horas Extras por Colaborador</h4>", unsafe_allow_html=True)
 
         for nombre_col, datos in fichas_colaboradores.items():
             with st.expander(f" {nombre_col} — {datos['estado']} | Total Trab.: {datos['tiempo_total_str']} | Extras: {datos['horas_extras_str']}", expanded=True):
