@@ -1001,7 +1001,7 @@ def renderizar_tarjeta_colaborador(row):
         
         st.markdown("<div class='profile-field'>DIRECCIÓN DE DOMICILIO:</div>", unsafe_allow_html=True)
         if link_domicilio.startswith("http"):
-            st.markdown(f"<div class='profile-val'>{direccion_val} — <a href='{link_domicilio}' target='_blank' style='color:#EC3237; text-decoration:none; font-weight:700;'> Ver en Google Maps 🗺️</a></div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='profile-val'>{direccion_val} — <a href='{link_domicilio}' target='_blank' style='color:#EC3237; text-decoration:none; font-weight:700;'> Ver en Google Maps </a></div>", unsafe_allow_html=True)
         else:
             st.markdown(f"<div class='profile-val'>{direccion_val}</div>", unsafe_allow_html=True)
 
@@ -1053,7 +1053,7 @@ def renderizar_calendario_colaborador(nombre_colab, anio, mes):
     html = f"""
     <div class='cal-card'>
         <div class='cal-title'>
-            <span>👤</span> <span>{nombre_colab}</span>
+            <span> </span> <span>{nombre_colab}</span>
         </div>
         <table class='cal-table'>
             <thead>
@@ -1401,7 +1401,7 @@ elif choice == "Solicitar Permiso / Adelanto":
                 
                 det_txt = f"**Fecha Permiso:** {r_sol['fecha_permiso']}" if r_sol['tipo_solicitud'] == "Permiso Laboral" else f"**Monto Solicitado:** S/. {float(r_sol['monto_adelanto']):.2f}"
                 
-                with st.expander(f"📌 {r_sol['tipo_solicitud']} — {r_sol['fecha_registro']} [{est}]"):
+                with st.expander(f" {r_sol['tipo_solicitud']} — {r_sol['fecha_registro']} [{est}]"):
                     st.markdown(f"<span style='background-color:{badge_c}; color:#fff; padding:3px 10px; border-radius:12px; font-size:0.75rem; font-weight:700;'>{est}</span>", unsafe_allow_html=True)
                     st.markdown(f"<br>{det_txt}", unsafe_allow_html=True)
                     st.markdown(f"**Motivo:** {r_sol['motivo']}")
@@ -2330,7 +2330,7 @@ elif choice == "Solicitudes y Permisos":
             
             color_st = "#EAB308" if est_s == "Pendiente" else ("#00A959" if est_s == "Aprobado" else "#EC3237")
             
-            with st.expander(f"📥 {tipo_s} - {nom_s} ({row_sol['fecha_registro']}) [{est_s}]"):
+            with st.expander(f" {tipo_s} - {nom_s} ({row_sol['fecha_registro']}) [{est_s}]"):
                 c_sol1, c_sol2 = st.columns([2, 1])
                 
                 with c_sol1:
