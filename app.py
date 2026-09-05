@@ -2170,7 +2170,7 @@ elif choice == "Boletas de Pago":
             <div class="boleta-container">
                 <div class="boleta-header-title">TIENDAS PREMIUM E.I.R.L.</div>
                 <div style="text-align:center; font-size:0.85rem; font-weight:700; margin-bottom:15px;">
-                    RUC: 20612345678 | PERÍODO DE PAGO: {datos_boleta['periodo']}
+                    RUC: 20612107786 | PERÍODO DE PAGO: {datos_boleta['periodo']}
                 </div>
                 <table class="boleta-table">
                     <tr>
