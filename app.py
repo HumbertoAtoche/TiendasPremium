@@ -17,7 +17,7 @@ except ImportError:
     REPORTLAB_AVAILABLE = False
 
 # =========================================================
-# LOGOS DE TIENDAS PREMIUM — AGREGADO SIN MODIFICAR LA LÓGICA
+# LOGO DE TIENDAS PREMIUM — AGREGADO SIN MODIFICAR LA LÓGICA
 # =========================================================
 import os
 import base64
@@ -27,9 +27,6 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 LOGO_PATH = os.path.join(BASE_DIR, "assets", "logo (2).png")
 LOGO_DISPONIBLE = os.path.isfile(LOGO_PATH)
 LOGO_MIME = mimetypes.guess_type(LOGO_PATH)[0] or "image/png"
-
-FAVICON_PATH = os.path.join(BASE_DIR, "assets", "logo (3).png")
-FAVICON_DISPONIBLE = os.path.isfile(FAVICON_PATH)
 
 @st.cache_data(show_spinner=False)
 def _logo_base64_app39():
@@ -53,7 +50,7 @@ def logo_tag_app39(height=52):
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(
     page_title="Tiendas Premium EIRL",
-    page_icon=FAVICON_PATH if FAVICON_DISPONIBLE else "🏪",
+    page_icon="🏪",
     layout="wide",
     initial_sidebar_state="expanded"
 )
