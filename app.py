@@ -16,10 +16,44 @@ try:
 except ImportError:
     REPORTLAB_AVAILABLE = False
 
+# =========================================================
+# LOGOS DE TIENDAS PREMIUM — AGREGADO SIN MODIFICAR LA LÓGICA
+# =========================================================
+import os
+import base64
+import mimetypes
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+LOGO_PATH = os.path.join(BASE_DIR, "assets", "logo (2).png")
+LOGO_DISPONIBLE = os.path.isfile(LOGO_PATH)
+LOGO_MIME = mimetypes.guess_type(LOGO_PATH)[0] or "image/png"
+
+FAVICON_PATH = os.path.join(BASE_DIR, "assets", "logo (3).png")
+FAVICON_DISPONIBLE = os.path.isfile(FAVICON_PATH)
+
+@st.cache_data(show_spinner=False)
+def _logo_base64_app39():
+    if not LOGO_DISPONIBLE:
+        return ""
+    try:
+        with open(LOGO_PATH, "rb") as f:
+            return base64.b64encode(f.read()).decode("ascii")
+    except Exception:
+        return ""
+
+def logo_tag_app39(height=52):
+    b64 = _logo_base64_app39()
+    if not b64:
+        return ""
+    return (
+        f'<img src="data:{LOGO_MIME};base64,{b64}" alt="Tiendas Premium" '
+        f'style="height:{height}px;max-width:100%;object-fit:contain;display:inline-block;">'
+    )
+
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(
     page_title="Tiendas Premium EIRL",
-    page_icon="🏪",
+    page_icon=FAVICON_PATH if FAVICON_DISPONIBLE else "🏪",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -729,6 +763,7 @@ if not st.session_state.usuario_login:
     c_log1, c_log2, c_log3 = st.columns([1, 1, 1])
     with c_log2:
         with st.container(border=True):
+            st.markdown(f'<div style="text-align:center; padding: 8px 0 12px 0;">{logo_tag_app39(72)}</div>', unsafe_allow_html=True)
             st.markdown("""
                 <div style='text-align: center; padding-bottom: 12px;'>
                     <span style='font-size: 0.75rem; font-weight: 700; letter-spacing: 1.5px; color: #EC3237;'>TIENDAS PREMIUM</span>
@@ -1125,6 +1160,7 @@ def renderizar_calendario_colaborador(nombre_colab, anio, mes):
     return html
 
 # --- SIDEBAR ---
+st.sidebar.markdown(f'<div style="text-align:center; padding: 8px 0 14px 0;">{logo_tag_app39(58)}</div>', unsafe_allow_html=True)
 st.sidebar.markdown("""
     <div style='padding: 8px 0 16px 0;'>
         <div style='font-size: 0.85rem; font-weight: 700; letter-spacing: 1px; color: #FFFFFF;'>
