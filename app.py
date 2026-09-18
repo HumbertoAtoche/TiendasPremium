@@ -790,7 +790,7 @@ rol_actual = USUARIOS[user_actual]["rol"]
 dni_actual = USUARIOS[user_actual]["dni"]
 
 # =========================================================
-# 🎉 SALUDO DE CUMPLEAÑOS — AGREGADO SIN MODIFICAR LA LÓGICA
+# 🎉 SALUDO DE CUMPLEAÑOS
 # =========================================================
 def _parsear_fecha_nac_cumple(f_str):
     """Parseador de fecha propio del módulo de cumpleaños (no depende de
@@ -851,13 +851,13 @@ def _mostrar_modal_cumpleanos(nombre_usuario):
                     ¡Que este nuevo año de vida venga acompañado de muchos éxitos, salud y nuevas metas cumplidas!
                 </p>
                 <p style="font-size: 1.02rem; color:#111827; font-weight:600; margin: 14px auto 0 auto; max-width: 400px; line-height: 1.6;">
-                    ¡Feliz cumpleaños y a seguir creciendo juntos! 🥳🎈
+                    ¡Feliz cumpleaños y a seguir creciendo juntos!
                 </p>
                 <p style="font-size: 0.95rem; color:#6B7280; margin: 18px 0 0 0; font-style: italic;">
                     Con cariño,<br>
                     <strong>Tiendas Premium E.I.R.L.</strong> ❤️💚
                 </p>
-                <div style="font-size: 2rem; margin-top: 14px;">🎈🎊🎁🎈</div>
+                <div style="font-size: 2rem; margin-top: 14px;"></div>
             </div>
         """, unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
