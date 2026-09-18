@@ -839,13 +839,25 @@ def _mostrar_modal_cumpleanos(nombre_usuario):
         st.markdown(f"""
             <div style="text-align:center; padding: 10px 0 4px 0;">
                 <div style="font-size: 3rem; line-height: 1;">🎉🎂🎈</div>
-                <h2 style="margin: 10px 0 6px 0; color:#EC3237;">¡Feliz Cumpleaños, {nombre_usuario.split(' ')[0]}!</h2>
-                <p style="font-size: 1rem; color:#374151; margin: 0 auto; max-width: 380px;">
-                    Toda la familia de <strong>Tiendas Premium E.I.R.L.</strong> te desea un día
-                    lleno de alegría, salud y mucho éxito. Gracias por formar parte de este equipo
-                    y por tu esfuerzo cada día. ¡Que cumplas muchos años más! 🥳
+                <h2 style="margin: 12px 0 4px 0; color:#EC3237;">¡Feliz Cumpleaños, {nombre_usuario.split(' ')[0]}!</h2>
+                <p style="font-size: 0.98rem; color:#374151; margin: 14px auto 0 auto; max-width: 400px; line-height: 1.6; text-align:left;">
+                    De parte de todo el equipo de <strong>Tiendas Premium E.I.R.L.</strong>, queremos
+                    desearte un excelente día, lleno de alegría y buenos momentos junto a tus seres queridos.
                 </p>
-                <div style="font-size: 2rem; margin-top: 10px;">🎈🎊🎁🎈</div>
+                <p style="font-size: 0.98rem; color:#374151; margin: 12px auto 0 auto; max-width: 400px; line-height: 1.6; text-align:left;">
+                    Agradecemos tu compromiso, esfuerzo y dedicación como parte de nuestro equipo. 💪✨
+                </p>
+                <p style="font-size: 0.98rem; color:#374151; margin: 12px auto 0 auto; max-width: 400px; line-height: 1.6; text-align:left;">
+                    ¡Que este nuevo año de vida venga acompañado de muchos éxitos, salud y nuevas metas cumplidas!
+                </p>
+                <p style="font-size: 1.02rem; color:#111827; font-weight:600; margin: 14px auto 0 auto; max-width: 400px; line-height: 1.6;">
+                    ¡Feliz cumpleaños y a seguir creciendo juntos! 🥳🎈
+                </p>
+                <p style="font-size: 0.95rem; color:#6B7280; margin: 18px 0 0 0; font-style: italic;">
+                    Con cariño,<br>
+                    <strong>Tiendas Premium E.I.R.L.</strong> ❤️💚
+                </p>
+                <div style="font-size: 2rem; margin-top: 14px;">🎈🎊🎁🎈</div>
             </div>
         """, unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
