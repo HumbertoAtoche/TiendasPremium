@@ -834,7 +834,7 @@ def _mostrar_modal_cumpleanos(nombre_usuario):
     # navegar por las secciones del sidebar.
     st.session_state[clave_flag] = True
 
-    @st.dialog("")
+    @st.dialog(" ¡Feliz Cumpleaños! ")
     def _dialogo_cumpleanos():
         st.markdown(f"""
             <div style="text-align:center; padding: 10px 0 4px 0;">
