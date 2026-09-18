@@ -792,9 +792,23 @@ dni_actual = USUARIOS[user_actual]["dni"]
 # =========================================================
 # 🎉 SALUDO DE CUMPLEAÑOS — AGREGADO SIN MODIFICAR LA LÓGICA
 # =========================================================
+def _parsear_fecha_nac_cumple(f_str):
+    """Parseador de fecha propio del módulo de cumpleaños (no depende de
+    funciones definidas más abajo en el archivo, para evitar NameError
+    al ejecutarse justo después del login)."""
+    if not f_str or str(f_str).strip() in ["", "-", "None", "nan", "NaT"]:
+        return None
+    txt = str(f_str).split(" ")[0].strip()
+    for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%Y/%m/%d"):
+        try:
+            return datetime.strptime(txt, fmt).date()
+        except Exception:
+            continue
+    return None
+
 def _es_cumpleanos_hoy(fecha_nac_str, hoy_date):
     """Compara día y mes de fecha_nacimiento contra la fecha actual (Perú)."""
-    f_nac = parsear_fecha_segura(fecha_nac_str)
+    f_nac = _parsear_fecha_nac_cumple(fecha_nac_str)
     if f_nac is None:
         return False
     return (f_nac.day == hoy_date.day) and (f_nac.month == hoy_date.month)
