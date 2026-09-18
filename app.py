@@ -829,6 +829,11 @@ def _mostrar_modal_cumpleanos(nombre_usuario):
     if st.session_state.get(clave_flag, False):
         return
 
+    # Se marca como "ya mostrado" de inmediato (no al cerrar el modal),
+    # para que aparezca una sola vez tras el login y no se reabra al
+    # navegar por las secciones del sidebar.
+    st.session_state[clave_flag] = True
+
     @st.dialog(" ¡Feliz Cumpleaños! ")
     def _dialogo_cumpleanos():
         st.markdown(f"""
@@ -845,7 +850,6 @@ def _mostrar_modal_cumpleanos(nombre_usuario):
         """, unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
         if st.button("¡Gracias! Continuar", use_container_width=True):
-            st.session_state[clave_flag] = True
             st.rerun()
 
     _dialogo_cumpleanos()
