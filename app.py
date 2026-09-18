@@ -789,6 +789,58 @@ user_actual = st.session_state.usuario_login
 rol_actual = USUARIOS[user_actual]["rol"]
 dni_actual = USUARIOS[user_actual]["dni"]
 
+# =========================================================
+# 🎉 SALUDO DE CUMPLEAÑOS — AGREGADO SIN MODIFICAR LA LÓGICA
+# =========================================================
+def _es_cumpleanos_hoy(fecha_nac_str, hoy_date):
+    """Compara día y mes de fecha_nacimiento contra la fecha actual (Perú)."""
+    f_nac = parsear_fecha_segura(fecha_nac_str)
+    if f_nac is None:
+        return False
+    return (f_nac.day == hoy_date.day) and (f_nac.month == hoy_date.month)
+
+def _mostrar_modal_cumpleanos(nombre_usuario):
+    hoy_peru = obtener_ahora_peru().date()
+    fila_usuario = st.session_state.empleados[st.session_state.empleados["nombre"] == nombre_usuario]
+
+    if fila_usuario.empty:
+        return
+
+    fecha_nac_usuario = str(fila_usuario.iloc[0].get("fecha_nacimiento", "")).strip()
+
+    if not _es_cumpleanos_hoy(fecha_nac_usuario, hoy_peru):
+        return
+
+    clave_flag = f"cumple_mostrado_{nombre_usuario}_{hoy_peru.isoformat()}"
+    if st.session_state.get(clave_flag, False):
+        return
+
+    @st.dialog(" ¡Feliz Cumpleaños! ")
+    def _dialogo_cumpleanos():
+        st.markdown(f"""
+            <div style="text-align:center; padding: 10px 0 4px 0;">
+                <div style="font-size: 3rem; line-height: 1;">🎉🎂🎈</div>
+                <h2 style="margin: 10px 0 6px 0; color:#EC3237;">¡Feliz Cumpleaños, {nombre_usuario.split(' ')[0]}!</h2>
+                <p style="font-size: 1rem; color:#374151; margin: 0 auto; max-width: 380px;">
+                    Toda la familia de <strong>Tiendas Premium E.I.R.L.</strong> te desea un día
+                    lleno de alegría, salud y mucho éxito. Gracias por formar parte de este equipo
+                    y por tu esfuerzo cada día. ¡Que cumplas muchos años más! 🥳
+                </p>
+                <div style="font-size: 2rem; margin-top: 10px;">🎈🎊🎁🎈</div>
+            </div>
+        """, unsafe_allow_html=True)
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("¡Gracias! Continuar", use_container_width=True):
+            st.session_state[clave_flag] = True
+            st.rerun()
+
+    _dialogo_cumpleanos()
+
+_mostrar_modal_cumpleanos(user_actual)
+# =========================================================
+# FIN SALUDO DE CUMPLEAÑOS
+# =========================================================
+
 def to_excel(df):
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
