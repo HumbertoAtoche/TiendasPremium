@@ -834,7 +834,7 @@ def _mostrar_modal_cumpleanos(nombre_usuario):
     # navegar por las secciones del sidebar.
     st.session_state[clave_flag] = True
 
-    @st.dialog(" ¡Feliz Cumpleaños! ")
+    @st.dialog("")
     def _dialogo_cumpleanos():
         st.markdown(f"""
             <div style="text-align:center; padding: 10px 0 4px 0;">
@@ -845,7 +845,7 @@ def _mostrar_modal_cumpleanos(nombre_usuario):
                     desearte un excelente día, lleno de alegría y buenos momentos junto a tus seres queridos.
                 </p>
                 <p style="font-size: 0.98rem; color:#374151; margin: 12px auto 0 auto; max-width: 400px; line-height: 1.6; text-align:left;">
-                    Agradecemos tu compromiso, esfuerzo y dedicación como parte de nuestro equipo. 💪✨
+                    Agradecemos tu compromiso, esfuerzo y dedicación como parte de nuestro equipo.
                 </p>
                 <p style="font-size: 0.98rem; color:#374151; margin: 12px auto 0 auto; max-width: 400px; line-height: 1.6; text-align:left;">
                     ¡Que este nuevo año de vida venga acompañado de muchos éxitos, salud y nuevas metas cumplidas!
