@@ -230,7 +230,7 @@ def obtener_colaboradores_gsheets():
                     "dni", "nombre", "cargo", "estado", "clave", "rol", 
                     "direccion", "telefono", "fecha_nacimiento", "foto",
                     "contacto_emergencia", "numero_emergencia", "link_domicilio",
-                    "fecha_inicio", "fecha_cese"
+                    "fecha_inicio", "fecha_cese", "en_planilla"
                 ]
                 for col in columnas_req:
                     if col not in df.columns:
@@ -243,18 +243,22 @@ def obtener_colaboradores_gsheets():
         "dni", "nombre", "cargo", "estado", "clave", "rol", 
         "direccion", "telefono", "fecha_nacimiento", "foto",
         "contacto_emergencia", "numero_emergencia", "link_domicilio",
-        "fecha_inicio", "fecha_cese"
+        "fecha_inicio", "fecha_cese", "en_planilla"
     ])
 
-def guardar_colaborador_gsheets(dni, nombre, cargo, estado, clave, rol, direccion="", telefono="", fecha_nacimiento="", foto="", contacto_emergencia="", numero_emergencia="", link_domicilio="", fecha_inicio="", fecha_cese=""):
+def guardar_colaborador_gsheets(dni, nombre, cargo, estado, clave, rol, direccion="", telefono="", fecha_nacimiento="", foto="", contacto_emergencia="", numero_emergencia="", link_domicilio="", fecha_inicio="", fecha_cese="", en_planilla="Sí"):
     if doc_sheets:
         try:
             hoja = doc_sheets.worksheet("Colaboradores")
+            encabezados_actuales = hoja.row_values(1)
+            if "en_planilla" not in encabezados_actuales:
+                hoja.update_cell(1, len(encabezados_actuales) + 1, "en_planilla")
+                encabezados_actuales.append("en_planilla")
             hoja.append_row([
                 str(dni), nombre, cargo, estado, str(clave), rol, 
                 direccion, str(telefono), str(fecha_nacimiento), foto,
                 contacto_emergencia, str(numero_emergencia), link_domicilio,
-                str(fecha_inicio), str(fecha_cese)
+                str(fecha_inicio), str(fecha_cese), en_planilla
             ])
         except Exception as e:
             st.error(f"Error al guardar colaborador en Google Sheets: {e}")
@@ -316,13 +320,14 @@ def guardar_feriado_gsheets(fecha, descripcion):
 # =========================================================
 def obtener_vacaciones_gsheets():
     columnas_vac = ["id_vacacion", "dni", "nombre", "tipo", "fecha_inicio", "fecha_fin",
-                     "dias_tomados", "observacion", "fecha_registro", "registrado_por"]
+                     "dias_tomados", "observacion", "fecha_registro", "registrado_por",
+                     "fecha_recuperacion", "horario_recuperacion", "estado_recuperacion"]
     if doc_sheets:
         try:
             try:
                 hoja = doc_sheets.worksheet("Vacaciones")
             except gspread.exceptions.WorksheetNotFound:
-                hoja = doc_sheets.add_worksheet(title="Vacaciones", rows="200", cols="10")
+                hoja = doc_sheets.add_worksheet(title="Vacaciones", rows="200", cols="13")
                 hoja.append_row(columnas_vac)
             datos = hoja.get_all_records()
             if datos:
@@ -335,33 +340,47 @@ def obtener_vacaciones_gsheets():
             st.error(f"Error al leer Vacaciones: {e}")
     return pd.DataFrame(columns=columnas_vac)
 
-def guardar_vacacion_gsheets(id_vac, dni, nombre, tipo, fecha_inicio, fecha_fin, dias_tomados, observacion, fecha_registro, registrado_por):
+def guardar_vacacion_gsheets(id_vac, dni, nombre, tipo, fecha_inicio, fecha_fin, dias_tomados, observacion, fecha_registro, registrado_por, fecha_recuperacion="", horario_recuperacion="", estado_recuperacion=""):
     if doc_sheets:
         try:
             try:
                 hoja = doc_sheets.worksheet("Vacaciones")
             except gspread.exceptions.WorksheetNotFound:
-                hoja = doc_sheets.add_worksheet(title="Vacaciones", rows="200", cols="10")
+                hoja = doc_sheets.add_worksheet(title="Vacaciones", rows="200", cols="13")
                 hoja.append_row(["id_vacacion", "dni", "nombre", "tipo", "fecha_inicio", "fecha_fin",
-                                  "dias_tomados", "observacion", "fecha_registro", "registrado_por"])
+                                  "dias_tomados", "observacion", "fecha_registro", "registrado_por",
+                                  "fecha_recuperacion", "horario_recuperacion", "estado_recuperacion"])
+
+            encabezados_actuales = hoja.row_values(1)
+            for col_nueva in ["fecha_recuperacion", "horario_recuperacion", "estado_recuperacion"]:
+                if col_nueva not in encabezados_actuales:
+                    hoja.update_cell(1, len(encabezados_actuales) + 1, col_nueva)
+                    encabezados_actuales.append(col_nueva)
+
             hoja.append_row([str(id_vac), str(dni), nombre, tipo, str(fecha_inicio), str(fecha_fin),
-                              float(dias_tomados), observacion, str(fecha_registro), registrado_por])
+                              float(dias_tomados), observacion, str(fecha_registro), registrado_por,
+                              str(fecha_recuperacion), horario_recuperacion, estado_recuperacion])
         except Exception as e:
             st.error(f"Error al guardar vacación: {e}")
 
-def calcular_saldo_vacacional(nombre_colab, fecha_inicio_labores, df_vacaciones):
+def calcular_saldo_vacacional(nombre_colab, fecha_inicio_labores, df_vacaciones, en_planilla="Sí"):
     """
-    Régimen peruano: 30 días calendario de vacaciones por cada año completo de servicio
-    (equivalente a 2.5 días acumulados por mes trabajado). Retorna un diccionario con
-    el detalle del saldo disponible, los días ya gozados y los días pendientes.
+    Régimen REMYPE (Microempresa) en Perú: 15 días calendario de vacaciones por cada
+    año completo de servicio (equivalente a 1.25 días acumulados por mes trabajado),
+    y es el único beneficio social otorgado. Los trabajadores que NO están en
+    planilla formal (en_planilla == "No") no generan este beneficio.
+    Retorna un diccionario con el detalle del saldo disponible.
     """
+    if str(en_planilla).strip().lower() != "sí" and str(en_planilla).strip().lower() != "si":
+        return {"aplica": False, "dias_generados": 0.0, "dias_gozados": 0.0, "saldo_disponible": 0.0}
+
     dias_generados = 0.0
     f_ini = _parsear_fecha_nac_cumple(fecha_inicio_labores)
     if f_ini:
         hoy = obtener_ahora_peru().date()
         meses_completos = (hoy.year - f_ini.year) * 12 + (hoy.month - f_ini.month) - (1 if hoy.day < f_ini.day else 0)
         meses_completos = max(0, meses_completos)
-        dias_generados = round(meses_completos * 2.5, 1)
+        dias_generados = round(meses_completos * 1.25, 1)  # 15 días / 12 meses (REMYPE)
 
     if not df_vacaciones.empty:
         df_v = df_vacaciones[(df_vacaciones["nombre"] == nombre_colab) & (df_vacaciones["tipo"] == "Vacaciones")].copy()
@@ -372,6 +391,7 @@ def calcular_saldo_vacacional(nombre_colab, fecha_inicio_labores, df_vacaciones)
 
     saldo_disponible = round(dias_generados - dias_gozados, 1)
     return {
+        "aplica": True,
         "dias_generados": dias_generados,
         "dias_gozados": dias_gozados,
         "saldo_disponible": max(0.0, saldo_disponible)
@@ -730,6 +750,11 @@ if "empleados" not in st.session_state:
 for col in ["fecha_inicio", "fecha_cese"]:
     if col not in st.session_state.empleados.columns:
         st.session_state.empleados[col] = ""
+
+if "en_planilla" not in st.session_state.empleados.columns:
+    st.session_state.empleados["en_planilla"] = "Sí"
+else:
+    st.session_state.empleados["en_planilla"] = st.session_state.empleados["en_planilla"].replace("", "Sí").fillna("Sí")
 
 if "asistencia" not in st.session_state:
     if doc_sheets:
@@ -2076,6 +2101,9 @@ elif choice == "Gestión Colaboradores":
             cargo_in = f3.selectbox("Cargo", ["Cajero", "Supervisora", "Reposidor", "Gerente de Tienda"])
             rol_in = f4.selectbox("Rol de Sistema", ["operativo", "admin"])
 
+            f3b, f4b = st.columns(2)
+            en_planilla_in = f3b.selectbox("¿Está en Planilla?", ["Sí", "No"], index=0, help="Marca 'No' para trabajadores jóvenes/informales que no están en planilla formal. No se les calculará beneficio vacacional.")
+
             f5, f6 = st.columns(2)
             dir_in = f5.text_input("Dirección de Domicilio")
             tel_in = f6.text_input("Número de Contacto / Teléfono")
@@ -2119,14 +2147,15 @@ elif choice == "Gestión Colaboradores":
                         "numero_emergencia": str(num_emerg_in).strip(),
                         "link_domicilio": link_maps_in.strip(),
                         "fecha_inicio": finicio_str,
-                        "fecha_cese": ""
+                        "fecha_cese": "",
+                        "en_planilla": en_planilla_in
                     }
                     st.session_state.empleados = pd.concat([st.session_state.empleados, pd.DataFrame([nuevo_e])], ignore_index=True)
                     guardar_colaborador_gsheets(
                         dni_in, nom_in, cargo_in, "Activo", clave_in, rol_in, 
                         dir_in, tel_in, fnac_str, foto_nombre,
                         c_emerg_in.strip(), num_emerg_in.strip(), link_maps_in.strip(),
-                        finicio_str, ""
+                        finicio_str, "", en_planilla_in
                     )
                     st.toast("Colaborador y Ficha Técnica registrados")
                     time.sleep(0.3)
@@ -2135,7 +2164,7 @@ elif choice == "Gestión Colaboradores":
     with tab_directorio:
         st.markdown("<h4 style='margin:0; font-size:0.95rem; color:#111827; margin-bottom:12px;'>Directorio Consolidado</h4>", unsafe_allow_html=True)
         cols_mostrar = [
-            c for c in ["dni", "nombre", "cargo", "rol", "telefono", "direccion", "fecha_nacimiento", "contacto_emergencia", "numero_emergencia", "estado", "fecha_inicio", "fecha_cese"] 
+            c for c in ["dni", "nombre", "cargo", "rol", "telefono", "direccion", "fecha_nacimiento", "contacto_emergencia", "numero_emergencia", "estado", "fecha_inicio", "fecha_cese", "en_planilla"] 
             if c in st.session_state.empleados.columns
         ]
         st.dataframe(
@@ -2143,6 +2172,24 @@ elif choice == "Gestión Colaboradores":
             use_container_width=True,
             hide_index=True
         )
+
+        if rol_actual == "admin" and not st.session_state.empleados.empty:
+            st.markdown("<br>", unsafe_allow_html=True)
+            with st.expander("Actualizar Estado de Planilla (REMYPE)"):
+                st.caption("Los trabajadores marcados como 'No' (jóvenes/informales sin planilla) no acumulan beneficio vacacional en el sistema.")
+                colabs_todos_ep = st.session_state.empleados["nombre"].tolist()
+                if colabs_todos_ep:
+                    colab_ep_sel = st.selectbox("Seleccionar colaborador", colabs_todos_ep, key="ep_sel")
+                    fila_ep = st.session_state.empleados[st.session_state.empleados["nombre"] == colab_ep_sel].iloc[0]
+                    valor_actual_ep = fila_ep.get("en_planilla", "Sí") or "Sí"
+                    nuevo_ep = st.selectbox("¿Está en Planilla?", ["Sí", "No"], index=0 if valor_actual_ep == "Sí" else 1, key="ep_valor")
+                    if st.button("Guardar Estado de Planilla", use_container_width=True, key="ep_btn"):
+                        idx_ep = st.session_state.empleados[st.session_state.empleados["nombre"] == colab_ep_sel].index
+                        st.session_state.empleados.loc[idx_ep, "en_planilla"] = nuevo_ep
+                        actualizar_hoja_completa("Colaboradores", st.session_state.empleados)
+                        st.toast(f"Estado de planilla de {colab_ep_sel} actualizado a '{nuevo_ep}'")
+                        time.sleep(0.3)
+                        st.rerun()
 
         if rol_actual == "admin" and not st.session_state.empleados.empty:
             st.markdown("<br>", unsafe_allow_html=True)
@@ -2863,7 +2910,15 @@ elif choice == "Centro de Alertas":
     if not st.session_state.solicitudes.empty:
         solicitudes_pend = len(st.session_state.solicitudes[st.session_state.solicitudes["estado"] == "Pendiente"])
 
-    al1, al2, al3, al4 = st.columns(4)
+    # --- 5. PERMISOS DE SALUD PENDIENTES DE RECUPERAR ---
+    permisos_pend_recup = 0
+    if not st.session_state.vacaciones.empty:
+        permisos_pend_recup = len(st.session_state.vacaciones[
+            (st.session_state.vacaciones["tipo"] == "Permiso de Salud (a recuperar)") &
+            (st.session_state.vacaciones["estado_recuperacion"] != "Recuperado")
+        ])
+
+    al1, al2, al3, al4, al5 = st.columns(5)
     with al1:
         st.markdown(f'<div class="info-card"><div class="info-label">Contratos por Vencer</div><div class="info-value" style="color:{"#EC3237" if contratos_por_vencer else "#111827"};">{len(contratos_por_vencer)}</div></div>', unsafe_allow_html=True)
     with al2:
@@ -2872,6 +2927,8 @@ elif choice == "Centro de Alertas":
         st.markdown(f'<div class="info-card"><div class="info-label">Tardanzas Recurrentes</div><div class="info-value" style="color:{"#EC3237" if tardanzas_recurrentes else "#111827"};">{len(tardanzas_recurrentes)}</div></div>', unsafe_allow_html=True)
     with al4:
         st.markdown(f'<div class="info-card"><div class="info-label">Solicitudes Pendientes</div><div class="info-value" style="color:{"#EC3237" if solicitudes_pend else "#111827"};">{solicitudes_pend}</div></div>', unsafe_allow_html=True)
+    with al5:
+        st.markdown(f'<div class="info-card"><div class="info-label">Permisos de Salud sin Recuperar</div><div class="info-value" style="color:{"#EC3237" if permisos_pend_recup else "#111827"};">{permisos_pend_recup}</div></div>', unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
 
@@ -2913,27 +2970,71 @@ elif choice == "Centro de Alertas":
         else:
             st.success("No hay solicitudes pendientes por atender.")
 
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    with st.container(border=True):
+        st.markdown("##### 🏥 Permisos de salud sin recuperar")
+        if permisos_pend_recup:
+            df_pend_recup_alerta = st.session_state.vacaciones[
+                (st.session_state.vacaciones["tipo"] == "Permiso de Salud (a recuperar)") &
+                (st.session_state.vacaciones["estado_recuperacion"] != "Recuperado")
+            ]
+            for _, r_pr_a in df_pend_recup_alerta.iterrows():
+                st.warning(f"**{r_pr_a['nombre']}** debe recuperar el **{r_pr_a['fecha_recuperacion']}** ({r_pr_a['horario_recuperacion'] or 'horario no especificado'}). Gestionar en 'Gestión de Vacaciones'.")
+        else:
+            st.success("No hay permisos de salud pendientes de recuperación.")
+
 elif choice == "Gestión de Vacaciones":
     st.markdown("""
         <div class="market-header">
-            <h1>Gestión de Vacaciones y Descanso Médico</h1>
-            <p>Control del saldo vacacional según el régimen laboral peruano (2.5 días por mes trabajado)</p>
+            <h1>Gestión de Vacaciones y Permisos de Salud</h1>
+            <p>Régimen REMYPE — 15 días de vacaciones al año (único beneficio social), único para personal en planilla</p>
         </div>
     """, unsafe_allow_html=True)
 
     lista_colabs_activos = st.session_state.empleados[st.session_state.empleados["estado"].astype(str).str.lower() == "activo"]["nombre"].tolist()
 
     with st.container(border=True):
-        st.markdown("##### Registrar Descanso")
-        with st.form("form_registro_vacacion", clear_on_submit=True):
-            v1, v2 = st.columns(2)
-            with v1:
-                colab_vac_sel = st.selectbox("Colaborador", lista_colabs_activos, key="vac_colab_sel")
-                tipo_vac_sel = st.selectbox("Tipo de Descanso", ["Vacaciones", "Descanso Médico", "Licencia sin Goce"], key="vac_tipo_sel")
-            with v2:
-                f_ini_vac = st.date_input("Fecha de Inicio", value=obtener_ahora_peru().date(), key="vac_f_ini")
-                f_fin_vac = st.date_input("Fecha de Fin", value=obtener_ahora_peru().date(), key="vac_f_fin")
+        st.markdown("##### Registrar Descanso / Permiso")
 
+        c_tipo1, c_tipo2 = st.columns(2)
+        with c_tipo1:
+            colab_vac_sel = st.selectbox("Colaborador", lista_colabs_activos, key="vac_colab_sel")
+        with c_tipo2:
+            tipo_vac_sel = st.selectbox(
+                "Tipo",
+                ["Vacaciones", "Permiso de Salud (a recuperar)", "Licencia sin Goce"],
+                key="vac_tipo_sel",
+                help="'Permiso de Salud' no se otorga como descanso médico pagado: se registra como permiso y el trabajador debe recuperar el día, usualmente el domingo."
+            )
+
+        fila_emp_check = st.session_state.empleados[st.session_state.empleados["nombre"] == colab_vac_sel]
+        en_planilla_check = str(fila_emp_check.iloc[0].get("en_planilla", "Sí")) if not fila_emp_check.empty else "Sí"
+        if tipo_vac_sel == "Vacaciones" and en_planilla_check.strip().lower() not in ("sí", "si"):
+            st.warning(f"**{colab_vac_sel}** no está en planilla formal, por lo que no genera beneficio vacacional. Puedes registrar igual el descanso, pero no se contabilizará contra ningún saldo.")
+
+        f_ini_vac = st.date_input("Fecha de Inicio", value=obtener_ahora_peru().date(), key="vac_f_ini")
+        f_fin_vac = st.date_input("Fecha de Fin", value=obtener_ahora_peru().date(), key="vac_f_fin")
+
+        fecha_recup_val = ""
+        horario_recup_val = ""
+        if tipo_vac_sel == "Permiso de Salud (a recuperar)":
+            st.markdown("##### Recuperación del día (usualmente domingo)")
+            hoy_v = obtener_ahora_peru().date()
+            dias_hasta_domingo = (6 - hoy_v.weekday()) % 7
+            dias_hasta_domingo = dias_hasta_domingo if dias_hasta_domingo > 0 else 7
+            proximo_domingo = hoy_v + timedelta(days=dias_hasta_domingo)
+            r1, r2 = st.columns(2)
+            with r1:
+                fecha_recup_sel = st.date_input("Fecha a Recuperar", value=proximo_domingo, key="vac_f_recup")
+            with r2:
+                horario_recup_val = st.text_input("Horario de Recuperación", value="3:30 pm - 9:00 pm", key="vac_horario_recup")
+            fecha_recup_val = str(fecha_recup_sel)
+            dias_semana_v = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
+            st.caption(f"Se recuperará el **{fecha_recup_sel.strftime('%d/%m/%Y')} ({dias_semana_v[fecha_recup_sel.weekday()]})**, de **{horario_recup_val}**.")
+            st.info("Este horario equivale a la jornada completa del día a recuperar, según política de la empresa (no se compara minuto a minuto contra la jornada base de 5h45m usada para el cálculo de horas extras diarias).")
+
+        with st.form("form_registro_vacacion", clear_on_submit=True):
             obs_vac = st.text_area("Observación (opcional)", key="vac_obs")
             enviar_vac = st.form_submit_button("Registrar", use_container_width=True)
 
@@ -2944,16 +3045,21 @@ elif choice == "Gestión de Vacaciones":
                     dias_calc = (f_fin_vac - f_ini_vac).days + 1
                     fila_emp_vac = st.session_state.empleados[st.session_state.empleados["nombre"] == colab_vac_sel].iloc[0]
                     id_vac_nuevo = f"VAC-{int(time.time())}"
+                    estado_recup_val = "Pendiente" if tipo_vac_sel == "Permiso de Salud (a recuperar)" else ""
+
                     guardar_vacacion_gsheets(
                         id_vac_nuevo, fila_emp_vac["dni"], colab_vac_sel, tipo_vac_sel,
                         f_ini_vac, f_fin_vac, dias_calc, obs_vac,
-                        obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S"), user_actual
+                        obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S"), user_actual,
+                        fecha_recup_val, horario_recup_val, estado_recup_val
                     )
                     nuevo_row_vac = {
                         "id_vacacion": id_vac_nuevo, "dni": fila_emp_vac["dni"], "nombre": colab_vac_sel,
                         "tipo": tipo_vac_sel, "fecha_inicio": str(f_ini_vac), "fecha_fin": str(f_fin_vac),
                         "dias_tomados": dias_calc, "observacion": obs_vac,
-                        "fecha_registro": obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S"), "registrado_por": user_actual
+                        "fecha_registro": obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S"), "registrado_por": user_actual,
+                        "fecha_recuperacion": fecha_recup_val, "horario_recuperacion": horario_recup_val,
+                        "estado_recuperacion": estado_recup_val
                     }
                     st.session_state.vacaciones = pd.concat([pd.DataFrame([nuevo_row_vac]), st.session_state.vacaciones], ignore_index=True)
                     st.toast(f"{tipo_vac_sel} registrado(a) para {colab_vac_sel} ({dias_calc} día(s))")
@@ -2961,17 +3067,22 @@ elif choice == "Gestión de Vacaciones":
                     st.rerun()
 
     st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("##### Saldo Vacacional por Colaborador")
+    st.markdown("##### Saldo Vacacional por Colaborador (solo personal en planilla)")
 
     filas_saldo = []
+    filas_no_planilla = []
     for _, r_emp_v in st.session_state.empleados[st.session_state.empleados["estado"].astype(str).str.lower() == "activo"].iterrows():
-        saldo_info = calcular_saldo_vacacional(r_emp_v["nombre"], r_emp_v.get("fecha_inicio", ""), st.session_state.vacaciones)
-        filas_saldo.append({
-            "Colaborador": r_emp_v["nombre"],
-            "Días Generados": saldo_info["dias_generados"],
-            "Días Gozados": saldo_info["dias_gozados"],
-            "Saldo Disponible": saldo_info["saldo_disponible"]
-        })
+        en_pl = str(r_emp_v.get("en_planilla", "Sí")) or "Sí"
+        saldo_info = calcular_saldo_vacacional(r_emp_v["nombre"], r_emp_v.get("fecha_inicio", ""), st.session_state.vacaciones, en_planilla=en_pl)
+        if saldo_info["aplica"]:
+            filas_saldo.append({
+                "Colaborador": r_emp_v["nombre"],
+                "Días Generados": saldo_info["dias_generados"],
+                "Días Gozados": saldo_info["dias_gozados"],
+                "Saldo Disponible": saldo_info["saldo_disponible"]
+            })
+        else:
+            filas_no_planilla.append(r_emp_v["nombre"])
 
     if filas_saldo:
         df_saldo_vac = pd.DataFrame(filas_saldo)
@@ -2987,7 +3098,38 @@ elif choice == "Gestión de Vacaciones":
         )
         st.download_button("Exportar Saldos a Excel", to_excel(df_saldo_vac), "Saldos_Vacacionales.xlsx", use_container_width=True)
     else:
-        st.info("No hay colaboradores activos registrados.")
+        st.info("No hay colaboradores activos en planilla con beneficio vacacional aplicable.")
+
+    if filas_no_planilla:
+        st.caption(f"⚪ No están en planilla (sin beneficio vacacional): {', '.join(filas_no_planilla)}")
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("##### Permisos de Salud Pendientes de Recuperar")
+
+    if not st.session_state.vacaciones.empty:
+        df_pend_recup = st.session_state.vacaciones[
+            (st.session_state.vacaciones["tipo"] == "Permiso de Salud (a recuperar)") &
+            (st.session_state.vacaciones["estado_recuperacion"] != "Recuperado")
+        ]
+    else:
+        df_pend_recup = pd.DataFrame()
+
+    if not df_pend_recup.empty:
+        for idx_pr, r_pr in df_pend_recup.iterrows():
+            with st.container(border=True):
+                pr1, pr2 = st.columns([3, 1])
+                with pr1:
+                    st.markdown(f"**{r_pr['nombre']}** — Permiso del **{r_pr['fecha_inicio']}**")
+                    st.caption(f"Recuperar el **{r_pr['fecha_recuperacion']}**, horario: **{r_pr['horario_recuperacion'] or 'No especificado'}**")
+                with pr2:
+                    if st.button("Marcar Recuperado", key=f"recup_btn_{idx_pr}", use_container_width=True):
+                        st.session_state.vacaciones.at[idx_pr, "estado_recuperacion"] = "Recuperado"
+                        actualizar_hoja_completa("Vacaciones", st.session_state.vacaciones)
+                        st.toast("Marcado como recuperado")
+                        time.sleep(0.3)
+                        st.rerun()
+    else:
+        st.success("No hay permisos de salud pendientes de recuperación.")
 
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("##### Historial de Descansos Registrados")
@@ -3026,24 +3168,28 @@ elif choice == "Mis Vacaciones":
 
     fila_mi_emp = st.session_state.empleados[st.session_state.empleados["nombre"] == user_actual]
     fecha_ingreso_mi = fila_mi_emp.iloc[0].get("fecha_inicio", "") if not fila_mi_emp.empty else ""
+    en_planilla_mi = str(fila_mi_emp.iloc[0].get("en_planilla", "Sí")) if not fila_mi_emp.empty else "Sí"
 
-    mi_saldo = calcular_saldo_vacacional(user_actual, fecha_ingreso_mi, st.session_state.vacaciones)
+    mi_saldo = calcular_saldo_vacacional(user_actual, fecha_ingreso_mi, st.session_state.vacaciones, en_planilla=en_planilla_mi)
 
-    mv1, mv2, mv3 = st.columns(3)
-    with mv1:
-        st.markdown(f'<div class="info-card"><div class="info-label">Días Generados</div><div class="info-value">{mi_saldo["dias_generados"]}</div></div>', unsafe_allow_html=True)
-    with mv2:
-        st.markdown(f'<div class="info-card"><div class="info-label">Días Gozados</div><div class="info-value">{mi_saldo["dias_gozados"]}</div></div>', unsafe_allow_html=True)
-    with mv3:
-        st.markdown(f'<div class="info-card"><div class="info-label">Saldo Disponible</div><div class="info-value" style="color:#00A959;">{mi_saldo["saldo_disponible"]}</div></div>', unsafe_allow_html=True)
+    if not mi_saldo["aplica"]:
+        st.warning("No estás registrado en planilla formal, por lo que no acumulas beneficio vacacional en el sistema. Si tienes dudas sobre tu situación laboral, consulta con administración.")
+    else:
+        mv1, mv2, mv3 = st.columns(3)
+        with mv1:
+            st.markdown(f'<div class="info-card"><div class="info-label">Días Generados</div><div class="info-value">{mi_saldo["dias_generados"]}</div></div>', unsafe_allow_html=True)
+        with mv2:
+            st.markdown(f'<div class="info-card"><div class="info-label">Días Gozados</div><div class="info-value">{mi_saldo["dias_gozados"]}</div></div>', unsafe_allow_html=True)
+        with mv3:
+            st.markdown(f'<div class="info-card"><div class="info-label">Saldo Disponible</div><div class="info-value" style="color:#00A959;">{mi_saldo["saldo_disponible"]}</div></div>', unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("##### Mi Historial de Descansos")
+    st.markdown("##### Mi Historial de Descansos y Permisos")
     if not st.session_state.vacaciones.empty:
         df_mis_vac = st.session_state.vacaciones[st.session_state.vacaciones["nombre"] == user_actual]
         if not df_mis_vac.empty:
             st.dataframe(
-                df_mis_vac[["tipo", "fecha_inicio", "fecha_fin", "dias_tomados", "observacion"]].sort_values("fecha_inicio", ascending=False),
+                df_mis_vac[["tipo", "fecha_inicio", "fecha_fin", "dias_tomados", "fecha_recuperacion", "horario_recuperacion", "estado_recuperacion", "observacion"]].sort_values("fecha_inicio", ascending=False),
                 use_container_width=True,
                 hide_index=True
             )
