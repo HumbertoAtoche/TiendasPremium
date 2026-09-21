@@ -310,6 +310,73 @@ def guardar_feriado_gsheets(fecha, descripcion):
             hoja.append_row([str(fecha), descripcion])
         except Exception as e:
             st.error(f"Error al guardar feriado: {e}")
+# =========================================================
+# NUEVO MÓDULO: GESTIÓN DE VACACIONES / DESCANSO MÉDICO
+# Agregado sin alterar ninguna función ni hoja existente.
+# =========================================================
+def obtener_vacaciones_gsheets():
+    columnas_vac = ["id_vacacion", "dni", "nombre", "tipo", "fecha_inicio", "fecha_fin",
+                     "dias_tomados", "observacion", "fecha_registro", "registrado_por"]
+    if doc_sheets:
+        try:
+            try:
+                hoja = doc_sheets.worksheet("Vacaciones")
+            except Exception:
+                hoja = doc_sheets.add_worksheet(title="Vacaciones", rows="200", cols="10")
+                hoja.append_row(columnas_vac)
+            datos = hoja.get_all_records()
+            if datos:
+                df = pd.DataFrame(datos)
+                for col in columnas_vac:
+                    if col not in df.columns:
+                        df[col] = ""
+                return df
+        except Exception as e:
+            st.error(f"Error al leer Vacaciones: {e}")
+    return pd.DataFrame(columns=columnas_vac)
+
+def guardar_vacacion_gsheets(id_vac, dni, nombre, tipo, fecha_inicio, fecha_fin, dias_tomados, observacion, fecha_registro, registrado_por):
+    if doc_sheets:
+        try:
+            try:
+                hoja = doc_sheets.worksheet("Vacaciones")
+            except Exception:
+                hoja = doc_sheets.add_worksheet(title="Vacaciones", rows="200", cols="10")
+                hoja.append_row(["id_vacacion", "dni", "nombre", "tipo", "fecha_inicio", "fecha_fin",
+                                  "dias_tomados", "observacion", "fecha_registro", "registrado_por"])
+            hoja.append_row([str(id_vac), str(dni), nombre, tipo, str(fecha_inicio), str(fecha_fin),
+                              float(dias_tomados), observacion, str(fecha_registro), registrado_por])
+        except Exception as e:
+            st.error(f"Error al guardar vacación: {e}")
+
+def calcular_saldo_vacacional(nombre_colab, fecha_inicio_labores, df_vacaciones):
+    """
+    Régimen peruano: 30 días calendario de vacaciones por cada año completo de servicio
+    (equivalente a 2.5 días acumulados por mes trabajado). Retorna un diccionario con
+    el detalle del saldo disponible, los días ya gozados y los días pendientes.
+    """
+    dias_generados = 0.0
+    f_ini = _parsear_fecha_nac_cumple(fecha_inicio_labores)
+    if f_ini:
+        hoy = obtener_ahora_peru().date()
+        meses_completos = (hoy.year - f_ini.year) * 12 + (hoy.month - f_ini.month) - (1 if hoy.day < f_ini.day else 0)
+        meses_completos = max(0, meses_completos)
+        dias_generados = round(meses_completos * 2.5, 1)
+
+    if not df_vacaciones.empty:
+        df_v = df_vacaciones[(df_vacaciones["nombre"] == nombre_colab) & (df_vacaciones["tipo"] == "Vacaciones")].copy()
+        df_v["dias_num"] = pd.to_numeric(df_v["dias_tomados"], errors="coerce").fillna(0)
+        dias_gozados = df_v["dias_num"].sum()
+    else:
+        dias_gozados = 0.0
+
+    saldo_disponible = round(dias_generados - dias_gozados, 1)
+    return {
+        "dias_generados": dias_generados,
+        "dias_gozados": dias_gozados,
+        "saldo_disponible": max(0.0, saldo_disponible)
+    }
+
 def actualizar_hoja_completa(nombre_hoja, df):
     if doc_sheets:
         try:
@@ -746,6 +813,10 @@ if "feriados" not in st.session_state:
             {"fecha": "2026-12-09", "descripcion": "Batalla de Ayacucho"},
             {"fecha": "2026-12-25", "descripcion": "Navidad"}
         ])
+
+# --- NUEVO: ESTADO DE SESIÓN PARA EL MÓDULO DE VACACIONES ---
+if "vacaciones" not in st.session_state:
+    st.session_state.vacaciones = obtener_vacaciones_gsheets()
 
 USUARIOS = {}
 USUARIOS = {}
@@ -1260,9 +1331,9 @@ st.sidebar.markdown(f"""
 """, unsafe_allow_html=True)
 
 if rol_actual == "admin":
-    menu = ["Dashboard General", "Gestión Colaboradores", "Boletas de Pago", "Solicitudes y Permisos", "Historial de Descuadres", "Historial de Asistencias"]
+    menu = ["Dashboard General", "Centro de Alertas", "Gestión Colaboradores", "Gestión de Vacaciones", "Boletas de Pago", "Solicitudes y Permisos", "Historial de Descuadres", "Historial de Asistencias"]
 else:
-    menu = ["Marcar Asistencia", "Registrar Descuadre", "Mi Ficha Técnica", "Solicitar Permiso / Adelanto", "Mi Dashboard Mensual"]
+    menu = ["Marcar Asistencia", "Registrar Descuadre", "Mi Ficha Técnica", "Mis Vacaciones", "Solicitar Permiso / Adelanto", "Mi Dashboard Mensual"]
 
 choice = st.sidebar.radio("Navegación", menu)
 
@@ -2742,6 +2813,244 @@ elif choice == "Historial de Asistencias":
             st.info("No se encontraron registros de asistencia para los filtros seleccionados.")
     else:
         st.info("No hay marcaciones de asistencia registradas en el sistema.")
+
+elif choice == "Centro de Alertas":
+    st.markdown("""
+        <div class="market-header">
+            <h1>Centro de Alertas y Notificaciones</h1>
+            <p>Avisos automáticos que el sistema detecta a partir de tus propios datos</p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    hoy_alerta = obtener_ahora_peru().date()
+    df_emp_activos = st.session_state.empleados[st.session_state.empleados["estado"].astype(str).str.lower() == "activo"].copy()
+
+    # --- 1. CONTRATOS POR VENCER (próximos 15 días) ---
+    contratos_por_vencer = []
+    for _, r_emp in df_emp_activos.iterrows():
+        f_cese = _parsear_fecha_nac_cumple(r_emp.get("fecha_cese", ""))
+        if f_cese:
+            dias_rest = (f_cese - hoy_alerta).days
+            if 0 <= dias_rest <= 15:
+                contratos_por_vencer.append((r_emp["nombre"], f_cese, dias_rest))
+
+    # --- 2. CUMPLEAÑOS EN LOS PRÓXIMOS 7 DÍAS ---
+    cumples_prox = []
+    for _, r_emp in df_emp_activos.iterrows():
+        f_nac = _parsear_fecha_nac_cumple(r_emp.get("fecha_nacimiento", ""))
+        if f_nac:
+            prox_cumple = f_nac.replace(year=hoy_alerta.year)
+            if prox_cumple < hoy_alerta:
+                prox_cumple = prox_cumple.replace(year=hoy_alerta.year + 1)
+            dias_para_cumple = (prox_cumple - hoy_alerta).days
+            if 0 <= dias_para_cumple <= 7:
+                cumples_prox.append((r_emp["nombre"], prox_cumple, dias_para_cumple))
+
+    # --- 3. TARDANZAS RECURRENTES EN EL MES ACTUAL (3 o más) ---
+    tardanzas_recurrentes = []
+    if not st.session_state.asistencia.empty:
+        mes_actual_str = hoy_alerta.strftime("%Y-%m")
+        df_asist_mes = st.session_state.asistencia[
+            st.session_state.asistencia["fecha"].astype(str).str.startswith(mes_actual_str)
+        ]
+        for nombre_c in df_asist_mes["nombre"].unique():
+            metrica_c = calcular_metricas_puntualidad(df_asist_mes, nombre_c)
+            if metrica_c["tardanzas"] >= 3:
+                tardanzas_recurrentes.append((nombre_c, metrica_c["tardanzas"], metrica_c["minutos_acumulados"]))
+
+    # --- 4. SOLICITUDES PENDIENTES DE RESPUESTA ---
+    solicitudes_pend = 0
+    if not st.session_state.solicitudes.empty:
+        solicitudes_pend = len(st.session_state.solicitudes[st.session_state.solicitudes["estado"] == "Pendiente"])
+
+    al1, al2, al3, al4 = st.columns(4)
+    with al1:
+        st.markdown(f'<div class="info-card"><div class="info-label">Contratos por Vencer</div><div class="info-value" style="color:{"#EC3237" if contratos_por_vencer else "#111827"};">{len(contratos_por_vencer)}</div></div>', unsafe_allow_html=True)
+    with al2:
+        st.markdown(f'<div class="info-card"><div class="info-label">Cumpleaños esta Semana</div><div class="info-value" style="color:#EC3237;">{len(cumples_prox)}</div></div>', unsafe_allow_html=True)
+    with al3:
+        st.markdown(f'<div class="info-card"><div class="info-label">Tardanzas Recurrentes</div><div class="info-value" style="color:{"#EC3237" if tardanzas_recurrentes else "#111827"};">{len(tardanzas_recurrentes)}</div></div>', unsafe_allow_html=True)
+    with al4:
+        st.markdown(f'<div class="info-card"><div class="info-label">Solicitudes Pendientes</div><div class="info-value" style="color:{"#EC3237" if solicitudes_pend else "#111827"};">{solicitudes_pend}</div></div>', unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    with st.container(border=True):
+        st.markdown("##### ⏳ Contratos próximos a vencer (15 días)")
+        if contratos_por_vencer:
+            for nom_c, f_c, d_r in sorted(contratos_por_vencer, key=lambda x: x[2]):
+                st.warning(f"**{nom_c}** — Cese programado el **{f_c.strftime('%d/%m/%Y')}** (en {d_r} día(s)). Evaluar renovación o cese.")
+        else:
+            st.success("No hay contratos por vencer en los próximos 15 días.")
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    with st.container(border=True):
+        st.markdown("##### 🎂 Cumpleaños de la próxima semana")
+        if cumples_prox:
+            for nom_c, f_c, d_r in sorted(cumples_prox, key=lambda x: x[2]):
+                etiqueta = "¡Hoy!" if d_r == 0 else f"en {d_r} día(s)"
+                st.info(f"**{nom_c}** cumple años el **{f_c.strftime('%d/%m')}** ({etiqueta}).")
+        else:
+            st.info("Sin cumpleaños en los próximos 7 días.")
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    with st.container(border=True):
+        st.markdown("##### ⏰ Colaboradores con tardanzas recurrentes (mes actual)")
+        if tardanzas_recurrentes:
+            for nom_c, cnt_t, mins_t in sorted(tardanzas_recurrentes, key=lambda x: -x[1]):
+                st.error(f"**{nom_c}** — {cnt_t} tardanza(s) este mes, acumulando {mins_t} minuto(s) de retraso.")
+        else:
+            st.success("Ningún colaborador supera las 3 tardanzas este mes.")
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    with st.container(border=True):
+        st.markdown("##### 📝 Solicitudes esperando respuesta")
+        if solicitudes_pend:
+            st.warning(f"Tienes **{solicitudes_pend}** solicitud(es) pendiente(s) de revisión en la sección 'Solicitudes y Permisos'.")
+        else:
+            st.success("No hay solicitudes pendientes por atender.")
+
+elif choice == "Gestión de Vacaciones":
+    st.markdown("""
+        <div class="market-header">
+            <h1>Gestión de Vacaciones y Descanso Médico</h1>
+            <p>Control del saldo vacacional según el régimen laboral peruano (2.5 días por mes trabajado)</p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    lista_colabs_activos = st.session_state.empleados[st.session_state.empleados["estado"].astype(str).str.lower() == "activo"]["nombre"].tolist()
+
+    with st.container(border=True):
+        st.markdown("##### Registrar Descanso")
+        with st.form("form_registro_vacacion", clear_on_submit=True):
+            v1, v2 = st.columns(2)
+            with v1:
+                colab_vac_sel = st.selectbox("Colaborador", lista_colabs_activos, key="vac_colab_sel")
+                tipo_vac_sel = st.selectbox("Tipo de Descanso", ["Vacaciones", "Descanso Médico", "Licencia sin Goce"], key="vac_tipo_sel")
+            with v2:
+                f_ini_vac = st.date_input("Fecha de Inicio", value=obtener_ahora_peru().date(), key="vac_f_ini")
+                f_fin_vac = st.date_input("Fecha de Fin", value=obtener_ahora_peru().date(), key="vac_f_fin")
+
+            obs_vac = st.text_area("Observación (opcional)", key="vac_obs")
+            enviar_vac = st.form_submit_button("Registrar", use_container_width=True)
+
+            if enviar_vac:
+                if f_fin_vac < f_ini_vac:
+                    st.error("La fecha de fin no puede ser anterior a la fecha de inicio.")
+                else:
+                    dias_calc = (f_fin_vac - f_ini_vac).days + 1
+                    fila_emp_vac = st.session_state.empleados[st.session_state.empleados["nombre"] == colab_vac_sel].iloc[0]
+                    id_vac_nuevo = f"VAC-{int(time.time())}"
+                    guardar_vacacion_gsheets(
+                        id_vac_nuevo, fila_emp_vac["dni"], colab_vac_sel, tipo_vac_sel,
+                        f_ini_vac, f_fin_vac, dias_calc, obs_vac,
+                        obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S"), user_actual
+                    )
+                    nuevo_row_vac = {
+                        "id_vacacion": id_vac_nuevo, "dni": fila_emp_vac["dni"], "nombre": colab_vac_sel,
+                        "tipo": tipo_vac_sel, "fecha_inicio": str(f_ini_vac), "fecha_fin": str(f_fin_vac),
+                        "dias_tomados": dias_calc, "observacion": obs_vac,
+                        "fecha_registro": obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S"), "registrado_por": user_actual
+                    }
+                    st.session_state.vacaciones = pd.concat([pd.DataFrame([nuevo_row_vac]), st.session_state.vacaciones], ignore_index=True)
+                    st.toast(f"{tipo_vac_sel} registrado(a) para {colab_vac_sel} ({dias_calc} día(s))")
+                    time.sleep(0.3)
+                    st.rerun()
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("##### Saldo Vacacional por Colaborador")
+
+    filas_saldo = []
+    for _, r_emp_v in st.session_state.empleados[st.session_state.empleados["estado"].astype(str).str.lower() == "activo"].iterrows():
+        saldo_info = calcular_saldo_vacacional(r_emp_v["nombre"], r_emp_v.get("fecha_inicio", ""), st.session_state.vacaciones)
+        filas_saldo.append({
+            "Colaborador": r_emp_v["nombre"],
+            "Días Generados": saldo_info["dias_generados"],
+            "Días Gozados": saldo_info["dias_gozados"],
+            "Saldo Disponible": saldo_info["saldo_disponible"]
+        })
+
+    if filas_saldo:
+        df_saldo_vac = pd.DataFrame(filas_saldo)
+        st.dataframe(
+            df_saldo_vac,
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "Días Generados": st.column_config.NumberColumn(format="%.1f días"),
+                "Días Gozados": st.column_config.NumberColumn(format="%.1f días"),
+                "Saldo Disponible": st.column_config.NumberColumn(format="%.1f días"),
+            }
+        )
+        st.download_button("Exportar Saldos a Excel", to_excel(df_saldo_vac), "Saldos_Vacacionales.xlsx", use_container_width=True)
+    else:
+        st.info("No hay colaboradores activos registrados.")
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("##### Historial de Descansos Registrados")
+    if not st.session_state.vacaciones.empty:
+        st.dataframe(
+            st.session_state.vacaciones.sort_values("fecha_registro", ascending=False),
+            use_container_width=True,
+            hide_index=True
+        )
+        st.download_button("Exportar Historial a Excel", to_excel(st.session_state.vacaciones), "Historial_Vacaciones.xlsx", use_container_width=True)
+
+        with st.expander("Eliminar Registro de Descanso"):
+            opciones_vac_del = [f"{i} | {r['nombre']} | {r['tipo']} | {r['fecha_inicio']} a {r['fecha_fin']}" for i, r in st.session_state.vacaciones.iterrows()]
+            sel_vac_del = st.selectbox("Seleccionar Registro a Eliminar", opciones_vac_del, key="vac_del_sel")
+            confirm_vac_del = st.checkbox("Confirmar eliminación", key="vac_del_confirm")
+            if st.button("Eliminar Registro", type="primary", use_container_width=True, key="vac_del_btn"):
+                if confirm_vac_del:
+                    idx_vac_del = int(sel_vac_del.split(" | ")[0])
+                    st.session_state.vacaciones = st.session_state.vacaciones.drop(idx_vac_del).reset_index(drop=True)
+                    actualizar_hoja_completa("Vacaciones", st.session_state.vacaciones)
+                    st.toast("Registro eliminado correctamente")
+                    time.sleep(0.3)
+                    st.rerun()
+                else:
+                    st.warning("Marca la casilla de confirmación antes de eliminar.")
+    else:
+        st.info("Sin descansos registrados todavía.")
+
+elif choice == "Mis Vacaciones":
+    st.markdown("""
+        <div class="market-header">
+            <h1>Mi Saldo de Vacaciones</h1>
+            <p>Consulta tus días generados, gozados y disponibles</p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    fila_mi_emp = st.session_state.empleados[st.session_state.empleados["nombre"] == user_actual]
+    fecha_ingreso_mi = fila_mi_emp.iloc[0].get("fecha_inicio", "") if not fila_mi_emp.empty else ""
+
+    mi_saldo = calcular_saldo_vacacional(user_actual, fecha_ingreso_mi, st.session_state.vacaciones)
+
+    mv1, mv2, mv3 = st.columns(3)
+    with mv1:
+        st.markdown(f'<div class="info-card"><div class="info-label">Días Generados</div><div class="info-value">{mi_saldo["dias_generados"]}</div></div>', unsafe_allow_html=True)
+    with mv2:
+        st.markdown(f'<div class="info-card"><div class="info-label">Días Gozados</div><div class="info-value">{mi_saldo["dias_gozados"]}</div></div>', unsafe_allow_html=True)
+    with mv3:
+        st.markdown(f'<div class="info-card"><div class="info-label">Saldo Disponible</div><div class="info-value" style="color:#00A959;">{mi_saldo["saldo_disponible"]}</div></div>', unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("##### Mi Historial de Descansos")
+    if not st.session_state.vacaciones.empty:
+        df_mis_vac = st.session_state.vacaciones[st.session_state.vacaciones["nombre"] == user_actual]
+        if not df_mis_vac.empty:
+            st.dataframe(
+                df_mis_vac[["tipo", "fecha_inicio", "fecha_fin", "dias_tomados", "observacion"]].sort_values("fecha_inicio", ascending=False),
+                use_container_width=True,
+                hide_index=True
+            )
+        else:
+            st.info("Aún no tienes descansos registrados.")
+    else:
+        st.info("Aún no tienes descansos registrados.")
 
 # --- PIE DE PÁGINA (FOOTER ESTILO WEB/APP) ---
 st.markdown("""
