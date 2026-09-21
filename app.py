@@ -321,7 +321,7 @@ def obtener_vacaciones_gsheets():
         try:
             try:
                 hoja = doc_sheets.worksheet("Vacaciones")
-            except Exception:
+            except gspread.exceptions.WorksheetNotFound:
                 hoja = doc_sheets.add_worksheet(title="Vacaciones", rows="200", cols="10")
                 hoja.append_row(columnas_vac)
             datos = hoja.get_all_records()
@@ -340,7 +340,7 @@ def guardar_vacacion_gsheets(id_vac, dni, nombre, tipo, fecha_inicio, fecha_fin,
         try:
             try:
                 hoja = doc_sheets.worksheet("Vacaciones")
-            except Exception:
+            except gspread.exceptions.WorksheetNotFound:
                 hoja = doc_sheets.add_worksheet(title="Vacaciones", rows="200", cols="10")
                 hoja.append_row(["id_vacacion", "dni", "nombre", "tipo", "fecha_inicio", "fecha_fin",
                                   "dias_tomados", "observacion", "fecha_registro", "registrado_por"])
