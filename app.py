@@ -351,6 +351,11 @@ def guardar_vacacion_gsheets(id_vac, dni, nombre, tipo, fecha_inicio, fecha_fin,
                                   "dias_tomados", "observacion", "fecha_registro", "registrado_por",
                                   "fecha_recuperacion", "horario_recuperacion", "estado_recuperacion"])
 
+            # Asegurar que la hoja Vacaciones tenga las 13 columnas requeridas.
+            # La hoja existente puede haber sido creada originalmente con solo 10 columnas.
+            if hoja.col_count < 13:
+                hoja.resize(cols=13)
+
             encabezados_actuales = hoja.row_values(1)
             for col_nueva in ["fecha_recuperacion", "horario_recuperacion", "estado_recuperacion"]:
                 if col_nueva not in encabezados_actuales:
