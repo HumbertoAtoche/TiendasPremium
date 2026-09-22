@@ -639,6 +639,21 @@ st.markdown("""
         color: #94a3b8 !important;
         border: 1px dashed #e2e8f0 !important;
     }
+    .bg-permiso-salud {
+        background-color: #fce7f3 !important;
+        color: #be185d !important;
+        border: 1px solid #f9a8d4 !important;
+    }
+    .bg-recuperacion-salud {
+        background-color: #e0e7ff !important;
+        color: #4338ca !important;
+        border: 1px solid #c7d2fe !important;
+    }
+    .bg-domingo-voluntario {
+        background-color: #ccfbf1 !important;
+        color: #0f766e !important;
+        border: 1px solid #5eead4 !important;
+    }
 
     .legend-container {
         display: flex;
@@ -991,6 +1006,7 @@ def generar_excel_boleta(datos_b):
             {"CONCEPTO": "SUELDO BÁSICO", "CANTIDAD": f"{datos_b['dias_trabajados']} Días", "INGRESOS (S/.)": datos_b["sueldo_basico"], "DESCUENTOS (S/.)": 0.0},
             {"CONCEPTO": "PAGO FERIADOS TRABAJADOS (ADICIONAL)", "CANTIDAD": f"{datos_b['feriados_trabajados']} Días", "INGRESOS (S/.)": datos_b["monto_feriados"], "DESCUENTOS (S/.)": 0.0},
             {"CONCEPTO": "HORAS EXTRAS TRABAJADAS", "CANTIDAD": f"{datos_b['horas_extras_hrs']:.2f} Hrs", "INGRESOS (S/.)": datos_b["monto_horas_extras"], "DESCUENTOS (S/.)": 0.0},
+            {"CONCEPTO": "DÍA DE DESCANSO TRABAJADO VOLUNTARIAMENTE (DOMINGO)", "CANTIDAD": f"{datos_b.get('domingos_voluntarios', 0)} Día(s)", "INGRESOS (S/.)": datos_b.get("monto_domingos_voluntarios", 0.0), "DESCUENTOS (S/.)": 0.0},
             {"CONCEPTO": "ADELANTO DE SUELDO", "CANTIDAD": "-", "INGRESOS (S/.)": 0.0, "DESCUENTOS (S/.)": datos_b["adelanto_sueldo"]},
             {"CONCEPTO": "DESCUENTOS POR FALTAS", "CANTIDAD": f"{datos_b['dias_faltas']} Días", "INGRESOS (S/.)": 0.0, "DESCUENTOS (S/.)": datos_b["monto_faltas"]},
             {"CONCEPTO": "DESCUADRES / FALTANTE DE CAJA", "CANTIDAD": "-", "INGRESOS (S/.)": 0.0, "DESCUENTOS (S/.)": datos_b["descuadre_caja"]},
@@ -1031,7 +1047,8 @@ def generar_pdf_boleta(datos_b):
         [Paragraph("<b>COLABORADOR:</b>", bold_style), Paragraph(str(datos_b['colaborador']), normal_style), Paragraph("<b>DNI:</b>", bold_style), Paragraph(str(datos_b['dni']), normal_style)],
         [Paragraph("<b>CARGO:</b>", bold_style), Paragraph(str(datos_b['cargo']), normal_style), Paragraph("<b>FECHA INGRESO:</b>", bold_style), Paragraph(str(datos_b['fecha_inicio']), normal_style)],
         [Paragraph("<b>DÍAS LABORADOS:</b>", bold_style), Paragraph(str(datos_b['dias_trabajados']), normal_style), Paragraph("<b>DÍAS FALTAS:</b>", bold_style), Paragraph(str(datos_b['dias_faltas']), normal_style)],
-        [Paragraph("<b>FERIADOS TRAB.:</b>", bold_style), Paragraph(str(datos_b['feriados_trabajados']), normal_style), Paragraph("<b>HORAS EXTRAS:</b>", bold_style), Paragraph(f"{datos_b['horas_extras_hrs']:.2f} hrs", normal_style)]
+        [Paragraph("<b>FERIADOS TRAB.:</b>", bold_style), Paragraph(str(datos_b['feriados_trabajados']), normal_style), Paragraph("<b>HORAS EXTRAS:</b>", bold_style), Paragraph(f"{datos_b['horas_extras_hrs']:.2f} hrs", normal_style)],
+        [Paragraph("<b>DOM. VOLUNTARIOS:</b>", bold_style), Paragraph(str(datos_b.get('domingos_voluntarios', 0)), normal_style), Paragraph("", normal_style), Paragraph("", normal_style)]
     ]
     t_info = Table(info_data, colWidths=[110, 160, 110, 160])
     t_info.setStyle(TableStyle([
@@ -1049,6 +1066,7 @@ def generar_pdf_boleta(datos_b):
         [Paragraph("SUELDO BÁSICO", normal_style), Paragraph(f"{datos_b['dias_trabajados']} días", normal_style), Paragraph(f"{datos_b['sueldo_basico']:.2f}", normal_style), Paragraph("0.00", normal_style)],
         [Paragraph("PAGO FERIADOS TRABAJADOS (ADICIONAL)", normal_style), Paragraph(f"{datos_b['feriados_trabajados']} días", normal_style), Paragraph(f"{datos_b['monto_feriados']:.2f}", normal_style), Paragraph("0.00", normal_style)],
         [Paragraph("HORAS EXTRAS TRABAJADAS", normal_style), Paragraph(f"{datos_b['horas_extras_hrs']:.2f} hrs", normal_style), Paragraph(f"{datos_b['monto_horas_extras']:.2f}", normal_style), Paragraph("0.00", normal_style)],
+        [Paragraph("DÍA DE DESCANSO TRABAJADO VOLUNTARIAMENTE (DOMINGO)", normal_style), Paragraph(f"{datos_b.get('domingos_voluntarios', 0)} día(s)", normal_style), Paragraph(f"{datos_b.get('monto_domingos_voluntarios', 0.0):.2f}", normal_style), Paragraph("0.00", normal_style)],
         [Paragraph("ADELANTO DE SUELDO", normal_style), Paragraph("-", normal_style), Paragraph("0.00", normal_style), Paragraph(f"{datos_b['adelanto_sueldo']:.2f}", normal_style)],
         [Paragraph("DESCUENTO POR FALTAS", normal_style), Paragraph(f"{datos_b['dias_faltas']} días", normal_style), Paragraph("0.00", normal_style), Paragraph(f"{datos_b['monto_faltas']:.2f}", normal_style)],
         [Paragraph("DESCUADRE / FALTANTE DE CAJA", normal_style), Paragraph("-", normal_style), Paragraph("0.00", normal_style), Paragraph(f"{datos_b['descuadre_caja']:.2f}", normal_style)],
@@ -1254,6 +1272,38 @@ def renderizar_calendario_colaborador(nombre_colab, anio, mes):
             if fecha_rec and fecha_rec.month == mes and fecha_rec.year == anio:
                 recuperaciones[fecha_rec] = str(sol.get("estado", "Pendiente"))
 
+    # --- NUEVO: Permisos de Salud (a recuperar) registrados en el módulo de Vacaciones ---
+    permisos_salud = {}
+    recuperaciones_salud = {}
+    if "vacaciones" in st.session_state and not st.session_state.vacaciones.empty:
+        df_vac_colab = st.session_state.vacaciones[
+            (st.session_state.vacaciones["nombre"].astype(str) == str(nombre_colab)) &
+            (st.session_state.vacaciones["tipo"] == "Permiso de Salud (a recuperar)")
+        ]
+        for _, vac_row in df_vac_colab.iterrows():
+            f_ini_ps = parsear_fecha_segura(vac_row.get("fecha_inicio", ""))
+            f_fin_ps = parsear_fecha_segura(vac_row.get("fecha_fin", ""))
+            estado_rec_ps = str(vac_row.get("estado_recuperacion", "Pendiente")) or "Pendiente"
+            if f_ini_ps and f_fin_ps:
+                d_iter = f_ini_ps
+                while d_iter <= f_fin_ps:
+                    if d_iter.month == mes and d_iter.year == anio:
+                        permisos_salud[d_iter] = estado_rec_ps
+                    d_iter += timedelta(days=1)
+
+            f_rec_ps = parsear_fecha_segura(vac_row.get("fecha_recuperacion", ""))
+            if f_rec_ps and f_rec_ps.month == mes and f_rec_ps.year == anio:
+                recuperaciones_salud[f_rec_ps] = estado_rec_ps
+
+    # --- NUEVO: Domingos trabajados voluntariamente (marcados en Terminal de Asistencia) ---
+    domingos_voluntarios = set()
+    if not df_asist.empty:
+        df_dom_vol = df_asist[df_asist["observacion"].astype(str).str.contains("TRABAJO VOLUNTARIO EN DOMINGO", case=False, na=False)]
+        for _, r_dv in df_dom_vol.iterrows():
+            f_dv = parsear_fecha_segura(r_dv.get("fecha", ""))
+            if f_dv and f_dv.month == mes and f_dv.year == anio:
+                domingos_voluntarios.add(f_dv)
+
     row_emp = st.session_state.empleados[st.session_state.empleados["nombre"] == nombre_colab]
     f_inicio_lab = None
     f_cese_lab = None
@@ -1287,13 +1337,23 @@ def renderizar_calendario_colaborador(nombre_colab, anio, mes):
                 fecha_dia = date(anio, mes, d)
                 f_str = fecha_dia.strftime("%Y-%m-%d")
 
-                # 1. Recuperación: tiene prioridad incluso si cae domingo.
-                if fecha_dia in recuperaciones:
+                # 1. Recuperación de Permiso de Salud: máxima prioridad, incluso si cae domingo.
+                if fecha_dia in recuperaciones_salud:
+                    estado_rec_s = recuperaciones_salud[fecha_dia]
+                    txt_rec_s = "🩺 Recup. Salud ✓" if estado_rec_s == "Recuperado" else "🩺 Recup. Salud"
+                    html += f"<td class='bg-recuperacion-salud'><span class='cal-day-num'>{d}</span><span class='cal-sub'>{txt_rec_s}</span></td>"
+
+                # 2. Permiso de Salud (día del permiso en sí).
+                elif fecha_dia in permisos_salud:
+                    html += f"<td class='bg-permiso-salud'><span class='cal-day-num'>{d}</span><span class='cal-sub'>🩺 Permiso Salud</span></td>"
+
+                # 3. Recuperación de Permiso Laboral: tiene prioridad incluso si cae domingo.
+                elif fecha_dia in recuperaciones:
                     estado_rec = recuperaciones[fecha_dia]
                     txt_rec = "↻ Recuperación" if estado_rec == "Aprobado" else "↻ Recup. solicitada"
                     html += f"<td class='bg-recuperacion'><span class='cal-day-num'>{d}</span><span class='cal-sub'>{txt_rec}</span></td>"
 
-                # 2. Permiso: tiene prioridad sobre Falta/Descanso.
+                # 4. Permiso Laboral: tiene prioridad sobre Falta/Descanso.
                 elif fecha_dia in permisos:
                     estado_perm = permisos[fecha_dia]
                     if estado_perm == "Aprobado":
@@ -1301,7 +1361,11 @@ def renderizar_calendario_colaborador(nombre_colab, anio, mes):
                     else:
                         html += f"<td class='bg-permiso-pendiente'><span class='cal-day-num'>{d}</span><span class='cal-sub'>⌛ Permiso</span></td>"
 
-                # 3. Asistencia real.
+                # 5. Domingo trabajado voluntariamente (día de descanso, por elección propia).
+                elif i == 6 and fecha_dia in domingos_voluntarios:
+                    html += f"<td class='bg-domingo-voluntario'><span class='cal-day-num'>{d}</span><span class='cal-sub'>☀ Dom. Voluntario</span></td>"
+
+                # 6. Asistencia real.
                 elif i == 6:
                     html += f"<td class='bg-descanso'><span class='cal-day-num'>{d}</span><span class='cal-sub'>Descanso</span></td>"
                 else:
@@ -1392,8 +1456,10 @@ if choice == "Marcar Asistencia":
             if es_turno_extra:
                 motivo_extra = st.selectbox(
                     "Motivo del Turno Adicional",
-                    ["Cubrir Turno Mañana (Apoyo)", "Cubrir Turno Tarde (Apoyo)", "Permanencia Extra / Post-Turno", "Otro Sustento"]
+                    ["Cubrir Turno Mañana (Apoyo)", "Cubrir Turno Tarde (Apoyo)", "Permanencia Extra / Post-Turno", "Trabajo Voluntario en Domingo (Día de Descanso)", "Otro Sustento"]
                 )
+                if motivo_extra == "Trabajo Voluntario en Domingo (Día de Descanso)":
+                    st.caption("☀ Se registrará como día de descanso trabajado por decisión propia. En tu boleta aparecerá como un día adicional pagado, distinto a tus faltas o tardanzas.")
             
             obs_marca = st.text_input("Observación / Justificación (Opcional)", placeholder="Ej. Reemplazo por renuncia, apoyo en caja, etc.")
             
@@ -1520,7 +1586,7 @@ elif choice == "Solicitar Permiso / Adelanto":
     t_sol, t_hist = st.tabs(["Nueva Solicitud", "Mi Historial de Solicitudes"])
 
     with t_sol:
-        tipo_sol = st.selectbox("Tipo de Solicitud", ["Permiso Laboral", "Adelanto de Sueldo"])
+        tipo_sol = st.selectbox("Tipo de Solicitud", ["Permiso Laboral", "Adelanto de Sueldo", "Trabajar Domingo (Descanso)"])
 
         hoy_peru = obtener_ahora_peru().date()
         fecha_minima_permiso = hoy_peru + timedelta(days=7)
@@ -1546,6 +1612,28 @@ elif choice == "Solicitar Permiso / Adelanto":
             with st.form("form_nuevo_permiso", clear_on_submit=True):
                 motivo_sol = st.text_area("Motivo o Justificación detallada", placeholder="Escribe aquí el motivo de tu solicitud...")
                 enviar_solicitud = st.form_submit_button("Enviar Solicitud", use_container_width=True)
+
+        elif tipo_sol == "Trabajar Domingo (Descanso)":
+            st.info("**Trabajar tu día de descanso:** Si tu descanso semanal es el domingo y deseas trabajar ese día, solicita autorización previa aquí. Una vez aprobada, podrás marcar tu asistencia ese domingo y en tu boleta se reflejará claramente como un día adicional trabajado (no como una falta ni un domingo normal de descanso).")
+
+            proximos_domingos = []
+            cursor_dom = hoy_peru
+            while len(proximos_domingos) < 8:
+                cursor_dom += timedelta(days=1)
+                if cursor_dom.weekday() == 6:
+                    proximos_domingos.append(cursor_dom)
+
+            domingo_sel = st.selectbox(
+                "Domingo que deseas trabajar",
+                proximos_domingos,
+                format_func=lambda d: d.strftime("%d/%m/%Y"),
+                key="domingo_trabajo_sel"
+            )
+            f_permiso_val = str(domingo_sel)
+
+            with st.form("form_domingo_trabajo", clear_on_submit=True):
+                motivo_sol = st.text_area("Motivo o Justificación (opcional)", placeholder="Ej. Necesito cubrir turno, quiero generar ingreso adicional, etc.")
+                enviar_solicitud = st.form_submit_button("Enviar Solicitud", use_container_width=True)
         else:
             st.info("**Adelanto de Sueldo:** Ingresa el monto total a solicitar y la justificación.")
             with st.form("form_nuevo_adelanto", clear_on_submit=True):
@@ -1555,7 +1643,7 @@ elif choice == "Solicitar Permiso / Adelanto":
                 enviar_solicitud = st.form_submit_button("Enviar Solicitud", use_container_width=True)
 
         if enviar_solicitud:
-                if not motivo_sol.strip():
+                if tipo_sol != "Trabajar Domingo (Descanso)" and not motivo_sol.strip():
                     st.error("Por favor ingresa un motivo para tu solicitud.")
                 else:
                     if tipo_sol == "Permiso Laboral":
@@ -1573,6 +1661,21 @@ elif choice == "Solicitar Permiso / Adelanto":
                             fecha_recuperacion_val = ""
                     else:
                         fecha_recuperacion_val = ""
+
+                    if tipo_sol == "Trabajar Domingo (Descanso)":
+                        ya_existe_dom = False
+                        if not st.session_state.solicitudes.empty:
+                            df_check_dom = st.session_state.solicitudes[
+                                (st.session_state.solicitudes["dni"].astype(str) == str(dni_actual)) &
+                                (st.session_state.solicitudes["tipo_solicitud"] == "Trabajar Domingo (Descanso)") &
+                                (st.session_state.solicitudes["fecha_permiso"].astype(str) == f_permiso_val) &
+                                (st.session_state.solicitudes["estado"].isin(["Pendiente", "Aprobado"]))
+                            ]
+                            ya_existe_dom = not df_check_dom.empty
+                        if ya_existe_dom:
+                            st.warning("Ya tienes una solicitud pendiente o aprobada para trabajar ese domingo.")
+                            st.stop()
+                        motivo_sol = motivo_sol.strip() if motivo_sol else "Solicita trabajar su día de descanso semanal (domingo)."
 
                     id_nuevo = f"SOL-{int(time.time())}"
                     f_reg_now = obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S")
@@ -1612,9 +1715,14 @@ elif choice == "Solicitar Permiso / Adelanto":
             for _, r_sol in df_mis_sol.iterrows():
                 est = r_sol["estado"]
                 badge_c = "#EAB308" if est == "Pendiente" else ("#00A959" if est == "Aprobado" else "#EC3237")
-                
-                det_txt = f"**Fecha Permiso:** {r_sol['fecha_permiso']}" if r_sol['tipo_solicitud'] == "Permiso Laboral" else f"**Monto Solicitado:** S/. {float(r_sol['monto_adelanto']):.2f}"
-                
+
+                if r_sol['tipo_solicitud'] == "Permiso Laboral":
+                    det_txt = f"**Fecha Permiso:** {r_sol['fecha_permiso']}"
+                elif r_sol['tipo_solicitud'] == "Trabajar Domingo (Descanso)":
+                    det_txt = f"**Domingo a Trabajar:** {r_sol['fecha_permiso']}"
+                else:
+                    det_txt = f"**Monto Solicitado:** S/. {float(r_sol['monto_adelanto']):.2f}"
+
                 with st.expander(f" {r_sol['tipo_solicitud']} — {r_sol['fecha_registro']} [{est}]"):
                     st.markdown(f"<span style='background-color:{badge_c}; color:#fff; padding:3px 10px; border-radius:12px; font-size:0.75rem; font-weight:700;'>{est}</span>", unsafe_allow_html=True)
                     st.markdown(f"<br>{det_txt}", unsafe_allow_html=True)
@@ -1624,6 +1732,8 @@ elif choice == "Solicitar Permiso / Adelanto":
                         _f_rec = str(r_sol.get("fecha_recuperacion", "")).strip()
                         if _req_rec in ["sí", "si", "yes", "true", "1"] and _f_rec:
                             st.markdown(f"**Recuperación:** {_f_rec}")
+                    if r_sol['tipo_solicitud'] == "Trabajar Domingo (Descanso)" and est == "Aprobado":
+                        st.success("Autorizado. Podrás marcar tu asistencia ese domingo desde 'Marcar Asistencia'.")
                     if str(r_sol.get('respuesta_admin', '')).strip():
                         st.markdown(f"**Respuesta Admin:** {r_sol['respuesta_admin']}")
         else:
@@ -1823,6 +1933,18 @@ elif choice == "Dashboard General":
             <div class="legend-item">
                 <span class="legend-badge" style="background-color: #cffafe; border: 1px solid #67e8f9;"></span>
                 <span>Recuperación</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-badge" style="background-color: #fce7f3; border: 1px solid #f9a8d4;"></span>
+                <span>Permiso de Salud</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-badge" style="background-color: #e0e7ff; border: 1px solid #c7d2fe;"></span>
+                <span>Recuperación de Salud (Domingo)</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-badge" style="background-color: #ccfbf1; border: 1px solid #5eead4;"></span>
+                <span>Domingo Trabajado Voluntariamente</span>
             </div>
         </div>
     """, unsafe_allow_html=True)
@@ -2289,6 +2411,7 @@ elif choice == "Boletas de Pago":
         dias_trabajados_cnt = 0
         hrs_extras_totales = 0.0
         feriados_trabajados_cnt = 0
+        domingos_voluntarios_cnt = 0
 
         if not df_asist_b.empty:
             df_asist_b["fecha_dt"] = pd.to_datetime(df_asist_b["fecha"], errors="coerce")
@@ -2310,6 +2433,10 @@ elif choice == "Boletas de Pago":
                         dt_f = pd.to_datetime(f_dia)
                         if dt_f.weekday() != 6:  # No es domingo
                             feriados_trabajados_cnt += 1
+
+                    dt_dia_check = pd.to_datetime(f_dia)
+                    if dt_dia_check.weekday() == 6 and grupo_dia["observacion"].astype(str).str.contains("TRABAJO VOLUNTARIO EN DOMINGO", case=False, na=False).any():
+                        domingos_voluntarios_cnt += 1
 
         dias_faltas_cnt = max(0, 30 - dias_trabajados_cnt)
 
@@ -2362,6 +2489,14 @@ elif choice == "Boletas de Pago":
         desc_inventario_in = c_i8.number_input("Descuadre Inventario (S/.)", min_value=0.0, value=0.0, step=1.0, format="%.2f")
         consumos_in = c_i9.number_input("Consumos por Pagar (S/.)", min_value=0.0, value=0.0, step=1.0, format="%.2f")
 
+        c_i10, c_i11 = st.columns(2)
+        domingo_volunt_in = c_i10.number_input(
+            "Días de Descanso Trabajados Voluntariamente (Domingo)", min_value=0, max_value=5, value=int(domingos_voluntarios_cnt),
+            help="Domingos marcados en Terminal de Asistencia como 'Trabajo Voluntario en Domingo (Día de Descanso)', o registrados manualmente aquí."
+        )
+        with c_i11:
+            st.caption("Se paga como día adicional (100% del valor día), separado del sueldo básico, dejando constancia de que originalmente era su descanso.")
+
         # FÓRMULAS DE CÁLCULO
         valor_dia = sueldo_basico_in / 30.0 if sueldo_basico_in > 0 else 0.0
         valor_hora = valor_dia / 5.75 if valor_dia > 0 else 0.0
@@ -2369,8 +2504,9 @@ elif choice == "Boletas de Pago":
         monto_feriados_calc = feriados_trab_in * (valor_dia * 1.0)
         monto_horas_extras_calc = hrs_extras_in * (valor_hora * 1.25)
         monto_faltas_calc = dias_faltas_in * valor_dia
+        monto_domingo_volunt_calc = domingo_volunt_in * (valor_dia * 1.0)
 
-        total_ingresos_calc = sueldo_basico_in + monto_feriados_calc + monto_horas_extras_calc
+        total_ingresos_calc = sueldo_basico_in + monto_feriados_calc + monto_horas_extras_calc + monto_domingo_volunt_calc
         total_descuentos_calc = adelanto_in + monto_faltas_calc + descuadre_caja_in + desc_inventario_in + consumos_in
         neto_pagar_calc = max(0.0, total_ingresos_calc - total_descuentos_calc)
 
@@ -2389,6 +2525,8 @@ elif choice == "Boletas de Pago":
             "sueldo_basico": sueldo_basico_in,
             "monto_feriados": monto_feriados_calc,
             "monto_horas_extras": monto_horas_extras_calc,
+            "domingos_voluntarios": domingo_volunt_in,
+            "monto_domingos_voluntarios": monto_domingo_volunt_calc,
             "adelanto_sueldo": adelanto_in,
             "monto_faltas": monto_faltas_calc,
             "descuadre_caja": descuadre_caja_in,
@@ -2433,6 +2571,12 @@ elif choice == "Boletas de Pago":
                         <th>HORAS EXTRAS:</th>
                         <td>{datos_boleta['horas_extras_hrs']:.2f} hrs</td>
                     </tr>
+                    <tr>
+                        <th>DOM. VOLUNTARIOS:</th>
+                        <td>{datos_boleta.get('domingos_voluntarios', 0)}</td>
+                        <th></th>
+                        <td></td>
+                    </tr>
                 </table>
                 <table class="boleta-table">
                     <thead>
@@ -2460,6 +2604,12 @@ elif choice == "Boletas de Pago":
                             <td>HORAS EXTRAS TRABAJADAS</td>
                             <td>{datos_boleta['horas_extras_hrs']:.2f} hrs</td>
                             <td style="text-align:right;">{datos_boleta['monto_horas_extras']:.2f}</td>
+                            <td style="text-align:right;">0.00</td>
+                        </tr>
+                        <tr>
+                            <td>DÍA DE DESCANSO TRABAJADO VOLUNTARIAMENTE (DOMINGO)</td>
+                            <td>{datos_boleta.get('domingos_voluntarios', 0)} día(s)</td>
+                            <td style="text-align:right;">{datos_boleta.get('monto_domingos_voluntarios', 0.0):.2f}</td>
                             <td style="text-align:right;">0.00</td>
                         </tr>
                         <tr>
@@ -2550,13 +2700,53 @@ elif choice == "Solicitudes y Permisos":
     """, unsafe_allow_html=True)
 
     if not st.session_state.solicitudes.empty:
-        df_sol = st.session_state.solicitudes.copy()
-        
-        estado_filtro = st.selectbox("Filtrar por Estado", ["Todos", "Pendiente", "Aprobado", "Rechazado"])
-        if estado_filtro != "Todos":
-            df_sol = df_sol[df_sol["estado"] == estado_filtro]
+        df_sol_base = st.session_state.solicitudes.copy()
+
+        # --- MÉTRICAS RESUMEN ---
+        total_pend = len(df_sol_base[df_sol_base["estado"] == "Pendiente"])
+        total_aprob = len(df_sol_base[df_sol_base["estado"] == "Aprobado"])
+        total_rechaz = len(df_sol_base[df_sol_base["estado"] == "Rechazado"])
+        monto_adel_aprob = pd.to_numeric(
+            df_sol_base[(df_sol_base["tipo_solicitud"] == "Adelanto de Sueldo") & (df_sol_base["estado"] == "Aprobado")]["monto_adelanto"],
+            errors="coerce"
+        ).sum()
+
+        sm1, sm2, sm3, sm4 = st.columns(4)
+        with sm1:
+            st.markdown(f'<div class="info-card"><div class="info-label">Pendientes</div><div class="info-value" style="color:{"#EAB308" if total_pend else "#111827"};">{total_pend}</div></div>', unsafe_allow_html=True)
+        with sm2:
+            st.markdown(f'<div class="info-card"><div class="info-label">Aprobadas</div><div class="info-value" style="color:#00A959;">{total_aprob}</div></div>', unsafe_allow_html=True)
+        with sm3:
+            st.markdown(f'<div class="info-card"><div class="info-label">Rechazadas</div><div class="info-value" style="color:#EC3237;">{total_rechaz}</div></div>', unsafe_allow_html=True)
+        with sm4:
+            st.markdown(f'<div class="info-card"><div class="info-label">Adelantos Aprobados (Total)</div><div class="info-value">S/. {monto_adel_aprob:.2f}</div></div>', unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
+
+        # --- FILTROS ---
+        fc1, fc2, fc3 = st.columns([1, 1, 1.4])
+        with fc1:
+            estado_filtro = st.selectbox("Filtrar por Estado", ["Pendiente", "Todos", "Aprobado", "Rechazado"], key="sol_estado_filtro")
+        with fc2:
+            tipos_disp = ["Todos"] + sorted(df_sol_base["tipo_solicitud"].dropna().unique().tolist())
+            tipo_filtro = st.selectbox("Filtrar por Tipo", tipos_disp, key="sol_tipo_filtro")
+        with fc3:
+            busqueda_sol = st.text_input("Buscar por colaborador", placeholder="Escribe un nombre...", key="sol_busqueda")
+
+        df_sol = df_sol_base.copy()
+        if estado_filtro != "Todos":
+            df_sol = df_sol[df_sol["estado"] == estado_filtro]
+        if tipo_filtro != "Todos":
+            df_sol = df_sol[df_sol["tipo_solicitud"] == tipo_filtro]
+        if busqueda_sol.strip():
+            df_sol = df_sol[df_sol["nombre"].astype(str).str.contains(busqueda_sol.strip(), case=False, na=False)]
+
+        df_sol = df_sol.sort_values("fecha_registro", ascending=False)
+        st.caption(f"Mostrando {len(df_sol)} de {len(df_sol_base)} solicitud(es) registradas.")
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        if df_sol.empty:
+            st.info("Ninguna solicitud coincide con los filtros seleccionados.")
 
         for idx, row_sol in df_sol.iterrows():
             id_s = row_sol["id_solicitud"]
@@ -2565,8 +2755,9 @@ elif choice == "Solicitudes y Permisos":
             est_s = row_sol["estado"]
             
             color_st = "#EAB308" if est_s == "Pendiente" else ("#00A959" if est_s == "Aprobado" else "#EC3237")
+            icono_tipo = "🗓️" if tipo_s == "Permiso Laboral" else ("💰" if tipo_s == "Adelanto de Sueldo" else "☀️")
             
-            with st.expander(f" {tipo_s} - {nom_s} ({row_sol['fecha_registro']}) [{est_s}]"):
+            with st.expander(f"{icono_tipo} {tipo_s} - {nom_s} ({row_sol['fecha_registro']}) [{est_s}]"):
                 c_sol1, c_sol2 = st.columns([2, 1])
                 
                 with c_sol1:
@@ -2581,6 +2772,9 @@ elif choice == "Solicitudes y Permisos":
                                 fecha_rec_dt = pd.to_datetime(fecha_rec_admin, errors="coerce")
                                 if fecha_rec_dt.dayofweek == 6:
                                     st.caption("🟢 La recuperación está programada para domingo.")
+                    elif tipo_s == "Trabajar Domingo (Descanso)":
+                        st.markdown(f"**Domingo que desea trabajar:** {row_sol['fecha_permiso']}")
+                        st.caption("☀ Este domingo es normalmente su día de descanso semanal. Al aprobar, el colaborador podrá marcar asistencia ese día y se reflejará como día adicional en su boleta.")
                     else:
                         st.markdown(f"**Monto Solicitado:** S/. {float(row_sol['monto_adelanto']):.2f}")
                     st.markdown(f"**Motivo:** {row_sol['motivo']}")
@@ -2612,6 +2806,9 @@ elif choice == "Solicitudes y Permisos":
                     else:
                         if str(row_sol.get("respuesta_admin", "")).strip():
                             st.markdown(f"**Respuesta emitida:** {row_sol['respuesta_admin']}")
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.download_button("Exportar Solicitudes Filtradas a Excel", to_excel(df_sol), "Solicitudes.xlsx", use_container_width=True)
     else:
         st.info("No hay solicitudes registradas en el sistema.")
 
@@ -2723,6 +2920,33 @@ elif choice == "Historial de Descuadres":
                 st.markdown(f'<div class="info-card"><div class="info-label">Total Faltantes (-)</div><div class="info-value" style="color:#EC3237;">S/. {abs(faltantes):.2f}</div></div>', unsafe_allow_html=True)
             with m3:
                 st.markdown(f'<div class="info-card"><div class="info-label">Balance Neto</div><div class="info-value" style="color:{"#00A959" if balance >= 0 else "#EC3237"};">S/. {balance:.2f}</div></div>', unsafe_allow_html=True)
+
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown("##### Ranking de Colaboradores (según filtro aplicado)")
+
+            df_rank_desc = df_desc_filtrado.groupby("nombre")["monto_num"].sum().reset_index().rename(columns={"monto_num": "balance"})
+            df_rank_desc = df_rank_desc.sort_values("balance")
+
+            if not df_rank_desc.empty:
+                rk1, rk2 = st.columns(2)
+                with rk1:
+                    st.markdown("**⚠️ Mayores Faltantes**")
+                    peores = df_rank_desc[df_rank_desc["balance"] < 0].head(5)
+                    if not peores.empty:
+                        for _, r_pk in peores.iterrows():
+                            st.markdown(f"- **{r_pk['nombre']}**: <span style='color:#EC3237; font-weight:700;'>S/. {r_pk['balance']:.2f}</span>", unsafe_allow_html=True)
+                    else:
+                        st.success("Nadie registra faltantes en este período.")
+                with rk2:
+                    st.markdown("**✅ Mejores Balances**")
+                    mejores = df_rank_desc[df_rank_desc["balance"] >= 0].sort_values("balance", ascending=False).head(5)
+                    if not mejores.empty:
+                        for _, r_mk in mejores.iterrows():
+                            st.markdown(f"- **{r_mk['nombre']}**: <span style='color:#00A959; font-weight:700;'>+S/. {r_mk['balance']:.2f}</span>", unsafe_allow_html=True)
+                    else:
+                        st.info("Sin balances positivos registrados en este período.")
+
+                st.bar_chart(df_rank_desc.set_index("nombre")["balance"])
 
             st.markdown("<br>", unsafe_allow_html=True)
             st.markdown("#####  Balance de Descuadres por Trabajador")
@@ -2847,6 +3071,36 @@ elif choice == "Historial de Asistencias":
                 st.markdown(f'<div class="info-card"><div class="info-label">Ingresos Registrados</div><div class="info-value" style="color:#00A959;">{ingresos_cnt}</div></div>', unsafe_allow_html=True)
             with a3:
                 st.markdown(f'<div class="info-card"><div class="info-label">Colaboradores Activos</div><div class="info-value">{colabs_unicos}</div></div>', unsafe_allow_html=True)
+
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown("##### Ranking de Puntualidad (según filtro aplicado)")
+
+            filas_punt = []
+            for nom_p in sorted(df_asist_filtrado["nombre"].unique().tolist()):
+                metrica_p = calcular_metricas_puntualidad(df_asist_filtrado, nom_p)
+                if metrica_p["total_ingresos"] > 0:
+                    filas_punt.append({
+                        "Colaborador": nom_p,
+                        "Ingresos": metrica_p["total_ingresos"],
+                        "Puntuales": metrica_p["puntuales"],
+                        "Tardanzas": metrica_p["tardanzas"],
+                        "Minutos Acumulados": metrica_p["minutos_acumulados"],
+                        "% Puntualidad": metrica_p["ratio"]
+                    })
+
+            if filas_punt:
+                df_punt = pd.DataFrame(filas_punt).sort_values("% Puntualidad")
+                st.dataframe(
+                    df_punt,
+                    use_container_width=True,
+                    hide_index=True,
+                    column_config={
+                        "% Puntualidad": st.column_config.ProgressColumn("% Puntualidad", format="%.1f%%", min_value=0, max_value=100)
+                    }
+                )
+                st.bar_chart(df_punt.set_index("Colaborador")["Tardanzas"])
+            else:
+                st.info("No hay ingresos registrados para calcular puntualidad en este filtro.")
 
             st.markdown("<br>", unsafe_allow_html=True)
             st.markdown("##### Registro Detallado de Asistencias")
