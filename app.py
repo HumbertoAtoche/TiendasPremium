@@ -6,6 +6,11 @@ import zoneinfo  # Manejo de zona horaria de Perú (UTC-5)
 import io
 import time
 import gspread
+import math
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+import streamlit.components.v1 as components
 # --- INTENTO DE IMPORTAR REPORTLAB PARA PDF (CON FALLBACK INTEGRADO) ---
 try:
     from reportlab.lib.pagesizes import letter
@@ -351,11 +356,6 @@ def guardar_vacacion_gsheets(id_vac, dni, nombre, tipo, fecha_inicio, fecha_fin,
                                   "dias_tomados", "observacion", "fecha_registro", "registrado_por",
                                   "fecha_recuperacion", "horario_recuperacion", "estado_recuperacion"])
 
-            # Asegurar que la hoja Vacaciones tenga las 13 columnas requeridas.
-            # La hoja existente puede haber sido creada originalmente con solo 10 columnas.
-            if hoja.col_count < 13:
-                hoja.resize(cols=13)
-
             encabezados_actuales = hoja.row_values(1)
             for col_nueva in ["fecha_recuperacion", "horario_recuperacion", "estado_recuperacion"]:
                 if col_nueva not in encabezados_actuales:
@@ -401,6 +401,271 @@ def calcular_saldo_vacacional(nombre_colab, fecha_inicio_labores, df_vacaciones,
         "dias_gozados": dias_gozados,
         "saldo_disponible": max(0.0, saldo_disponible)
     }
+
+# =========================================================
+# NUEVO MÓDULO: REGISTRO DE AUDITORÍA
+# =========================================================
+def obtener_auditoria_gsheets():
+    columnas_aud = ["id_log", "fecha_hora", "usuario", "rol", "accion", "entidad", "detalle"]
+    if doc_sheets:
+        try:
+            try:
+                hoja = doc_sheets.worksheet("Auditoria")
+            except gspread.exceptions.WorksheetNotFound:
+                hoja = doc_sheets.add_worksheet(title="Auditoria", rows="500", cols="7")
+                hoja.append_row(columnas_aud)
+            datos = hoja.get_all_records()
+            if datos:
+                df = pd.DataFrame(datos)
+                for col in columnas_aud:
+                    if col not in df.columns:
+                        df[col] = ""
+                return df
+        except Exception:
+            pass
+    return pd.DataFrame(columns=columnas_aud)
+
+def registrar_auditoria(accion, entidad, detalle=""):
+    """Deja constancia de quién hizo qué y cuándo. Se llama en cada acción
+    administrativa sensible (editar, eliminar, aprobar, dar de baja, etc.)."""
+    try:
+        usuario_aud = st.session_state.get("usuario_login", "Desconocido") or "Desconocido"
+        _usuarios_globales = globals().get("USUARIOS", {})
+        rol_aud = _usuarios_globales.get(usuario_aud, {}).get("rol", "-")
+    except Exception:
+        usuario_aud, rol_aud = "Desconocido", "-"
+
+    fecha_h_aud = obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S")
+    id_log_aud = f"LOG-{int(time.time()*1000)}"
+
+    nuevo_log = {
+        "id_log": id_log_aud, "fecha_hora": fecha_h_aud, "usuario": usuario_aud,
+        "rol": rol_aud, "accion": accion, "entidad": entidad, "detalle": detalle
+    }
+    if "auditoria" in st.session_state:
+        st.session_state.auditoria = pd.concat([pd.DataFrame([nuevo_log]), st.session_state.auditoria], ignore_index=True)
+
+    if doc_sheets:
+        try:
+            try:
+                hoja = doc_sheets.worksheet("Auditoria")
+            except gspread.exceptions.WorksheetNotFound:
+                hoja = doc_sheets.add_worksheet(title="Auditoria", rows="500", cols="7")
+                hoja.append_row(["id_log", "fecha_hora", "usuario", "rol", "accion", "entidad", "detalle"])
+            hoja.append_row([id_log_aud, fecha_h_aud, usuario_aud, rol_aud, accion, entidad, str(detalle)])
+        except Exception:
+            pass
+
+# =========================================================
+# NUEVO MÓDULO: CONFIGURACIÓN DEL SISTEMA (GPS / Notificaciones)
+# =========================================================
+def obtener_configuracion_gsheets():
+    config_default = {
+        "tienda_lat": "-12.046374", "tienda_lon": "-77.042793", "radio_metros": "150",
+        "bloquear_fuera_rango": "No", "email_notificaciones": "humberto1098@outlook.com"
+    }
+    if doc_sheets:
+        try:
+            try:
+                hoja = doc_sheets.worksheet("Configuracion")
+            except gspread.exceptions.WorksheetNotFound:
+                hoja = doc_sheets.add_worksheet(title="Configuracion", rows="20", cols="2")
+                hoja.append_row(["clave", "valor"])
+                for k, v in config_default.items():
+                    hoja.append_row([k, v])
+                return config_default
+            datos = hoja.get_all_records()
+            if datos:
+                cfg = {row["clave"]: row["valor"] for row in datos if row.get("clave")}
+                for k, v in config_default.items():
+                    if k not in cfg:
+                        cfg[k] = v
+                return cfg
+        except Exception:
+            pass
+    return config_default
+
+def guardar_configuracion_gsheets(clave, valor):
+    if doc_sheets:
+        try:
+            try:
+                hoja = doc_sheets.worksheet("Configuracion")
+            except gspread.exceptions.WorksheetNotFound:
+                hoja = doc_sheets.add_worksheet(title="Configuracion", rows="20", cols="2")
+                hoja.append_row(["clave", "valor"])
+            celdas = hoja.findall(str(clave), in_column=1)
+            if celdas:
+                hoja.update_cell(celdas[0].row, 2, str(valor))
+            else:
+                hoja.append_row([str(clave), str(valor)])
+        except Exception as e:
+            st.error(f"Error al guardar configuración: {e}")
+
+def calcular_distancia_metros(lat1, lon1, lat2, lon2):
+    """Fórmula de Haversine: distancia en metros entre dos coordenadas GPS."""
+    try:
+        R = 6371000
+        lat1, lon1, lat2, lon2 = map(float, [lat1, lon1, lat2, lon2])
+        phi1, phi2 = math.radians(lat1), math.radians(lat2)
+        dphi = math.radians(lat2 - lat1)
+        dlambda = math.radians(lon2 - lon1)
+        a = math.sin(dphi/2)**2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda/2)**2
+        return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    except Exception:
+        return None
+
+# =========================================================
+# NUEVO MÓDULO: NOTIFICACIONES POR CORREO
+# =========================================================
+def enviar_correo_alerta(asunto, cuerpo_html, destinatario=None):
+    """Envía un correo usando las credenciales SMTP configuradas en st.secrets['email'].
+    Requiere configurar en Settings > Secrets:
+    [email]
+    remitente = "tu_correo@outlook.com"
+    clave_app = "tu_contraseña_de_aplicación"
+    servidor = "smtp-mail.outlook.com"
+    puerto = 587
+    Si no está configurado, informa al usuario en vez de fallar silenciosamente."""
+    if "email" not in st.secrets:
+        return False, "No se ha configurado el envío de correo (falta la sección [email] en Secrets)."
+    try:
+        cfg_sys = obtener_configuracion_gsheets()
+        dest_final = destinatario or cfg_sys.get("email_notificaciones", "humberto1098@outlook.com")
+
+        remitente = st.secrets["email"]["remitente"]
+        clave_app = st.secrets["email"]["clave_app"]
+        servidor = st.secrets["email"].get("servidor", "smtp-mail.outlook.com")
+        puerto = int(st.secrets["email"].get("puerto", 587))
+
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = asunto
+        msg["From"] = remitente
+        msg["To"] = dest_final
+        msg.attach(MIMEText(cuerpo_html, "html"))
+
+        with smtplib.SMTP(servidor, puerto) as server:
+            server.starttls()
+            server.login(remitente, clave_app)
+            server.sendmail(remitente, dest_final, msg.as_string())
+        return True, f"Correo enviado a {dest_final}"
+    except Exception as e:
+        return False, f"No se pudo enviar el correo: {e}"
+
+# =========================================================
+# NUEVO MÓDULO: ONBOARDING / OFFBOARDING ESTRUCTURADO
+# =========================================================
+TAREAS_ONBOARDING_DEFAULT = [
+    "Firma de contrato de trabajo",
+    "Entrega de uniforme",
+    "Entrega de fotocheck / credencial",
+    "Capacitación inicial (caja, procesos, políticas)",
+    "Registro formal en planilla (REMYPE)",
+    "Creación de usuario en el sistema"
+]
+TAREAS_OFFBOARDING_DEFAULT = [
+    "Carta de renuncia / documento de cese",
+    "Devolución de uniforme",
+    "Devolución de llaves / accesos",
+    "Verificación de saldo de caja e inventario",
+    "Liquidación de beneficios sociales",
+    "Baja de usuario en el sistema"
+]
+
+def obtener_checklist_gsheets():
+    columnas_chk = ["id_item", "dni", "nombre", "tipo", "tarea", "estado", "fecha_creacion", "fecha_completado"]
+    if doc_sheets:
+        try:
+            try:
+                hoja = doc_sheets.worksheet("Checklist")
+            except gspread.exceptions.WorksheetNotFound:
+                hoja = doc_sheets.add_worksheet(title="Checklist", rows="500", cols="8")
+                hoja.append_row(columnas_chk)
+            datos = hoja.get_all_records()
+            if datos:
+                df = pd.DataFrame(datos)
+                for col in columnas_chk:
+                    if col not in df.columns:
+                        df[col] = ""
+                return df
+        except Exception:
+            pass
+    return pd.DataFrame(columns=columnas_chk)
+
+def guardar_item_checklist_gsheets(id_item, dni, nombre, tipo, tarea, estado, fecha_creacion, fecha_completado=""):
+    if doc_sheets:
+        try:
+            try:
+                hoja = doc_sheets.worksheet("Checklist")
+            except gspread.exceptions.WorksheetNotFound:
+                hoja = doc_sheets.add_worksheet(title="Checklist", rows="500", cols="8")
+                hoja.append_row(["id_item", "dni", "nombre", "tipo", "tarea", "estado", "fecha_creacion", "fecha_completado"])
+            hoja.append_row([id_item, str(dni), nombre, tipo, tarea, estado, str(fecha_creacion), str(fecha_completado)])
+        except Exception as e:
+            st.error(f"Error al guardar checklist: {e}")
+
+def _crear_checklist_generico(dni, nombre, tipo, tareas):
+    fecha_c = obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S")
+    nuevas_filas = []
+    for tarea in tareas:
+        id_item = f"CHK-{int(time.time()*1000)}-{tareas.index(tarea)}"
+        guardar_item_checklist_gsheets(id_item, dni, nombre, tipo, tarea, "Pendiente", fecha_c, "")
+        nuevas_filas.append({
+            "id_item": id_item, "dni": dni, "nombre": nombre, "tipo": tipo,
+            "tarea": tarea, "estado": "Pendiente", "fecha_creacion": fecha_c, "fecha_completado": ""
+        })
+    if "checklist" in st.session_state:
+        st.session_state.checklist = pd.concat([pd.DataFrame(nuevas_filas), st.session_state.checklist], ignore_index=True)
+    registrar_auditoria(f"Crear Checklist de {tipo}", "Checklist", f"{nombre} — {len(tareas)} tarea(s) generadas")
+
+def crear_checklist_onboarding(dni, nombre):
+    _crear_checklist_generico(dni, nombre, "Onboarding", TAREAS_ONBOARDING_DEFAULT)
+
+def crear_checklist_offboarding(dni, nombre):
+    _crear_checklist_generico(dni, nombre, "Offboarding", TAREAS_OFFBOARDING_DEFAULT)
+
+# =========================================================
+# NUEVO MÓDULO: HISTORIAL DE BOLETAS (para Analítica / BI)
+# =========================================================
+def obtener_boletas_historial_gsheets():
+    columnas_bh = ["id_boleta", "mes", "anio", "dni", "nombre", "cargo", "sueldo_basico",
+                   "total_ingresos", "total_descuentos", "neto_pagar", "fecha_emision", "emitido_por"]
+    if doc_sheets:
+        try:
+            try:
+                hoja = doc_sheets.worksheet("Boletas_Historial")
+            except gspread.exceptions.WorksheetNotFound:
+                hoja = doc_sheets.add_worksheet(title="Boletas_Historial", rows="500", cols="12")
+                hoja.append_row(columnas_bh)
+            datos = hoja.get_all_records()
+            if datos:
+                df = pd.DataFrame(datos)
+                for col in columnas_bh:
+                    if col not in df.columns:
+                        df[col] = ""
+                return df
+        except Exception:
+            pass
+    return pd.DataFrame(columns=columnas_bh)
+
+def guardar_boleta_historial_gsheets(datos_b):
+    if doc_sheets:
+        try:
+            try:
+                hoja = doc_sheets.worksheet("Boletas_Historial")
+            except gspread.exceptions.WorksheetNotFound:
+                hoja = doc_sheets.add_worksheet(title="Boletas_Historial", rows="500", cols="12")
+                hoja.append_row(["id_boleta", "mes", "anio", "dni", "nombre", "cargo", "sueldo_basico",
+                                  "total_ingresos", "total_descuentos", "neto_pagar", "fecha_emision", "emitido_por"])
+            id_b = f"BOL-{int(time.time()*1000)}"
+            hoja.append_row([
+                id_b, datos_b["mes"], datos_b["anio"], str(datos_b["dni"]), datos_b["nombre"], datos_b["cargo"],
+                float(datos_b["sueldo_basico"]), float(datos_b["total_ingresos"]), float(datos_b["total_descuentos"]),
+                float(datos_b["neto_pagar"]), obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S"), datos_b.get("emitido_por", "")
+            ])
+            return id_b
+        except Exception as e:
+            st.error(f"Error al guardar historial de boleta: {e}")
+    return None
 
 def actualizar_hoja_completa(nombre_hoja, df):
     if doc_sheets:
@@ -863,6 +1128,19 @@ if "feriados" not in st.session_state:
 if "vacaciones" not in st.session_state:
     st.session_state.vacaciones = obtener_vacaciones_gsheets()
 
+# --- NUEVO: ESTADO DE SESIÓN PARA AUDITORÍA Y CONFIGURACIÓN ---
+if "auditoria" not in st.session_state:
+    st.session_state.auditoria = obtener_auditoria_gsheets()
+
+if "config_sistema" not in st.session_state:
+    st.session_state.config_sistema = obtener_configuracion_gsheets()
+
+if "checklist" not in st.session_state:
+    st.session_state.checklist = obtener_checklist_gsheets()
+
+if "boletas_historial" not in st.session_state:
+    st.session_state.boletas_historial = obtener_boletas_historial_gsheets()
+
 USUARIOS = {}
 USUARIOS = {}
 for _, row in st.session_state.empleados.iterrows():
@@ -894,6 +1172,8 @@ if not st.session_state.usuario_login:
             if st.button("Ingresar al Sistema", use_container_width=True):
                 if clave_input == USUARIOS[usuario_sel]["clave"]:
                     st.session_state.usuario_login = usuario_sel
+                    st.session_state.login_timestamp = time.time()
+                    st.session_state.ultima_actividad = time.time()
                     st.success("Acceso concedido")
                     time.sleep(0.3)
                     st.rerun()
@@ -901,9 +1181,37 @@ if not st.session_state.usuario_login:
                     st.error("Credenciales incorrectas")
     st.stop()
 
+# --- NUEVO: CONTROL DE EXPIRACIÓN DE SESIÓN ---
+# Sesión máxima de 10 horas desde el login, y cierre automático tras 30 minutos de inactividad.
+SESION_MAX_SEGUNDOS = 10 * 60 * 60
+INACTIVIDAD_MAX_SEGUNDOS = 30 * 60
+
+if "login_timestamp" not in st.session_state:
+    st.session_state.login_timestamp = time.time()
+if "ultima_actividad" not in st.session_state:
+    st.session_state.ultima_actividad = time.time()
+
+_ahora_sesion = time.time()
+_tiempo_desde_login = _ahora_sesion - st.session_state.login_timestamp
+_tiempo_inactivo = _ahora_sesion - st.session_state.ultima_actividad
+
+if _tiempo_desde_login > SESION_MAX_SEGUNDOS or _tiempo_inactivo > INACTIVIDAD_MAX_SEGUNDOS:
+    _motivo_cierre = "duración máxima (10 horas)" if _tiempo_desde_login > SESION_MAX_SEGUNDOS else "inactividad (30 minutos)"
+    st.session_state.usuario_login = None
+    st.session_state.login_auditado = False
+    st.warning(f"Tu sesión se cerró automáticamente por {_motivo_cierre}. Por favor, vuelve a iniciar sesión.")
+    time.sleep(1.2)
+    st.rerun()
+
+st.session_state.ultima_actividad = _ahora_sesion
+
 user_actual = st.session_state.usuario_login
 rol_actual = USUARIOS[user_actual]["rol"]
 dni_actual = USUARIOS[user_actual]["dni"]
+
+if not st.session_state.get("login_auditado", False):
+    registrar_auditoria("Inicio de Sesión", "Usuarios", f"{user_actual} ({rol_actual}) inició sesión.")
+    st.session_state.login_auditado = True
 
 # =========================================================
 # 🎉 SALUDO DE CUMPLEAÑOS
@@ -1425,7 +1733,7 @@ st.sidebar.markdown(f"""
 """, unsafe_allow_html=True)
 
 if rol_actual == "admin":
-    menu = ["Dashboard General", "Centro de Alertas", "Gestión Colaboradores", "Gestión de Vacaciones", "Boletas de Pago", "Solicitudes y Permisos", "Historial de Descuadres", "Historial de Asistencias"]
+    menu = ["Dashboard General", "Centro de Alertas", "Analítica (BI)", "Gestión Colaboradores", "Onboarding / Offboarding", "Gestión de Vacaciones", "Boletas de Pago", "Solicitudes y Permisos", "Historial de Descuadres", "Historial de Asistencias", "Auditoría y Configuración"]
 else:
     menu = ["Marcar Asistencia", "Registrar Descuadre", "Mi Ficha Técnica", "Mis Vacaciones", "Solicitar Permiso / Adelanto", "Mi Dashboard Mensual"]
 
@@ -1434,7 +1742,9 @@ choice = st.sidebar.radio("Navegación", menu)
 st.sidebar.markdown("<br><br>", unsafe_allow_html=True)
 st.sidebar.markdown('<div class="btn-logout">', unsafe_allow_html=True)
 if st.sidebar.button("Cerrar Sesión", use_container_width=True):
+    registrar_auditoria("Cierre de Sesión", "Usuarios", f"{user_actual} cerró sesión.")
     st.session_state.usuario_login = None
+    st.session_state.login_auditado = False
     st.rerun()
 st.sidebar.markdown('</div>', unsafe_allow_html=True)
 
@@ -1449,6 +1759,69 @@ if choice == "Marcar Asistencia":
     """, unsafe_allow_html=True)
 
     col_main, col_preview = st.columns([1.1, 1])
+
+    # --- NUEVO: GEOLOCALIZACIÓN ANTI-FRAUDE ---
+    cfg_geo = st.session_state.config_sistema
+    qp_geo = st.query_params
+    lat_geo_qp = qp_geo.get("geo_lat")
+    lon_geo_qp = qp_geo.get("geo_lon")
+
+    st.markdown("##### 📍 Verificación de Ubicación")
+    components.html("""
+        <div id="geo-status" style="font-family:sans-serif;font-size:12.5px;color:#6B7280;padding:2px 0;">Solicitando permiso de ubicación al navegador...</div>
+        <script>
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(function(pos) {
+                var lat = pos.coords.latitude.toFixed(6);
+                var lon = pos.coords.longitude.toFixed(6);
+                try {
+                    var url = new URL(window.parent.location.href);
+                    if (url.searchParams.get('geo_lat') !== lat) {
+                        url.searchParams.set('geo_lat', lat);
+                        url.searchParams.set('geo_lon', lon);
+                        window.parent.location.href = url.toString();
+                    } else {
+                        document.getElementById('geo-status').innerText = 'Ubicación detectada ✓';
+                    }
+                } catch (e) {
+                    document.getElementById('geo-status').innerText = 'No se pudo verificar la ubicación automáticamente en este navegador (usa el campo manual).';
+                }
+            }, function(err) {
+                document.getElementById('geo-status').innerText = 'Ubicación no disponible: ' + err.message + ' (usa el campo manual si es necesario).';
+            });
+        } else {
+            document.getElementById('geo-status').innerText = 'Este navegador no soporta geolocalización (usa el campo manual).';
+        }
+        </script>
+    """, height=26)
+
+    with st.expander("¿No se detectó tu ubicación automáticamente? Ingrésala manualmente", expanded=(not lat_geo_qp)):
+        gm1, gm2 = st.columns(2)
+        lat_manual = gm1.text_input("Latitud", value=lat_geo_qp or "", key="lat_manual_geo")
+        lon_manual = gm2.text_input("Longitud", value=lon_geo_qp or "", key="lon_manual_geo")
+        if st.button("Usar esta ubicación manual", key="btn_usar_manual_geo"):
+            st.query_params["geo_lat"] = lat_manual
+            st.query_params["geo_lon"] = lon_manual
+            st.rerun()
+
+    distancia_geo = None
+    dentro_rango_geo = True
+    lat_final_geo = lat_geo_qp
+    lon_final_geo = lon_geo_qp
+
+    if lat_final_geo and lon_final_geo:
+        distancia_geo = calcular_distancia_metros(lat_final_geo, lon_final_geo, cfg_geo.get("tienda_lat"), cfg_geo.get("tienda_lon"))
+        if distancia_geo is not None:
+            radio_permitido = float(cfg_geo.get("radio_metros", 150) or 150)
+            dentro_rango_geo = distancia_geo <= radio_permitido
+            if dentro_rango_geo:
+                st.success(f"📍 Estás dentro del rango permitido ({distancia_geo:.0f} m de la tienda, máximo {radio_permitido:.0f} m).")
+            else:
+                st.warning(f"⚠️ Estás fuera del rango esperado ({distancia_geo:.0f} m de la tienda, máximo {radio_permitido:.0f} m).")
+    else:
+        st.caption("Aún no se detecta tu ubicación. Si tu navegador lo permite, se completará automáticamente en unos segundos.")
+
+    bloqueo_activo_geo = str(cfg_geo.get("bloquear_fuera_rango", "No")).strip().lower() in ["sí", "si", "yes", "true"]
 
     with col_main:
         with st.container(border=True):
@@ -1471,13 +1844,23 @@ if choice == "Marcar Asistencia":
             if es_turno_extra and motivo_extra:
                 obs_marca = f"[{motivo_extra}] {obs_marca}".strip()
 
+            if distancia_geo is not None:
+                tag_geo = f"[GPS: {distancia_geo:.0f}m {'OK' if dentro_rango_geo else 'FUERA DE RANGO'}]"
+                obs_marca = f"{tag_geo} {obs_marca}".strip()
+
             st.markdown("<br>", unsafe_allow_html=True)
+
+            bloquear_marca_geo = bloqueo_activo_geo and (distancia_geo is not None) and (not dentro_rango_geo)
+            if bloquear_marca_geo:
+                st.error("🚫 No puedes marcar asistencia: estás fuera del rango permitido y el administrador activó el bloqueo por ubicación. Si crees que es un error, contacta a tu administrador.")
 
             c1, c2 = st.columns(2)
             with c1:
                 st.markdown('<div class="btn-ingreso">', unsafe_allow_html=True)
-                if st.button("Marcar Ingreso", use_container_width=True):
+                if st.button("Marcar Ingreso", use_container_width=True, disabled=bloquear_marca_geo):
                     if registrar_marca(dni_actual, user_actual, "INGRESO", obs_marca, es_turno_extra):
+                        if distancia_geo is not None and not dentro_rango_geo:
+                            registrar_auditoria("Marcación Fuera de Rango", "Asistencia", f"{user_actual} marcó INGRESO a {distancia_geo:.0f}m de la tienda")
                         st.toast("Ingreso registrado correctamente")
                         time.sleep(0.3)
                         st.rerun()
@@ -1485,8 +1868,10 @@ if choice == "Marcar Asistencia":
 
             with c2:
                 st.markdown('<div class="btn-salida">', unsafe_allow_html=True)
-                if st.button("Marcar Salida", use_container_width=True):
+                if st.button("Marcar Salida", use_container_width=True, disabled=bloquear_marca_geo):
                     if registrar_marca(dni_actual, user_actual, "SALIDA", obs_marca, es_turno_extra):
+                        if distancia_geo is not None and not dentro_rango_geo:
+                            registrar_auditoria("Marcación Fuera de Rango", "Asistencia", f"{user_actual} marcó SALIDA a {distancia_geo:.0f}m de la tienda")
                         st.toast("Salida registrada correctamente")
                         time.sleep(0.3)
                         st.rerun()
@@ -2284,6 +2669,8 @@ elif choice == "Gestión Colaboradores":
                         c_emerg_in.strip(), num_emerg_in.strip(), link_maps_in.strip(),
                         finicio_str, "", en_planilla_in
                     )
+                    registrar_auditoria("Crear Colaborador", "Colaboradores", f"{nom_in.strip()} (DNI {dni_in}) — cargo: {cargo_in}")
+                    crear_checklist_onboarding(str(dni_in).strip(), nom_in.strip())
                     st.toast("Colaborador y Ficha Técnica registrados")
                     time.sleep(0.3)
                     st.rerun()
@@ -2314,6 +2701,7 @@ elif choice == "Gestión Colaboradores":
                         idx_ep = st.session_state.empleados[st.session_state.empleados["nombre"] == colab_ep_sel].index
                         st.session_state.empleados.loc[idx_ep, "en_planilla"] = nuevo_ep
                         actualizar_hoja_completa("Colaboradores", st.session_state.empleados)
+                        registrar_auditoria("Actualizar Estado de Planilla", "Colaboradores", f"{colab_ep_sel} → en_planilla={nuevo_ep}")
                         st.toast(f"Estado de planilla de {colab_ep_sel} actualizado a '{nuevo_ep}'")
                         time.sleep(0.3)
                         st.rerun()
@@ -2332,9 +2720,12 @@ elif choice == "Gestión Colaboradores":
                         if confirm_desactivar:
                             idx = st.session_state.empleados[st.session_state.empleados["nombre"] == colab_a_desactivar].index
                             if not idx.empty:
+                                dni_baja_ep = str(st.session_state.empleados.loc[idx[0], "dni"])
                                 st.session_state.empleados.loc[idx, "estado"] = "Desactivado"
                                 st.session_state.empleados.loc[idx, "fecha_cese"] = str(f_cese_input)
                                 actualizar_hoja_completa("Colaboradores", st.session_state.empleados)
+                                registrar_auditoria("Dar de Baja Colaborador", "Colaboradores", f"{colab_a_desactivar} — cese: {f_cese_input}")
+                                crear_checklist_offboarding(dni_baja_ep, colab_a_desactivar)
                                 st.toast(f"Colaborador {colab_a_desactivar} desactivado correctamente")
                                 time.sleep(0.3)
                                 st.rerun()
@@ -2696,6 +3087,18 @@ elif choice == "Boletas de Pago":
             )
         else:
             col_exp2.warning("La librería `reportlab` no está instalada en el entorno.")
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("💾 Guardar esta Boleta en el Historial (para Analítica / BI)", use_container_width=True):
+            id_bol_hist = guardar_boleta_historial_gsheets({
+                "mes": NOMBRES_MESES_B[mes_b_sel-1], "anio": anio_b_sel, "dni": dni_b_val,
+                "nombre": colab_b_sel, "cargo": cargo_b_val, "sueldo_basico": sueldo_basico_in,
+                "total_ingresos": total_ingresos_calc, "total_descuentos": total_descuentos_calc,
+                "neto_pagar": neto_pagar_calc, "emitido_por": user_actual
+            })
+            if id_bol_hist:
+                registrar_auditoria("Emitir Boleta", "Boletas", f"{colab_b_sel} — {datos_boleta['periodo']} — Neto: S/. {neto_pagar_calc:.2f}")
+                st.toast("Boleta guardada en el historial de analítica")
 elif choice == "Solicitudes y Permisos":
     st.markdown("""
         <div class="market-header">
@@ -2796,6 +3199,7 @@ elif choice == "Solicitudes y Permisos":
                             st.session_state.solicitudes.loc[idx_real, "estado"] = "Aprobado"
                             st.session_state.solicitudes.loc[idx_real, "respuesta_admin"] = resp_admin_input
                             actualizar_hoja_completa("Solicitudes", st.session_state.solicitudes)
+                            registrar_auditoria("Aprobar Solicitud", "Solicitudes", f"{tipo_s} de {nom_s} ({id_s})")
                             st.toast("Solicitud Aprobada")
                             time.sleep(0.3)
                             st.rerun()
@@ -2805,6 +3209,7 @@ elif choice == "Solicitudes y Permisos":
                             st.session_state.solicitudes.loc[idx_real, "estado"] = "Rechazado"
                             st.session_state.solicitudes.loc[idx_real, "respuesta_admin"] = resp_admin_input
                             actualizar_hoja_completa("Solicitudes", st.session_state.solicitudes)
+                            registrar_auditoria("Rechazar Solicitud", "Solicitudes", f"{tipo_s} de {nom_s} ({id_s})")
                             st.toast("Solicitud Rechazada")
                             time.sleep(0.3)
                             st.rerun()
@@ -3003,10 +3408,12 @@ elif choice == "Historial de Descuadres":
                         nueva_obs = st.text_area("Nueva Observación", value=str(row_mod["observacion"]))
 
                         if st.button("Guardar Cambios en Descuadre", use_container_width=True):
+                            valor_anterior_desc = f"S/. {row_mod['monto']} ({row_mod['tipo']})"
                             st.session_state.descuadres.at[idx_mod, "monto"] = nuevo_monto
                             st.session_state.descuadres.at[idx_mod, "tipo"] = nuevo_tipo
                             st.session_state.descuadres.at[idx_mod, "observacion"] = nueva_obs
                             actualizar_hoja_completa("Descuadres", st.session_state.descuadres)
+                            registrar_auditoria("Editar Descuadre", "Descuadres", f"{row_mod['nombre']} ({row_mod['fecha']}): {valor_anterior_desc} → S/. {nuevo_monto} ({nuevo_tipo})")
                             st.toast("Descuadre actualizado correctamente")
                             time.sleep(0.3)
                             st.rerun()
@@ -3020,8 +3427,10 @@ elif choice == "Historial de Descuadres":
                     if st.button("Eliminar Descuadre", type="primary", use_container_width=True):
                         if confirm_del_desc:
                             idx_del = int(sel_del.split(" | ")[0])
+                            row_del_desc = st.session_state.descuadres.loc[idx_del]
                             st.session_state.descuadres = st.session_state.descuadres.drop(idx_del).reset_index(drop=True)
                             actualizar_hoja_completa("Descuadres", st.session_state.descuadres)
+                            registrar_auditoria("Eliminar Descuadre", "Descuadres", f"{row_del_desc['nombre']} ({row_del_desc['fecha']}): S/. {row_del_desc['monto']} ({row_del_desc['tipo']})")
                             st.toast("Descuadre eliminado correctamente")
                             time.sleep(0.3)
                             st.rerun()
@@ -3243,6 +3652,24 @@ elif choice == "Centro de Alertas":
         else:
             st.success("No hay permisos de salud pendientes de recuperación.")
 
+    st.markdown("<br>", unsafe_allow_html=True)
+    if st.button("✉️ Enviar este Resumen de Alertas por Correo", use_container_width=True):
+        cuerpo_correo = f"""
+        <h3>Resumen de Alertas - Tiendas Premium</h3>
+        <p><b>Contratos por vencer (15 días):</b> {len(contratos_por_vencer)}</p>
+        <p><b>Cumpleaños esta semana:</b> {len(cumples_prox)}</p>
+        <p><b>Tardanzas recurrentes este mes:</b> {len(tardanzas_recurrentes)}</p>
+        <p><b>Solicitudes pendientes:</b> {solicitudes_pend}</p>
+        <p><b>Permisos de salud sin recuperar:</b> {permisos_pend_recup}</p>
+        <p style="color:#94a3b8; font-size:12px;">Generado automáticamente desde el Centro de Alertas.</p>
+        """
+        ok_alerta_mail, msg_alerta_mail = enviar_correo_alerta("Resumen de Alertas - Tiendas Premium", cuerpo_correo)
+        if ok_alerta_mail:
+            registrar_auditoria("Enviar Resumen de Alertas", "Notificaciones", msg_alerta_mail)
+            st.success(msg_alerta_mail)
+        else:
+            st.warning(msg_alerta_mail)
+
 elif choice == "Gestión de Vacaciones":
     st.markdown("""
         <div class="market-header">
@@ -3384,6 +3811,7 @@ elif choice == "Gestión de Vacaciones":
                     if st.button("Marcar Recuperado", key=f"recup_btn_{idx_pr}", use_container_width=True):
                         st.session_state.vacaciones.at[idx_pr, "estado_recuperacion"] = "Recuperado"
                         actualizar_hoja_completa("Vacaciones", st.session_state.vacaciones)
+                        registrar_auditoria("Marcar Permiso Recuperado", "Vacaciones", f"{r_pr['nombre']} — recuperación del {r_pr['fecha_recuperacion']}")
                         st.toast("Marcado como recuperado")
                         time.sleep(0.3)
                         st.rerun()
@@ -3407,8 +3835,10 @@ elif choice == "Gestión de Vacaciones":
             if st.button("Eliminar Registro", type="primary", use_container_width=True, key="vac_del_btn"):
                 if confirm_vac_del:
                     idx_vac_del = int(sel_vac_del.split(" | ")[0])
+                    row_vac_del = st.session_state.vacaciones.loc[idx_vac_del]
                     st.session_state.vacaciones = st.session_state.vacaciones.drop(idx_vac_del).reset_index(drop=True)
                     actualizar_hoja_completa("Vacaciones", st.session_state.vacaciones)
+                    registrar_auditoria("Eliminar Registro de Descanso", "Vacaciones", f"{row_vac_del['nombre']} — {row_vac_del['tipo']} ({row_vac_del['fecha_inicio']} a {row_vac_del['fecha_fin']})")
                     st.toast("Registro eliminado correctamente")
                     time.sleep(0.3)
                     st.rerun()
@@ -3456,6 +3886,207 @@ elif choice == "Mis Vacaciones":
             st.info("Aún no tienes descansos registrados.")
     else:
         st.info("Aún no tienes descansos registrados.")
+
+elif choice == "Analítica (BI)":
+    st.markdown("""
+        <div class="market-header">
+            <h1>Analítica y Business Intelligence</h1>
+            <p>Indicadores ejecutivos para la toma de decisiones</p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    tab_bi1, tab_bi2, tab_bi3 = st.tabs(["💰 Costo de Planilla", "🔄 Rotación de Personal", "⏰ Tendencia de Puntualidad"])
+
+    with tab_bi1:
+        st.markdown("##### Evolución del Costo de Planilla (Boletas Guardadas)")
+        if not st.session_state.boletas_historial.empty:
+            df_bh = st.session_state.boletas_historial.copy()
+            df_bh["neto_pagar"] = pd.to_numeric(df_bh["neto_pagar"], errors="coerce").fillna(0)
+            df_bh["periodo_bi"] = df_bh["mes"].astype(str) + " " + df_bh["anio"].astype(str)
+            resumen_mes = df_bh.groupby("periodo_bi")["neto_pagar"].sum()
+            st.bar_chart(resumen_mes)
+            st.metric("Costo Total Histórico Registrado", f"S/. {df_bh['neto_pagar'].sum():.2f}")
+            st.dataframe(df_bh.sort_values("fecha_emision", ascending=False), use_container_width=True, hide_index=True)
+            st.download_button("Exportar Historial de Boletas a Excel", to_excel(df_bh), "Boletas_Historial.xlsx", use_container_width=True)
+        else:
+            st.info("Aún no hay boletas guardadas en el historial. Ve a 'Boletas de Pago', genera una boleta y usa el botón 'Guardar esta Boleta en el Historial'.")
+
+    with tab_bi2:
+        st.markdown("##### Altas y Bajas de Personal por Mes")
+        df_emp_bi = st.session_state.empleados.copy()
+        altas_por_mes = {}
+        bajas_por_mes = {}
+        for _, r_bi in df_emp_bi.iterrows():
+            f_alta = _parsear_fecha_nac_cumple(r_bi.get("fecha_inicio", ""))
+            if f_alta:
+                key_a = f_alta.strftime("%Y-%m")
+                altas_por_mes[key_a] = altas_por_mes.get(key_a, 0) + 1
+            f_baja = _parsear_fecha_nac_cumple(r_bi.get("fecha_cese", ""))
+            if f_baja:
+                key_b = f_baja.strftime("%Y-%m")
+                bajas_por_mes[key_b] = bajas_por_mes.get(key_b, 0) + 1
+
+        meses_todos_bi = sorted(set(list(altas_por_mes.keys()) + list(bajas_por_mes.keys())))
+        if meses_todos_bi:
+            df_rot = pd.DataFrame({
+                "Altas": [altas_por_mes.get(m, 0) for m in meses_todos_bi],
+                "Bajas": [bajas_por_mes.get(m, 0) for m in meses_todos_bi]
+            }, index=meses_todos_bi)
+            st.bar_chart(df_rot)
+            total_activos_bi = len(df_emp_bi[df_emp_bi["estado"].astype(str).str.lower() == "activo"])
+            total_bajas_bi = sum(bajas_por_mes.values())
+            r1, r2 = st.columns(2)
+            r1.metric("Colaboradores Activos Hoy", total_activos_bi)
+            r2.metric("Total de Bajas Históricas", total_bajas_bi)
+        else:
+            st.info("No hay suficientes datos de fechas de ingreso/cese para calcular rotación.")
+
+    with tab_bi3:
+        st.markdown("##### Tardanzas Totales por Mes (Todos los Colaboradores)")
+        if not st.session_state.asistencia.empty:
+            df_asist_bi = st.session_state.asistencia.copy()
+            df_asist_bi["fecha_dt_bi"] = pd.to_datetime(df_asist_bi["fecha"], errors="coerce")
+            df_asist_bi = df_asist_bi.dropna(subset=["fecha_dt_bi"])
+            df_asist_bi["periodo_bi"] = df_asist_bi["fecha_dt_bi"].dt.strftime("%Y-%m")
+
+            tardanzas_por_mes = {}
+            for periodo_m, grupo_m in df_asist_bi.groupby("periodo_bi"):
+                total_tard_mes = 0
+                for nom_m in grupo_m["nombre"].unique():
+                    met_m = calcular_metricas_puntualidad(grupo_m, nom_m)
+                    total_tard_mes += met_m["tardanzas"]
+                tardanzas_por_mes[periodo_m] = total_tard_mes
+
+            if tardanzas_por_mes:
+                st.bar_chart(pd.Series(tardanzas_por_mes, name="Tardanzas"))
+            else:
+                st.info("No hay tardanzas registradas todavía.")
+        else:
+            st.info("No hay datos de asistencia registrados.")
+
+elif choice == "Onboarding / Offboarding":
+    st.markdown("""
+        <div class="market-header">
+            <h1>Onboarding y Offboarding Estructurado</h1>
+            <p>Checklist de incorporación y salida de colaboradores</p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    if st.session_state.checklist.empty:
+        st.info("No hay checklists generados todavía. Se crean automáticamente al registrar un nuevo colaborador o al dar de baja a uno existente.")
+    else:
+        colabs_con_checklist = sorted(st.session_state.checklist["nombre"].unique().tolist())
+        colab_chk_sel = st.selectbox("Seleccionar Colaborador", colabs_con_checklist, key="chk_colab_sel")
+
+        df_chk_colab = st.session_state.checklist[st.session_state.checklist["nombre"] == colab_chk_sel]
+
+        for tipo_chk in ["Onboarding", "Offboarding"]:
+            df_tipo_chk = df_chk_colab[df_chk_colab["tipo"] == tipo_chk]
+            if df_tipo_chk.empty:
+                continue
+
+            completados = len(df_tipo_chk[df_tipo_chk["estado"] == "Completado"])
+            total_items = len(df_tipo_chk)
+            pct_chk = int((completados / total_items) * 100) if total_items else 0
+
+            with st.container(border=True):
+                icono_chk = "🚀" if tipo_chk == "Onboarding" else "🚪"
+                st.markdown(f"##### {icono_chk} Checklist de {tipo_chk} ({completados}/{total_items})")
+                st.progress(pct_chk / 100.0)
+
+                for idx_chk, row_chk in df_tipo_chk.iterrows():
+                    marcado = row_chk["estado"] == "Completado"
+                    nuevo_marcado = st.checkbox(row_chk["tarea"], value=marcado, key=f"chk_{row_chk['id_item']}")
+                    if nuevo_marcado != marcado:
+                        st.session_state.checklist.at[idx_chk, "estado"] = "Completado" if nuevo_marcado else "Pendiente"
+                        st.session_state.checklist.at[idx_chk, "fecha_completado"] = obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S") if nuevo_marcado else ""
+                        actualizar_hoja_completa("Checklist", st.session_state.checklist)
+                        registrar_auditoria(f"Actualizar Ítem de {tipo_chk}", "Checklist", f"{colab_chk_sel}: '{row_chk['tarea']}' → {'Completado' if nuevo_marcado else 'Pendiente'}")
+                        st.rerun()
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.download_button("Exportar Checklists a Excel", to_excel(st.session_state.checklist), "Checklists.xlsx", use_container_width=True)
+
+elif choice == "Auditoría y Configuración":
+    st.markdown("""
+        <div class="market-header">
+            <h1>Auditoría y Configuración del Sistema</h1>
+            <p>Trazabilidad de cambios y ajustes de seguridad</p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    tab_aud, tab_cfg = st.tabs(["📋 Registro de Auditoría", "⚙️ Configuración"])
+
+    with tab_aud:
+        if not st.session_state.auditoria.empty:
+            df_aud = st.session_state.auditoria.copy()
+            fa1, fa2 = st.columns(2)
+            with fa1:
+                usuarios_aud_disp = ["Todos"] + sorted(df_aud["usuario"].dropna().unique().tolist())
+                usuario_aud_filtro = st.selectbox("Filtrar por Usuario", usuarios_aud_disp)
+            with fa2:
+                acciones_aud_disp = ["Todas"] + sorted(df_aud["accion"].dropna().unique().tolist())
+                accion_aud_filtro = st.selectbox("Filtrar por Acción", acciones_aud_disp)
+
+            if usuario_aud_filtro != "Todos":
+                df_aud = df_aud[df_aud["usuario"] == usuario_aud_filtro]
+            if accion_aud_filtro != "Todas":
+                df_aud = df_aud[df_aud["accion"] == accion_aud_filtro]
+
+            st.dataframe(df_aud.sort_values("fecha_hora", ascending=False), use_container_width=True, hide_index=True)
+            st.download_button("Exportar Auditoría a Excel", to_excel(df_aud), "Auditoria.xlsx", use_container_width=True)
+        else:
+            st.info("Aún no hay eventos registrados en la auditoría.")
+
+    with tab_cfg:
+        st.markdown("##### 📍 Ubicación de la Tienda (para Geolocalización)")
+        st.caption("Define las coordenadas GPS de tu tienda y el radio permitido para marcar asistencia. Puedes obtener tu latitud/longitud buscando tu dirección en Google Maps y copiando las coordenadas.")
+
+        cfg_actual = st.session_state.config_sistema
+        cc1, cc2, cc3 = st.columns(3)
+        lat_cfg_in = cc1.text_input("Latitud de la Tienda", value=str(cfg_actual.get("tienda_lat", "")))
+        lon_cfg_in = cc2.text_input("Longitud de la Tienda", value=str(cfg_actual.get("tienda_lon", "")))
+        radio_cfg_in = cc3.number_input("Radio Permitido (metros)", min_value=10, max_value=5000, value=int(float(cfg_actual.get("radio_metros", 150) or 150)))
+
+        bloquear_cfg_in = st.checkbox("Bloquear marcación de asistencia si está fuera del rango", value=str(cfg_actual.get("bloquear_fuera_rango", "No")).strip().lower() in ["sí", "si"])
+
+        if st.button("Guardar Configuración de Ubicación", use_container_width=True):
+            guardar_configuracion_gsheets("tienda_lat", lat_cfg_in)
+            guardar_configuracion_gsheets("tienda_lon", lon_cfg_in)
+            guardar_configuracion_gsheets("radio_metros", radio_cfg_in)
+            guardar_configuracion_gsheets("bloquear_fuera_rango", "Sí" if bloquear_cfg_in else "No")
+            st.session_state.config_sistema = obtener_configuracion_gsheets()
+            registrar_auditoria("Actualizar Configuración GPS", "Configuracion", f"lat={lat_cfg_in}, lon={lon_cfg_in}, radio={radio_cfg_in}m, bloqueo={'Sí' if bloquear_cfg_in else 'No'}")
+            st.toast("Configuración de ubicación guardada")
+            time.sleep(0.3)
+            st.rerun()
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("##### ✉️ Notificaciones por Correo")
+        email_cfg_in = st.text_input("Correo para recibir alertas", value=str(cfg_actual.get("email_notificaciones", "humberto1098@outlook.com")))
+        if st.button("Guardar Correo de Notificaciones", use_container_width=True):
+            guardar_configuracion_gsheets("email_notificaciones", email_cfg_in)
+            st.session_state.config_sistema = obtener_configuracion_gsheets()
+            st.toast("Correo de notificaciones actualizado")
+
+        if "email" not in st.secrets:
+            st.warning("Para activar el envío real de correos, agrega en **Settings → Secrets** de tu app:\n\n```\n[email]\nremitente = \"tu_correo@outlook.com\"\nclave_app = \"tu_contraseña_de_aplicación\"\nservidor = \"smtp-mail.outlook.com\"\npuerto = 587\n```\nMientras no esté configurado, los botones de envío de correo mostrarán un aviso en vez de fallar.")
+        else:
+            st.success("Envío de correo configurado correctamente en Secrets.")
+            if st.button("Enviar Correo de Prueba", use_container_width=True):
+                ok_mail, msg_mail = enviar_correo_alerta(
+                    "Prueba - Sistema Tiendas Premium",
+                    "<p>Este es un correo de prueba del Centro de Alertas de Tiendas Premium.</p>",
+                    email_cfg_in
+                )
+                if ok_mail:
+                    st.success(msg_mail)
+                else:
+                    st.error(msg_mail)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("##### 🔒 Sesión")
+        st.caption(f"Las sesiones se cierran automáticamente tras 30 minutos de inactividad o 10 horas desde el inicio de sesión. Sesión actual iniciada: {datetime.fromtimestamp(st.session_state.login_timestamp).strftime('%d/%m/%Y %H:%M:%S')}.")
 
 # --- PIE DE PÁGINA (FOOTER ESTILO WEB/APP) ---
 st.markdown("""
