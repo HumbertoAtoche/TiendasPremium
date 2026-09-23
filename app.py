@@ -295,6 +295,95 @@ def guardar_descuadre_gsheets(fecha, dni, nombre, tipo, monto, observacion, fech
         except Exception as e:
             st.error(f"Error al guardar descuadre: {e}")
 
+# =========================================================
+# NUEVO MÓDULO: INCIDENCIAS (Billete Falso, Botellas Rotas, Otros Daños)
+# =========================================================
+def obtener_incidencias_gsheets():
+    columnas_inc = ["id_incidencia", "dni", "nombre", "fecha", "tipo_incidencia", "detalle",
+                     "valor_reparacion", "fecha_registro", "registrado_por", "estado"]
+    if doc_sheets:
+        try:
+            try:
+                hoja = doc_sheets.worksheet("Incidencias")
+            except gspread.exceptions.WorksheetNotFound:
+                hoja = doc_sheets.add_worksheet(title="Incidencias", rows="300", cols="10")
+                hoja.append_row(columnas_inc)
+            datos = hoja.get_all_records()
+            if datos:
+                df = pd.DataFrame(datos)
+                for col in columnas_inc:
+                    if col not in df.columns:
+                        df[col] = ""
+                return df
+        except Exception as e:
+            st.warning(f"⚠️ No se pudo leer la hoja 'Incidencias' de Google Sheets: {e}")
+    return pd.DataFrame(columns=columnas_inc)
+
+def guardar_incidencia_gsheets(id_inc, dni, nombre, fecha, tipo_incidencia, detalle, valor_reparacion, fecha_registro, registrado_por, estado="Pendiente"):
+    if doc_sheets:
+        try:
+            try:
+                hoja = doc_sheets.worksheet("Incidencias")
+            except gspread.exceptions.WorksheetNotFound:
+                hoja = doc_sheets.add_worksheet(title="Incidencias", rows="300", cols="10")
+                hoja.append_row(["id_incidencia", "dni", "nombre", "fecha", "tipo_incidencia", "detalle",
+                                  "valor_reparacion", "fecha_registro", "registrado_por", "estado"])
+            hoja.append_row([str(id_inc), str(dni), nombre, str(fecha), tipo_incidencia, detalle,
+                              float(valor_reparacion), str(fecha_registro), registrado_por, estado])
+            return True
+        except Exception as e:
+            st.error(f"❌ Error al guardar la incidencia en Google Sheets: {e}")
+            return False
+    else:
+        st.error("❌ No hay conexión con Google Sheets. La incidencia no se guardó en la nube (solo quedó en esta sesión).")
+        return False
+
+# =========================================================
+# NUEVO MÓDULO: BOTELLAS FIADAS (visible para todos los roles)
+# =========================================================
+def obtener_botellas_fiadas_gsheets():
+    columnas_bf = ["id_fiado", "cliente_nombre", "cliente_dni", "cliente_direccion",
+                   "cantidad_botellas", "tipo_botella", "dejo_dinero", "monto_dejado",
+                   "fecha_prestamo", "registrado_por", "estado", "fecha_devolucion", "observacion"]
+    if doc_sheets:
+        try:
+            try:
+                hoja = doc_sheets.worksheet("BotellasFiadas")
+            except gspread.exceptions.WorksheetNotFound:
+                hoja = doc_sheets.add_worksheet(title="BotellasFiadas", rows="300", cols="13")
+                hoja.append_row(columnas_bf)
+            datos = hoja.get_all_records()
+            if datos:
+                df = pd.DataFrame(datos)
+                for col in columnas_bf:
+                    if col not in df.columns:
+                        df[col] = ""
+                return df
+        except Exception as e:
+            st.warning(f"⚠️ No se pudo leer la hoja 'BotellasFiadas' de Google Sheets: {e}")
+    return pd.DataFrame(columns=columnas_bf)
+
+def guardar_botella_fiada_gsheets(id_bf, cliente_nombre, cliente_dni, cliente_direccion, cantidad, tipo_botella, dejo_dinero, monto_dejado, fecha_prestamo, registrado_por, estado="Pendiente", fecha_devolucion="", observacion=""):
+    if doc_sheets:
+        try:
+            try:
+                hoja = doc_sheets.worksheet("BotellasFiadas")
+            except gspread.exceptions.WorksheetNotFound:
+                hoja = doc_sheets.add_worksheet(title="BotellasFiadas", rows="300", cols="13")
+                hoja.append_row(["id_fiado", "cliente_nombre", "cliente_dni", "cliente_direccion",
+                                  "cantidad_botellas", "tipo_botella", "dejo_dinero", "monto_dejado",
+                                  "fecha_prestamo", "registrado_por", "estado", "fecha_devolucion", "observacion"])
+            hoja.append_row([str(id_bf), cliente_nombre, str(cliente_dni), cliente_direccion,
+                              int(cantidad), tipo_botella, dejo_dinero, float(monto_dejado),
+                              str(fecha_prestamo), registrado_por, estado, str(fecha_devolucion), observacion])
+            return True
+        except Exception as e:
+            st.error(f"❌ Error al guardar el registro de botellas fiadas en Google Sheets: {e}")
+            return False
+    else:
+        st.error("❌ No hay conexión con Google Sheets. El registro no se guardó en la nube (solo quedó en esta sesión).")
+        return False
+
 def guardar_solicitud_gsheets(id_sol, fecha_reg, dni, nombre, tipo_sol, f_permiso, monto_adel, motivo, estado="Pendiente", respuesta="", requiere_recuperacion="No", fecha_recuperacion=""):
     if doc_sheets:
         try:
@@ -421,8 +510,8 @@ def obtener_auditoria_gsheets():
                     if col not in df.columns:
                         df[col] = ""
                 return df
-        except Exception:
-            pass
+        except Exception as e:
+            st.warning(f"⚠️ No se pudo leer la hoja 'Auditoria' de Google Sheets: {e}")
     return pd.DataFrame(columns=columnas_aud)
 
 def registrar_auditoria(accion, entidad, detalle=""):
@@ -453,8 +542,8 @@ def registrar_auditoria(accion, entidad, detalle=""):
                 hoja = doc_sheets.add_worksheet(title="Auditoria", rows="500", cols="7")
                 hoja.append_row(["id_log", "fecha_hora", "usuario", "rol", "accion", "entidad", "detalle"])
             hoja.append_row([id_log_aud, fecha_h_aud, usuario_aud, rol_aud, accion, entidad, str(detalle)])
-        except Exception:
-            pass
+        except Exception as e:
+            st.warning(f"⚠️ No se pudo guardar en la hoja 'Auditoria' de Google Sheets: {e}")
 
 # =========================================================
 # NUEVO MÓDULO: CONFIGURACIÓN DEL SISTEMA (GPS / Notificaciones)
@@ -481,8 +570,8 @@ def obtener_configuracion_gsheets():
                     if k not in cfg:
                         cfg[k] = v
                 return cfg
-        except Exception:
-            pass
+        except Exception as e:
+            st.warning(f"⚠️ No se pudo leer la hoja 'Configuracion' de Google Sheets: {e}")
     return config_default
 
 def guardar_configuracion_gsheets(clave, valor):
@@ -587,8 +676,8 @@ def obtener_checklist_gsheets():
                     if col not in df.columns:
                         df[col] = ""
                 return df
-        except Exception:
-            pass
+        except Exception as e:
+            st.warning(f"⚠️ No se pudo leer la hoja 'Checklist' de Google Sheets: {e}")
     return pd.DataFrame(columns=columnas_chk)
 
 def guardar_item_checklist_gsheets(id_item, dni, nombre, tipo, tarea, estado, fecha_creacion, fecha_completado=""):
@@ -643,8 +732,8 @@ def obtener_boletas_historial_gsheets():
                     if col not in df.columns:
                         df[col] = ""
                 return df
-        except Exception:
-            pass
+        except Exception as e:
+            st.warning(f"⚠️ No se pudo leer la hoja 'Boletas_Historial' de Google Sheets: {e}")
     return pd.DataFrame(columns=columnas_bh)
 
 def guardar_boleta_historial_gsheets(datos_b):
@@ -1140,6 +1229,12 @@ if "checklist" not in st.session_state:
 
 if "boletas_historial" not in st.session_state:
     st.session_state.boletas_historial = obtener_boletas_historial_gsheets()
+
+if "incidencias" not in st.session_state:
+    st.session_state.incidencias = obtener_incidencias_gsheets()
+
+if "botellas_fiadas" not in st.session_state:
+    st.session_state.botellas_fiadas = obtener_botellas_fiadas_gsheets()
 
 USUARIOS = {}
 USUARIOS = {}
@@ -1733,9 +1828,9 @@ st.sidebar.markdown(f"""
 """, unsafe_allow_html=True)
 
 if rol_actual == "admin":
-    menu = ["Dashboard General", "Centro de Alertas", "Analítica (BI)", "Gestión Colaboradores", "Onboarding / Offboarding", "Gestión de Vacaciones", "Boletas de Pago", "Solicitudes y Permisos", "Historial de Descuadres", "Historial de Asistencias", "Auditoría y Configuración"]
+    menu = ["Dashboard General", "Centro de Alertas", "Analítica (BI)", "Gestión Colaboradores", "Onboarding / Offboarding", "Gestión de Vacaciones", "Boletas de Pago", "Solicitudes y Permisos", "Historial de Descuadres", "Incidencias y Daños", "Botellas Fiadas", "Historial de Asistencias", "Auditoría y Configuración"]
 else:
-    menu = ["Marcar Asistencia", "Registrar Descuadre", "Mi Ficha Técnica", "Mis Vacaciones", "Solicitar Permiso / Adelanto", "Mi Dashboard Mensual"]
+    menu = ["Marcar Asistencia", "Registrar Descuadre", "Registrar Incidencia", "Botellas Fiadas", "Mi Ficha Técnica", "Mis Vacaciones", "Solicitar Permiso / Adelanto", "Mi Dashboard Mensual"]
 
 choice = st.sidebar.radio("Navegación", menu)
 
@@ -1950,6 +2045,74 @@ elif choice == "Registrar Descuadre":
             st.toast("Descuadre registrado en la nube")
             time.sleep(0.3)
             st.rerun()
+
+elif choice == "Registrar Incidencia":
+    st.markdown(f"""
+        <div class="market-header">
+            <h1>Registro de Incidencias y Daños</h1>
+            <p>Billetes falsos, botellas rotas u otros daños — responsable: <b>{user_actual}</b></p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    st.caption("Registra aquí cualquier billete falso recibido, botella rota (gaseosa o cerveza), o cualquier otro daño (silla, pared, vitrina, etc.). El valor de reparación queda visible para administración.")
+
+    tipo_inc_sel = st.selectbox(
+        "Tipo de Incidencia",
+        ["Billete Falso", "Botella Rota (Gaseosa)", "Botella Rota (Cerveza)", "Otro Daño (Silla, Pared, Vitrina, etc.)"],
+        key="inc_tipo_sel"
+    )
+
+    with st.form("form_incidencia_user", clear_on_submit=True):
+        f_inc = st.date_input("Fecha del Incidente", obtener_ahora_peru(), key="inc_fecha")
+
+        if tipo_inc_sel == "Billete Falso":
+            valor_inc = st.number_input("Valor del Billete Falso (S/.)", min_value=0.0, step=1.0, format="%.2f", key="inc_valor_billete")
+            detalle_inc = st.text_area("Detalle (denominación, cómo se detectó, etc.)", key="inc_detalle_billete")
+        elif "Botella Rota" in tipo_inc_sel:
+            cantidad_bot_rota = st.number_input("Cantidad de Botellas Rotas", min_value=1, step=1, key="inc_cantidad_botella")
+            valor_unit_bot = st.number_input("Valor de Reposición por Botella (S/.)", min_value=0.0, step=0.50, format="%.2f", key="inc_valor_unit_botella")
+            valor_inc = cantidad_bot_rota * valor_unit_bot
+            detalle_inc = st.text_area("Detalle (cómo ocurrió)", key="inc_detalle_botella")
+            st.caption(f"Valor total estimado de reparación: **S/. {valor_inc:.2f}**")
+        else:
+            detalle_inc = st.text_area("Describe el daño (ej: 'Rompió la silla del área de mesas', 'Golpeó la pared del almacén')", key="inc_detalle_otro")
+            valor_inc = st.number_input("Valor Estimado de Reparación (S/.)", min_value=0.0, step=1.0, format="%.2f", key="inc_valor_otro")
+
+        if st.form_submit_button("Guardar Incidencia", use_container_width=True):
+            f_reg_inc = obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S")
+            id_inc_nuevo = f"INC-{int(time.time()*1000)}"
+
+            guardado_ok = guardar_incidencia_gsheets(
+                id_inc_nuevo, dni_actual, user_actual, f_inc, tipo_inc_sel, detalle_inc,
+                valor_inc, f_reg_inc, user_actual, "Pendiente"
+            )
+            if guardado_ok:
+                nueva_fila_inc = {
+                    "id_incidencia": id_inc_nuevo, "dni": dni_actual, "nombre": user_actual,
+                    "fecha": str(f_inc), "tipo_incidencia": tipo_inc_sel, "detalle": detalle_inc,
+                    "valor_reparacion": valor_inc, "fecha_registro": f_reg_inc,
+                    "registrado_por": user_actual, "estado": "Pendiente"
+                }
+                st.session_state.incidencias = pd.concat([pd.DataFrame([nueva_fila_inc]), st.session_state.incidencias], ignore_index=True)
+                registrar_auditoria("Registrar Incidencia", "Incidencias", f"{user_actual}: {tipo_inc_sel} — S/. {valor_inc:.2f}")
+                st.toast("Incidencia registrada correctamente")
+                time.sleep(0.3)
+                st.rerun()
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("##### Mis Incidencias Registradas")
+    if not st.session_state.incidencias.empty:
+        mis_inc = st.session_state.incidencias[st.session_state.incidencias["nombre"] == user_actual]
+        if not mis_inc.empty:
+            st.dataframe(
+                mis_inc[["fecha", "tipo_incidencia", "detalle", "valor_reparacion", "estado"]].sort_values("fecha", ascending=False),
+                use_container_width=True,
+                hide_index=True
+            )
+        else:
+            st.info("Aún no tienes incidencias registradas.")
+    else:
+        st.info("Aún no tienes incidencias registradas.")
 
 elif choice == "Mi Ficha Técnica":
     st.markdown(f"""
@@ -3438,6 +3601,181 @@ elif choice == "Historial de Descuadres":
                             st.warning("Marca la casilla de confirmación antes de eliminar.")
     else:
         st.info("Sin descuadres registrados.")
+
+elif choice == "Incidencias y Daños":
+    st.markdown("""
+        <div class="market-header">
+            <h1>Incidencias y Daños</h1>
+            <p>Billetes falsos, botellas rotas y otros daños reportados por el personal</p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    if not st.session_state.incidencias.empty:
+        df_inc_admin = st.session_state.incidencias.copy()
+        df_inc_admin["valor_reparacion"] = pd.to_numeric(df_inc_admin["valor_reparacion"], errors="coerce").fillna(0)
+
+        im1, im2, im3, im4 = st.columns(4)
+        with im1:
+            st.markdown(f'<div class="info-card"><div class="info-label">Total Incidencias</div><div class="info-value">{len(df_inc_admin)}</div></div>', unsafe_allow_html=True)
+        with im2:
+            st.markdown(f'<div class="info-card"><div class="info-label">Valor Total a Reparar</div><div class="info-value" style="color:#EC3237;">S/. {df_inc_admin["valor_reparacion"].sum():.2f}</div></div>', unsafe_allow_html=True)
+        with im3:
+            pend_inc_cnt = len(df_inc_admin[df_inc_admin["estado"] == "Pendiente"])
+            st.markdown(f'<div class="info-card"><div class="info-label">Pendientes de Resolver</div><div class="info-value" style="color:{"#EAB308" if pend_inc_cnt else "#111827"};">{pend_inc_cnt}</div></div>', unsafe_allow_html=True)
+        with im4:
+            billetes_falsos_total = df_inc_admin[df_inc_admin["tipo_incidencia"] == "Billete Falso"]["valor_reparacion"].sum()
+            st.markdown(f'<div class="info-card"><div class="info-label">Total en Billetes Falsos</div><div class="info-value">S/. {billetes_falsos_total:.2f}</div></div>', unsafe_allow_html=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        fi1, fi2 = st.columns(2)
+        with fi1:
+            tipos_inc_disp = ["Todos"] + sorted(df_inc_admin["tipo_incidencia"].dropna().unique().tolist())
+            tipo_inc_filtro = st.selectbox("Filtrar por Tipo", tipos_inc_disp, key="inc_filtro_tipo_admin")
+        with fi2:
+            colabs_inc_disp = ["Todos"] + sorted(df_inc_admin["nombre"].dropna().unique().tolist())
+            colab_inc_filtro = st.selectbox("Filtrar por Colaborador", colabs_inc_disp, key="inc_filtro_colab_admin")
+
+        df_inc_filtrado = df_inc_admin.copy()
+        if tipo_inc_filtro != "Todos":
+            df_inc_filtrado = df_inc_filtrado[df_inc_filtrado["tipo_incidencia"] == tipo_inc_filtro]
+        if colab_inc_filtro != "Todos":
+            df_inc_filtrado = df_inc_filtrado[df_inc_filtrado["nombre"] == colab_inc_filtro]
+
+        st.markdown("##### Ranking por Colaborador (valor total a reparar)")
+        df_rank_inc = df_inc_filtrado.groupby("nombre")["valor_reparacion"].sum().reset_index().sort_values("valor_reparacion", ascending=False)
+        if not df_rank_inc.empty:
+            st.bar_chart(df_rank_inc.set_index("nombre")["valor_reparacion"])
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("##### Detalle de Incidencias")
+        st.dataframe(
+            df_inc_filtrado.sort_values("fecha_registro", ascending=False),
+            use_container_width=True,
+            hide_index=True
+        )
+        st.download_button("Exportar Incidencias a Excel", to_excel(df_inc_filtrado), "Incidencias.xlsx", use_container_width=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        with st.expander("Marcar Incidencia como Resuelta / Descontada"):
+            opciones_inc_resolver = [
+                f"{i} | {r['nombre']} | {r['tipo_incidencia']} | S/. {r['valor_reparacion']:.2f} | {r['estado']}"
+                for i, r in st.session_state.incidencias.iterrows()
+            ]
+            sel_inc_resolver = st.selectbox("Seleccionar Incidencia", opciones_inc_resolver, key="inc_resolver_sel")
+            nuevo_estado_inc = st.selectbox("Nuevo Estado", ["Pendiente", "Descontado en Boleta", "Resuelto / Condonado"], key="inc_nuevo_estado")
+            if st.button("Actualizar Estado", use_container_width=True, key="inc_resolver_btn"):
+                idx_inc_resolver = int(sel_inc_resolver.split(" | ")[0])
+                st.session_state.incidencias.at[idx_inc_resolver, "estado"] = nuevo_estado_inc
+                actualizar_hoja_completa("Incidencias", st.session_state.incidencias)
+                registrar_auditoria("Actualizar Estado de Incidencia", "Incidencias", f"Incidencia #{idx_inc_resolver} → {nuevo_estado_inc}")
+                st.toast("Estado actualizado")
+                time.sleep(0.3)
+                st.rerun()
+    else:
+        st.info("No hay incidencias registradas todavía.")
+
+elif choice == "Botellas Fiadas":
+    st.markdown(f"""
+        <div class="market-header">
+            <h1>Botellas Fiadas a Clientes</h1>
+            <p>Visible para todos los turnos y roles — responsable actual: <b>{user_actual}</b></p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    st.caption("Registra aquí cuando se le fíen botellas (gaseosa o cerveza) a un cliente. Cualquier colaborador o el administrador podrá ver este registro en cualquier turno, hasta que las botellas sean devueltas.")
+
+    with st.container(border=True):
+        st.markdown("##### Registrar Botellas Fiadas")
+        with st.form("form_botella_fiada", clear_on_submit=True):
+            bf1, bf2 = st.columns(2)
+            cliente_nombre_bf = bf1.text_input("Nombre del Cliente", key="bf_nombre")
+            cliente_dni_bf = bf2.text_input("DNI del Cliente", key="bf_dni")
+
+            cliente_dir_bf = st.text_input("Dirección / Dónde Vive", key="bf_direccion")
+
+            bf3, bf4, bf5 = st.columns(3)
+            cantidad_bf = bf3.number_input("Cantidad de Botellas", min_value=1, step=1, key="bf_cantidad")
+            tipo_botella_bf = bf4.selectbox("Tipo de Botella", ["Gaseosa", "Cerveza", "Mixto (Gaseosa y Cerveza)"], key="bf_tipo")
+            dejo_dinero_bf = bf5.selectbox("¿Dejó Dinero de Garantía?", ["No", "Sí"], key="bf_dejo_dinero")
+
+            monto_dejado_bf = 0.0
+            if dejo_dinero_bf == "Sí":
+                monto_dejado_bf = st.number_input("Monto Dejado (S/.)", min_value=0.0, step=1.0, format="%.2f", key="bf_monto_dejado")
+
+            obs_bf = st.text_area("Observación (opcional)", key="bf_obs")
+
+            if st.form_submit_button("Guardar Registro de Botellas Fiadas", use_container_width=True):
+                if not cliente_nombre_bf.strip():
+                    st.error("Debes ingresar el nombre del cliente.")
+                else:
+                    id_bf_nuevo = f"BF-{int(time.time()*1000)}"
+                    f_prestamo_bf = obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S")
+
+                    guardado_bf_ok = guardar_botella_fiada_gsheets(
+                        id_bf_nuevo, cliente_nombre_bf.strip(), cliente_dni_bf.strip(), cliente_dir_bf.strip(),
+                        cantidad_bf, tipo_botella_bf, dejo_dinero_bf, monto_dejado_bf, f_prestamo_bf,
+                        user_actual, "Pendiente", "", obs_bf
+                    )
+                    if guardado_bf_ok:
+                        nueva_fila_bf = {
+                            "id_fiado": id_bf_nuevo, "cliente_nombre": cliente_nombre_bf.strip(), "cliente_dni": cliente_dni_bf.strip(),
+                            "cliente_direccion": cliente_dir_bf.strip(), "cantidad_botellas": cantidad_bf, "tipo_botella": tipo_botella_bf,
+                            "dejo_dinero": dejo_dinero_bf, "monto_dejado": monto_dejado_bf, "fecha_prestamo": f_prestamo_bf,
+                            "registrado_por": user_actual, "estado": "Pendiente", "fecha_devolucion": "", "observacion": obs_bf
+                        }
+                        st.session_state.botellas_fiadas = pd.concat([pd.DataFrame([nueva_fila_bf]), st.session_state.botellas_fiadas], ignore_index=True)
+                        registrar_auditoria("Registrar Botellas Fiadas", "BotellasFiadas", f"{cliente_nombre_bf.strip()} — {cantidad_bf} botella(s) de {tipo_botella_bf}")
+                        st.toast("Botellas fiadas registradas correctamente")
+                        time.sleep(0.3)
+                        st.rerun()
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("##### 🍾 Botellas Pendientes de Devolución (todos los turnos)")
+
+    if not st.session_state.botellas_fiadas.empty:
+        df_bf_pend = st.session_state.botellas_fiadas[st.session_state.botellas_fiadas["estado"] != "Devuelta"]
+        if not df_bf_pend.empty:
+            for idx_bf, r_bf in df_bf_pend.iterrows():
+                with st.container(border=True):
+                    cbf1, cbf2 = st.columns([3, 1])
+                    with cbf1:
+                        st.markdown(f"**{r_bf['cliente_nombre']}** — DNI: {r_bf['cliente_dni'] or 'No registrado'}")
+                        st.caption(f"📍 {r_bf['cliente_direccion'] or 'Sin dirección registrada'}")
+                        st.markdown(f"**{r_bf['cantidad_botellas']} botella(s)** de **{r_bf['tipo_botella']}** — Fiado el {r_bf['fecha_prestamo']} por {r_bf['registrado_por']}")
+                        if str(r_bf['dejo_dinero']).strip().lower() in ["sí", "si"]:
+                            st.success(f"💰 Dejó S/. {float(r_bf['monto_dejado']):.2f} de garantía")
+                        else:
+                            st.warning("⚠️ No dejó dinero de garantía")
+                        if str(r_bf.get("observacion", "")).strip():
+                            st.caption(f"Obs: {r_bf['observacion']}")
+                    with cbf2:
+                        if st.button("✅ Marcar Devueltas", key=f"bf_dev_{idx_bf}", use_container_width=True):
+                            st.session_state.botellas_fiadas.at[idx_bf, "estado"] = "Devuelta"
+                            st.session_state.botellas_fiadas.at[idx_bf, "fecha_devolucion"] = obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S")
+                            actualizar_hoja_completa("BotellasFiadas", st.session_state.botellas_fiadas)
+                            registrar_auditoria("Marcar Botellas Devueltas", "BotellasFiadas", f"{r_bf['cliente_nombre']} — {r_bf['cantidad_botellas']} botella(s)")
+                            st.toast("Botellas marcadas como devueltas")
+                            time.sleep(0.3)
+                            st.rerun()
+        else:
+            st.success("No hay botellas pendientes de devolución en este momento.")
+    else:
+        st.info("No hay registros de botellas fiadas todavía.")
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    with st.expander("📜 Historial de Botellas Ya Devueltas"):
+        if not st.session_state.botellas_fiadas.empty:
+            df_bf_devueltas = st.session_state.botellas_fiadas[st.session_state.botellas_fiadas["estado"] == "Devuelta"]
+            if not df_bf_devueltas.empty:
+                st.dataframe(
+                    df_bf_devueltas.sort_values("fecha_devolucion", ascending=False),
+                    use_container_width=True,
+                    hide_index=True
+                )
+                st.download_button("Exportar Historial a Excel", to_excel(df_bf_devueltas), "Botellas_Devueltas.xlsx", use_container_width=True)
+            else:
+                st.info("Aún no hay botellas devueltas registradas.")
 
 elif choice == "Historial de Asistencias":
     st.markdown("""
