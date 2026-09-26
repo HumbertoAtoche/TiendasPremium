@@ -224,7 +224,6 @@ def conectar_google_sheets():
 doc_sheets = conectar_google_sheets()
 
 # --- FUNCIONES DE LECTURA Y ESCRITURA EN LA NUBE ---
-@st.cache_data(ttl=120, show_spinner=False)
 def obtener_colaboradores_gsheets():
     if doc_sheets:
         try:
@@ -299,7 +298,6 @@ def guardar_descuadre_gsheets(fecha, dni, nombre, tipo, monto, observacion, fech
 # =========================================================
 # NUEVO MÓDULO: INCIDENCIAS (Billete Falso, Botellas Rotas, Otros Daños)
 # =========================================================
-@st.cache_data(ttl=120, show_spinner=False)
 def obtener_incidencias_gsheets():
     columnas_inc = ["id_incidencia", "dni", "nombre", "fecha", "tipo_incidencia", "detalle",
                      "valor_reparacion", "fecha_registro", "registrado_por", "estado"]
@@ -343,7 +341,6 @@ def guardar_incidencia_gsheets(id_inc, dni, nombre, fecha, tipo_incidencia, deta
 # =========================================================
 # NUEVO MÓDULO: BOTELLAS FIADAS (visible para todos los roles)
 # =========================================================
-@st.cache_data(ttl=120, show_spinner=False)
 def obtener_botellas_fiadas_gsheets():
     columnas_bf = ["id_fiado", "cliente_nombre", "cliente_dni", "cliente_direccion",
                    "cantidad_botellas", "tipo_botella", "dejo_dinero", "monto_dejado",
@@ -415,7 +412,6 @@ def guardar_feriado_gsheets(fecha, descripcion):
 # NUEVO MÓDULO: GESTIÓN DE VACACIONES / DESCANSO MÉDICO
 # Agregado sin alterar ninguna función ni hoja existente.
 # =========================================================
-@st.cache_data(ttl=120, show_spinner=False)
 def obtener_vacaciones_gsheets():
     columnas_vac = ["id_vacacion", "dni", "nombre", "tipo", "fecha_inicio", "fecha_fin",
                      "dias_tomados", "observacion", "fecha_registro", "registrado_por",
@@ -498,7 +494,6 @@ def calcular_saldo_vacacional(nombre_colab, fecha_inicio_labores, df_vacaciones,
 # =========================================================
 # NUEVO MÓDULO: REGISTRO DE AUDITORÍA
 # =========================================================
-@st.cache_data(ttl=120, show_spinner=False)
 def obtener_auditoria_gsheets():
     columnas_aud = ["id_log", "fecha_hora", "usuario", "rol", "accion", "entidad", "detalle"]
     if doc_sheets:
@@ -553,7 +548,6 @@ def registrar_auditoria(accion, entidad, detalle=""):
 # =========================================================
 # NUEVO MÓDULO: CONFIGURACIÓN DEL SISTEMA (GPS / Notificaciones)
 # =========================================================
-@st.cache_data(ttl=120, show_spinner=False)
 def obtener_configuracion_gsheets():
     config_default = {
         "tienda_lat": "-12.046374", "tienda_lon": "-77.042793", "radio_metros": "150",
@@ -666,7 +660,6 @@ TAREAS_OFFBOARDING_DEFAULT = [
     "Baja de usuario en el sistema"
 ]
 
-@st.cache_data(ttl=120, show_spinner=False)
 def obtener_checklist_gsheets():
     columnas_chk = ["id_item", "dni", "nombre", "tipo", "tarea", "estado", "fecha_creacion", "fecha_completado"]
     if doc_sheets:
@@ -722,7 +715,6 @@ def crear_checklist_offboarding(dni, nombre):
 # =========================================================
 # NUEVO MÓDULO: HISTORIAL DE BOLETAS (para Analítica / BI)
 # =========================================================
-@st.cache_data(ttl=120, show_spinner=False)
 def obtener_boletas_historial_gsheets():
     columnas_bh = ["id_boleta", "mes", "anio", "dni", "nombre", "cargo", "sueldo_basico",
                    "total_ingresos", "total_descuentos", "neto_pagar", "fecha_emision", "emitido_por"]
@@ -1138,46 +1130,13 @@ if "en_planilla" not in st.session_state.empleados.columns:
 else:
     st.session_state.empleados["en_planilla"] = st.session_state.empleados["en_planilla"].replace("", "Sí").fillna("Sí")
 
-@st.cache_data(ttl=120, show_spinner=False)
-def _leer_asistencia_gsheets():
-    if doc_sheets:
-        try:
-            return doc_sheets.worksheet("Asistencia").get_all_records()
-        except Exception as e:
-            st.warning(f"⚠️ No se pudo leer la hoja 'Asistencia': {e}")
-    return []
-
-@st.cache_data(ttl=120, show_spinner=False)
-def _leer_descuadres_gsheets():
-    if doc_sheets:
-        try:
-            return doc_sheets.worksheet("Descuadres").get_all_records()
-        except Exception as e:
-            st.warning(f"⚠️ No se pudo leer la hoja 'Descuadres': {e}")
-    return []
-
-@st.cache_data(ttl=120, show_spinner=False)
-def _leer_solicitudes_gsheets():
-    if doc_sheets:
-        try:
-            return doc_sheets.worksheet("Solicitudes").get_all_records()
-        except Exception as e:
-            st.warning(f"⚠️ No se pudo leer la hoja 'Solicitudes': {e}")
-    return []
-
-@st.cache_data(ttl=120, show_spinner=False)
-def _leer_feriados_gsheets():
-    if doc_sheets:
-        try:
-            return doc_sheets.worksheet("Feriados").get_all_records()
-        except Exception as e:
-            st.warning(f"⚠️ No se pudo leer la hoja 'Feriados': {e}")
-    return []
-
 if "asistencia" not in st.session_state:
-    data_asist = _leer_asistencia_gsheets()
-    if data_asist:
-        st.session_state.asistencia = pd.DataFrame(data_asist)
+    if doc_sheets:
+        try:
+            data_asist = doc_sheets.worksheet("Asistencia").get_all_records()
+            st.session_state.asistencia = pd.DataFrame(data_asist)
+        except Exception:
+            st.session_state.asistencia = pd.DataFrame(columns=["dni", "nombre", "tipo", "fecha_hora", "fecha", "observacion", "es_extra"])
     else:
         st.session_state.asistencia = pd.DataFrame(columns=["dni", "nombre", "tipo", "fecha_hora", "fecha", "observacion", "es_extra"])
 
@@ -1186,9 +1145,12 @@ for col in ["observacion", "es_extra"]:
         st.session_state.asistencia[col] = "NO" if col == "es_extra" else ""
 
 if "descuadres" not in st.session_state:
-    data_desc = _leer_descuadres_gsheets()
-    if data_desc:
-        st.session_state.descuadres = pd.DataFrame(data_desc)
+    if doc_sheets:
+        try:
+            data_desc = doc_sheets.worksheet("Descuadres").get_all_records()
+            st.session_state.descuadres = pd.DataFrame(data_desc)
+        except Exception:
+            st.session_state.descuadres = pd.DataFrame(columns=["fecha", "dni", "nombre", "tipo", "monto", "observacion", "fecha_registro"])
     else:
         st.session_state.descuadres = pd.DataFrame(columns=["fecha", "dni", "nombre", "tipo", "monto", "observacion", "fecha_registro"])
 
@@ -1198,9 +1160,12 @@ if "solicitudes" not in st.session_state:
         "fecha_permiso", "monto_adelanto", "motivo", "estado", "respuesta_admin",
         "requiere_recuperacion", "fecha_recuperacion"
     ]
-    data_sol = _leer_solicitudes_gsheets()
-    if data_sol:
-        st.session_state.solicitudes = pd.DataFrame(data_sol)
+    if doc_sheets:
+        try:
+            data_sol = doc_sheets.worksheet("Solicitudes").get_all_records()
+            st.session_state.solicitudes = pd.DataFrame(data_sol)
+        except Exception:
+            st.session_state.solicitudes = pd.DataFrame(columns=columnas_solicitudes)
     else:
         st.session_state.solicitudes = pd.DataFrame(columns=columnas_solicitudes)
 
@@ -1209,17 +1174,18 @@ if "solicitudes" not in st.session_state:
             st.session_state.solicitudes[col_sol] = ""
 
 if "feriados" not in st.session_state:
-    data_fer = _leer_feriados_gsheets()
-    if data_fer:
-        st.session_state.feriados = pd.DataFrame(data_fer)
-    else:
-        st.session_state.feriados = pd.DataFrame([
-            {"fecha": "2026-01-01", "descripcion": "Año Nuevo"},
-            {"fecha": "2026-04-02", "descripcion": "Jueves Santo"},
-            {"fecha": "2026-04-03", "descripcion": "Viernes Santo"},
-            {"fecha": "2026-05-01", "descripcion": "Día del Trabajo"},
-            {"fecha": "2026-06-29", "descripcion": "San Pedro y San Pablo"},
-            {"fecha": "2026-07-28", "descripcion": "Fiestas Patrias"},
+    if doc_sheets:
+        try:
+            data_fer = doc_sheets.worksheet("Feriados").get_all_records()
+            st.session_state.feriados = pd.DataFrame(data_fer)
+        except Exception:
+            st.session_state.feriados = pd.DataFrame([
+                {"fecha": "2026-01-01", "descripcion": "Año Nuevo"},
+                {"fecha": "2026-04-02", "descripcion": "Jueves Santo"},
+                {"fecha": "2026-04-03", "descripcion": "Viernes Santo"},
+                {"fecha": "2026-05-01", "descripcion": "Día del Trabajo"},
+                {"fecha": "2026-06-29", "descripcion": "San Pedro y San Pablo"},
+                {"fecha": "2026-07-28", "descripcion": "Fiestas Patrias"},
                 {"fecha": "2026-07-29", "descripcion": "Fiestas Patrias"},
                 {"fecha": "2026-08-06", "descripcion": "Batalla de Junín"},
                 {"fecha": "2026-08-30", "descripcion": "Santa Rosa de Lima"},
@@ -1229,6 +1195,23 @@ if "feriados" not in st.session_state:
                 {"fecha": "2026-12-09", "descripcion": "Batalla de Ayacucho"},
                 {"fecha": "2026-12-25", "descripcion": "Navidad"}
             ])
+    else:
+        st.session_state.feriados = pd.DataFrame([
+            {"fecha": "2026-01-01", "descripcion": "Año Nuevo"},
+            {"fecha": "2026-04-02", "descripcion": "Jueves Santo"},
+            {"fecha": "2026-04-03", "descripcion": "Viernes Santo"},
+            {"fecha": "2026-05-01", "descripcion": "Día del Trabajo"},
+            {"fecha": "2026-06-29", "descripcion": "San Pedro y San Pablo"},
+            {"fecha": "2026-07-28", "descripcion": "Fiestas Patrias"},
+            {"fecha": "2026-07-29", "descripcion": "Fiestas Patrias"},
+            {"fecha": "2026-08-06", "descripcion": "Batalla de Junín"},
+            {"fecha": "2026-08-30", "descripcion": "Santa Rosa de Lima"},
+            {"fecha": "2026-10-08", "descripcion": "Combate de Angamos"},
+            {"fecha": "2026-11-01", "descripcion": "Día de Todos los Santos"},
+            {"fecha": "2026-12-08", "descripcion": "Inmaculada Concepción"},
+            {"fecha": "2026-12-09", "descripcion": "Batalla de Ayacucho"},
+            {"fecha": "2026-12-25", "descripcion": "Navidad"}
+        ])
 
 # --- NUEVO: ESTADO DE SESIÓN PARA EL MÓDULO DE VACACIONES ---
 if "vacaciones" not in st.session_state:
@@ -1851,18 +1834,7 @@ else:
 
 choice = st.sidebar.radio("Navegación", menu)
 
-st.sidebar.markdown("<br>", unsafe_allow_html=True)
-if st.sidebar.button("🔄 Recargar datos desde Sheets", use_container_width=True, help="Los datos se guardan en caché por 2 minutos para no saturar la cuota de Google Sheets. Usa esto si necesitas ver un cambio hecho por otra persona de inmediato."):
-    st.cache_data.clear()
-    for _clave_datos in ["empleados", "asistencia", "descuadres", "solicitudes", "feriados", "vacaciones",
-                          "auditoria", "config_sistema", "checklist", "boletas_historial", "incidencias", "botellas_fiadas"]:
-        if _clave_datos in st.session_state:
-            del st.session_state[_clave_datos]
-    st.toast("Datos recargados desde Google Sheets")
-    time.sleep(0.3)
-    st.rerun()
-
-st.sidebar.markdown("<br>", unsafe_allow_html=True)
+st.sidebar.markdown("<br><br>", unsafe_allow_html=True)
 st.sidebar.markdown('<div class="btn-logout">', unsafe_allow_html=True)
 if st.sidebar.button("Cerrar Sesión", use_container_width=True):
     registrar_auditoria("Cierre de Sesión", "Usuarios", f"{user_actual} cerró sesión.")
@@ -1882,6 +1854,69 @@ if choice == "Marcar Asistencia":
     """, unsafe_allow_html=True)
 
     col_main, col_preview = st.columns([1.1, 1])
+
+    # --- NUEVO: GEOLOCALIZACIÓN ANTI-FRAUDE ---
+    cfg_geo = st.session_state.config_sistema
+    qp_geo = st.query_params
+    lat_geo_qp = qp_geo.get("geo_lat")
+    lon_geo_qp = qp_geo.get("geo_lon")
+
+    st.markdown("##### 📍 Verificación de Ubicación")
+    components.html("""
+        <div id="geo-status" style="font-family:sans-serif;font-size:12.5px;color:#6B7280;padding:2px 0;">Solicitando permiso de ubicación al navegador...</div>
+        <script>
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(function(pos) {
+                var lat = pos.coords.latitude.toFixed(6);
+                var lon = pos.coords.longitude.toFixed(6);
+                try {
+                    var url = new URL(window.parent.location.href);
+                    if (url.searchParams.get('geo_lat') !== lat) {
+                        url.searchParams.set('geo_lat', lat);
+                        url.searchParams.set('geo_lon', lon);
+                        window.parent.location.href = url.toString();
+                    } else {
+                        document.getElementById('geo-status').innerText = 'Ubicación detectada ✓';
+                    }
+                } catch (e) {
+                    document.getElementById('geo-status').innerText = 'No se pudo verificar la ubicación automáticamente en este navegador (usa el campo manual).';
+                }
+            }, function(err) {
+                document.getElementById('geo-status').innerText = 'Ubicación no disponible: ' + err.message + ' (usa el campo manual si es necesario).';
+            });
+        } else {
+            document.getElementById('geo-status').innerText = 'Este navegador no soporta geolocalización (usa el campo manual).';
+        }
+        </script>
+    """, height=26)
+
+    with st.expander("¿No se detectó tu ubicación automáticamente? Ingrésala manualmente", expanded=(not lat_geo_qp)):
+        gm1, gm2 = st.columns(2)
+        lat_manual = gm1.text_input("Latitud", value=lat_geo_qp or "", key="lat_manual_geo")
+        lon_manual = gm2.text_input("Longitud", value=lon_geo_qp or "", key="lon_manual_geo")
+        if st.button("Usar esta ubicación manual", key="btn_usar_manual_geo"):
+            st.query_params["geo_lat"] = lat_manual
+            st.query_params["geo_lon"] = lon_manual
+            st.rerun()
+
+    distancia_geo = None
+    dentro_rango_geo = True
+    lat_final_geo = lat_geo_qp
+    lon_final_geo = lon_geo_qp
+
+    if lat_final_geo and lon_final_geo:
+        distancia_geo = calcular_distancia_metros(lat_final_geo, lon_final_geo, cfg_geo.get("tienda_lat"), cfg_geo.get("tienda_lon"))
+        if distancia_geo is not None:
+            radio_permitido = float(cfg_geo.get("radio_metros", 150) or 150)
+            dentro_rango_geo = distancia_geo <= radio_permitido
+            if dentro_rango_geo:
+                st.success(f"📍 Estás dentro del rango permitido ({distancia_geo:.0f} m de la tienda, máximo {radio_permitido:.0f} m).")
+            else:
+                st.warning(f"⚠️ Estás fuera del rango esperado ({distancia_geo:.0f} m de la tienda, máximo {radio_permitido:.0f} m).")
+    else:
+        st.caption("Aún no se detecta tu ubicación. Si tu navegador lo permite, se completará automáticamente en unos segundos.")
+
+    bloqueo_activo_geo = str(cfg_geo.get("bloquear_fuera_rango", "No")).strip().lower() in ["sí", "si", "yes", "true"]
 
     with col_main:
         with st.container(border=True):
@@ -1904,13 +1939,23 @@ if choice == "Marcar Asistencia":
             if es_turno_extra and motivo_extra:
                 obs_marca = f"[{motivo_extra}] {obs_marca}".strip()
 
+            if distancia_geo is not None:
+                tag_geo = f"[GPS: {distancia_geo:.0f}m {'OK' if dentro_rango_geo else 'FUERA DE RANGO'}]"
+                obs_marca = f"{tag_geo} {obs_marca}".strip()
+
             st.markdown("<br>", unsafe_allow_html=True)
+
+            bloquear_marca_geo = bloqueo_activo_geo and (distancia_geo is not None) and (not dentro_rango_geo)
+            if bloquear_marca_geo:
+                st.error("🚫 No puedes marcar asistencia: estás fuera del rango permitido y el administrador activó el bloqueo por ubicación. Si crees que es un error, contacta a tu administrador.")
 
             c1, c2 = st.columns(2)
             with c1:
                 st.markdown('<div class="btn-ingreso">', unsafe_allow_html=True)
-                if st.button("Marcar Ingreso", use_container_width=True):
+                if st.button("Marcar Ingreso", use_container_width=True, disabled=bloquear_marca_geo):
                     if registrar_marca(dni_actual, user_actual, "INGRESO", obs_marca, es_turno_extra):
+                        if distancia_geo is not None and not dentro_rango_geo:
+                            registrar_auditoria("Marcación Fuera de Rango", "Asistencia", f"{user_actual} marcó INGRESO a {distancia_geo:.0f}m de la tienda")
                         st.toast("Ingreso registrado correctamente")
                         time.sleep(0.3)
                         st.rerun()
@@ -1918,8 +1963,10 @@ if choice == "Marcar Asistencia":
 
             with c2:
                 st.markdown('<div class="btn-salida">', unsafe_allow_html=True)
-                if st.button("Marcar Salida", use_container_width=True):
+                if st.button("Marcar Salida", use_container_width=True, disabled=bloquear_marca_geo):
                     if registrar_marca(dni_actual, user_actual, "SALIDA", obs_marca, es_turno_extra):
+                        if distancia_geo is not None and not dentro_rango_geo:
+                            registrar_auditoria("Marcación Fuera de Rango", "Asistencia", f"{user_actual} marcó SALIDA a {distancia_geo:.0f}m de la tienda")
                         st.toast("Salida registrada correctamente")
                         time.sleep(0.3)
                         st.rerun()
@@ -3943,6 +3990,24 @@ elif choice == "Centro de Alertas":
         else:
             st.success("No hay permisos de salud pendientes de recuperación.")
 
+    st.markdown("<br>", unsafe_allow_html=True)
+    if st.button("✉️ Enviar este Resumen de Alertas por Correo", use_container_width=True):
+        cuerpo_correo = f"""
+        <h3>Resumen de Alertas - Tiendas Premium</h3>
+        <p><b>Contratos por vencer (15 días):</b> {len(contratos_por_vencer)}</p>
+        <p><b>Cumpleaños esta semana:</b> {len(cumples_prox)}</p>
+        <p><b>Tardanzas recurrentes este mes:</b> {len(tardanzas_recurrentes)}</p>
+        <p><b>Solicitudes pendientes:</b> {solicitudes_pend}</p>
+        <p><b>Permisos de salud sin recuperar:</b> {permisos_pend_recup}</p>
+        <p style="color:#94a3b8; font-size:12px;">Generado automáticamente desde el Centro de Alertas.</p>
+        """
+        ok_alerta_mail, msg_alerta_mail = enviar_correo_alerta("Resumen de Alertas - Tiendas Premium", cuerpo_correo)
+        if ok_alerta_mail:
+            registrar_auditoria("Enviar Resumen de Alertas", "Notificaciones", msg_alerta_mail)
+            st.success(msg_alerta_mail)
+        else:
+            st.warning(msg_alerta_mail)
+
 elif choice == "Gestión de Vacaciones":
     st.markdown("""
         <div class="market-header">
@@ -4312,8 +4377,52 @@ elif choice == "Auditoría y Configuración":
             st.info("Aún no hay eventos registrados en la auditoría.")
 
     with tab_cfg:
-        cfg_actual = st.session_state.config_sistema
+        st.markdown("##### 📍 Ubicación de la Tienda (para Geolocalización)")
+        st.caption("Define las coordenadas GPS de tu tienda y el radio permitido para marcar asistencia. Puedes obtener tu latitud/longitud buscando tu dirección en Google Maps y copiando las coordenadas.")
 
+        cfg_actual = st.session_state.config_sistema
+        cc1, cc2, cc3 = st.columns(3)
+        lat_cfg_in = cc1.text_input("Latitud de la Tienda", value=str(cfg_actual.get("tienda_lat", "")))
+        lon_cfg_in = cc2.text_input("Longitud de la Tienda", value=str(cfg_actual.get("tienda_lon", "")))
+        radio_cfg_in = cc3.number_input("Radio Permitido (metros)", min_value=10, max_value=5000, value=int(float(cfg_actual.get("radio_metros", 150) or 150)))
+
+        bloquear_cfg_in = st.checkbox("Bloquear marcación de asistencia si está fuera del rango", value=str(cfg_actual.get("bloquear_fuera_rango", "No")).strip().lower() in ["sí", "si"])
+
+        if st.button("Guardar Configuración de Ubicación", use_container_width=True):
+            guardar_configuracion_gsheets("tienda_lat", lat_cfg_in)
+            guardar_configuracion_gsheets("tienda_lon", lon_cfg_in)
+            guardar_configuracion_gsheets("radio_metros", radio_cfg_in)
+            guardar_configuracion_gsheets("bloquear_fuera_rango", "Sí" if bloquear_cfg_in else "No")
+            st.session_state.config_sistema = obtener_configuracion_gsheets()
+            registrar_auditoria("Actualizar Configuración GPS", "Configuracion", f"lat={lat_cfg_in}, lon={lon_cfg_in}, radio={radio_cfg_in}m, bloqueo={'Sí' if bloquear_cfg_in else 'No'}")
+            st.toast("Configuración de ubicación guardada")
+            time.sleep(0.3)
+            st.rerun()
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("##### ✉️ Notificaciones por Correo")
+        email_cfg_in = st.text_input("Correo para recibir alertas", value=str(cfg_actual.get("email_notificaciones", "humberto1098@outlook.com")))
+        if st.button("Guardar Correo de Notificaciones", use_container_width=True):
+            guardar_configuracion_gsheets("email_notificaciones", email_cfg_in)
+            st.session_state.config_sistema = obtener_configuracion_gsheets()
+            st.toast("Correo de notificaciones actualizado")
+
+        if "email" not in st.secrets:
+            st.warning("Para activar el envío real de correos, agrega en **Settings → Secrets** de tu app:\n\n```\n[email]\nremitente = \"tu_correo@outlook.com\"\nclave_app = \"tu_contraseña_de_aplicación\"\nservidor = \"smtp-mail.outlook.com\"\npuerto = 587\n```\nMientras no esté configurado, los botones de envío de correo mostrarán un aviso en vez de fallar.")
+        else:
+            st.success("Envío de correo configurado correctamente en Secrets.")
+            if st.button("Enviar Correo de Prueba", use_container_width=True):
+                ok_mail, msg_mail = enviar_correo_alerta(
+                    "Prueba - Sistema Tiendas Premium",
+                    "<p>Este es un correo de prueba del Centro de Alertas de Tiendas Premium.</p>",
+                    email_cfg_in
+                )
+                if ok_mail:
+                    st.success(msg_mail)
+                else:
+                    st.error(msg_mail)
+
+        st.markdown("<br>", unsafe_allow_html=True)
         st.markdown("##### 🔒 Sesión")
         st.caption(f"Las sesiones se cierran automáticamente tras 30 minutos de inactividad o 10 horas desde el inicio de sesión. Sesión actual iniciada: {datetime.fromtimestamp(st.session_state.login_timestamp).strftime('%d/%m/%Y %H:%M:%S')}.")
 
