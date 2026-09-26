@@ -224,6 +224,7 @@ def conectar_google_sheets():
 doc_sheets = conectar_google_sheets()
 
 # --- FUNCIONES DE LECTURA Y ESCRITURA EN LA NUBE ---
+@st.cache_data(ttl=120, show_spinner=False)
 def obtener_colaboradores_gsheets():
     if doc_sheets:
         try:
@@ -298,6 +299,7 @@ def guardar_descuadre_gsheets(fecha, dni, nombre, tipo, monto, observacion, fech
 # =========================================================
 # NUEVO MÓDULO: INCIDENCIAS (Billete Falso, Botellas Rotas, Otros Daños)
 # =========================================================
+@st.cache_data(ttl=120, show_spinner=False)
 def obtener_incidencias_gsheets():
     columnas_inc = ["id_incidencia", "dni", "nombre", "fecha", "tipo_incidencia", "detalle",
                      "valor_reparacion", "fecha_registro", "registrado_por", "estado"]
@@ -341,6 +343,7 @@ def guardar_incidencia_gsheets(id_inc, dni, nombre, fecha, tipo_incidencia, deta
 # =========================================================
 # NUEVO MÓDULO: BOTELLAS FIADAS (visible para todos los roles)
 # =========================================================
+@st.cache_data(ttl=120, show_spinner=False)
 def obtener_botellas_fiadas_gsheets():
     columnas_bf = ["id_fiado", "cliente_nombre", "cliente_dni", "cliente_direccion",
                    "cantidad_botellas", "tipo_botella", "dejo_dinero", "monto_dejado",
@@ -412,6 +415,7 @@ def guardar_feriado_gsheets(fecha, descripcion):
 # NUEVO MÓDULO: GESTIÓN DE VACACIONES / DESCANSO MÉDICO
 # Agregado sin alterar ninguna función ni hoja existente.
 # =========================================================
+@st.cache_data(ttl=120, show_spinner=False)
 def obtener_vacaciones_gsheets():
     columnas_vac = ["id_vacacion", "dni", "nombre", "tipo", "fecha_inicio", "fecha_fin",
                      "dias_tomados", "observacion", "fecha_registro", "registrado_por",
@@ -494,6 +498,7 @@ def calcular_saldo_vacacional(nombre_colab, fecha_inicio_labores, df_vacaciones,
 # =========================================================
 # NUEVO MÓDULO: REGISTRO DE AUDITORÍA
 # =========================================================
+@st.cache_data(ttl=120, show_spinner=False)
 def obtener_auditoria_gsheets():
     columnas_aud = ["id_log", "fecha_hora", "usuario", "rol", "accion", "entidad", "detalle"]
     if doc_sheets:
@@ -548,6 +553,7 @@ def registrar_auditoria(accion, entidad, detalle=""):
 # =========================================================
 # NUEVO MÓDULO: CONFIGURACIÓN DEL SISTEMA (GPS / Notificaciones)
 # =========================================================
+@st.cache_data(ttl=120, show_spinner=False)
 def obtener_configuracion_gsheets():
     config_default = {
         "tienda_lat": "-12.046374", "tienda_lon": "-77.042793", "radio_metros": "150",
@@ -660,6 +666,7 @@ TAREAS_OFFBOARDING_DEFAULT = [
     "Baja de usuario en el sistema"
 ]
 
+@st.cache_data(ttl=120, show_spinner=False)
 def obtener_checklist_gsheets():
     columnas_chk = ["id_item", "dni", "nombre", "tipo", "tarea", "estado", "fecha_creacion", "fecha_completado"]
     if doc_sheets:
@@ -715,6 +722,7 @@ def crear_checklist_offboarding(dni, nombre):
 # =========================================================
 # NUEVO MÓDULO: HISTORIAL DE BOLETAS (para Analítica / BI)
 # =========================================================
+@st.cache_data(ttl=120, show_spinner=False)
 def obtener_boletas_historial_gsheets():
     columnas_bh = ["id_boleta", "mes", "anio", "dni", "nombre", "cargo", "sueldo_basico",
                    "total_ingresos", "total_descuentos", "neto_pagar", "fecha_emision", "emitido_por"]
@@ -1130,13 +1138,46 @@ if "en_planilla" not in st.session_state.empleados.columns:
 else:
     st.session_state.empleados["en_planilla"] = st.session_state.empleados["en_planilla"].replace("", "Sí").fillna("Sí")
 
-if "asistencia" not in st.session_state:
+@st.cache_data(ttl=120, show_spinner=False)
+def _leer_asistencia_gsheets():
     if doc_sheets:
         try:
-            data_asist = doc_sheets.worksheet("Asistencia").get_all_records()
-            st.session_state.asistencia = pd.DataFrame(data_asist)
-        except Exception:
-            st.session_state.asistencia = pd.DataFrame(columns=["dni", "nombre", "tipo", "fecha_hora", "fecha", "observacion", "es_extra"])
+            return doc_sheets.worksheet("Asistencia").get_all_records()
+        except Exception as e:
+            st.warning(f"⚠️ No se pudo leer la hoja 'Asistencia': {e}")
+    return []
+
+@st.cache_data(ttl=120, show_spinner=False)
+def _leer_descuadres_gsheets():
+    if doc_sheets:
+        try:
+            return doc_sheets.worksheet("Descuadres").get_all_records()
+        except Exception as e:
+            st.warning(f"⚠️ No se pudo leer la hoja 'Descuadres': {e}")
+    return []
+
+@st.cache_data(ttl=120, show_spinner=False)
+def _leer_solicitudes_gsheets():
+    if doc_sheets:
+        try:
+            return doc_sheets.worksheet("Solicitudes").get_all_records()
+        except Exception as e:
+            st.warning(f"⚠️ No se pudo leer la hoja 'Solicitudes': {e}")
+    return []
+
+@st.cache_data(ttl=120, show_spinner=False)
+def _leer_feriados_gsheets():
+    if doc_sheets:
+        try:
+            return doc_sheets.worksheet("Feriados").get_all_records()
+        except Exception as e:
+            st.warning(f"⚠️ No se pudo leer la hoja 'Feriados': {e}")
+    return []
+
+if "asistencia" not in st.session_state:
+    data_asist = _leer_asistencia_gsheets()
+    if data_asist:
+        st.session_state.asistencia = pd.DataFrame(data_asist)
     else:
         st.session_state.asistencia = pd.DataFrame(columns=["dni", "nombre", "tipo", "fecha_hora", "fecha", "observacion", "es_extra"])
 
@@ -1145,12 +1186,9 @@ for col in ["observacion", "es_extra"]:
         st.session_state.asistencia[col] = "NO" if col == "es_extra" else ""
 
 if "descuadres" not in st.session_state:
-    if doc_sheets:
-        try:
-            data_desc = doc_sheets.worksheet("Descuadres").get_all_records()
-            st.session_state.descuadres = pd.DataFrame(data_desc)
-        except Exception:
-            st.session_state.descuadres = pd.DataFrame(columns=["fecha", "dni", "nombre", "tipo", "monto", "observacion", "fecha_registro"])
+    data_desc = _leer_descuadres_gsheets()
+    if data_desc:
+        st.session_state.descuadres = pd.DataFrame(data_desc)
     else:
         st.session_state.descuadres = pd.DataFrame(columns=["fecha", "dni", "nombre", "tipo", "monto", "observacion", "fecha_registro"])
 
@@ -1160,12 +1198,9 @@ if "solicitudes" not in st.session_state:
         "fecha_permiso", "monto_adelanto", "motivo", "estado", "respuesta_admin",
         "requiere_recuperacion", "fecha_recuperacion"
     ]
-    if doc_sheets:
-        try:
-            data_sol = doc_sheets.worksheet("Solicitudes").get_all_records()
-            st.session_state.solicitudes = pd.DataFrame(data_sol)
-        except Exception:
-            st.session_state.solicitudes = pd.DataFrame(columns=columnas_solicitudes)
+    data_sol = _leer_solicitudes_gsheets()
+    if data_sol:
+        st.session_state.solicitudes = pd.DataFrame(data_sol)
     else:
         st.session_state.solicitudes = pd.DataFrame(columns=columnas_solicitudes)
 
@@ -1174,18 +1209,17 @@ if "solicitudes" not in st.session_state:
             st.session_state.solicitudes[col_sol] = ""
 
 if "feriados" not in st.session_state:
-    if doc_sheets:
-        try:
-            data_fer = doc_sheets.worksheet("Feriados").get_all_records()
-            st.session_state.feriados = pd.DataFrame(data_fer)
-        except Exception:
-            st.session_state.feriados = pd.DataFrame([
-                {"fecha": "2026-01-01", "descripcion": "Año Nuevo"},
-                {"fecha": "2026-04-02", "descripcion": "Jueves Santo"},
-                {"fecha": "2026-04-03", "descripcion": "Viernes Santo"},
-                {"fecha": "2026-05-01", "descripcion": "Día del Trabajo"},
-                {"fecha": "2026-06-29", "descripcion": "San Pedro y San Pablo"},
-                {"fecha": "2026-07-28", "descripcion": "Fiestas Patrias"},
+    data_fer = _leer_feriados_gsheets()
+    if data_fer:
+        st.session_state.feriados = pd.DataFrame(data_fer)
+    else:
+        st.session_state.feriados = pd.DataFrame([
+            {"fecha": "2026-01-01", "descripcion": "Año Nuevo"},
+            {"fecha": "2026-04-02", "descripcion": "Jueves Santo"},
+            {"fecha": "2026-04-03", "descripcion": "Viernes Santo"},
+            {"fecha": "2026-05-01", "descripcion": "Día del Trabajo"},
+            {"fecha": "2026-06-29", "descripcion": "San Pedro y San Pablo"},
+            {"fecha": "2026-07-28", "descripcion": "Fiestas Patrias"},
                 {"fecha": "2026-07-29", "descripcion": "Fiestas Patrias"},
                 {"fecha": "2026-08-06", "descripcion": "Batalla de Junín"},
                 {"fecha": "2026-08-30", "descripcion": "Santa Rosa de Lima"},
@@ -1195,23 +1229,6 @@ if "feriados" not in st.session_state:
                 {"fecha": "2026-12-09", "descripcion": "Batalla de Ayacucho"},
                 {"fecha": "2026-12-25", "descripcion": "Navidad"}
             ])
-    else:
-        st.session_state.feriados = pd.DataFrame([
-            {"fecha": "2026-01-01", "descripcion": "Año Nuevo"},
-            {"fecha": "2026-04-02", "descripcion": "Jueves Santo"},
-            {"fecha": "2026-04-03", "descripcion": "Viernes Santo"},
-            {"fecha": "2026-05-01", "descripcion": "Día del Trabajo"},
-            {"fecha": "2026-06-29", "descripcion": "San Pedro y San Pablo"},
-            {"fecha": "2026-07-28", "descripcion": "Fiestas Patrias"},
-            {"fecha": "2026-07-29", "descripcion": "Fiestas Patrias"},
-            {"fecha": "2026-08-06", "descripcion": "Batalla de Junín"},
-            {"fecha": "2026-08-30", "descripcion": "Santa Rosa de Lima"},
-            {"fecha": "2026-10-08", "descripcion": "Combate de Angamos"},
-            {"fecha": "2026-11-01", "descripcion": "Día de Todos los Santos"},
-            {"fecha": "2026-12-08", "descripcion": "Inmaculada Concepción"},
-            {"fecha": "2026-12-09", "descripcion": "Batalla de Ayacucho"},
-            {"fecha": "2026-12-25", "descripcion": "Navidad"}
-        ])
 
 # --- NUEVO: ESTADO DE SESIÓN PARA EL MÓDULO DE VACACIONES ---
 if "vacaciones" not in st.session_state:
@@ -1834,7 +1851,18 @@ else:
 
 choice = st.sidebar.radio("Navegación", menu)
 
-st.sidebar.markdown("<br><br>", unsafe_allow_html=True)
+st.sidebar.markdown("<br>", unsafe_allow_html=True)
+if st.sidebar.button("🔄 Recargar datos desde Sheets", use_container_width=True, help="Los datos se guardan en caché por 2 minutos para no saturar la cuota de Google Sheets. Usa esto si necesitas ver un cambio hecho por otra persona de inmediato."):
+    st.cache_data.clear()
+    for _clave_datos in ["empleados", "asistencia", "descuadres", "solicitudes", "feriados", "vacaciones",
+                          "auditoria", "config_sistema", "checklist", "boletas_historial", "incidencias", "botellas_fiadas"]:
+        if _clave_datos in st.session_state:
+            del st.session_state[_clave_datos]
+    st.toast("Datos recargados desde Google Sheets")
+    time.sleep(0.3)
+    st.rerun()
+
+st.sidebar.markdown("<br>", unsafe_allow_html=True)
 st.sidebar.markdown('<div class="btn-logout">', unsafe_allow_html=True)
 if st.sidebar.button("Cerrar Sesión", use_container_width=True):
     registrar_auditoria("Cierre de Sesión", "Usuarios", f"{user_actual} cerró sesión.")
