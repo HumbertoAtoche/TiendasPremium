@@ -6,11 +6,6 @@ import zoneinfo  # Manejo de zona horaria de Perú (UTC-5)
 import io
 import time
 import gspread
-import math
-import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-import streamlit.components.v1 as components
 # --- INTENTO DE IMPORTAR REPORTLAB PARA PDF (CON FALLBACK INTEGRADO) ---
 try:
     from reportlab.lib.pagesizes import letter
@@ -544,101 +539,6 @@ def registrar_auditoria(accion, entidad, detalle=""):
             hoja.append_row([id_log_aud, fecha_h_aud, usuario_aud, rol_aud, accion, entidad, str(detalle)])
         except Exception as e:
             st.warning(f"⚠️ No se pudo guardar en la hoja 'Auditoria' de Google Sheets: {e}")
-
-# =========================================================
-# NUEVO MÓDULO: CONFIGURACIÓN DEL SISTEMA (GPS / Notificaciones)
-# =========================================================
-def obtener_configuracion_gsheets():
-    config_default = {
-        "tienda_lat": "-12.046374", "tienda_lon": "-77.042793", "radio_metros": "150",
-        "bloquear_fuera_rango": "No", "email_notificaciones": "humberto1098@outlook.com"
-    }
-    if doc_sheets:
-        try:
-            try:
-                hoja = doc_sheets.worksheet("Configuracion")
-            except gspread.exceptions.WorksheetNotFound:
-                hoja = doc_sheets.add_worksheet(title="Configuracion", rows="20", cols="2")
-                hoja.append_row(["clave", "valor"])
-                for k, v in config_default.items():
-                    hoja.append_row([k, v])
-                return config_default
-            datos = hoja.get_all_records()
-            if datos:
-                cfg = {row["clave"]: row["valor"] for row in datos if row.get("clave")}
-                for k, v in config_default.items():
-                    if k not in cfg:
-                        cfg[k] = v
-                return cfg
-        except Exception as e:
-            st.warning(f"⚠️ No se pudo leer la hoja 'Configuracion' de Google Sheets: {e}")
-    return config_default
-
-def guardar_configuracion_gsheets(clave, valor):
-    if doc_sheets:
-        try:
-            try:
-                hoja = doc_sheets.worksheet("Configuracion")
-            except gspread.exceptions.WorksheetNotFound:
-                hoja = doc_sheets.add_worksheet(title="Configuracion", rows="20", cols="2")
-                hoja.append_row(["clave", "valor"])
-            celdas = hoja.findall(str(clave), in_column=1)
-            if celdas:
-                hoja.update_cell(celdas[0].row, 2, str(valor))
-            else:
-                hoja.append_row([str(clave), str(valor)])
-        except Exception as e:
-            st.error(f"Error al guardar configuración: {e}")
-
-def calcular_distancia_metros(lat1, lon1, lat2, lon2):
-    """Fórmula de Haversine: distancia en metros entre dos coordenadas GPS."""
-    try:
-        R = 6371000
-        lat1, lon1, lat2, lon2 = map(float, [lat1, lon1, lat2, lon2])
-        phi1, phi2 = math.radians(lat1), math.radians(lat2)
-        dphi = math.radians(lat2 - lat1)
-        dlambda = math.radians(lon2 - lon1)
-        a = math.sin(dphi/2)**2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda/2)**2
-        return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-    except Exception:
-        return None
-
-# =========================================================
-# NUEVO MÓDULO: NOTIFICACIONES POR CORREO
-# =========================================================
-def enviar_correo_alerta(asunto, cuerpo_html, destinatario=None):
-    """Envía un correo usando las credenciales SMTP configuradas en st.secrets['email'].
-    Requiere configurar en Settings > Secrets:
-    [email]
-    remitente = "tu_correo@outlook.com"
-    clave_app = "tu_contraseña_de_aplicación"
-    servidor = "smtp-mail.outlook.com"
-    puerto = 587
-    Si no está configurado, informa al usuario en vez de fallar silenciosamente."""
-    if "email" not in st.secrets:
-        return False, "No se ha configurado el envío de correo (falta la sección [email] en Secrets)."
-    try:
-        cfg_sys = obtener_configuracion_gsheets()
-        dest_final = destinatario or cfg_sys.get("email_notificaciones", "humberto1098@outlook.com")
-
-        remitente = st.secrets["email"]["remitente"]
-        clave_app = st.secrets["email"]["clave_app"]
-        servidor = st.secrets["email"].get("servidor", "smtp-mail.outlook.com")
-        puerto = int(st.secrets["email"].get("puerto", 587))
-
-        msg = MIMEMultipart("alternative")
-        msg["Subject"] = asunto
-        msg["From"] = remitente
-        msg["To"] = dest_final
-        msg.attach(MIMEText(cuerpo_html, "html"))
-
-        with smtplib.SMTP(servidor, puerto) as server:
-            server.starttls()
-            server.login(remitente, clave_app)
-            server.sendmail(remitente, dest_final, msg.as_string())
-        return True, f"Correo enviado a {dest_final}"
-    except Exception as e:
-        return False, f"No se pudo enviar el correo: {e}"
 
 # =========================================================
 # NUEVO MÓDULO: ONBOARDING / OFFBOARDING ESTRUCTURADO
@@ -1220,9 +1120,6 @@ if "vacaciones" not in st.session_state:
 # --- NUEVO: ESTADO DE SESIÓN PARA AUDITORÍA Y CONFIGURACIÓN ---
 if "auditoria" not in st.session_state:
     st.session_state.auditoria = obtener_auditoria_gsheets()
-
-if "config_sistema" not in st.session_state:
-    st.session_state.config_sistema = obtener_configuracion_gsheets()
 
 if "checklist" not in st.session_state:
     st.session_state.checklist = obtener_checklist_gsheets()
@@ -1828,7 +1725,7 @@ st.sidebar.markdown(f"""
 """, unsafe_allow_html=True)
 
 if rol_actual == "admin":
-    menu = ["Dashboard General", "Centro de Alertas", "Analítica (BI)", "Gestión Colaboradores", "Onboarding / Offboarding", "Gestión de Vacaciones", "Boletas de Pago", "Solicitudes y Permisos", "Historial de Descuadres", "Incidencias y Daños", "Botellas Fiadas", "Historial de Asistencias", "Auditoría y Configuración"]
+    menu = ["Dashboard General", "Centro de Alertas", "Analítica (BI)", "Gestión Colaboradores", "Onboarding / Offboarding", "Gestión de Vacaciones", "Boletas de Pago", "Solicitudes y Permisos", "Historial de Descuadres", "Incidencias y Daños", "Botellas Fiadas", "Historial de Asistencias", "Auditoría"]
 else:
     menu = ["Marcar Asistencia", "Registrar Descuadre", "Registrar Incidencia", "Botellas Fiadas", "Mi Ficha Técnica", "Mis Vacaciones", "Solicitar Permiso / Adelanto", "Mi Dashboard Mensual"]
 
@@ -1855,69 +1752,6 @@ if choice == "Marcar Asistencia":
 
     col_main, col_preview = st.columns([1.1, 1])
 
-    # --- NUEVO: GEOLOCALIZACIÓN ANTI-FRAUDE ---
-    cfg_geo = st.session_state.config_sistema
-    qp_geo = st.query_params
-    lat_geo_qp = qp_geo.get("geo_lat")
-    lon_geo_qp = qp_geo.get("geo_lon")
-
-    st.markdown("##### 📍 Verificación de Ubicación")
-    components.html("""
-        <div id="geo-status" style="font-family:sans-serif;font-size:12.5px;color:#6B7280;padding:2px 0;">Solicitando permiso de ubicación al navegador...</div>
-        <script>
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(function(pos) {
-                var lat = pos.coords.latitude.toFixed(6);
-                var lon = pos.coords.longitude.toFixed(6);
-                try {
-                    var url = new URL(window.parent.location.href);
-                    if (url.searchParams.get('geo_lat') !== lat) {
-                        url.searchParams.set('geo_lat', lat);
-                        url.searchParams.set('geo_lon', lon);
-                        window.parent.location.href = url.toString();
-                    } else {
-                        document.getElementById('geo-status').innerText = 'Ubicación detectada ✓';
-                    }
-                } catch (e) {
-                    document.getElementById('geo-status').innerText = 'No se pudo verificar la ubicación automáticamente en este navegador (usa el campo manual).';
-                }
-            }, function(err) {
-                document.getElementById('geo-status').innerText = 'Ubicación no disponible: ' + err.message + ' (usa el campo manual si es necesario).';
-            });
-        } else {
-            document.getElementById('geo-status').innerText = 'Este navegador no soporta geolocalización (usa el campo manual).';
-        }
-        </script>
-    """, height=26)
-
-    with st.expander("¿No se detectó tu ubicación automáticamente? Ingrésala manualmente", expanded=(not lat_geo_qp)):
-        gm1, gm2 = st.columns(2)
-        lat_manual = gm1.text_input("Latitud", value=lat_geo_qp or "", key="lat_manual_geo")
-        lon_manual = gm2.text_input("Longitud", value=lon_geo_qp or "", key="lon_manual_geo")
-        if st.button("Usar esta ubicación manual", key="btn_usar_manual_geo"):
-            st.query_params["geo_lat"] = lat_manual
-            st.query_params["geo_lon"] = lon_manual
-            st.rerun()
-
-    distancia_geo = None
-    dentro_rango_geo = True
-    lat_final_geo = lat_geo_qp
-    lon_final_geo = lon_geo_qp
-
-    if lat_final_geo and lon_final_geo:
-        distancia_geo = calcular_distancia_metros(lat_final_geo, lon_final_geo, cfg_geo.get("tienda_lat"), cfg_geo.get("tienda_lon"))
-        if distancia_geo is not None:
-            radio_permitido = float(cfg_geo.get("radio_metros", 150) or 150)
-            dentro_rango_geo = distancia_geo <= radio_permitido
-            if dentro_rango_geo:
-                st.success(f"📍 Estás dentro del rango permitido ({distancia_geo:.0f} m de la tienda, máximo {radio_permitido:.0f} m).")
-            else:
-                st.warning(f"⚠️ Estás fuera del rango esperado ({distancia_geo:.0f} m de la tienda, máximo {radio_permitido:.0f} m).")
-    else:
-        st.caption("Aún no se detecta tu ubicación. Si tu navegador lo permite, se completará automáticamente en unos segundos.")
-
-    bloqueo_activo_geo = str(cfg_geo.get("bloquear_fuera_rango", "No")).strip().lower() in ["sí", "si", "yes", "true"]
-
     with col_main:
         with st.container(border=True):
             st.markdown("<h4 style='margin:0; font-size:1rem; color:#111827;'>Registro de Turno</h4>", unsafe_allow_html=True)
@@ -1939,23 +1773,13 @@ if choice == "Marcar Asistencia":
             if es_turno_extra and motivo_extra:
                 obs_marca = f"[{motivo_extra}] {obs_marca}".strip()
 
-            if distancia_geo is not None:
-                tag_geo = f"[GPS: {distancia_geo:.0f}m {'OK' if dentro_rango_geo else 'FUERA DE RANGO'}]"
-                obs_marca = f"{tag_geo} {obs_marca}".strip()
-
             st.markdown("<br>", unsafe_allow_html=True)
-
-            bloquear_marca_geo = bloqueo_activo_geo and (distancia_geo is not None) and (not dentro_rango_geo)
-            if bloquear_marca_geo:
-                st.error("🚫 No puedes marcar asistencia: estás fuera del rango permitido y el administrador activó el bloqueo por ubicación. Si crees que es un error, contacta a tu administrador.")
 
             c1, c2 = st.columns(2)
             with c1:
                 st.markdown('<div class="btn-ingreso">', unsafe_allow_html=True)
-                if st.button("Marcar Ingreso", use_container_width=True, disabled=bloquear_marca_geo):
+                if st.button("Marcar Ingreso", use_container_width=True):
                     if registrar_marca(dni_actual, user_actual, "INGRESO", obs_marca, es_turno_extra):
-                        if distancia_geo is not None and not dentro_rango_geo:
-                            registrar_auditoria("Marcación Fuera de Rango", "Asistencia", f"{user_actual} marcó INGRESO a {distancia_geo:.0f}m de la tienda")
                         st.toast("Ingreso registrado correctamente")
                         time.sleep(0.3)
                         st.rerun()
@@ -1963,10 +1787,8 @@ if choice == "Marcar Asistencia":
 
             with c2:
                 st.markdown('<div class="btn-salida">', unsafe_allow_html=True)
-                if st.button("Marcar Salida", use_container_width=True, disabled=bloquear_marca_geo):
+                if st.button("Marcar Salida", use_container_width=True):
                     if registrar_marca(dni_actual, user_actual, "SALIDA", obs_marca, es_turno_extra):
-                        if distancia_geo is not None and not dentro_rango_geo:
-                            registrar_auditoria("Marcación Fuera de Rango", "Asistencia", f"{user_actual} marcó SALIDA a {distancia_geo:.0f}m de la tienda")
                         st.toast("Salida registrada correctamente")
                         time.sleep(0.3)
                         st.rerun()
@@ -3990,24 +3812,6 @@ elif choice == "Centro de Alertas":
         else:
             st.success("No hay permisos de salud pendientes de recuperación.")
 
-    st.markdown("<br>", unsafe_allow_html=True)
-    if st.button("✉️ Enviar este Resumen de Alertas por Correo", use_container_width=True):
-        cuerpo_correo = f"""
-        <h3>Resumen de Alertas - Tiendas Premium</h3>
-        <p><b>Contratos por vencer (15 días):</b> {len(contratos_por_vencer)}</p>
-        <p><b>Cumpleaños esta semana:</b> {len(cumples_prox)}</p>
-        <p><b>Tardanzas recurrentes este mes:</b> {len(tardanzas_recurrentes)}</p>
-        <p><b>Solicitudes pendientes:</b> {solicitudes_pend}</p>
-        <p><b>Permisos de salud sin recuperar:</b> {permisos_pend_recup}</p>
-        <p style="color:#94a3b8; font-size:12px;">Generado automáticamente desde el Centro de Alertas.</p>
-        """
-        ok_alerta_mail, msg_alerta_mail = enviar_correo_alerta("Resumen de Alertas - Tiendas Premium", cuerpo_correo)
-        if ok_alerta_mail:
-            registrar_auditoria("Enviar Resumen de Alertas", "Notificaciones", msg_alerta_mail)
-            st.success(msg_alerta_mail)
-        else:
-            st.warning(msg_alerta_mail)
-
 elif choice == "Gestión de Vacaciones":
     st.markdown("""
         <div class="market-header">
@@ -4345,82 +4149,35 @@ elif choice == "Onboarding / Offboarding":
         st.markdown("<br>", unsafe_allow_html=True)
         st.download_button("Exportar Checklists a Excel", to_excel(st.session_state.checklist), "Checklists.xlsx", use_container_width=True)
 
-elif choice == "Auditoría y Configuración":
+elif choice == "Auditoría":
     st.markdown("""
         <div class="market-header">
-            <h1>Auditoría y Configuración del Sistema</h1>
-            <p>Trazabilidad de cambios y ajustes de seguridad</p>
+            <h1>Auditoría del Sistema</h1>
+            <p>Trazabilidad de cambios y acciones administrativas</p>
         </div>
     """, unsafe_allow_html=True)
 
-    tab_aud, tab_cfg = st.tabs(["📋 Registro de Auditoría", "⚙️ Configuración"])
+    st.markdown("##### 📋 Registro de Auditoría")
 
-    with tab_aud:
-        if not st.session_state.auditoria.empty:
-            df_aud = st.session_state.auditoria.copy()
-            fa1, fa2 = st.columns(2)
-            with fa1:
-                usuarios_aud_disp = ["Todos"] + sorted(df_aud["usuario"].dropna().unique().tolist())
-                usuario_aud_filtro = st.selectbox("Filtrar por Usuario", usuarios_aud_disp)
-            with fa2:
-                acciones_aud_disp = ["Todas"] + sorted(df_aud["accion"].dropna().unique().tolist())
-                accion_aud_filtro = st.selectbox("Filtrar por Acción", acciones_aud_disp)
+    if not st.session_state.auditoria.empty:
+        df_aud = st.session_state.auditoria.copy()
+        fa1, fa2 = st.columns(2)
+        with fa1:
+            usuarios_aud_disp = ["Todos"] + sorted(df_aud["usuario"].dropna().unique().tolist())
+            usuario_aud_filtro = st.selectbox("Filtrar por Usuario", usuarios_aud_disp)
+        with fa2:
+            acciones_aud_disp = ["Todas"] + sorted(df_aud["accion"].dropna().unique().tolist())
+            accion_aud_filtro = st.selectbox("Filtrar por Acción", acciones_aud_disp)
 
-            if usuario_aud_filtro != "Todos":
-                df_aud = df_aud[df_aud["usuario"] == usuario_aud_filtro]
-            if accion_aud_filtro != "Todas":
-                df_aud = df_aud[df_aud["accion"] == accion_aud_filtro]
+        if usuario_aud_filtro != "Todos":
+            df_aud = df_aud[df_aud["usuario"] == usuario_aud_filtro]
+        if accion_aud_filtro != "Todas":
+            df_aud = df_aud[df_aud["accion"] == accion_aud_filtro]
 
-            st.dataframe(df_aud.sort_values("fecha_hora", ascending=False), use_container_width=True, hide_index=True)
-            st.download_button("Exportar Auditoría a Excel", to_excel(df_aud), "Auditoria.xlsx", use_container_width=True)
-        else:
-            st.info("Aún no hay eventos registrados en la auditoría.")
-
-    with tab_cfg:
-        st.markdown("##### 📍 Ubicación de la Tienda (para Geolocalización)")
-        st.caption("Define las coordenadas GPS de tu tienda y el radio permitido para marcar asistencia. Puedes obtener tu latitud/longitud buscando tu dirección en Google Maps y copiando las coordenadas.")
-
-        cfg_actual = st.session_state.config_sistema
-        cc1, cc2, cc3 = st.columns(3)
-        lat_cfg_in = cc1.text_input("Latitud de la Tienda", value=str(cfg_actual.get("tienda_lat", "")))
-        lon_cfg_in = cc2.text_input("Longitud de la Tienda", value=str(cfg_actual.get("tienda_lon", "")))
-        radio_cfg_in = cc3.number_input("Radio Permitido (metros)", min_value=10, max_value=5000, value=int(float(cfg_actual.get("radio_metros", 150) or 150)))
-
-        bloquear_cfg_in = st.checkbox("Bloquear marcación de asistencia si está fuera del rango", value=str(cfg_actual.get("bloquear_fuera_rango", "No")).strip().lower() in ["sí", "si"])
-
-        if st.button("Guardar Configuración de Ubicación", use_container_width=True):
-            guardar_configuracion_gsheets("tienda_lat", lat_cfg_in)
-            guardar_configuracion_gsheets("tienda_lon", lon_cfg_in)
-            guardar_configuracion_gsheets("radio_metros", radio_cfg_in)
-            guardar_configuracion_gsheets("bloquear_fuera_rango", "Sí" if bloquear_cfg_in else "No")
-            st.session_state.config_sistema = obtener_configuracion_gsheets()
-            registrar_auditoria("Actualizar Configuración GPS", "Configuracion", f"lat={lat_cfg_in}, lon={lon_cfg_in}, radio={radio_cfg_in}m, bloqueo={'Sí' if bloquear_cfg_in else 'No'}")
-            st.toast("Configuración de ubicación guardada")
-            time.sleep(0.3)
-            st.rerun()
-
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown("##### ✉️ Notificaciones por Correo")
-        email_cfg_in = st.text_input("Correo para recibir alertas", value=str(cfg_actual.get("email_notificaciones", "humberto1098@outlook.com")))
-        if st.button("Guardar Correo de Notificaciones", use_container_width=True):
-            guardar_configuracion_gsheets("email_notificaciones", email_cfg_in)
-            st.session_state.config_sistema = obtener_configuracion_gsheets()
-            st.toast("Correo de notificaciones actualizado")
-
-        if "email" not in st.secrets:
-            st.warning("Para activar el envío real de correos, agrega en **Settings → Secrets** de tu app:\n\n```\n[email]\nremitente = \"tu_correo@outlook.com\"\nclave_app = \"tu_contraseña_de_aplicación\"\nservidor = \"smtp-mail.outlook.com\"\npuerto = 587\n```\nMientras no esté configurado, los botones de envío de correo mostrarán un aviso en vez de fallar.")
-        else:
-            st.success("Envío de correo configurado correctamente en Secrets.")
-            if st.button("Enviar Correo de Prueba", use_container_width=True):
-                ok_mail, msg_mail = enviar_correo_alerta(
-                    "Prueba - Sistema Tiendas Premium",
-                    "<p>Este es un correo de prueba del Centro de Alertas de Tiendas Premium.</p>",
-                    email_cfg_in
-                )
-                if ok_mail:
-                    st.success(msg_mail)
-                else:
-                    st.error(msg_mail)
+        st.dataframe(df_aud.sort_values("fecha_hora", ascending=False), use_container_width=True, hide_index=True)
+        st.download_button("Exportar Auditoría a Excel", to_excel(df_aud), "Auditoria.xlsx", use_container_width=True)
+    else:
+        st.info("Aún no hay eventos registrados en la auditoría.")
 
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown("##### 🔒 Sesión")
