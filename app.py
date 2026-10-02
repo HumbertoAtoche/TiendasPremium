@@ -1415,6 +1415,9 @@ def generar_excel_boleta(datos_b):
             {"CONCEPTO": "PAGO FERIADOS TRABAJADOS (ADICIONAL)", "CANTIDAD": f"{datos_b['feriados_trabajados']} Días", "INGRESOS (S/.)": datos_b["monto_feriados"], "DESCUENTOS (S/.)": 0.0},
             {"CONCEPTO": "HORAS EXTRAS TRABAJADAS", "CANTIDAD": f"{datos_b['horas_extras_hrs']:.2f} Hrs", "INGRESOS (S/.)": datos_b["monto_horas_extras"], "DESCUENTOS (S/.)": 0.0},
             {"CONCEPTO": "DÍA DE DESCANSO TRABAJADO VOLUNTARIAMENTE (DOMINGO)", "CANTIDAD": f"{datos_b.get('domingos_voluntarios', 0)} Día(s)", "INGRESOS (S/.)": datos_b.get("monto_domingos_voluntarios", 0.0), "DESCUENTOS (S/.)": 0.0},
+            {"CONCEPTO": "BONO POR PUNTUALIDAD", "CANTIDAD": "-", "INGRESOS (S/.)": datos_b.get("bono_puntualidad", 0.0), "DESCUENTOS (S/.)": 0.0},
+            {"CONCEPTO": "BONO PRESENCIA Y UNIFORME", "CANTIDAD": "-", "INGRESOS (S/.)": datos_b.get("bono_presencia_uniforme", 0.0), "DESCUENTOS (S/.)": 0.0},
+            {"CONCEPTO": "BONO ORDEN Y LIMPIEZA", "CANTIDAD": "-", "INGRESOS (S/.)": datos_b.get("bono_orden_limpieza", 0.0), "DESCUENTOS (S/.)": 0.0},
             {"CONCEPTO": "ADELANTO DE SUELDO", "CANTIDAD": "-", "INGRESOS (S/.)": 0.0, "DESCUENTOS (S/.)": datos_b["adelanto_sueldo"]},
             {"CONCEPTO": "DESCUENTOS POR FALTAS", "CANTIDAD": f"{datos_b['dias_faltas']} Días", "INGRESOS (S/.)": 0.0, "DESCUENTOS (S/.)": datos_b["monto_faltas"]},
             {"CONCEPTO": "DESCUADRES / FALTANTE DE CAJA", "CANTIDAD": "-", "INGRESOS (S/.)": 0.0, "DESCUENTOS (S/.)": datos_b["descuadre_caja"]},
@@ -1475,6 +1478,9 @@ def generar_pdf_boleta(datos_b):
         [Paragraph("PAGO FERIADOS TRABAJADOS (ADICIONAL)", normal_style), Paragraph(f"{datos_b['feriados_trabajados']} días", normal_style), Paragraph(f"{datos_b['monto_feriados']:.2f}", normal_style), Paragraph("0.00", normal_style)],
         [Paragraph("HORAS EXTRAS TRABAJADAS", normal_style), Paragraph(f"{datos_b['horas_extras_hrs']:.2f} hrs", normal_style), Paragraph(f"{datos_b['monto_horas_extras']:.2f}", normal_style), Paragraph("0.00", normal_style)],
         [Paragraph("DÍA DE DESCANSO TRABAJADO VOLUNTARIAMENTE (DOMINGO)", normal_style), Paragraph(f"{datos_b.get('domingos_voluntarios', 0)} día(s)", normal_style), Paragraph(f"{datos_b.get('monto_domingos_voluntarios', 0.0):.2f}", normal_style), Paragraph("0.00", normal_style)],
+        [Paragraph("BONO POR PUNTUALIDAD", normal_style), Paragraph("-", normal_style), Paragraph(f"{datos_b.get('bono_puntualidad', 0.0):.2f}", normal_style), Paragraph("0.00", normal_style)],
+        [Paragraph("BONO PRESENCIA Y UNIFORME", normal_style), Paragraph("-", normal_style), Paragraph(f"{datos_b.get('bono_presencia_uniforme', 0.0):.2f}", normal_style), Paragraph("0.00", normal_style)],
+        [Paragraph("BONO ORDEN Y LIMPIEZA", normal_style), Paragraph("-", normal_style), Paragraph(f"{datos_b.get('bono_orden_limpieza', 0.0):.2f}", normal_style), Paragraph("0.00", normal_style)],
         [Paragraph("ADELANTO DE SUELDO", normal_style), Paragraph("-", normal_style), Paragraph("0.00", normal_style), Paragraph(f"{datos_b['adelanto_sueldo']:.2f}", normal_style)],
         [Paragraph("DESCUENTO POR FALTAS", normal_style), Paragraph(f"{datos_b['dias_faltas']} días", normal_style), Paragraph("0.00", normal_style), Paragraph(f"{datos_b['monto_faltas']:.2f}", normal_style)],
         [Paragraph("DESCUADRE / FALTANTE DE CAJA", normal_style), Paragraph("-", normal_style), Paragraph("0.00", normal_style), Paragraph(f"{datos_b['descuadre_caja']:.2f}", normal_style)],
@@ -3056,6 +3062,11 @@ elif choice == "Boletas de Pago":
         with c_i11:
             st.caption("Se paga como día adicional (100% del valor día), separado del sueldo básico, dejando constancia de que originalmente era su descanso.")
 
+        c_b1, c_b2, c_b3 = st.columns(3)
+        bono_puntualidad_in = c_b1.number_input("Bono por Puntualidad (S/.)", min_value=0.0, value=0.0, step=5.0, format="%.2f", key="boleta_bono_puntualidad")
+        bono_presencia_in = c_b2.number_input("Bono Presencia y Uniforme (S/.)", min_value=0.0, value=0.0, step=5.0, format="%.2f", key="boleta_bono_presencia")
+        bono_orden_in = c_b3.number_input("Bono Orden y Limpieza (S/.)", min_value=0.0, value=0.0, step=5.0, format="%.2f", key="boleta_bono_orden")
+
         # FÓRMULAS DE CÁLCULO
         valor_dia = sueldo_basico_in / 30.0 if sueldo_basico_in > 0 else 0.0
         valor_hora = valor_dia / 5.75 if valor_dia > 0 else 0.0
@@ -3065,7 +3076,7 @@ elif choice == "Boletas de Pago":
         monto_faltas_calc = dias_faltas_in * valor_dia
         monto_domingo_volunt_calc = domingo_volunt_in * (valor_dia * 1.0)
 
-        total_ingresos_calc = sueldo_basico_in + monto_feriados_calc + monto_horas_extras_calc + monto_domingo_volunt_calc
+        total_ingresos_calc = sueldo_basico_in + monto_feriados_calc + monto_horas_extras_calc + monto_domingo_volunt_calc + bono_puntualidad_in + bono_presencia_in + bono_orden_in
         total_descuentos_calc = adelanto_in + monto_faltas_calc + descuadre_caja_in + desc_inventario_in + consumos_in
         neto_pagar_calc = max(0.0, total_ingresos_calc - total_descuentos_calc)
 
@@ -3086,6 +3097,9 @@ elif choice == "Boletas de Pago":
             "monto_horas_extras": monto_horas_extras_calc,
             "domingos_voluntarios": domingo_volunt_in,
             "monto_domingos_voluntarios": monto_domingo_volunt_calc,
+            "bono_puntualidad": bono_puntualidad_in,
+            "bono_presencia_uniforme": bono_presencia_in,
+            "bono_orden_limpieza": bono_orden_in,
             "adelanto_sueldo": adelanto_in,
             "monto_faltas": monto_faltas_calc,
             "descuadre_caja": descuadre_caja_in,
@@ -3169,6 +3183,24 @@ elif choice == "Boletas de Pago":
                             <td>DÍA DE DESCANSO TRABAJADO VOLUNTARIAMENTE (DOMINGO)</td>
                             <td>{datos_boleta.get('domingos_voluntarios', 0)} día(s)</td>
                             <td style="text-align:right;">{datos_boleta.get('monto_domingos_voluntarios', 0.0):.2f}</td>
+                            <td style="text-align:right;">0.00</td>
+                        </tr>
+                        <tr>
+                            <td>BONO POR PUNTUALIDAD</td>
+                            <td>-</td>
+                            <td style="text-align:right;">{datos_boleta['bono_puntualidad']:.2f}</td>
+                            <td style="text-align:right;">0.00</td>
+                        </tr>
+                        <tr>
+                            <td>BONO PRESENCIA Y UNIFORME</td>
+                            <td>-</td>
+                            <td style="text-align:right;">{datos_boleta['bono_presencia_uniforme']:.2f}</td>
+                            <td style="text-align:right;">0.00</td>
+                        </tr>
+                        <tr>
+                            <td>BONO ORDEN Y LIMPIEZA</td>
+                            <td>-</td>
+                            <td style="text-align:right;">{datos_boleta['bono_orden_limpieza']:.2f}</td>
                             <td style="text-align:right;">0.00</td>
                         </tr>
                         <tr>
