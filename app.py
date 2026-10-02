@@ -8,8 +8,8 @@ import time
 import gspread
 # --- INTENTO DE IMPORTAR REPORTLAB PARA PDF (CON FALLBACK INTEGRADO) ---
 try:
-    from reportlab.lib.pagesizes import letter
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
+    from reportlab.lib.pagesizes import letter, A4
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable, Image
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
     from reportlab.lib import colors
     REPORTLAB_AVAILABLE = True
@@ -1293,137 +1293,540 @@ def to_excel(df):
         df.to_excel(writer, index=False)
     return output.getvalue()
 
-def generar_excel_boleta(datos_b):
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
-        df_emp = pd.DataFrame([{
-            "EMPRESA": datos_b["empresa"],
-            "RUC": datos_b["ruc"],
-            "PERÍODO": datos_b["periodo"],
-            "COLABORADOR": datos_b["colaborador"],
-            "DNI": datos_b["dni"],
-            "CARGO": datos_b["cargo"],
-            "FECHA INGRESO": datos_b["fecha_inicio"],
-            "PERMISOS RECUPERADOS": datos_b.get("permisos_recuperados", 0)
-        }])
-        df_emp.to_excel(writer, sheet_name="Boleta de Pago", index=False, startrow=0)
+# =========================================================
+# BOLETA DE PAGO — DISEÑO CORPORATIVO UNIFICADO
+# (Previsualización HTML, PDF y Excel comparten la misma estructura)
+# =========================================================
+import html as _html
+from xml.sax.saxutils import escape as _xml_esc
 
-        df_calc = pd.DataFrame([
-            {"CONCEPTO": "SUELDO BÁSICO", "CANTIDAD": f"{datos_b['dias_trabajados']} Días", "INGRESOS (S/.)": datos_b["sueldo_basico"], "DESCUENTOS (S/.)": 0.0},
-            {"CONCEPTO": "PAGO FERIADOS TRABAJADOS (ADICIONAL)", "CANTIDAD": f"{datos_b['feriados_trabajados']} Días", "INGRESOS (S/.)": datos_b["monto_feriados"], "DESCUENTOS (S/.)": 0.0},
-            {"CONCEPTO": "HORAS EXTRAS TRABAJADAS", "CANTIDAD": f"{datos_b['horas_extras_hrs']:.2f} Hrs", "INGRESOS (S/.)": datos_b["monto_horas_extras"], "DESCUENTOS (S/.)": 0.0},
-            {"CONCEPTO": "DÍA DE DESCANSO TRABAJADO VOLUNTARIAMENTE (DOMINGO)", "CANTIDAD": f"{datos_b.get('domingos_voluntarios', 0)} Día(s)", "INGRESOS (S/.)": datos_b.get("monto_domingos_voluntarios", 0.0), "DESCUENTOS (S/.)": 0.0},
-            {"CONCEPTO": "BONO POR PUNTUALIDAD", "CANTIDAD": "-", "INGRESOS (S/.)": datos_b.get("bono_puntualidad", 0.0), "DESCUENTOS (S/.)": 0.0},
-            {"CONCEPTO": "BONO PRESENCIA Y UNIFORME", "CANTIDAD": "-", "INGRESOS (S/.)": datos_b.get("bono_presencia_uniforme", 0.0), "DESCUENTOS (S/.)": 0.0},
-            {"CONCEPTO": "BONO ORDEN Y LIMPIEZA", "CANTIDAD": "-", "INGRESOS (S/.)": datos_b.get("bono_orden_limpieza", 0.0), "DESCUENTOS (S/.)": 0.0},
-            {"CONCEPTO": "ADELANTO DE SUELDO", "CANTIDAD": "-", "INGRESOS (S/.)": 0.0, "DESCUENTOS (S/.)": datos_b["adelanto_sueldo"]},
-            {"CONCEPTO": "DESCUENTOS POR FALTAS", "CANTIDAD": f"{datos_b['dias_faltas']} Días", "INGRESOS (S/.)": 0.0, "DESCUENTOS (S/.)": datos_b["monto_faltas"]},
-            {"CONCEPTO": "DESCUADRES / FALTANTE DE CAJA", "CANTIDAD": "-", "INGRESOS (S/.)": 0.0, "DESCUENTOS (S/.)": datos_b["descuadre_caja"]},
-            {"CONCEPTO": "DESCUADRES DE INVENTARIO", "CANTIDAD": "-", "INGRESOS (S/.)": 0.0, "DESCUENTOS (S/.)": datos_b.get("descuadre_inventario", 0.0)},
-            {"CONCEPTO": "CONSUMOS POR PAGAR", "CANTIDAD": "-", "INGRESOS (S/.)": 0.0, "DESCUENTOS (S/.)": datos_b.get("consumos_pagar", 0.0)},
-            {"CONCEPTO": "INCIDENCIAS Y DAÑOS", "CANTIDAD": "-", "INGRESOS (S/.)": 0.0, "DESCUENTOS (S/.)": datos_b.get("incidencias_danos", 0.0)},
-            {"CONCEPTO": "TOTALES", "CANTIDAD": "", "INGRESOS (S/.)": datos_b["total_ingresos"], "DESCUENTOS (S/.)": datos_b["total_descuentos"]},
-            {"CONCEPTO": "NETO A PAGAR", "CANTIDAD": "", "INGRESOS (S/.)": datos_b["neto_pagar"], "DESCUENTOS (S/.)": 0.0}
-        ])
-        df_calc.to_excel(writer, sheet_name="Boleta de Pago", index=False, startrow=10)
+BP_NAVY = "#0F172A"      # Azul noche corporativo
+BP_SLATE = "#475569"     # Texto secundario
+BP_MUTED = "#94A3B8"     # Valores en cero / etiquetas tenues
+BP_RED = "#EC3237"       # Acento de marca
+BP_LINE = "#E2E8F0"      # Bordes suaves
+BP_SOFT = "#F8FAFC"      # Fondo suave
+BP_SOFT2 = "#F1F5F9"     # Fondo de secciones
+BP_NEG = "#B91C1C"       # Descuentos
+
+
+def _bp_money(v):
+    try:
+        return f"{float(v):,.2f}"
+    except Exception:
+        return "0.00"
+
+
+def _n_dias(n):
+    try:
+        return f"{n} día" if int(float(n)) == 1 else f"{n} días"
+    except Exception:
+        return f"{n} días"
+
+
+def _estructura_boleta(d):
+    """Fuente única de filas: se reutiliza en HTML, PDF y Excel."""
+    ingresos = [
+        ("SUELDO BÁSICO", _n_dias(d['dias_trabajados']), float(d["sueldo_basico"])),
+        ("PAGO FERIADOS TRABAJADOS (ADICIONAL)", _n_dias(d['feriados_trabajados']), float(d["monto_feriados"])),
+        ("HORAS EXTRAS TRABAJADAS", f"{float(d['horas_extras_hrs']):.2f} hrs", float(d["monto_horas_extras"])),
+        ("DÍA DE DESCANSO TRABAJADO VOLUNTARIAMENTE (DOMINGO)", f"{d.get('domingos_voluntarios', 0)} día(s)", float(d.get("monto_domingos_voluntarios", 0.0))),
+        ("BONO POR PUNTUALIDAD", "-", float(d.get("bono_puntualidad", 0.0))),
+        ("BONO PRESENCIA Y UNIFORME", "-", float(d.get("bono_presencia_uniforme", 0.0))),
+        ("BONO ORDEN Y LIMPIEZA", "-", float(d.get("bono_orden_limpieza", 0.0))),
+    ]
+    descuentos = [
+        ("ADELANTO DE SUELDO", "-", float(d["adelanto_sueldo"])),
+        ("DESCUENTO POR FALTAS", _n_dias(d['dias_faltas']), float(d["monto_faltas"])),
+        ("DESCUADRE / FALTANTE DE CAJA", "-", float(d["descuadre_caja"])),
+        ("DESCUADRES DE INVENTARIO", "-", float(d.get("descuadre_inventario", 0.0))),
+        ("CONSUMOS POR PAGAR", "-", float(d.get("consumos_pagar", 0.0))),
+        ("INCIDENCIAS Y DAÑOS", "-", float(d.get("incidencias_danos", 0.0))),
+    ]
+    resumen = [
+        ("Días laborados", str(d["dias_trabajados"])),
+        ("Días de falta", str(d["dias_faltas"])),
+        ("Feriados trab.", str(d["feriados_trabajados"])),
+        ("Horas extras", f"{float(d['horas_extras_hrs']):.2f} h"),
+        ("Dom. voluntarios", str(d.get("domingos_voluntarios", 0))),
+        ("Perm. recuperados", str(d.get("permisos_recuperados", 0))),
+    ]
+    return ingresos, descuentos, resumen
+
+
+# ---------------------------------------------------------
+# 1) PREVISUALIZACIÓN HTML
+# ---------------------------------------------------------
+def generar_html_boleta(d):
+    esc = _html.escape
+    ingresos, descuentos, resumen = _estructura_boleta(d)
+    fecha_gen = obtener_ahora_peru().strftime("%d/%m/%Y %H:%M")
+    ff = "font-family:'Montserrat','Segoe UI',Arial,sans-serif;"
+    logo = logo_tag_app39(44)
+
+    def filas(items, color_monto):
+        out = []
+        for concepto, cant, monto in items:
+            muted = float(monto) == 0
+            c_txt = BP_MUTED if muted else BP_NAVY
+            c_monto = BP_MUTED if muted else color_monto
+            out.append(
+                f'<tr>'
+                f'<td style="padding:9px 12px;border-bottom:1px solid {BP_LINE};color:{c_txt};font-size:.76rem;">{esc(concepto)}</td>'
+                f'<td style="padding:9px 12px;border-bottom:1px solid {BP_LINE};color:{BP_SLATE if not muted else BP_MUTED};font-size:.76rem;text-align:center;white-space:nowrap;">{esc(cant)}</td>'
+                f'<td style="padding:9px 12px;border-bottom:1px solid {BP_LINE};color:{c_monto};font-size:.8rem;font-weight:600;text-align:right;white-space:nowrap;">{_bp_money(monto)}</td>'
+                f'</tr>'
+            )
+        return "".join(out)
+
+    def seccion(titulo, color):
+        return (
+            f'<tr><td colspan="3" style="padding:8px 12px;background:{BP_SOFT2};border-left:4px solid {color};'
+            f'font-size:.68rem;font-weight:800;letter-spacing:1.5px;color:{BP_NAVY};">{titulo}</td></tr>'
+        )
+
+    def subtotal(label, valor, color):
+        return (
+            f'<tr><td colspan="2" style="padding:10px 12px;border-top:1.5px solid {BP_NAVY};background:{BP_SOFT};'
+            f'font-size:.72rem;font-weight:800;letter-spacing:.8px;color:{BP_NAVY};">{label}</td>'
+            f'<td style="padding:10px 12px;border-top:1.5px solid {BP_NAVY};background:{BP_SOFT};'
+            f'font-size:.85rem;font-weight:800;text-align:right;color:{color};white-space:nowrap;">S/. {_bp_money(valor)}</td></tr>'
+        )
+
+    th = f'padding:10px 12px;background:{BP_NAVY};color:#fff;font-size:.66rem;font-weight:700;letter-spacing:1.2px;'
+
+    def celda_info(label, valor):
+        return (
+            f'<div style="padding:10px 14px;">'
+            f'<div style="font-size:.6rem;font-weight:700;letter-spacing:1.2px;color:{BP_MUTED};text-transform:uppercase;">{label}</div>'
+            f'<div style="font-size:.88rem;font-weight:700;color:{BP_NAVY};margin-top:2px;word-break:break-word;">{esc(str(valor))}</div>'
+            f'</div>'
+        )
+
+    def celda_resumen(label, valor):
+        return (
+            f'<div style="padding:12px 6px;text-align:center;border-right:1px solid {BP_LINE};">'
+            f'<div style="font-size:1.15rem;font-weight:800;color:{BP_NAVY};line-height:1.1;">{esc(valor)}</div>'
+            f'<div style="font-size:.58rem;font-weight:700;letter-spacing:.8px;color:{BP_MUTED};text-transform:uppercase;margin-top:4px;">{esc(label)}</div>'
+            f'</div>'
+        )
+
+    partes = []
+    partes.append(
+        f'<div style="{ff}background:#fff;color:{BP_NAVY};max-width:820px;margin:0 auto 20px auto;padding:30px 32px;'
+        f'border:1px solid {BP_LINE};border-radius:12px;box-shadow:0 6px 24px rgba(15,23,42,.08);">'
+    )
+    # Encabezado
+    partes.append(
+        f'<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;">'
+        f'<div style="display:flex;align-items:center;gap:14px;">{logo}'
+        f'<div><div style="font-size:1.05rem;font-weight:800;letter-spacing:.4px;">{esc(d["empresa"])}</div>'
+        f'<div style="font-size:.72rem;color:{BP_SLATE};margin-top:2px;">RUC: {esc(d["ruc"])}</div></div></div>'
+        f'<div style="text-align:right;">'
+        f'<div style="font-size:.68rem;font-weight:800;letter-spacing:3px;color:{BP_RED};">BOLETA DE PAGO</div>'
+        f'<div style="font-size:1.05rem;font-weight:800;margin-top:2px;">{esc(d["periodo"])}</div></div>'
+        f'</div>'
+    )
+    partes.append(
+        f'<div style="height:3px;margin:16px 0 18px 0;background:linear-gradient(90deg,{BP_RED} 0,{BP_RED} 90px,{BP_NAVY} 90px,{BP_NAVY} 100%);"></div>'
+    )
+    # Datos del colaborador
+    partes.append(
+        f'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));background:{BP_SOFT};'
+        f'border:1px solid {BP_LINE};border-radius:8px;">'
+        + celda_info("Colaborador", d["colaborador"])
+        + celda_info("DNI", d["dni"])
+        + celda_info("Cargo", d["cargo"])
+        + celda_info("Fecha de ingreso", d["fecha_inicio"])
+        + '</div>'
+    )
+    # Resumen del período
+    partes.append(
+        f'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(105px,1fr));margin-top:12px;'
+        f'border:1px solid {BP_LINE};border-right:none;border-radius:8px;overflow:hidden;">'
+        + "".join(celda_resumen(l, v) for l, v in resumen)
+        + '</div>'
+    )
+    # Tabla de conceptos
+    partes.append(
+        f'<table style="width:100%;border-collapse:collapse;margin-top:18px;border:1px solid {BP_LINE};">'
+        f'<thead><tr><th style="{th}text-align:left;">CONCEPTO</th>'
+        f'<th style="{th}text-align:center;">CANTIDAD</th>'
+        f'<th style="{th}text-align:right;">IMPORTE (S/.)</th></tr></thead><tbody>'
+        + seccion("INGRESOS", "#16A34A") + filas(ingresos, BP_NAVY)
+        + subtotal("TOTAL INGRESOS", d["total_ingresos"], BP_NAVY)
+        + seccion("DESCUENTOS", BP_NEG) + filas(descuentos, BP_NEG)
+        + subtotal("TOTAL DESCUENTOS", d["total_descuentos"], BP_NEG)
+        + '</tbody></table>'
+    )
+    # Neto
+    partes.append(
+        f'<div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding:16px 20px;'
+        f'background:{BP_NAVY};border-left:5px solid {BP_RED};border-radius:6px;">'
+        f'<div style="color:#fff;font-size:.78rem;font-weight:800;letter-spacing:2px;">NETO A PAGAR</div>'
+        f'<div style="color:#fff;font-size:1.5rem;font-weight:800;white-space:nowrap;">S/. {_bp_money(d["neto_pagar"])}</div>'
+        f'</div>'
+    )
+    # Firmas
+    firma = lambda txt: (
+        f'<div style="flex:1;min-width:200px;text-align:center;">'
+        f'<div style="border-top:1.5px solid {BP_NAVY};padding-top:6px;font-size:.66rem;font-weight:800;letter-spacing:1px;">{txt}</div></div>'
+    )
+    partes.append(
+        f'<div style="display:flex;justify-content:space-around;gap:48px;flex-wrap:wrap;margin-top:62px;">'
+        + firma("EMPLEADOR / TIENDAS PREMIUM") + firma("RECIBÍ CONFORME (TRABAJADOR)") + '</div>'
+    )
+    partes.append(
+        f'<div style="margin-top:26px;padding-top:10px;border-top:1px solid {BP_LINE};text-align:center;'
+        f'font-size:.6rem;color:{BP_MUTED};letter-spacing:.4px;">'
+        f'Documento generado por el Sistema de Control Interno de {esc(d["empresa"])} · {fecha_gen}</div>'
+    )
+    partes.append('</div>')
+    # Sin saltos de línea ni sangrías: evita que Markdown interprete bloques de código
+    return "".join(partes)
+
+
+# ---------------------------------------------------------
+# 2) EXCEL
+# ---------------------------------------------------------
+def generar_excel_boleta(datos_b):
+    import xlsxwriter
+    ingresos, descuentos, resumen = _estructura_boleta(datos_b)
+    fecha_gen = obtener_ahora_peru().strftime("%d/%m/%Y %H:%M")
+
+    output = io.BytesIO()
+    wb = xlsxwriter.Workbook(output, {"in_memory": True})
+    ws = wb.add_worksheet("Boleta de Pago")
+    ws.hide_gridlines(2)
+    ws.set_column("A:D", 14)
+    ws.set_column("E:E", 16)
+    ws.set_column("F:F", 19)
+
+    base = {"font_name": "Calibri", "font_size": 10, "valign": "vcenter", "font_color": BP_NAVY}
+    def F(**kw):
+        x = dict(base); x.update(kw)
+        return wb.add_format(x)
+
+    f_empresa = F(bold=True, font_size=16)
+    f_ruc = F(font_size=9, font_color=BP_SLATE, bottom=2, bottom_color=BP_NAVY)
+    f_doc = F(bold=True, font_size=9, font_color=BP_RED, align="right")
+    f_per = F(bold=True, font_size=14, align="right")
+    f_lbl = F(bold=True, font_size=8, font_color=BP_MUTED, bg_color=BP_SOFT, top=1, top_color=BP_LINE, left=1, left_color=BP_LINE, right=1, right_color=BP_LINE, indent=1)
+    f_val = F(bold=True, font_size=11, bg_color=BP_SOFT, bottom=1, bottom_color=BP_LINE, left=1, left_color=BP_LINE, right=1, right_color=BP_LINE, indent=1)
+    f_stat_v = F(bold=True, font_size=14, align="center", top=1, top_color=BP_LINE, left=1, left_color=BP_LINE, right=1, right_color=BP_LINE)
+    f_stat_l = F(bold=True, font_size=8, font_color=BP_MUTED, align="center", bottom=1, bottom_color=BP_LINE, left=1, left_color=BP_LINE, right=1, right_color=BP_LINE)
+    f_th = F(bold=True, font_size=9, font_color="#FFFFFF", bg_color=BP_NAVY, indent=1)
+    f_th_c = F(bold=True, font_size=9, font_color="#FFFFFF", bg_color=BP_NAVY, align="center")
+    f_th_r = F(bold=True, font_size=9, font_color="#FFFFFF", bg_color=BP_NAVY, align="right", indent=1)
+    f_sec_ing = F(bold=True, font_size=9, bg_color=BP_SOFT2, left=5, left_color="#16A34A", indent=1)
+    f_sec_des = F(bold=True, font_size=9, bg_color=BP_SOFT2, left=5, left_color=BP_NEG, indent=1)
+    line = {"bottom": 1, "bottom_color": BP_LINE}
+    f_c = F(indent=1, **line); f_c_m = F(indent=1, font_color=BP_MUTED, **line)
+    f_q = F(align="center", font_color=BP_SLATE, **line); f_q_m = F(align="center", font_color=BP_MUTED, **line)
+    f_m = F(align="right", num_format="#,##0.00", indent=1, **line)
+    f_m_m = F(align="right", num_format="#,##0.00", indent=1, font_color=BP_MUTED, **line)
+    f_m_neg = F(align="right", num_format="#,##0.00", indent=1, font_color=BP_NEG, **line)
+    f_st_l = F(bold=True, font_size=9, bg_color=BP_SOFT, top=1, top_color=BP_NAVY, indent=1)
+    f_st_ing = F(bold=True, bg_color=BP_SOFT, top=1, top_color=BP_NAVY, align="right", num_format='"S/." #,##0.00', indent=1)
+    f_st_des = F(bold=True, bg_color=BP_SOFT, top=1, top_color=BP_NAVY, align="right", num_format='"S/." #,##0.00', font_color=BP_NEG, indent=1)
+    f_net_l = F(bold=True, font_size=11, font_color="#FFFFFF", bg_color=BP_NAVY, left=5, left_color=BP_RED, indent=1)
+    f_net_v = F(bold=True, font_size=14, font_color="#FFFFFF", bg_color=BP_NAVY, align="right", num_format='"S/." #,##0.00', indent=1)
+    f_sig = F(bold=True, font_size=8, align="center", top=1, top_color=BP_NAVY)
+    f_foot = F(italic=True, font_size=8, font_color=BP_MUTED, align="center", top=1, top_color=BP_LINE)
+
+    # Encabezado
+    ws.set_row(0, 24); ws.set_row(1, 24); ws.set_row(2, 18)
+    logo_ok = False
+    if LOGO_DISPONIBLE:
+        try:
+            from reportlab.lib.utils import ImageReader
+            iw, ih = ImageReader(LOGO_PATH).getSize()
+            esc_ = 44.0 / ih
+            ws.insert_image("A1", LOGO_PATH, {"x_scale": esc_, "y_scale": esc_, "x_offset": 4, "y_offset": 2, "object_position": 1})
+            logo_ok = True
+        except Exception:
+            logo_ok = False
+    ws.merge_range("A1:C2", "" if logo_ok else datos_b["empresa"], f_empresa)
+    ws.merge_range("D1:F1", "BOLETA DE PAGO", f_doc)
+    ws.merge_range("D2:F2", datos_b["periodo"], f_per)
+    _txt_ruc = f"{datos_b['empresa']}   ·   RUC: {datos_b['ruc']}" if logo_ok else f"RUC: {datos_b['ruc']}"
+    ws.merge_range("A3:F3", _txt_ruc, f_ruc)
+
+    # Datos del colaborador
+    r = 4
+    ws.merge_range(r, 0, r, 1, "COLABORADOR", f_lbl); ws.write(r, 2, "DNI", f_lbl)
+    ws.merge_range(r, 3, r, 4, "CARGO", f_lbl); ws.write(r, 5, "FECHA DE INGRESO", f_lbl)
+    ws.set_row(r + 1, 22)
+    ws.merge_range(r + 1, 0, r + 1, 1, str(datos_b["colaborador"]), f_val)
+    ws.write_string(r + 1, 2, str(datos_b["dni"]), f_val)
+    ws.merge_range(r + 1, 3, r + 1, 4, str(datos_b["cargo"]), f_val)
+    ws.write_string(r + 1, 5, str(datos_b["fecha_inicio"]), f_val)
+
+    # Resumen del período
+    r = 7
+    ws.set_row(r, 26)
+    for i, (lbl, val) in enumerate(resumen):
+        ws.write(r, i, val, f_stat_v)
+        ws.write(r + 1, i, lbl.upper(), f_stat_l)
+
+    # Tabla de conceptos
+    r = 10
+    ws.set_row(r, 22)
+    ws.merge_range(r, 0, r, 3, "CONCEPTO", f_th)
+    ws.write(r, 4, "CANTIDAD", f_th_c)
+    ws.write(r, 5, "IMPORTE (S/.)", f_th_r)
+
+    def bloque(r, titulo, items, f_sec, es_descuento):
+        ws.set_row(r, 20)
+        ws.merge_range(r, 0, r, 5, titulo, f_sec)
+        r += 1
+        first = r
+        for concepto, cant, monto in items:
+            ws.set_row(r, 19)
+            muted = float(monto) == 0
+            ws.merge_range(r, 0, r, 3, concepto, f_c_m if muted else f_c)
+            ws.write(r, 4, cant, f_q_m if muted else f_q)
+            ws.write_number(r, 5, float(monto), f_m_m if muted else (f_m_neg if es_descuento else f_m))
+            r += 1
+        return first, r - 1, r
+
+    ing_ini, ing_fin, r = bloque(11, "INGRESOS", ingresos, f_sec_ing, False)
+    ws.set_row(r, 22)
+    ws.merge_range(r, 0, r, 4, "TOTAL INGRESOS", f_st_l)
+    ws.write_formula(r, 5, f"=SUM(F{ing_ini + 1}:F{ing_fin + 1})", f_st_ing, float(datos_b["total_ingresos"]))
+    fila_ti = r + 1
+    r += 1
+    des_ini, des_fin, r = bloque(r, "DESCUENTOS", descuentos, f_sec_des, True)
+    ws.set_row(r, 22)
+    ws.merge_range(r, 0, r, 4, "TOTAL DESCUENTOS", f_st_l)
+    ws.write_formula(r, 5, f"=SUM(F{des_ini + 1}:F{des_fin + 1})", f_st_des, float(datos_b["total_descuentos"]))
+    fila_td = r + 1
+    r += 2
+    ws.set_row(r, 32)
+    ws.merge_range(r, 0, r, 4, "NETO A PAGAR", f_net_l)
+    ws.write_formula(r, 5, f"=MAX(0,F{fila_ti}-F{fila_td})", f_net_v, float(datos_b["neto_pagar"]))
+
+    # Firmas
+    r += 4
+    ws.merge_range(r, 0, r, 1, "EMPLEADOR / TIENDAS PREMIUM", f_sig)
+    ws.merge_range(r, 3, r, 5, "RECIBÍ CONFORME (TRABAJADOR)", f_sig)
+    r += 3
+    ws.merge_range(r, 0, r, 5, f"Documento generado por el Sistema de Control Interno de {datos_b['empresa']} · {fecha_gen}", f_foot)
+
+    # Impresión: A4 vertical, una sola página
+    ws.set_paper(9)
+    ws.set_portrait()
+    ws.fit_to_pages(1, 1)
+    ws.center_horizontally()
+    ws.set_margins(left=0.5, right=0.5, top=0.6, bottom=0.6)
+    ws.print_area(0, 0, r, 5)
+    wb.close()
     return output.getvalue()
 
+
+# ---------------------------------------------------------
+# 3) PDF
+# ---------------------------------------------------------
 def generar_pdf_boleta(datos_b):
     if not REPORTLAB_AVAILABLE:
         return None
 
+    ingresos, descuentos, resumen = _estructura_boleta(datos_b)
+    fecha_gen = obtener_ahora_peru().strftime("%d/%m/%Y %H:%M")
+    X = _xml_esc
+
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36)
+    MARGIN = 40
+    doc = SimpleDocTemplate(
+        buffer, pagesize=A4, rightMargin=MARGIN, leftMargin=MARGIN, topMargin=36, bottomMargin=36,
+        title=f"Boleta de Pago - {datos_b['colaborador']} - {datos_b['periodo']}",
+        author=datos_b["empresa"]
+    )
+    W = A4[0] - 2 * MARGIN
+
+    navy = colors.HexColor(BP_NAVY); red = colors.HexColor(BP_RED)
+    line_c = colors.HexColor(BP_LINE); soft = colors.HexColor(BP_SOFT); soft2 = colors.HexColor(BP_SOFT2)
+    neg = colors.HexColor(BP_NEG); green = colors.HexColor("#16A34A")
+
+    def ps(name, **kw):
+        kw.setdefault("fontName", "Helvetica")
+        kw.setdefault("textColor", navy)
+        return ParagraphStyle(name, **kw)
+
+    s_emp = ps("emp", fontName="Helvetica-Bold", fontSize=13, leading=15)
+    s_ruc = ps("ruc", fontSize=8, leading=10, textColor=colors.HexColor(BP_SLATE))
+    s_doc = ps("doc", fontName="Helvetica-Bold", fontSize=8, leading=10, alignment=2, textColor=red, charSpace=2)
+    s_per = ps("per", fontName="Helvetica-Bold", fontSize=13, leading=16, alignment=2)
+    s_lbl = ps("lbl", fontName="Helvetica-Bold", fontSize=6.5, leading=8, textColor=colors.HexColor(BP_MUTED), charSpace=0.8)
+    s_val = ps("val", fontName="Helvetica-Bold", fontSize=9.5, leading=12)
+    s_sv = ps("sv", fontName="Helvetica-Bold", fontSize=13, leading=15, alignment=1)
+    s_sl = ps("sl", fontName="Helvetica-Bold", fontSize=6, leading=8, alignment=1, textColor=colors.HexColor(BP_MUTED), charSpace=0.5)
+    s_th = ps("th", fontName="Helvetica-Bold", fontSize=7.5, leading=9, textColor=colors.white, charSpace=0.8)
+    s_th_c = ParagraphStyle("thc", parent=s_th, alignment=1)
+    s_th_r = ParagraphStyle("thr", parent=s_th, alignment=2)
+    s_sec = ps("sec", fontName="Helvetica-Bold", fontSize=7.5, leading=9, charSpace=1.2)
+    s_c = ps("c", fontSize=8, leading=10)
+    s_c_m = ps("cm", fontSize=8, leading=10, textColor=colors.HexColor(BP_MUTED))
+    s_q = ps("q", fontSize=8, leading=10, alignment=1, textColor=colors.HexColor(BP_SLATE))
+    s_q_m = ps("qm", fontSize=8, leading=10, alignment=1, textColor=colors.HexColor(BP_MUTED))
+    s_m = ps("m", fontName="Helvetica-Bold", fontSize=8.5, leading=10, alignment=2)
+    s_m_m = ps("mm", fontName="Helvetica-Bold", fontSize=8.5, leading=10, alignment=2, textColor=colors.HexColor(BP_MUTED))
+    s_m_neg = ps("mn", fontName="Helvetica-Bold", fontSize=8.5, leading=10, alignment=2, textColor=neg)
+    s_st = ps("st", fontName="Helvetica-Bold", fontSize=8, leading=10, charSpace=0.5)
+    s_st_r = ps("str", fontName="Helvetica-Bold", fontSize=9, leading=11, alignment=2)
+    s_st_r_neg = ps("strn", fontName="Helvetica-Bold", fontSize=9, leading=11, alignment=2, textColor=neg)
+    s_net_l = ps("netl", fontName="Helvetica-Bold", fontSize=9.5, leading=12, textColor=colors.white, charSpace=1.8)
+    s_net_v = ps("netv", fontName="Helvetica-Bold", fontSize=17, leading=20, textColor=colors.white, alignment=2)
+    s_sig = ps("sig", fontName="Helvetica-Bold", fontSize=7, leading=9, alignment=1, charSpace=0.6)
+    s_foot = ps("foot", fontSize=6.5, leading=8, alignment=1, textColor=colors.HexColor(BP_MUTED))
+
     story = []
 
-    styles = getSampleStyleSheet()
-    title_style = ParagraphStyle(
-        'TitleStyle',
-        parent=styles['Heading1'],
-        fontName='Helvetica-Bold',
-        fontSize=14,
-        alignment=1,
-        spaceAfter=10
+    # --- Encabezado ---
+    logo_flow = None
+    if LOGO_DISPONIBLE:
+        try:
+            from reportlab.lib.utils import ImageReader
+            iw, ih = ImageReader(LOGO_PATH).getSize()
+            h_logo = 34
+            logo_flow = Image(LOGO_PATH, width=h_logo * iw / ih, height=h_logo)
+        except Exception:
+            logo_flow = None
+
+    txt_emp = [Paragraph(X(datos_b["empresa"]), s_emp), Paragraph(f"RUC: {X(str(datos_b['ruc']))}", s_ruc)]
+    txt_per = [Paragraph("BOLETA DE PAGO", s_doc), Paragraph(X(datos_b["periodo"]), s_per)]
+    if logo_flow:
+        lw = logo_flow.drawWidth + 12
+        t_head = Table([[logo_flow, txt_emp, txt_per]], colWidths=[lw, W * 0.66 - lw, W * 0.34])
+    else:
+        t_head = Table([[txt_emp, txt_per]], colWidths=[W * 0.62, W * 0.38])
+    t_head.setStyle(TableStyle([
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 0), ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 6), ("TOPPADDING", (0, 0), (-1, -1), 0),
+    ]))
+    story.append(t_head)
+    t_acc = Table([["", ""]], colWidths=[70, W - 70], rowHeights=[3])
+    t_acc.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (0, 0), red), ("BACKGROUND", (1, 0), (1, 0), navy),
+        ("LEFTPADDING", (0, 0), (-1, -1), 0), ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+        ("TOPPADDING", (0, 0), (-1, -1), 0), ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+    ]))
+    story.append(t_acc)
+    story.append(Spacer(1, 14))
+
+    # --- Datos del colaborador ---
+    def celda(lbl, val):
+        return [Paragraph(lbl.upper(), s_lbl), Spacer(1, 2), Paragraph(X(str(val)), s_val)]
+    t_info = Table(
+        [[celda("Colaborador", datos_b["colaborador"]), celda("DNI", datos_b["dni"]),
+          celda("Cargo", datos_b["cargo"]), celda("Fecha de ingreso", datos_b["fecha_inicio"])]],
+        colWidths=[W * 0.31, W * 0.17, W * 0.30, W * 0.22]
     )
-    bold_style = ParagraphStyle('BoldStyle', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=9)
-    normal_style = ParagraphStyle('NormalStyle', parent=styles['Normal'], fontName='Helvetica', fontSize=9)
-
-    story.append(Paragraph(f"<b>{datos_b['empresa']}</b>", title_style))
-    story.append(Paragraph(f"RUC: {datos_b['ruc']} | PERÍODO DE PAGO: {datos_b['periodo']}", ParagraphStyle('Sub', alignment=1, fontSize=10, fontName='Helvetica-Bold')))
-    story.append(Spacer(1, 10))
-    story.append(HRFlowable(width="100%", thickness=1.5, color=colors.black, spaceAfter=15))
-
-    info_data = [
-        [Paragraph("<b>COLABORADOR:</b>", bold_style), Paragraph(str(datos_b['colaborador']), normal_style), Paragraph("<b>DNI:</b>", bold_style), Paragraph(str(datos_b['dni']), normal_style)],
-        [Paragraph("<b>CARGO:</b>", bold_style), Paragraph(str(datos_b['cargo']), normal_style), Paragraph("<b>FECHA INGRESO:</b>", bold_style), Paragraph(str(datos_b['fecha_inicio']), normal_style)],
-        [Paragraph("<b>DÍAS LABORADOS:</b>", bold_style), Paragraph(str(datos_b['dias_trabajados']), normal_style), Paragraph("<b>DÍAS FALTAS:</b>", bold_style), Paragraph(str(datos_b['dias_faltas']), normal_style)],
-        [Paragraph("<b>FERIADOS TRAB.:</b>", bold_style), Paragraph(str(datos_b['feriados_trabajados']), normal_style), Paragraph("<b>HORAS EXTRAS:</b>", bold_style), Paragraph(f"{datos_b['horas_extras_hrs']:.2f} hrs", normal_style)],
-        [Paragraph("<b>DOM. VOLUNTARIOS:</b>", bold_style), Paragraph(str(datos_b.get('domingos_voluntarios', 0)), normal_style), Paragraph("<b>PERM. RECUPERADOS:</b>", bold_style), Paragraph(str(datos_b.get('permisos_recuperados', 0)), normal_style)]
-    ]
-    t_info = Table(info_data, colWidths=[110, 160, 110, 160])
     t_info.setStyle(TableStyle([
-        ('GRID', (0,0), (-1,-1), 0.5, colors.gray),
-        ('BACKGROUND', (0,0), (0,-1), colors.whitesmoke),
-        ('BACKGROUND', (2,0), (2,-1), colors.whitesmoke),
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('PADDING', (0,0), (-1,-1), 5),
+        ("BACKGROUND", (0, 0), (-1, -1), soft), ("BOX", (0, 0), (-1, -1), 0.6, line_c),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 10), ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+        ("TOPPADDING", (0, 0), (-1, -1), 8), ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
     ]))
     story.append(t_info)
-    story.append(Spacer(1, 15))
+    story.append(Spacer(1, 8))
 
-    calc_data = [
-        [Paragraph("<b>CONCEPTO / RUBRO</b>", bold_style), Paragraph("<b>CANTIDAD</b>", bold_style), Paragraph("<b>INGRESOS (S/.)</b>", bold_style), Paragraph("<b>DESCUENTOS (S/.)</b>", bold_style)],
-        [Paragraph("SUELDO BÁSICO", normal_style), Paragraph(f"{datos_b['dias_trabajados']} días", normal_style), Paragraph(f"{datos_b['sueldo_basico']:.2f}", normal_style), Paragraph("0.00", normal_style)],
-        [Paragraph("PAGO FERIADOS TRABAJADOS (ADICIONAL)", normal_style), Paragraph(f"{datos_b['feriados_trabajados']} días", normal_style), Paragraph(f"{datos_b['monto_feriados']:.2f}", normal_style), Paragraph("0.00", normal_style)],
-        [Paragraph("HORAS EXTRAS TRABAJADAS", normal_style), Paragraph(f"{datos_b['horas_extras_hrs']:.2f} hrs", normal_style), Paragraph(f"{datos_b['monto_horas_extras']:.2f}", normal_style), Paragraph("0.00", normal_style)],
-        [Paragraph("DÍA DE DESCANSO TRABAJADO VOLUNTARIAMENTE (DOMINGO)", normal_style), Paragraph(f"{datos_b.get('domingos_voluntarios', 0)} día(s)", normal_style), Paragraph(f"{datos_b.get('monto_domingos_voluntarios', 0.0):.2f}", normal_style), Paragraph("0.00", normal_style)],
-        [Paragraph("BONO POR PUNTUALIDAD", normal_style), Paragraph("-", normal_style), Paragraph(f"{datos_b.get('bono_puntualidad', 0.0):.2f}", normal_style), Paragraph("0.00", normal_style)],
-        [Paragraph("BONO PRESENCIA Y UNIFORME", normal_style), Paragraph("-", normal_style), Paragraph(f"{datos_b.get('bono_presencia_uniforme', 0.0):.2f}", normal_style), Paragraph("0.00", normal_style)],
-        [Paragraph("BONO ORDEN Y LIMPIEZA", normal_style), Paragraph("-", normal_style), Paragraph(f"{datos_b.get('bono_orden_limpieza', 0.0):.2f}", normal_style), Paragraph("0.00", normal_style)],
-        [Paragraph("ADELANTO DE SUELDO", normal_style), Paragraph("-", normal_style), Paragraph("0.00", normal_style), Paragraph(f"{datos_b['adelanto_sueldo']:.2f}", normal_style)],
-        [Paragraph("DESCUENTO POR FALTAS", normal_style), Paragraph(f"{datos_b['dias_faltas']} días", normal_style), Paragraph("0.00", normal_style), Paragraph(f"{datos_b['monto_faltas']:.2f}", normal_style)],
-        [Paragraph("DESCUADRE / FALTANTE DE CAJA", normal_style), Paragraph("-", normal_style), Paragraph("0.00", normal_style), Paragraph(f"{datos_b['descuadre_caja']:.2f}", normal_style)],
-        [Paragraph("DESCUADRES DE INVENTARIO", normal_style), Paragraph("-", normal_style), Paragraph("0.00", normal_style), Paragraph(f"{datos_b.get('descuadre_inventario', 0.0):.2f}", normal_style)],
-        [Paragraph("CONSUMOS POR PAGAR", normal_style), Paragraph("-", normal_style), Paragraph("0.00", normal_style), Paragraph(f"{datos_b.get('consumos_pagar', 0.0):.2f}", normal_style)],
-        [Paragraph("INCIDENCIAS Y DAÑOS", normal_style), Paragraph("-", normal_style), Paragraph("0.00", normal_style), Paragraph(f"{datos_b.get('incidencias_danos', 0.0):.2f}", normal_style)],
-        [Paragraph("<b>TOTALES</b>", bold_style), Paragraph("", normal_style), Paragraph(f"<b>S/. {datos_b['total_ingresos']:.2f}</b>", bold_style), Paragraph(f"<b>S/. {datos_b['total_descuentos']:.2f}</b>", bold_style)],
-        [Paragraph("<b>NETO A PAGAR</b>", ParagraphStyle('Neto', parent=bold_style, fontSize=11, textColor=colors.black)), Paragraph("", normal_style), Paragraph(f"<b>S/. {datos_b['neto_pagar']:.2f}</b>", ParagraphStyle('NetoVal', parent=bold_style, fontSize=11, textColor=colors.black)), Paragraph("", normal_style)]
+    # --- Resumen del período ---
+    t_res = Table(
+        [[Paragraph(X(v), s_sv) for _, v in resumen], [Paragraph(l.upper(), s_sl) for l, _ in resumen]],
+        colWidths=[W / 6.0] * 6
+    )
+    t_res.setStyle(TableStyle([
+        ("BOX", (0, 0), (-1, -1), 0.6, line_c), ("INNERGRID", (0, 0), (-1, -1), 0, colors.white),
+        *[("LINEAFTER", (i, 0), (i, -1), 0.6, line_c) for i in range(5)],
+        ("TOPPADDING", (0, 0), (-1, 0), 9), ("BOTTOMPADDING", (0, 0), (-1, 0), 1),
+        ("TOPPADDING", (0, 1), (-1, 1), 1), ("BOTTOMPADDING", (0, 1), (-1, 1), 8),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+    ]))
+    story.append(t_res)
+    story.append(Spacer(1, 14))
+
+    # --- Tabla de conceptos ---
+    data = [[Paragraph("CONCEPTO", s_th), Paragraph("CANTIDAD", s_th_c), Paragraph("IMPORTE (S/.)", s_th_r)]]
+    estilos = [
+        ("BACKGROUND", (0, 0), (-1, 0), navy),
+        ("BOX", (0, 0), (-1, -1), 0.6, line_c),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 9), ("RIGHTPADDING", (0, 0), (-1, -1), 9),
+        ("TOPPADDING", (0, 0), (-1, -1), 5.5), ("BOTTOMPADDING", (0, 0), (-1, -1), 5.5),
     ]
 
-    t_calc = Table(calc_data, colWidths=[200, 100, 120, 120])
-    t_calc.setStyle(TableStyle([
-        ('GRID', (0,0), (-1,-1), 0.5, colors.black),
-        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#E5E7EB')),
-        ('BACKGROUND', (0,-2), (-1,-2), colors.whitesmoke),
-        ('BACKGROUND', (0,-1), (-1,-1), colors.HexColor('#F3F4F6')),
-        ('SPAN', (0,-1), (1,-1)),
-        ('SPAN', (2,-1), (3,-1)),
-        ('ALIGN', (2,0), (-1,-1), 'RIGHT'),
-        ('PADDING', (0,0), (-1,-1), 6),
-    ]))
+    def bloque(titulo, items, color_barra, es_desc, label_total, total):
+        r = len(data)
+        data.append([Paragraph(titulo, s_sec), "", ""])
+        estilos.extend([
+            ("SPAN", (0, r), (-1, r)), ("BACKGROUND", (0, r), (-1, r), soft2),
+            ("LINEBEFORE", (0, r), (0, r), 3, color_barra),
+        ])
+        for concepto, cant, monto in items:
+            muted = float(monto) == 0
+            st_m = s_m_m if muted else (s_m_neg if es_desc else s_m)
+            data.append([
+                Paragraph(X(concepto), s_c_m if muted else s_c),
+                Paragraph(X(cant), s_q_m if muted else s_q),
+                Paragraph(_bp_money(monto), st_m),
+            ])
+            estilos.append(("LINEBELOW", (0, len(data) - 1), (-1, len(data) - 1), 0.4, line_c))
+        r = len(data)
+        data.append([
+            Paragraph(label_total, s_st), "",
+            Paragraph(f"S/. {_bp_money(total)}", s_st_r_neg if es_desc else s_st_r)
+        ])
+        estilos.extend([
+            ("SPAN", (0, r), (1, r)), ("BACKGROUND", (0, r), (-1, r), soft),
+            ("LINEABOVE", (0, r), (-1, r), 1, navy),
+        ])
 
+    bloque("INGRESOS", ingresos, green, False, "TOTAL INGRESOS", datos_b["total_ingresos"])
+    bloque("DESCUENTOS", descuentos, neg, True, "TOTAL DESCUENTOS", datos_b["total_descuentos"])
+
+    t_calc = Table(data, colWidths=[W * 0.60, W * 0.16, W * 0.24], repeatRows=1)
+    t_calc.setStyle(TableStyle(estilos))
     story.append(t_calc)
-    story.append(Spacer(1, 40))
+    story.append(Spacer(1, 12))
 
-    # SOLUCIÓN DEL ERROR PARAPARSER: SEPARAR LA LÍNEA Y EL TEXTO EN PARÁGRAFOS INDEPENDIENTES
-    f1_line = Paragraph("_______________________________", ParagraphStyle('Line1', alignment=1, fontSize=8, fontName='Helvetica'))
-    f1_text = Paragraph("<b>EMPLEADOR / TIENDAS PREMIUM</b>", ParagraphStyle('Text1', alignment=1, fontSize=8, fontName='Helvetica-Bold'))
-    
-    f2_line = Paragraph("_______________________________", ParagraphStyle('Line2', alignment=1, fontSize=8, fontName='Helvetica'))
-    f2_text = Paragraph("<b>RECIBÍ CONFORME (TRABAJADOR)</b>", ParagraphStyle('Text2', alignment=1, fontSize=8, fontName='Helvetica-Bold'))
-
-    firmas = [
-        [[f1_line, Spacer(1, 4), f1_text], [f2_line, Spacer(1, 4), f2_text]]
-    ]
-    t_firmas = Table(firmas, colWidths=[270, 270])
-    t_firmas.setStyle(TableStyle([
-        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE')
+    # --- Neto a pagar ---
+    t_net = Table(
+        [[Paragraph("NETO A PAGAR", s_net_l), Paragraph(f"S/. {_bp_money(datos_b['neto_pagar'])}", s_net_v)]],
+        colWidths=[W * 0.5, W * 0.5]
+    )
+    t_net.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, -1), navy), ("LINEBEFORE", (0, 0), (0, 0), 5, red),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 16), ("RIGHTPADDING", (0, 0), (-1, -1), 16),
+        ("TOPPADDING", (0, 0), (-1, -1), 12), ("BOTTOMPADDING", (0, 0), (-1, -1), 12),
     ]))
-    story.append(t_firmas)
+    story.append(t_net)
+    story.append(Spacer(1, 52))
+
+    # --- Firmas ---
+    gap = 60
+    cw = (W - gap) / 2.0
+    t_firm = Table(
+        [[Paragraph("EMPLEADOR / TIENDAS PREMIUM", s_sig), "", Paragraph("RECIBÍ CONFORME (TRABAJADOR)", s_sig)]],
+        colWidths=[cw, gap, cw]
+    )
+    t_firm.setStyle(TableStyle([
+        ("LINEABOVE", (0, 0), (0, 0), 1, navy), ("LINEABOVE", (2, 0), (2, 0), 1, navy),
+        ("TOPPADDING", (0, 0), (-1, -1), 6),
+    ]))
+    story.append(t_firm)
+    story.append(Spacer(1, 26))
+
+    # --- Pie ---
+    story.append(HRFlowable(width="100%", thickness=0.5, color=line_c, spaceAfter=6))
+    story.append(Paragraph(f"Documento generado por el Sistema de Control Interno de {X(datos_b['empresa'])} · {fecha_gen}", s_foot))
 
     doc.build(story)
     return buffer.getvalue()
+
+
 def registrar_marca(dni, nombre, tipo, observacion="", es_extra=False):
     ahora_peru = obtener_ahora_peru()
     hoy_str = ahora_peru.strftime("%Y-%m-%d")
@@ -3079,157 +3482,7 @@ elif choice == "Boletas de Pago":
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown("##### Previsualización de la Boleta de Pago")
 
-        st.markdown(f"""
-            <div class="boleta-container">
-                <div class="boleta-header-title">TIENDAS PREMIUM E.I.R.L.</div>
-                <div style="text-align:center; font-size:0.85rem; font-weight:700; margin-bottom:15px;">
-                    RUC: 20612107786 | PERÍODO DE PAGO: {datos_boleta['periodo']}
-                </div>
-                <table class="boleta-table">
-                    <tr>
-                        <th style="width:15%;">COLABORADOR:</th>
-                        <td style="width:35%;">{datos_boleta['colaborador']}</td>
-                        <th style="width:15%;">DNI:</th>
-                        <td style="width:35%;">{datos_boleta['dni']}</td>
-                    </tr>
-                    <tr>
-                        <th>CARGO:</th>
-                        <td>{datos_boleta['cargo']}</td>
-                        <th>FECHA INGRESO:</th>
-                        <td>{datos_boleta['fecha_inicio']}</td>
-                    </tr>
-                    <tr>
-                        <th>DÍAS LABORADOS:</th>
-                        <td>{datos_boleta['dias_trabajados']}</td>
-                        <th>DÍAS FALTAS:</th>
-                        <td>{datos_boleta['dias_faltas']}</td>
-                    </tr>
-                    <tr>
-                        <th>FERIADOS TRAB.:</th>
-                        <td>{datos_boleta['feriados_trabajados']}</td>
-                        <th>HORAS EXTRAS:</th>
-                        <td>{datos_boleta['horas_extras_hrs']:.2f} hrs</td>
-                    </tr>
-                    <tr>
-                        <th>DOM. VOLUNTARIOS:</th>
-                        <td>{datos_boleta.get('domingos_voluntarios', 0)}</td>
-                        <th>PERM. RECUPERADOS:</th>
-                        <td>{datos_boleta.get('permisos_recuperados', 0)}</td>
-                    </tr>
-                </table>
-                <table class="boleta-table">
-                    <thead>
-                        <tr>
-                            <th>CONCEPTO / RUBRO</th>
-                            <th>CANTIDAD</th>
-                            <th style="text-align:right;">INGRESOS (S/.)</th>
-                            <th style="text-align:right;">DESCUENTOS (S/.)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>SUELDO BÁSICO</td>
-                            <td>{datos_boleta['dias_trabajados']} días</td>
-                            <td style="text-align:right;">{datos_boleta['sueldo_basico']:.2f}</td>
-                            <td style="text-align:right;">0.00</td>
-                        </tr>
-                        <tr>
-                            <td>PAGO FERIADOS TRABAJADOS (ADICIONAL)</td>
-                            <td>{datos_boleta['feriados_trabajados']} días</td>
-                            <td style="text-align:right;">{datos_boleta['monto_feriados']:.2f}</td>
-                            <td style="text-align:right;">0.00</td>
-                        </tr>
-                        <tr>
-                            <td>HORAS EXTRAS TRABAJADAS</td>
-                            <td>{datos_boleta['horas_extras_hrs']:.2f} hrs</td>
-                            <td style="text-align:right;">{datos_boleta['monto_horas_extras']:.2f}</td>
-                            <td style="text-align:right;">0.00</td>
-                        </tr>
-                        <tr>
-                            <td>DÍA DE DESCANSO TRABAJADO VOLUNTARIAMENTE (DOMINGO)</td>
-                            <td>{datos_boleta.get('domingos_voluntarios', 0)} día(s)</td>
-                            <td style="text-align:right;">{datos_boleta.get('monto_domingos_voluntarios', 0.0):.2f}</td>
-                            <td style="text-align:right;">0.00</td>
-                        </tr>
-                        <tr>
-                            <td>BONO POR PUNTUALIDAD</td>
-                            <td>-</td>
-                            <td style="text-align:right;">{datos_boleta['bono_puntualidad']:.2f}</td>
-                            <td style="text-align:right;">0.00</td>
-                        </tr>
-                        <tr>
-                            <td>BONO PRESENCIA Y UNIFORME</td>
-                            <td>-</td>
-                            <td style="text-align:right;">{datos_boleta['bono_presencia_uniforme']:.2f}</td>
-                            <td style="text-align:right;">0.00</td>
-                        </tr>
-                        <tr>
-                            <td>BONO ORDEN Y LIMPIEZA</td>
-                            <td>-</td>
-                            <td style="text-align:right;">{datos_boleta['bono_orden_limpieza']:.2f}</td>
-                            <td style="text-align:right;">0.00</td>
-                        </tr>
-                        <tr>
-                            <td>ADELANTO DE SUELDO</td>
-                            <td>-</td>
-                            <td style="text-align:right;">0.00</td>
-                            <td style="text-align:right;">{datos_boleta['adelanto_sueldo']:.2f}</td>
-                        </tr>
-                        <tr>
-                            <td>DESCUENTO POR FALTAS</td>
-                            <td>{datos_boleta['dias_faltas']} días</td>
-                            <td style="text-align:right;">0.00</td>
-                            <td style="text-align:right;">{datos_boleta['monto_faltas']:.2f}</td>
-                        </tr>
-                        <tr>
-                            <td>DESCUADRE / FALTANTE DE CAJA</td>
-                            <td>-</td>
-                            <td style="text-align:right;">0.00</td>
-                            <td style="text-align:right;">{datos_boleta['descuadre_caja']:.2f}</td>
-                        </tr>
-                        <tr>
-                            <td>DESCUADRES DE INVENTARIO</td>
-                            <td>-</td>
-                            <td style="text-align:right;">0.00</td>
-                            <td style="text-align:right;">{datos_boleta['descuadre_inventario']:.2f}</td>
-                        </tr>
-                        <tr>
-                            <td>CONSUMOS POR PAGAR</td>
-                            <td>-</td>
-                            <td style="text-align:right;">0.00</td>
-                            <td style="text-align:right;">{datos_boleta['consumos_pagar']:.2f}</td>
-                        </tr>
-                        <tr>
-                            <td>INCIDENCIAS Y DAÑOS</td>
-                            <td>-</td>
-                            <td style="text-align:right;">0.00</td>
-                            <td style="text-align:right;">{datos_boleta['incidencias_danos']:.2f}</td>
-                        </tr>
-                        <tr style="background-color:#f3f4f6; font-weight:700;">
-                            <td>TOTALES</td>
-                            <td>-</td>
-                            <td style="text-align:right;">S/. {datos_boleta['total_ingresos']:.2f}</td>
-                            <td style="text-align:right;">S/. {datos_boleta['total_descuentos']:.2f}</td>
-                        </tr>
-                        <tr style="background-color:#111827; color:#ffffff; font-weight:700; font-size:0.95rem;">
-                            <td colspan="2">NETO A PAGAR</td>
-                            <td colspan="2" style="text-align:right;">S/. {datos_boleta['neto_pagar']:.2f}</td>
-                        </tr>
-                    </tbody>
-                </table>
-                <br><br>
-                <div style="display:flex; justify-content:space-around; text-align:center; font-size:0.8rem; margin-top:20px;">
-                    <div>
-                        ___________________________________<br>
-                        <b>EMPLEADOR / TIENDAS PREMIUM</b>
-                    </div>
-                    <div>
-                        ___________________________________<br>
-                        <b>RECIBÍ CONFORME (TRABAJADOR)</b>
-                    </div>
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
+        st.markdown(generar_html_boleta(datos_boleta), unsafe_allow_html=True)
 
         st.markdown("##### Opciones de Exportación")
         col_exp1, col_exp2 = st.columns(2)
