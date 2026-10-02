@@ -3418,11 +3418,38 @@ elif choice == "Solicitudes y Permisos":
         df_sol_base = st.session_state.solicitudes.copy()
 
         # --- MÉTRICAS RESUMEN ---
-        total_pend = len(df_sol_base[df_sol_base["estado"] == "Pendiente"])
-        total_aprob = len(df_sol_base[df_sol_base["estado"] == "Aprobado"])
-        total_rechaz = len(df_sol_base[df_sol_base["estado"] == "Rechazado"])
+        # --- SELECTOR DE MES PARA LAS MÉTRICAS ---
+        NOMBRES_MESES_SOL = [
+            "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+            "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+        ]
+        ahora_p_sol = obtener_ahora_peru()
+        col_mes_sol, col_anio_sol, _col_sp_sol = st.columns([1, 1, 2])
+        mes_sol_sel = col_mes_sol.selectbox(
+            "Seleccionar Mes",
+            [0] + list(range(1, 13)),
+            index=ahora_p_sol.month,
+            format_func=lambda x: "Todos los meses" if x == 0 else NOMBRES_MESES_SOL[x - 1],
+            key="sol_mes_resumen"
+        )
+        anio_sol_sel = col_anio_sol.number_input(
+            "Año", min_value=2024, max_value=2030, value=ahora_p_sol.year,
+            key="sol_anio_resumen", disabled=(mes_sol_sel == 0)
+        )
+
+        df_sol_metricas = df_sol_base.copy()
+        if mes_sol_sel != 0:
+            _fecha_sol_dt = pd.to_datetime(df_sol_metricas["fecha_registro"], errors="coerce")
+            df_sol_metricas = df_sol_metricas[
+                (_fecha_sol_dt.dt.month == mes_sol_sel) & (_fecha_sol_dt.dt.year == anio_sol_sel)
+            ]
+        etiqueta_periodo_sol = "Total" if mes_sol_sel == 0 else NOMBRES_MESES_SOL[mes_sol_sel - 1]
+
+        total_pend = len(df_sol_metricas[df_sol_metricas["estado"] == "Pendiente"])
+        total_aprob = len(df_sol_metricas[df_sol_metricas["estado"] == "Aprobado"])
+        total_rechaz = len(df_sol_metricas[df_sol_metricas["estado"] == "Rechazado"])
         monto_adel_aprob = pd.to_numeric(
-            df_sol_base[(df_sol_base["tipo_solicitud"] == "Adelanto de Sueldo") & (df_sol_base["estado"] == "Aprobado")]["monto_adelanto"],
+            df_sol_metricas[(df_sol_metricas["tipo_solicitud"] == "Adelanto de Sueldo") & (df_sol_metricas["estado"] == "Aprobado")]["monto_adelanto"],
             errors="coerce"
         ).sum()
 
@@ -3434,7 +3461,7 @@ elif choice == "Solicitudes y Permisos":
         with sm3:
             st.markdown(f'<div class="info-card"><div class="info-label">Rechazadas</div><div class="info-value" style="color:#EC3237;">{total_rechaz}</div></div>', unsafe_allow_html=True)
         with sm4:
-            st.markdown(f'<div class="info-card"><div class="info-label">Adelantos Aprobados (Total)</div><div class="info-value">S/. {monto_adel_aprob:.2f}</div></div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="info-card"><div class="info-label">Adelantos Aprobados ({etiqueta_periodo_sol})</div><div class="info-value">S/. {monto_adel_aprob:.2f}</div></div>', unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
 
@@ -3834,7 +3861,7 @@ elif choice == "Botellas Fiadas":
         with st.form("form_botella_fiada", clear_on_submit=True):
             bf1, bf2 = st.columns(2)
             cliente_nombre_bf = bf1.text_input("Nombre del Cliente", key="bf_nombre")
-            cliente_dni_bf = bf2.text_input("DNI del Cliente", key="bf_dni")
+            cliente_dni_bf = bf2.text_input("DNI del Cliente (opcional)", value="12345678", key="bf_dni", help="Si el cliente no quiere dar su DNI, deja 12345678.")
 
             cliente_dir_bf = st.text_input("Dirección / Dónde Vive", key="bf_direccion")
 
@@ -3853,6 +3880,8 @@ elif choice == "Botellas Fiadas":
                 if not cliente_nombre_bf.strip():
                     st.error("Debes ingresar el nombre del cliente.")
                 else:
+                    if not cliente_dni_bf.strip():
+                        cliente_dni_bf = "12345678"
                     id_bf_nuevo = f"BF-{int(time.time()*1000)}"
                     f_prestamo_bf = obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S")
 
