@@ -1406,7 +1406,8 @@ def generar_excel_boleta(datos_b):
             "COLABORADOR": datos_b["colaborador"],
             "DNI": datos_b["dni"],
             "CARGO": datos_b["cargo"],
-            "FECHA INGRESO": datos_b["fecha_inicio"]
+            "FECHA INGRESO": datos_b["fecha_inicio"],
+            "PERMISOS RECUPERADOS": datos_b.get("permisos_recuperados", 0)
         }])
         df_emp.to_excel(writer, sheet_name="Boleta de Pago", index=False, startrow=0)
 
@@ -1460,7 +1461,7 @@ def generar_pdf_boleta(datos_b):
         [Paragraph("<b>CARGO:</b>", bold_style), Paragraph(str(datos_b['cargo']), normal_style), Paragraph("<b>FECHA INGRESO:</b>", bold_style), Paragraph(str(datos_b['fecha_inicio']), normal_style)],
         [Paragraph("<b>DÍAS LABORADOS:</b>", bold_style), Paragraph(str(datos_b['dias_trabajados']), normal_style), Paragraph("<b>DÍAS FALTAS:</b>", bold_style), Paragraph(str(datos_b['dias_faltas']), normal_style)],
         [Paragraph("<b>FERIADOS TRAB.:</b>", bold_style), Paragraph(str(datos_b['feriados_trabajados']), normal_style), Paragraph("<b>HORAS EXTRAS:</b>", bold_style), Paragraph(f"{datos_b['horas_extras_hrs']:.2f} hrs", normal_style)],
-        [Paragraph("<b>DOM. VOLUNTARIOS:</b>", bold_style), Paragraph(str(datos_b.get('domingos_voluntarios', 0)), normal_style), Paragraph("", normal_style), Paragraph("", normal_style)]
+        [Paragraph("<b>DOM. VOLUNTARIOS:</b>", bold_style), Paragraph(str(datos_b.get('domingos_voluntarios', 0)), normal_style), Paragraph("<b>PERM. RECUPERADOS:</b>", bold_style), Paragraph(str(datos_b.get('permisos_recuperados', 0)), normal_style)]
     ]
     t_info = Table(info_data, colWidths=[110, 160, 110, 160])
     t_info.setStyle(TableStyle([
@@ -2980,6 +2981,66 @@ elif choice == "Boletas de Pago":
         feriados_trabajados_cnt = 0
         domingos_voluntarios_cnt = 0
 
+        # --- PERMISOS RECUPERADOS (Permiso Laboral aprobado / Permiso de Salud a recuperar) ---
+        # Si el colaborador pidió permiso o se enfermó pero ya recuperó el día, NO cuenta como falta.
+        _asist_fechas_colab = set()
+        if not df_asist_b.empty:
+            _asist_fechas_colab = {parsear_fecha_segura(_x) for _x in df_asist_b[df_asist_b["nombre"] == colab_b_sel]["fecha"].astype(str).tolist()}
+            _asist_fechas_colab.discard(None)
+
+        fechas_recuperacion_colab = set()
+        permisos_recuperados_cnt = 0
+        permisos_recuperados_detalle = []
+
+        # a) Permiso Laboral aprobado con día de recuperación (se considera recuperado si asistió ese día)
+        df_sol_rec = st.session_state.solicitudes.copy()
+        if not df_sol_rec.empty:
+            df_sol_rec = df_sol_rec[
+                (df_sol_rec["nombre"] == colab_b_sel) &
+                (df_sol_rec["tipo_solicitud"] == "Permiso Laboral") &
+                (df_sol_rec["estado"] == "Aprobado")
+            ]
+            for _, _s in df_sol_rec.iterrows():
+                _f_perm = parsear_fecha_segura(_s.get("fecha_permiso", ""))
+                _f_rec = parsear_fecha_segura(_s.get("fecha_recuperacion", ""))
+                if not _f_rec:
+                    continue
+                fechas_recuperacion_colab.add(_f_rec)
+                if (_f_perm and _f_perm.month == mes_b_sel and _f_perm.year == anio_b_sel
+                        and _f_perm.weekday() != 6
+                        and _f_perm not in _asist_fechas_colab
+                        and _f_rec in _asist_fechas_colab):
+                    permisos_recuperados_cnt += 1
+                    permisos_recuperados_detalle.append(f"Permiso {_f_perm.strftime('%d/%m')} → recuperado el {_f_rec.strftime('%d/%m')}")
+
+        # b) Permiso de Salud (a recuperar): recuperado si el admin lo marcó "Recuperado" o si asistió el día de recuperación
+        df_vac_rec = st.session_state.vacaciones.copy()
+        if not df_vac_rec.empty:
+            df_vac_rec = df_vac_rec[
+                (df_vac_rec["nombre"].astype(str) == colab_b_sel) &
+                (df_vac_rec["tipo"] == "Permiso de Salud (a recuperar)")
+            ]
+            for _, _v in df_vac_rec.iterrows():
+                _f_ini_v = parsear_fecha_segura(_v.get("fecha_inicio", ""))
+                _f_fin_v = parsear_fecha_segura(_v.get("fecha_fin", ""))
+                _f_rec_v = parsear_fecha_segura(_v.get("fecha_recuperacion", ""))
+                if _f_rec_v:
+                    fechas_recuperacion_colab.add(_f_rec_v)
+                _recuperado_v = (str(_v.get("estado_recuperacion", "")).strip() == "Recuperado") or (_f_rec_v is not None and _f_rec_v in _asist_fechas_colab)
+                if not (_f_ini_v and _f_fin_v and _recuperado_v):
+                    continue
+                _dias_sin_asist = []
+                _d_it = _f_ini_v
+                while _d_it <= _f_fin_v:
+                    if (_d_it.month == mes_b_sel and _d_it.year == anio_b_sel
+                            and _d_it.weekday() != 6 and _d_it not in _asist_fechas_colab):
+                        _dias_sin_asist.append(_d_it)
+                    _d_it += timedelta(days=1)
+                if _dias_sin_asist:
+                    permisos_recuperados_cnt += 1
+                    _txt_rec_v = f" → recuperado el {_f_rec_v.strftime('%d/%m')}" if _f_rec_v else " → recuperado"
+                    permisos_recuperados_detalle.append(f"Permiso de salud {_dias_sin_asist[0].strftime('%d/%m')}{_txt_rec_v}")
+
         if not df_asist_b.empty:
             df_asist_b["fecha_dt"] = pd.to_datetime(df_asist_b["fecha"], errors="coerce")
             df_asist_user = df_asist_b[
@@ -3003,12 +3064,12 @@ elif choice == "Boletas de Pago":
                             feriados_trabajados_cnt += 1
 
                     dt_dia_check = pd.to_datetime(f_dia)
-                    if dt_dia_check.weekday() == 6 and grupo_dia["observacion"].astype(str).str.contains("TRABAJO VOLUNTARIO EN DOMINGO", case=False, na=False).any():
+                    if dt_dia_check.weekday() == 6 and dt_dia_check.date() not in fechas_recuperacion_colab and grupo_dia["observacion"].astype(str).str.contains("TRABAJO VOLUNTARIO EN DOMINGO", case=False, na=False).any():
                         domingos_voluntarios_cnt += 1
 
         # Domingos de descanso semanal: son pagados, se suman a los días laborados (tope 30 días)
         domingos_descanso_pagados = 0
-        if dias_trabajados_cnt > 0:
+        if dias_trabajados_cnt + permisos_recuperados_cnt > 0:
             _f_ini_emp = parsear_fecha_segura(finicio_b_val)
             _f_cese_emp = parsear_fecha_segura(row_trab.iloc[0].get("fecha_cese", "")) if not row_trab.empty else None
             _dias_mes_b = pd.Period(f"{int(anio_b_sel)}-{int(mes_b_sel):02d}").days_in_month
@@ -3020,7 +3081,7 @@ elif choice == "Boletas de Pago":
                     if _f_cese_emp and _dd > _f_cese_emp:
                         continue
                     domingos_descanso_pagados += 1
-            dias_trabajados_cnt = min(30, dias_trabajados_cnt + domingos_descanso_pagados)
+            dias_trabajados_cnt = min(30, dias_trabajados_cnt + domingos_descanso_pagados + permisos_recuperados_cnt)
 
         dias_faltas_cnt = max(0, 30 - dias_trabajados_cnt)
 
@@ -3074,6 +3135,9 @@ elif choice == "Boletas de Pago":
         st.markdown("---")
         st.markdown("##### Valores y Conceptos Calculados")
         
+        if permisos_recuperados_cnt > 0:
+            st.info("🔄 **Permisos recuperados (no se cuentan como falta):** " + " | ".join(permisos_recuperados_detalle))
+
         c_i1, c_i2, c_i3 = st.columns(3)
         sueldo_basico_in = c_i1.number_input("Sueldo Básico (S/.)", min_value=0.0, value=530.0, step=10.0, format="%.2f")
         dias_trab_in = c_i2.number_input("Días Laborados", min_value=0, max_value=31, value=int(dias_trabajados_cnt))
@@ -3130,6 +3194,7 @@ elif choice == "Boletas de Pago":
             "fecha_inicio": finicio_b_val,
             "dias_trabajados": dias_trab_in,
             "dias_faltas": dias_faltas_in,
+            "permisos_recuperados": permisos_recuperados_cnt,
             "feriados_trabajados": feriados_trab_in,
             "horas_extras_hrs": hrs_extras_in,
             "sueldo_basico": sueldo_basico_in,
@@ -3188,8 +3253,8 @@ elif choice == "Boletas de Pago":
                     <tr>
                         <th>DOM. VOLUNTARIOS:</th>
                         <td>{datos_boleta.get('domingos_voluntarios', 0)}</td>
-                        <th></th>
-                        <td></td>
+                        <th>PERM. RECUPERADOS:</th>
+                        <td>{datos_boleta.get('permisos_recuperados', 0)}</td>
                     </tr>
                 </table>
                 <table class="boleta-table">
