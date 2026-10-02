@@ -1423,6 +1423,7 @@ def generar_excel_boleta(datos_b):
             {"CONCEPTO": "DESCUADRES / FALTANTE DE CAJA", "CANTIDAD": "-", "INGRESOS (S/.)": 0.0, "DESCUENTOS (S/.)": datos_b["descuadre_caja"]},
             {"CONCEPTO": "DESCUADRES DE INVENTARIO", "CANTIDAD": "-", "INGRESOS (S/.)": 0.0, "DESCUENTOS (S/.)": datos_b.get("descuadre_inventario", 0.0)},
             {"CONCEPTO": "CONSUMOS POR PAGAR", "CANTIDAD": "-", "INGRESOS (S/.)": 0.0, "DESCUENTOS (S/.)": datos_b.get("consumos_pagar", 0.0)},
+            {"CONCEPTO": "INCIDENCIAS Y DAÑOS", "CANTIDAD": "-", "INGRESOS (S/.)": 0.0, "DESCUENTOS (S/.)": datos_b.get("incidencias_danos", 0.0)},
             {"CONCEPTO": "TOTALES", "CANTIDAD": "", "INGRESOS (S/.)": datos_b["total_ingresos"], "DESCUENTOS (S/.)": datos_b["total_descuentos"]},
             {"CONCEPTO": "NETO A PAGAR", "CANTIDAD": "", "INGRESOS (S/.)": datos_b["neto_pagar"], "DESCUENTOS (S/.)": 0.0}
         ])
@@ -1486,6 +1487,7 @@ def generar_pdf_boleta(datos_b):
         [Paragraph("DESCUADRE / FALTANTE DE CAJA", normal_style), Paragraph("-", normal_style), Paragraph("0.00", normal_style), Paragraph(f"{datos_b['descuadre_caja']:.2f}", normal_style)],
         [Paragraph("DESCUADRES DE INVENTARIO", normal_style), Paragraph("-", normal_style), Paragraph("0.00", normal_style), Paragraph(f"{datos_b.get('descuadre_inventario', 0.0):.2f}", normal_style)],
         [Paragraph("CONSUMOS POR PAGAR", normal_style), Paragraph("-", normal_style), Paragraph("0.00", normal_style), Paragraph(f"{datos_b.get('consumos_pagar', 0.0):.2f}", normal_style)],
+        [Paragraph("INCIDENCIAS Y DAÑOS", normal_style), Paragraph("-", normal_style), Paragraph("0.00", normal_style), Paragraph(f"{datos_b.get('incidencias_danos', 0.0):.2f}", normal_style)],
         [Paragraph("<b>TOTALES</b>", bold_style), Paragraph("", normal_style), Paragraph(f"<b>S/. {datos_b['total_ingresos']:.2f}</b>", bold_style), Paragraph(f"<b>S/. {datos_b['total_descuentos']:.2f}</b>", bold_style)],
         [Paragraph("<b>NETO A PAGAR</b>", ParagraphStyle('Neto', parent=bold_style, fontSize=11, textColor=colors.black)), Paragraph("", normal_style), Paragraph(f"<b>S/. {datos_b['neto_pagar']:.2f}</b>", ParagraphStyle('NetoVal', parent=bold_style, fontSize=11, textColor=colors.black)), Paragraph("", normal_style)]
     ]
@@ -2987,7 +2989,8 @@ elif choice == "Boletas de Pago":
             ]
             
             if not df_asist_user.empty:
-                dias_trabajados_cnt = df_asist_user["fecha"].nunique()
+                _fechas_user = pd.to_datetime(df_asist_user["fecha"].drop_duplicates(), errors="coerce").dropna()
+                dias_trabajados_cnt = int((_fechas_user.dt.weekday != 6).sum())
                 
                 df_asist_user["dt"] = pd.to_datetime(df_asist_user["fecha_hora"])
                 for f_dia, grupo_dia in df_asist_user.groupby("fecha"):
@@ -3002,6 +3005,22 @@ elif choice == "Boletas de Pago":
                     dt_dia_check = pd.to_datetime(f_dia)
                     if dt_dia_check.weekday() == 6 and grupo_dia["observacion"].astype(str).str.contains("TRABAJO VOLUNTARIO EN DOMINGO", case=False, na=False).any():
                         domingos_voluntarios_cnt += 1
+
+        # Domingos de descanso semanal: son pagados, se suman a los días laborados (tope 30 días)
+        domingos_descanso_pagados = 0
+        if dias_trabajados_cnt > 0:
+            _f_ini_emp = parsear_fecha_segura(finicio_b_val)
+            _f_cese_emp = parsear_fecha_segura(row_trab.iloc[0].get("fecha_cese", "")) if not row_trab.empty else None
+            _dias_mes_b = pd.Period(f"{int(anio_b_sel)}-{int(mes_b_sel):02d}").days_in_month
+            for _d in pd.date_range(start=f"{int(anio_b_sel)}-{int(mes_b_sel):02d}-01", periods=_dias_mes_b):
+                if _d.weekday() == 6:
+                    _dd = _d.date()
+                    if _f_ini_emp and _dd < _f_ini_emp:
+                        continue
+                    if _f_cese_emp and _dd > _f_cese_emp:
+                        continue
+                    domingos_descanso_pagados += 1
+            dias_trabajados_cnt = min(30, dias_trabajados_cnt + domingos_descanso_pagados)
 
         dias_faltas_cnt = max(0, 30 - dias_trabajados_cnt)
 
@@ -3036,6 +3055,22 @@ elif choice == "Boletas de Pago":
                 faltantes = df_desc_u[pd.to_numeric(df_desc_u["monto"], errors="coerce") < 0]
                 descuadre_caja_monto = abs(pd.to_numeric(faltantes["monto"], errors="coerce").sum())
 
+        # Incidencias y daños del mes (se excluyen las condonadas)
+        incidencias_monto = 0.0
+        incidencias_cnt = 0
+        df_inc_b = st.session_state.incidencias.copy()
+        if not df_inc_b.empty:
+            df_inc_b["f_dt"] = pd.to_datetime(df_inc_b["fecha"], errors="coerce")
+            df_inc_u = df_inc_b[
+                (df_inc_b["nombre"] == colab_b_sel) &
+                (df_inc_b["f_dt"].dt.month == mes_b_sel) &
+                (df_inc_b["f_dt"].dt.year == anio_b_sel) &
+                (df_inc_b["estado"].astype(str) != "Resuelto / Condonado")
+            ]
+            if not df_inc_u.empty:
+                incidencias_cnt = len(df_inc_u)
+                incidencias_monto = float(pd.to_numeric(df_inc_u["valor_reparacion"], errors="coerce").fillna(0).sum())
+
         st.markdown("---")
         st.markdown("##### Valores y Conceptos Calculados")
         
@@ -3062,6 +3097,11 @@ elif choice == "Boletas de Pago":
         with c_i11:
             st.caption("Se paga como día adicional (100% del valor día), separado del sueldo básico, dejando constancia de que originalmente era su descanso.")
 
+        c_inc1, c_inc2 = st.columns(2)
+        incidencias_in = c_inc1.number_input("Incidencias / Daños (S/.)", min_value=0.0, value=float(incidencias_monto), step=1.0, format="%.2f", key=f"boleta_incidencias_{colab_b_sel}_{mes_b_sel}_{anio_b_sel}")
+        with c_inc2:
+            st.caption(f"Se descuentan las incidencias del mes registradas por el colaborador ({incidencias_cnt} registrada(s)), excepto las marcadas como 'Resuelto / Condonado'.")
+
         c_b1, c_b2, c_b3 = st.columns(3)
         bono_puntualidad_in = c_b1.number_input("Bono por Puntualidad (S/.)", min_value=0.0, value=0.0, step=5.0, format="%.2f", key="boleta_bono_puntualidad")
         bono_presencia_in = c_b2.number_input("Bono Presencia y Uniforme (S/.)", min_value=0.0, value=0.0, step=5.0, format="%.2f", key="boleta_bono_presencia")
@@ -3077,7 +3117,7 @@ elif choice == "Boletas de Pago":
         monto_domingo_volunt_calc = domingo_volunt_in * (valor_dia * 1.0)
 
         total_ingresos_calc = sueldo_basico_in + monto_feriados_calc + monto_horas_extras_calc + monto_domingo_volunt_calc + bono_puntualidad_in + bono_presencia_in + bono_orden_in
-        total_descuentos_calc = adelanto_in + monto_faltas_calc + descuadre_caja_in + desc_inventario_in + consumos_in
+        total_descuentos_calc = adelanto_in + monto_faltas_calc + descuadre_caja_in + desc_inventario_in + consumos_in + incidencias_in
         neto_pagar_calc = max(0.0, total_ingresos_calc - total_descuentos_calc)
 
         datos_boleta = {
@@ -3105,6 +3145,7 @@ elif choice == "Boletas de Pago":
             "descuadre_caja": descuadre_caja_in,
             "descuadre_inventario": desc_inventario_in,
             "consumos_pagar": consumos_in,
+            "incidencias_danos": incidencias_in,
             "total_ingresos": total_ingresos_calc,
             "total_descuentos": total_descuentos_calc,
             "neto_pagar": neto_pagar_calc
@@ -3232,6 +3273,12 @@ elif choice == "Boletas de Pago":
                             <td>-</td>
                             <td style="text-align:right;">0.00</td>
                             <td style="text-align:right;">{datos_boleta['consumos_pagar']:.2f}</td>
+                        </tr>
+                        <tr>
+                            <td>INCIDENCIAS Y DAÑOS</td>
+                            <td>-</td>
+                            <td style="text-align:right;">0.00</td>
+                            <td style="text-align:right;">{datos_boleta['incidencias_danos']:.2f}</td>
                         </tr>
                         <tr style="background-color:#f3f4f6; font-weight:700;">
                             <td>TOTALES</td>
