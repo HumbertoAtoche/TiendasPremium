@@ -2096,6 +2096,32 @@ elif choice == "Solicitar Permiso / Adelanto":
         df_mis_sol = st.session_state.solicitudes[st.session_state.solicitudes["dni"].astype(str) == str(dni_actual)].copy() if not st.session_state.solicitudes.empty else pd.DataFrame()
 
         if not df_mis_sol.empty:
+            _MESES_HS = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+                         "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
+            _ahora_hs = obtener_ahora_peru()
+            df_mis_sol["_f_reg_dt"] = pd.to_datetime(df_mis_sol["fecha_registro"], errors="coerce")
+
+            _anios_hs = sorted({int(a) for a in df_mis_sol["_f_reg_dt"].dt.year.dropna().unique()} | {_ahora_hs.year}, reverse=True)
+            _fh1, _fh2 = st.columns(2)
+            _mes_hs = _fh1.selectbox(
+                "Mes", [0] + list(range(1, 13)),
+                index=_ahora_hs.month,
+                format_func=lambda x: "Todos los meses" if x == 0 else _MESES_HS[x - 1],
+                key="hist_sol_mes"
+            )
+            _anio_hs = _fh2.selectbox("Año", _anios_hs, index=_anios_hs.index(_ahora_hs.year), key="hist_sol_anio")
+
+            df_mis_sol = df_mis_sol[df_mis_sol["_f_reg_dt"].dt.year == int(_anio_hs)]
+            if _mes_hs != 0:
+                df_mis_sol = df_mis_sol[df_mis_sol["_f_reg_dt"].dt.month == int(_mes_hs)]
+            df_mis_sol = df_mis_sol.sort_values("_f_reg_dt", ascending=False)
+
+            if df_mis_sol.empty:
+                _txt_per = f"{_MESES_HS[_mes_hs - 1]} " if _mes_hs != 0 else ""
+                st.info(f"No tienes solicitudes en {_txt_per}{_anio_hs}.")
+            else:
+                st.caption(f"{len(df_mis_sol)} solicitud(es) encontrada(s).")
+
             for _, r_sol in df_mis_sol.iterrows():
                 est = r_sol["estado"]
                 badge_c = "#EAB308" if est == "Pendiente" else ("#00A959" if est == "Aprobado" else "#EC3237")
@@ -2895,9 +2921,12 @@ elif choice == "Boletas de Pago":
             _f_ini_emp = parsear_fecha_segura(finicio_b_val)
             _f_cese_emp = parsear_fecha_segura(row_trab.iloc[0].get("fecha_cese", "")) if not row_trab.empty else None
             _dias_mes_b = pd.Period(f"{int(anio_b_sel)}-{int(mes_b_sel):02d}").days_in_month
+            _hoy_b = ahora_p_b.date()
             for _d in pd.date_range(start=f"{int(anio_b_sel)}-{int(mes_b_sel):02d}-01", periods=_dias_mes_b):
                 if _d.weekday() == 6:
                     _dd = _d.date()
+                    if _dd > _hoy_b:
+                        continue  # Domingos futuros aún no se devengan
                     if _f_ini_emp and _dd < _f_ini_emp:
                         continue
                     if _f_cese_emp and _dd > _f_cese_emp:
@@ -2905,7 +2934,16 @@ elif choice == "Boletas de Pago":
                     domingos_descanso_pagados += 1
             dias_trabajados_cnt = min(30, dias_trabajados_cnt + domingos_descanso_pagados + permisos_recuperados_cnt)
 
-        dias_faltas_cnt = max(0, 30 - dias_trabajados_cnt)
+        # Días transcurridos del mes: si el mes está en curso solo se evalúan los días que ya pasaron
+        _hoy_falt = ahora_p_b.date()
+        _inicio_mes_b = pd.Timestamp(year=int(anio_b_sel), month=int(mes_b_sel), day=1).date()
+        if _inicio_mes_b > _hoy_falt:
+            _dias_evaluables = 0  # Mes futuro
+        elif (_inicio_mes_b.year, _inicio_mes_b.month) == (_hoy_falt.year, _hoy_falt.month):
+            _dias_evaluables = min(30, _hoy_falt.day)  # Mes en curso
+        else:
+            _dias_evaluables = 30  # Mes cerrado
+        dias_faltas_cnt = max(0, _dias_evaluables - dias_trabajados_cnt)
 
         # Buscar adelantos aprobados
         df_sol_b = st.session_state.solicitudes.copy()
