@@ -1423,6 +1423,103 @@ def ui_vac_card(r, admin=False):
     body = f'<div class="tp-card-body">{cuerpo}</div>' if cuerpo else '<div style="height:10px"></div>'
     return f'<div class="tp-card{" flat" if admin else ""}"><div class="tp-card-head">{quien}{ui_chip(e(tipo), tchip)}</div>{body}{tl}</div>'
 
+import unicodedata
+
+def _norm(x):
+    return "".join(c for c in unicodedata.normalize("NFD", str(x).lower()) if unicodedata.category(c) != "Mn")
+
+def _gs_hit(q, *vals):
+    blob = _norm(" ".join(str(v) for v in vals))
+    return all(t in blob for t in _norm(q).split())
+
+def _limpiar_busqueda():
+    st.session_state["gs_q"] = ""
+
+def _gs_ir(dest, nombre_sol=None):
+    st.session_state["nav_radio"] = dest
+    st.session_state["gs_q"] = ""
+    if nombre_sol:
+        st.session_state["sol_busqueda"] = nombre_sol
+        st.session_state["sol_estado_filtro"] = "Todos"
+
+def _gs_titulo(txt, n):
+    st.markdown(f'<div class="tp-note-t" style="margin:22px 0 10px">{txt} · {n}</div>', unsafe_allow_html=True)
+
+def _gs_filtrar(df, q, cols):
+    if df is None or df.empty:
+        return pd.DataFrame()
+    return df[df.apply(lambda r: _gs_hit(q, *[r.get(c, "") for c in cols]), axis=1)]
+
+def render_busqueda(q, es_admin, dni_me, menu):
+    e = _html.escape
+    h1, h2 = st.columns([4, 1])
+    h1.markdown(f'<div class="market-header" style="margin-bottom:8px"><h1>Resultados de búsqueda</h1><p>Buscando “{e(q)}” en {"todo el sistema" if es_admin else "tus datos"}</p></div>', unsafe_allow_html=True)
+    h2.button("Limpiar búsqueda", key="gs_clear", on_click=_limpiar_busqueda, use_container_width=True)
+    total = 0
+
+    sec = [m for m in menu if _gs_hit(q, m)]
+    if sec:
+        total += len(sec); _gs_titulo("Ir a una sección", len(sec))
+        cols = st.columns(min(len(sec), 3))
+        for i, m in enumerate(sec[:6]):
+            cols[i % len(cols)].button(m, key=f"gs_sec_{i}", on_click=_gs_ir, args=(m,), use_container_width=True)
+
+    if es_admin:
+        r_e = _gs_filtrar(st.session_state.empleados, q, ["nombre", "dni", "cargo"])
+        if not r_e.empty:
+            total += len(r_e); _gs_titulo("Colaboradores", len(r_e))
+            for i, (_, r) in enumerate(r_e.head(6).iterrows()):
+                act = str(r.get("estado", "")).lower() == "activo"
+                c1, c2 = st.columns([4, 1])
+                c1.markdown(f'<div class="tp-row">{ui_avatar(r["nombre"], r["dni"], str(r.get("foto", "")), 44)}<div class="tp-row-main"><b>{e(str(r["nombre"]))}</b><span>{e(str(r.get("cargo", "")))} · DNI {e(str(r["dni"]))}</span></div><div class="tp-chips">{ui_chip("Activo" if act else "Dado de baja", "ok" if act else "neutral")}</div></div>', unsafe_allow_html=True)
+                c2.button("Ver ficha", key=f"gs_emp_{i}", on_click=_gs_ir, args=("Gestión Colaboradores",), use_container_width=True)
+
+    sol = st.session_state.get("solicitudes")
+    if sol is not None and not sol.empty and not es_admin:
+        sol = sol[sol["dni"].astype(str) == str(dni_me)]
+    r_s = _gs_filtrar(sol, q, ["nombre", "dni", "tipo_solicitud", "motivo", "estado", "respuesta_admin"])
+    if not r_s.empty:
+        r_s = r_s.sort_values("fecha_registro", ascending=False)
+        total += len(r_s); _gs_titulo("Solicitudes y permisos", len(r_s))
+        for _, r in r_s.head(5).iterrows():
+            if es_admin:
+                with st.container(border=True):
+                    st.markdown(ui_solicitud_card(r, admin=True), unsafe_allow_html=True)
+            else:
+                st.markdown(ui_solicitud_card(r), unsafe_allow_html=True)
+        un_solo = es_admin and r_s["nombre"].nunique() == 1
+        st.button("Ver en Solicitudes" if es_admin else "Ir a mis solicitudes", key="gs_sol_go", on_click=_gs_ir,
+                  args=("Solicitudes y Permisos" if es_admin else "Solicitar Permiso / Adelanto", str(r_s.iloc[0]["nombre"]) if un_solo else None))
+
+    if es_admin:
+        des = st.session_state.get("descuadres")
+        if des is not None and not des.empty:
+            des = des.copy(); des["monto_num"] = pd.to_numeric(des["monto"], errors="coerce").fillna(0)
+            r_d = _gs_filtrar(des, q, ["nombre", "tipo", "observacion", "fecha"])
+            if not r_d.empty:
+                total += len(r_d); _gs_titulo("Descuadres de caja", len(r_d))
+                for nom, g in list(r_d.groupby("nombre"))[:4]:
+                    d_, f_ = ui_dni_foto(nom)
+                    st.markdown(ui_desc_card(nom, g.head(8), d_, f_), unsafe_allow_html=True)
+                st.button("Ver Auditoría de Descuadres", key="gs_des_go", on_click=_gs_ir, args=("Historial de Descuadres",))
+
+    vac = st.session_state.get("vacaciones")
+    if vac is not None and not vac.empty and not es_admin:
+        vac = vac[vac["dni"].astype(str) == str(dni_me)]
+    r_v = _gs_filtrar(vac, q, ["nombre", "tipo", "observacion", "fecha_inicio"])
+    if not r_v.empty:
+        total += len(r_v); _gs_titulo("Vacaciones y descansos", len(r_v))
+        for _, r in r_v.sort_values("fecha_inicio", ascending=False).head(5).iterrows():
+            if es_admin:
+                with st.container(border=True):
+                    st.markdown(ui_vac_card(r, admin=True), unsafe_allow_html=True)
+            else:
+                st.markdown(ui_vac_card(r), unsafe_allow_html=True)
+        st.button("Ir a Vacaciones", key="gs_vac_go", on_click=_gs_ir, args=("Gestión de Vacaciones" if es_admin else "Mis Vacaciones",))
+
+    if total == 0:
+        st.markdown(f'<div class="tp-card" style="text-align:center;padding:36px 20px"><div class="tp-card-title">Sin resultados para “{e(q)}”</div><div class="tp-card-sub" style="margin-top:6px">Prueba con otro nombre, DNI o palabra, o revisa la ortografía.</div></div>', unsafe_allow_html=True)
+
 # --- COMPONENTES UI REUTILIZABLES ---
 def ui_iniciales(nombre):
     p = [x for x in str(nombre).split() if x]
@@ -2531,12 +2628,14 @@ if rol_actual == "admin":
 else:
     menu = ["Marcar Asistencia", "Registrar Descuadre", "Registrar Incidencia", "Botellas Fiadas", "Mi Ficha Técnica", "Mis Vacaciones", "Solicitar Permiso / Adelanto", "Mi Dashboard Mensual"]
 
+st.sidebar.text_input("Buscar", key="gs_q", placeholder="Buscar personas, solicitudes, secciones…", label_visibility="collapsed")
 if st.session_state.get("nav_radio") not in menu:
     st.session_state["nav_radio"] = menu[0]
-choice = st.sidebar.radio("Navegación", menu, key="nav_radio")
+choice = st.sidebar.radio("Navegación", menu, key="nav_radio", on_change=_limpiar_busqueda)
 
 def _ir_a(destino):
     st.session_state["nav_radio"] = destino
+    st.session_state["gs_q"] = ""
 
 if rol_actual == "admin":
     _nav_items = [("Dashboard General", "Resumen", ":material/dashboard:"), ("Centro de Alertas", "Alertas", ":material/notifications:"),
@@ -2563,6 +2662,11 @@ if st.sidebar.button("Cerrar Sesión", use_container_width=True):
 st.sidebar.markdown('</div>', unsafe_allow_html=True)
 
 # -------------------- MÓDULOS OPERATIVOS --------------------
+
+_gq = str(st.session_state.get("gs_q", "")).strip()
+if len(_gq) >= 2:
+    render_busqueda(_gq, rol_actual == "admin", dni_actual, menu)
+    st.stop()
 
 if choice == "Marcar Asistencia":
     st.markdown(f"""
