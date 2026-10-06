@@ -1483,7 +1483,7 @@ def render_busqueda(q, es_admin, dni_me, menu):
         total += len(r_s); _gs_titulo("Solicitudes y permisos", len(r_s))
         for _, r in r_s.head(5).iterrows():
             if es_admin:
-                with st.container(border=True):
+                with ui_card_container(f"gs_s{_}"):
                     st.markdown(ui_solicitud_card(r, admin=True), unsafe_allow_html=True)
             else:
                 st.markdown(ui_solicitud_card(r), unsafe_allow_html=True)
@@ -1511,7 +1511,7 @@ def render_busqueda(q, es_admin, dni_me, menu):
         total += len(r_v); _gs_titulo("Vacaciones y descansos", len(r_v))
         for _, r in r_v.sort_values("fecha_inicio", ascending=False).head(5).iterrows():
             if es_admin:
-                with st.container(border=True):
+                with ui_card_container(f"gs_v{_}"):
                     st.markdown(ui_vac_card(r, admin=True), unsafe_allow_html=True)
             else:
                 st.markdown(ui_vac_card(r), unsafe_allow_html=True)
@@ -1519,6 +1519,19 @@ def render_busqueda(q, es_admin, dni_me, menu):
 
     if total == 0:
         st.markdown(f'<div class="tp-card" style="text-align:center;padding:36px 20px"><div class="tp-card-title">Sin resultados para “{e(q)}”</div><div class="tp-card-sub" style="margin-top:6px">Prueba con otro nombre, DNI o palabra, o revisa la ortografía.</div></div>', unsafe_allow_html=True)
+
+st.markdown("""
+<style>
+[class*="st-key-tpc_"]{background:var(--tp-surface);border:1px solid var(--tp-line);border-radius:16px;padding:16px 18px;box-shadow:var(--tp-sh-1);margin-bottom:12px;}
+</style>
+""", unsafe_allow_html=True)
+
+def ui_card_container(key):
+    """Contenedor que ES la tarjeta blanca (foto, texto y botones dentro del mismo fondo)."""
+    try:
+        return st.container(key=f"tpc_{key}")
+    except TypeError:
+        return st.container(border=True)
 
 # --- COMPONENTES UI REUTILIZABLES ---
 def ui_iniciales(nombre):
@@ -4076,7 +4089,7 @@ elif choice == "Solicitudes y Permisos":
             tipo_s = row_sol["tipo_solicitud"]
             est_s = row_sol["estado"]
             
-            with st.container(border=True):
+            with ui_card_container(f"sol_{id_s}"):
                 st.markdown(ui_solicitud_card(row_sol, admin=True), unsafe_allow_html=True)
                 if tipo_s == "Permiso Laboral":
                     _fr = pd.to_datetime(str(row_sol.get("fecha_recuperacion", "")).strip(), errors="coerce")
@@ -4837,7 +4850,7 @@ elif choice == "Gestión de Vacaciones":
 
     if not df_pend_recup.empty:
         for idx_pr, r_pr in df_pend_recup.iterrows():
-            with st.container(border=True):
+            with ui_card_container(f"vac_{idx_pr}"):
                 st.markdown(ui_vac_card(r_pr, admin=True), unsafe_allow_html=True)
                 if st.button("Marcar Recuperado", key=f"recup_btn_{idx_pr}", use_container_width=True):
                     st.session_state.vacaciones.at[idx_pr, "estado_recuperacion"] = "Recuperado"
