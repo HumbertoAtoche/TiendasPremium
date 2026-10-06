@@ -1030,8 +1030,18 @@ st.markdown("""
   --tp-sh-2:0 8px 24px -8px rgba(15,23,42,.14);
 }
 .stApp{background:var(--tp-bg);}
-.block-container{max-width:1240px;padding-top:1.4rem;padding-bottom:3rem;}
-#MainMenu,footer,[data-testid="stToolbar"],[data-testid="stDecoration"]{visibility:hidden;display:none;}
+.block-container{max-width:1240px;padding-top:4.2rem;padding-bottom:3rem;}
+#MainMenu,footer,[data-testid="stDecoration"],[data-testid="stAppDeployButton"],[data-testid="stMainMenu"],.stDeployButton{visibility:hidden;display:none;}
+header[data-testid="stHeader"]{background:transparent!important;}
+[data-testid="stToolbar"]{visibility:visible!important;display:flex!important;}
+/* Botón para abrir el menú de vistas (siempre visible) */
+[data-testid="stExpandSidebarButton"],[data-testid="stSidebarCollapsedControl"],[data-testid="collapsedControl"]{
+  display:flex!important;visibility:visible!important;opacity:1!important;z-index:1000;
+  position:fixed;top:12px;left:12px;width:46px;height:46px;align-items:center;justify-content:center;
+  background:var(--tp-ink)!important;border-radius:14px;box-shadow:var(--tp-sh-2);}
+[data-testid="stExpandSidebarButton"] *,[data-testid="stSidebarCollapsedControl"] *,[data-testid="collapsedControl"] *{color:#fff!important;fill:#fff!important;}
+[data-testid="stExpandSidebarButton"]:hover,[data-testid="stSidebarCollapsedControl"]:hover{background:var(--tp-red)!important;}
+[data-testid="stSidebarCollapseButton"] button,[data-testid="stSidebarCollapseButton"] *{color:#AEB8CC!important;}
 h1,h2,h3,h4,h5{color:var(--tp-ink);letter-spacing:-.01em;}
 h5{font-size:1.02rem!important;font-weight:650!important;margin:.4rem 0 .6rem!important;}
 [data-testid="stMetricValue"],.info-value,.tp-kpi-val{font-variant-numeric:tabular-nums;}
@@ -1115,7 +1125,7 @@ div[data-testid="stForm"],div[data-testid="stExpander"]{border-radius:var(--tp-r
 
 /* Pantallas medianas y celulares */
 @media (max-width:900px){
-  .block-container{padding:1rem .9rem 5rem;}
+  .block-container{padding:4.2rem .9rem 5rem;}
   .market-header{padding:18px 18px 16px;border-radius:var(--tp-r-md);margin-bottom:16px;}
   .market-header::before{left:18px;}
   .market-header h1{font-size:1.2rem!important;}
