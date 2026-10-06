@@ -1380,6 +1380,49 @@ def ui_rank_rows(df_r, tipo):
                 f'<div class="tp-chips">{ui_chip(("+" if v > 0 else "") + f"S/. {v:.2f}", tipo)}</div></div>')
     return out
 
+st.markdown("""
+<style>
+.tp-grid2{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;margin-bottom:8px;} .tp-grid2 .tp-card{margin-bottom:0;}
+.tp-saldo-n{font-size:2.1rem;font-weight:800;line-height:1.1;margin:14px 0 10px;color:var(--tp-ink);font-variant-numeric:tabular-nums;}
+.tp-saldo-n span{font-size:.88rem;font-weight:600;color:var(--tp-mute);margin-left:6px;}
+.tp-card.hero{padding:22px 24px;} .tp-card.hero .tp-saldo-n{font-size:2.8rem;}
+.tp-prog.ok i{background:var(--tp-ok);} .tp-prog.warn i{background:#F59E0B;} .tp-prog.bad i{background:var(--tp-bad);}
+[class*="st-key-recup_btn_"] button{background:var(--tp-ok)!important;border:none!important;}
+[class*="st-key-recup_btn_"] button *{color:#fff!important;}
+[class*="st-key-recup_btn_"] button:hover{background:#087548!important;}
+</style>
+""", unsafe_allow_html=True)
+
+def ui_saldo_card(nombre, sv, dni="", foto="", hero=False):
+    gen, goz, sal = float(sv["dias_generados"]), float(sv["dias_gozados"]), float(sv["saldo_disponible"])
+    pct = max(0, min(100, int(sal * 100 / gen))) if gen > 0 else 0
+    tono, etq = ("ok", "Saldo suficiente") if sal >= 7 else (("warn", "Saldo medio") if sal >= 3 else ("bad", "Saldo bajo"))
+    return (f'<div class="tp-card{" hero" if hero else ""}"><div class="tp-op-head" style="margin-bottom:0">{ui_avatar(nombre, dni, foto, 52 if hero else 44)}'
+            f'<div><div class="tp-card-title">{_html.escape(str(nombre))}</div><div class="tp-card-sub">Vacaciones · Régimen REMYPE</div></div>{ui_chip(etq, tono)}</div>'
+            f'<div class="tp-saldo-n">{sal:g}<span>días disponibles</span></div><div class="tp-prog {tono}"><i style="width:{pct}%"></i></div>'
+            f'<div class="tp-prog-lbl" style="margin:8px 0 0"><span>{gen:g} generados</span><span>{goz:g} gozados</span></div></div>')
+
+def ui_vac_card(r, admin=False):
+    e = _html.escape
+    c = lambda k: ("" if str(r.get(k, "")).strip().lower() in ("nan", "none") else str(r.get(k, "")).strip())
+    tipo, f_i, f_f = c("tipo"), c("fecha_inicio")[:10], c("fecha_fin")[:10]
+    rango = f_i if f_i == f_f else f"{f_i} → {f_f}"
+    dias = f"{c('dias_tomados')} día(s)"
+    tchip = "info" if tipo == "Vacaciones" else ("warn" if tipo.startswith("Permiso") else "neutral")
+    if admin:
+        d, f = ui_dni_foto(c("nombre"))
+        quien = f'<div class="tp-op-head" style="margin:0">{ui_avatar(c("nombre"), d, f, 44)}<div><div class="tp-card-title">{e(c("nombre"))}</div><div class="tp-card-sub">{rango} · {dias}</div></div></div>'
+    else:
+        quien = f'<div><div class="tp-card-title">{rango}</div><div class="tp-card-sub">{dias}</div></div>'
+    cuerpo = e(c("observacion"))
+    tl = ""
+    if tipo.startswith("Permiso"):
+        rec = c("estado_recuperacion") == "Recuperado"
+        cuerpo += f'{"<br>" if cuerpo else ""}Recuperar el <b>{e(c("fecha_recuperacion") or "-")}</b> · {e(c("horario_recuperacion") or "horario no especificado")}'
+        tl = f'<div class="tp-tl"><div class="tp-tl-step done">Permiso</div><div class="tp-tl-step {"done" if rec else "now"}">Por recuperar</div><div class="tp-tl-step {"done" if rec else ""}">Recuperado</div></div>'
+    body = f'<div class="tp-card-body">{cuerpo}</div>' if cuerpo else '<div style="height:10px"></div>'
+    return f'<div class="tp-card{" flat" if admin else ""}"><div class="tp-card-head">{quien}{ui_chip(e(tipo), tchip)}</div>{body}{tl}</div>'
+
 # --- COMPONENTES UI REUTILIZABLES ---
 def ui_iniciales(nombre):
     p = [x for x in str(nombre).split() if x]
@@ -4589,8 +4632,11 @@ elif choice == "Gestión de Vacaciones":
         if tipo_vac_sel == "Vacaciones" and en_planilla_check.strip().lower() not in ("sí", "si"):
             st.warning(f"**{colab_vac_sel}** no está en planilla formal, por lo que no genera beneficio vacacional. Puedes registrar igual el descanso, pero no se contabilizará contra ningún saldo.")
 
-        f_ini_vac = st.date_input("Fecha de Inicio", value=obtener_ahora_peru().date(), key="vac_f_ini")
-        f_fin_vac = st.date_input("Fecha de Fin", value=obtener_ahora_peru().date(), key="vac_f_fin")
+        _cd1, _cd2 = st.columns(2)
+        f_ini_vac = _cd1.date_input("Fecha de Inicio", value=obtener_ahora_peru().date(), key="vac_f_ini")
+        f_fin_vac = _cd2.date_input("Fecha de Fin", value=obtener_ahora_peru().date(), key="vac_f_fin")
+        if f_fin_vac >= f_ini_vac:
+            st.caption(f"Total del período: **{(f_fin_vac - f_ini_vac).days + 1} día(s)**")
 
         fecha_recup_val = ""
         horario_recup_val = ""
@@ -4662,22 +4708,17 @@ elif choice == "Gestión de Vacaciones":
 
     if filas_saldo:
         df_saldo_vac = pd.DataFrame(filas_saldo)
-        st.dataframe(
-            df_saldo_vac,
-            use_container_width=True,
-            hide_index=True,
-            column_config={
-                "Días Generados": st.column_config.NumberColumn(format="%.1f días"),
-                "Días Gozados": st.column_config.NumberColumn(format="%.1f días"),
-                "Saldo Disponible": st.column_config.NumberColumn(format="%.1f días"),
-            }
-        )
+        _cards = ""
+        for _, _fs in df_saldo_vac.sort_values("Saldo Disponible").iterrows():
+            _d, _f = ui_dni_foto(_fs["Colaborador"])
+            _cards += ui_saldo_card(_fs["Colaborador"], {"dias_generados": _fs["Días Generados"], "dias_gozados": _fs["Días Gozados"], "saldo_disponible": _fs["Saldo Disponible"]}, _d, _f)
+        st.markdown(f'<div class="tp-grid2">{_cards}</div>', unsafe_allow_html=True)
         st.download_button("Exportar Saldos a Excel", to_excel(df_saldo_vac), "Saldos_Vacacionales.xlsx", use_container_width=True)
     else:
         st.info("No hay colaboradores activos en planilla con beneficio vacacional aplicable.")
 
     if filas_no_planilla:
-        st.caption(f"⚪ No están en planilla (sin beneficio vacacional): {', '.join(filas_no_planilla)}")
+        st.markdown('<div class="tp-card"><div class="tp-note-t">No están en planilla (sin beneficio vacacional)</div><div class="tp-chips" style="justify-content:flex-start">' + "".join(ui_chip(_html.escape(n), "neutral") for n in filas_no_planilla) + '</div></div>', unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("##### Permisos de Salud Pendientes de Recuperar")
@@ -4693,29 +4734,31 @@ elif choice == "Gestión de Vacaciones":
     if not df_pend_recup.empty:
         for idx_pr, r_pr in df_pend_recup.iterrows():
             with st.container(border=True):
-                pr1, pr2 = st.columns([3, 1])
-                with pr1:
-                    st.markdown(f"**{r_pr['nombre']}** — Permiso del **{r_pr['fecha_inicio']}**")
-                    st.caption(f"Recuperar el **{r_pr['fecha_recuperacion']}**, horario: **{r_pr['horario_recuperacion'] or 'No especificado'}**")
-                with pr2:
-                    if st.button("Marcar Recuperado", key=f"recup_btn_{idx_pr}", use_container_width=True):
-                        st.session_state.vacaciones.at[idx_pr, "estado_recuperacion"] = "Recuperado"
-                        actualizar_hoja_completa("Vacaciones", st.session_state.vacaciones)
-                        registrar_auditoria("Marcar Permiso Recuperado", "Vacaciones", f"{r_pr['nombre']} — recuperación del {r_pr['fecha_recuperacion']}")
-                        st.toast("Marcado como recuperado")
-                        time.sleep(0.3)
-                        st.rerun()
+                st.markdown(ui_vac_card(r_pr, admin=True), unsafe_allow_html=True)
+                if st.button("Marcar Recuperado", key=f"recup_btn_{idx_pr}", use_container_width=True):
+                    st.session_state.vacaciones.at[idx_pr, "estado_recuperacion"] = "Recuperado"
+                    actualizar_hoja_completa("Vacaciones", st.session_state.vacaciones)
+                    registrar_auditoria("Marcar Permiso Recuperado", "Vacaciones", f"{r_pr['nombre']} — recuperación del {r_pr['fecha_recuperacion']}")
+                    st.toast("Marcado como recuperado")
+                    time.sleep(0.3)
+                    st.rerun()
     else:
         st.success("No hay permisos de salud pendientes de recuperación.")
 
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("##### Historial de Descansos Registrados")
     if not st.session_state.vacaciones.empty:
-        st.dataframe(
-            st.session_state.vacaciones.sort_values("fecha_registro", ascending=False),
-            use_container_width=True,
-            hide_index=True
-        )
+        _vac_ord = st.session_state.vacaciones.sort_values("fecha_registro", ascending=False)
+        try:
+            _c_tab, _c_tar = st.container(key="vista_tabla"), st.container(key="vista_tarjetas")
+        except TypeError:
+            _c_tab, _c_tar = st.container(), None
+        with _c_tab:
+            st.dataframe(_vac_ord, use_container_width=True, hide_index=True)
+        if _c_tar is not None:
+            with _c_tar:
+                st.markdown("".join(ui_vac_card(_rv, admin=True) .replace('tp-card flat', 'tp-card') for _, _rv in _vac_ord.head(30).iterrows()), unsafe_allow_html=True)
+                st.caption("Se muestran los 30 registros más recientes. Exporta a Excel para ver todo.")
         st.download_button("Exportar Historial a Excel", to_excel(st.session_state.vacaciones), "Historial_Vacaciones.xlsx", use_container_width=True)
 
         with st.expander("Eliminar Registro de Descanso"):
@@ -4754,24 +4797,15 @@ elif choice == "Mis Vacaciones":
     if not mi_saldo["aplica"]:
         st.warning("No estás registrado en planilla formal, por lo que no acumulas beneficio vacacional en el sistema. Si tienes dudas sobre tu situación laboral, consulta con administración.")
     else:
-        mv1, mv2, mv3 = st.columns(3)
-        with mv1:
-            st.markdown(f'<div class="info-card"><div class="info-label">Días Generados</div><div class="info-value">{mi_saldo["dias_generados"]}</div></div>', unsafe_allow_html=True)
-        with mv2:
-            st.markdown(f'<div class="info-card"><div class="info-label">Días Gozados</div><div class="info-value">{mi_saldo["dias_gozados"]}</div></div>', unsafe_allow_html=True)
-        with mv3:
-            st.markdown(f'<div class="info-card"><div class="info-label">Saldo Disponible</div><div class="info-value" style="color:#00A959;">{mi_saldo["saldo_disponible"]}</div></div>', unsafe_allow_html=True)
+        st.markdown(ui_saldo_card(user_actual, mi_saldo, dni_actual, _foto_actual, hero=True), unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("##### Mi Historial de Descansos y Permisos")
     if not st.session_state.vacaciones.empty:
         df_mis_vac = st.session_state.vacaciones[st.session_state.vacaciones["nombre"] == user_actual]
         if not df_mis_vac.empty:
-            st.dataframe(
-                df_mis_vac[["tipo", "fecha_inicio", "fecha_fin", "dias_tomados", "fecha_recuperacion", "horario_recuperacion", "estado_recuperacion", "observacion"]].sort_values("fecha_inicio", ascending=False),
-                use_container_width=True,
-                hide_index=True
-            )
+            for _, _rv in df_mis_vac.sort_values("fecha_inicio", ascending=False).iterrows():
+                st.markdown(ui_vac_card(_rv), unsafe_allow_html=True)
         else:
             st.info("Aún no tienes descansos registrados.")
     else:
