@@ -1332,6 +1332,54 @@ def ui_op_card(nombre, d, dni="", foto=""):
             f'<div class="tp-card-sub">Total trabajado: {e(str(d["tiempo_total_str"]))}</div></div>{ui_chip(est_txt, ch)}</div>'
             f'<div class="tp-mgrid">{kpis}</div><div class="tp-ngrid">{notas}</div></div>')
 
+st.markdown("""
+<style>
+.tp-id{background:var(--tp-surface);border:1px solid var(--tp-line);border-radius:20px;box-shadow:var(--tp-sh-1);overflow:hidden;margin-bottom:16px;}
+.tp-id-band{height:76px;background:linear-gradient(120deg,#0F172A 0%,#1E293B 58%,#EC3237 190%);}
+.tp-id.off .tp-id-band{background:linear-gradient(120deg,#475569,#94A3B8);}
+.tp-id-head{display:flex;gap:16px;align-items:flex-start;padding:0 20px;}
+.tp-id-photo{flex:0 0 auto;width:96px;height:96px;margin-top:-44px;border-radius:20px;object-fit:cover;object-position:center top;border:4px solid #fff;box-shadow:var(--tp-sh-2);background:#EEF1F5;}
+.tp-id-photo.ph{display:flex;align-items:center;justify-content:center;font-size:1.9rem;font-weight:700;color:#fff;background:var(--tp-red);}
+.tp-id.off .tp-id-photo{filter:grayscale(1);}
+.tp-id-who{padding-top:12px;min-width:0;} .tp-id-name{font-size:1.1rem;font-weight:700;color:var(--tp-ink);line-height:1.25;}
+.tp-id-role{font-size:.82rem;color:var(--tp-mute);margin-top:2px;} .tp-id-chips{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
+.tp-id-body{padding:18px 20px 20px;} .tp-id-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 18px;}
+.tp-f.wide{grid-column:1/-1;} .tp-f-l{font-size:.64rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--tp-mute);}
+.tp-f-v{font-size:.9rem;font-weight:600;color:var(--tp-ink);margin-top:3px;word-break:break-word;} .tp-f-v.bad{color:var(--tp-bad);}
+.tp-id-sos{margin-top:16px;background:#F6F7FA;border-radius:12px;padding:11px 14px;}
+a.tp-link{color:var(--tp-red);font-weight:700;text-decoration:none;} a.tp-link:hover{text-decoration:underline;}
+.tp-row-main span.wrap{white-space:normal;} .tp-row-time{min-width:56px;}
+@media (max-width:640px){.tp-id-grid{grid-template-columns:1fr;}.tp-id-photo{width:84px;height:84px;}}
+</style>
+""", unsafe_allow_html=True)
+
+def ui_dni_foto(nombre):
+    emp = st.session_state.empleados
+    f = emp[emp["nombre"] == nombre]
+    return (str(f.iloc[0]["dni"]), str(f.iloc[0].get("foto", ""))) if not f.empty else ("", "")
+
+def ui_desc_card(nombre, df_c, dni="", foto=""):
+    e = _html.escape
+    MES = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
+    total = float(df_c["monto_num"].sum())
+    filas = ""
+    for _, r in df_c.sort_values("fecha", ascending=False).iterrows():
+        mv = float(r["monto_num"]); dt = pd.to_datetime(r["fecha"], errors="coerce")
+        f_corta = f"{dt.day} {MES[dt.month - 1]}" if pd.notnull(dt) else str(r["fecha"])
+        obs = str(r.get("observacion", "")).strip() or "Sin motivo registrado"
+        filas += (f'<div class="tp-row"><div class="tp-row-time">{f_corta}</div><div class="tp-row-main"><b>{e(str(r["tipo"]))}</b><span class="wrap">{e(obs)}</span></div>'
+                  f'<div class="tp-chips">{ui_chip(("+" if mv > 0 else "") + f"S/. {mv:.2f}", "ok" if mv >= 0 else "bad")}</div></div>')
+    return (f'<div class="tp-card"><div class="tp-op-head">{ui_avatar(nombre, dni, foto, 44)}<div><div class="tp-card-title">{e(str(nombre))}</div>'
+            f'<div class="tp-card-sub">{len(df_c)} movimiento(s)</div></div>{ui_chip(("Balance +" if total > 0 else "Balance ") + f"S/. {total:.2f}", "ok" if total >= 0 else "bad")}</div>{filas}</div>')
+
+def ui_rank_rows(df_r, tipo):
+    out = ""
+    for _, r in df_r.iterrows():
+        d, f = ui_dni_foto(r["nombre"]); v = float(r["balance"])
+        out += (f'<div class="tp-row">{ui_avatar(r["nombre"], d, f, 40)}<div class="tp-row-main"><b>{_html.escape(str(r["nombre"]))}</b></div>'
+                f'<div class="tp-chips">{ui_chip(("+" if v > 0 else "") + f"S/. {v:.2f}", tipo)}</div></div>')
+    return out
+
 # --- COMPONENTES UI REUTILIZABLES ---
 def ui_iniciales(nombre):
     p = [x for x in str(nombre).split() if x]
@@ -2229,71 +2277,29 @@ def parsear_fecha_segura(f_str):
         return None
 
 def renderizar_tarjeta_colaborador(row):
-    dni_val = str(row.get("dni", "")).strip()
-    nombre_val = str(row.get("nombre", "")).strip()
-    cargo_val = str(row.get("cargo", "")).strip()
-    rol_val = str(row.get("rol", "")).strip()
-    estado_val = str(row.get("estado", "Activo")).strip()
-    direccion_val = str(row.get("direccion", "-")).strip() or "-"
-    telefono_val = str(row.get("telefono", "-")).strip() or "-"
-    f_nac_val = str(row.get("fecha_nacimiento", "")).strip()
-    edad_val = calcular_edad(f_nac_val)
-    
-    c_emergencia = str(row.get("contacto_emergencia", "-")).strip() or "-"
-    num_emergencia = str(row.get("numero_emergencia", "-")).strip() or "-"
-    link_domicilio = str(row.get("link_domicilio", "")).strip()
-    f_inicio_val = str(row.get("fecha_inicio", "")).strip() or "-"
-    f_cese_val = str(row.get("fecha_cese", "")).strip() or "-"
-
-    foto_nom = str(row.get("foto", "")).strip()
-    if not foto_nom:
-        foto_nom = f"{dni_val}.png"
-    foto_url = f"fotos/{foto_nom}"
-
-    with st.container(border=True):
-        c_img, c_info = st.columns([1, 2])
-        
-        with c_img:
-            try:
-                st.image(foto_url, use_container_width=True)
-            except Exception:
-                st.image("https://via.placeholder.com/150?text=Sin+Foto", use_container_width=True)
-        
-        with c_info:
-            st.markdown(f"<div class='profile-name'>{nombre_val}</div>", unsafe_allow_html=True)
-            st.markdown(f"<div class='profile-role'>{cargo_val} • <span style='color:#6B7280;'>{rol_val}</span></div>", unsafe_allow_html=True)
-            
-            badge_color = "#00A959" if estado_val.lower() == "activo" else "#6B7280"
-            texto_estado = "ACTIVO" if estado_val.lower() == "activo" else "DADO DE BAJA"
-            st.markdown(f"<span style='background-color:{badge_color}; color:#fff; padding:2px 8px; border-radius:10px; font-size:0.65rem; font-weight:700;'>{texto_estado}</span>", unsafe_allow_html=True)
-            st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
-
-            st.markdown("<div class='profile-field'>DNI / ID:</div>", unsafe_allow_html=True)
-            st.markdown(f"<div class='profile-val'>{dni_val}</div>", unsafe_allow_html=True)
-
-            st.markdown("<div class='profile-field'>TELÉFONO DE CONTACTO:</div>", unsafe_allow_html=True)
-            st.markdown(f"<div class='profile-val'>{telefono_val}</div>", unsafe_allow_html=True)
-
-            st.markdown("<div class='profile-field'>FECHA NAC. / EDAD:</div>", unsafe_allow_html=True)
-            st.markdown(f"<div class='profile-val'>{f_nac_val if f_nac_val else '-'} ({edad_val})</div>", unsafe_allow_html=True)
-
-        st.markdown("---")
-
-        st.markdown("<div class='profile-field'>PERÍODO LABORAL / TIEMPO TRABAJADO:</div>", unsafe_allow_html=True)
-        if estado_val.lower() in ["desactivado", "dado de baja"]:
-            st.markdown(f"<div class='profile-val' style='color:#EC3237; font-weight:600;'>Se retiró de la empresa el {f_cese_val} (Inicio: {f_inicio_val})</div>", unsafe_allow_html=True)
-        else:
-            st.markdown(f"<div class='profile-val'>Inicio de labores: {f_inicio_val}</div>", unsafe_allow_html=True)
-        st.markdown("<div style='height: 6px;'></div>", unsafe_allow_html=True)
-        
-        st.markdown("<div class='profile-field'>DIRECCIÓN DE DOMICILIO:</div>", unsafe_allow_html=True)
-        if link_domicilio.startswith("http"):
-            st.markdown(f"<div class='profile-val'>{direccion_val} — <a href='{link_domicilio}' target='_blank' style='color:#EC3237; text-decoration:none; font-weight:700;'> Ver en Google Maps </a></div>", unsafe_allow_html=True)
-        else:
-            st.markdown(f"<div class='profile-val'>{direccion_val}</div>", unsafe_allow_html=True)
-
-        st.markdown("<div class='profile-field'>CONTACTO DE EMERGENCIA:</div>", unsafe_allow_html=True)
-        st.markdown(f"<div class='profile-val'>{c_emergencia} ({num_emergencia})</div>", unsafe_allow_html=True)
+    e = _html.escape
+    g = lambda k, d="": str(row.get(k, d)).strip()
+    dni_val, nombre_val, cargo_val, rol_val = g("dni"), g("nombre"), g("cargo"), g("rol")
+    activo = g("estado", "Activo").lower() == "activo"
+    f_nac = g("fecha_nacimiento")
+    tel = g("telefono") or "-"
+    direccion = g("direccion") or "-"
+    link = g("link_domicilio")
+    f_ini = g("fecha_inicio") or "-"
+    f_cese = g("fecha_cese") or "-"
+    uri = ui_foto_uri(dni_val, g("foto"))
+    foto = f'<img class="tp-id-photo" src="{uri}" alt="{e(nombre_val)}">' if uri else f'<div class="tp-id-photo ph">{ui_iniciales(nombre_val)}</div>'
+    chips = ui_chip("Activo" if activo else "Dado de baja", "ok" if activo else "neutral") + ui_chip(e(rol_val.capitalize()), "info") if rol_val else ui_chip("Activo" if activo else "Dado de baja", "ok" if activo else "neutral")
+    def fld(l, v, wide=False, cls=""):
+        return f'<div class="tp-f{" wide" if wide else ""}"><div class="tp-f-l">{l}</div><div class="tp-f-v {cls}">{v}</div></div>'
+    dir_html = e(direccion) + (f' · <a class="tp-link" href="{e(link)}" target="_blank" rel="noopener">Ver en Google Maps</a>' if link.startswith("http") else "")
+    campos = (fld("DNI / ID", e(dni_val)) + fld("Teléfono", e(tel)) +
+              fld("Nacimiento / edad", f"{e(f_nac) if f_nac else '-'} ({e(str(calcular_edad(f_nac)))})") +
+              (fld("Inicio de labores", e(f_ini)) if activo else fld("Retiro", f"{e(f_cese)} (inicio {e(f_ini)})", cls="bad")) +
+              fld("Domicilio", dir_html, wide=True))
+    sos = f'<div class="tp-id-sos"><div class="tp-f-l">Contacto de emergencia</div><div class="tp-f-v">{e(g("contacto_emergencia", "-") or "-")} · {e(g("numero_emergencia", "-") or "-")}</div></div>'
+    st.markdown(f'<div class="tp-id{"" if activo else " off"}"><div class="tp-id-band"></div><div class="tp-id-head">{foto}<div class="tp-id-who"><div class="tp-id-name">{e(nombre_val)}</div>'
+                f'<div class="tp-id-role">{e(cargo_val)}</div><div class="tp-id-chips">{chips}</div></div></div><div class="tp-id-body"><div class="tp-id-grid">{campos}</div>{sos}</div></div>', unsafe_allow_html=True)
 
 def renderizar_calendario_colaborador(nombre_colab, anio, mes):
     cal = calendar.Calendar(firstweekday=0)
@@ -3995,36 +4001,32 @@ elif choice == "Historial de Descuadres":
             (df_desc_mes["fecha_dt"].dt.year == anio_desc_sel)
         ]
 
-        colabs_operativos = obtener_solo_colaboradores()
+        _f_ini_mes = f"{int(anio_desc_sel)}-{mes_desc_sel:02d}-01"
+        _validos = obtener_solo_colaboradores(_f_ini_mes)  # excluye a quienes ya cesaron antes del mes
+        colabs_operativos = list(dict.fromkeys(_validos + [n for n in df_desc_mes["nombre"].unique().tolist() if n in obtener_solo_colaboradores()]))
+        _per = f"{NOMBRES_MESES[mes_desc_sel-1]} {int(anio_desc_sel)}"
 
         if not df_desc_mes.empty:
+            _sob = df_desc_mes[df_desc_mes["monto_num"] > 0]["monto_num"].sum()
+            _fal = df_desc_mes[df_desc_mes["monto_num"] < 0]["monto_num"].sum()
+            _bal = df_desc_mes["monto_num"].sum()
+            kd1, kd2, kd3 = st.columns(3)
+            kd1.markdown(ui_kpi(f"Sobrantes · {_per}", f"S/. {_sob:.2f}"), unsafe_allow_html=True)
+            kd2.markdown(ui_kpi(f"Faltantes · {_per}", f"S/. {abs(_fal):.2f}"), unsafe_allow_html=True)
+            kd3.markdown(ui_kpi(f"Balance neto · {_per}", f"S/. {_bal:.2f}"), unsafe_allow_html=True)
+            st.markdown("<div style='height:14px'></div>", unsafe_allow_html=True)
+            _sin_mov = []
             for nombre_colab in colabs_operativos:
                 df_c = df_desc_mes[df_desc_mes["nombre"] == nombre_colab]
-                
-                if not df_c.empty:
-                    monto_total_colab = df_c["monto_num"].sum()
-                    color_monto = "#00A959" if monto_total_colab >= 0 else "#EC3237"
-                    signo_total = "+" if monto_total_colab > 0 else ""
-                    
-                    with st.expander(f" **{nombre_colab}** | Balance Mes de {NOMBRES_MESES[mes_desc_sel-1]}: S/. {monto_total_colab:.2f}", expanded=True):
-                        st.markdown(f"<div style='font-size:1.05rem; font-weight:700; color:{color_monto}; margin-bottom:8px;'>Balance Total: {signo_total} S/. {monto_total_colab:.2f}</div>", unsafe_allow_html=True)
-                        st.markdown("**Desglose diario del mes:**")
-                        
-                        df_c_sorted = df_c.sort_values("fecha", ascending=False)
-                        for _, row_d in df_c_sorted.iterrows():
-                            m_val = row_d["monto_num"]
-                            signo_d = "+" if m_val > 0 else ""
-                            color_d = "green" if m_val >= 0 else "red"
-                            
-                            f_obj = row_d["fecha_dt"]
-                            fecha_bonita = f"{f_obj.day} de {NOMBRES_MESES[f_obj.month - 1]}" if pd.notnull(f_obj) else row_d["fecha"]
-                            
-                            obs_txt = f" — *Motivo:* {row_d['observacion']}" if str(row_d.get('observacion', '')).strip() != "" else ""
-                            st.markdown(f"- **{signo_d}{m_val:.2f} soles** el día {fecha_bonita}{obs_txt}")
-                else:
-                    st.markdown(f" **{nombre_colab}**: *Sin descuadres registrados en {NOMBRES_MESES[mes_desc_sel-1]}.*")
+                if df_c.empty:
+                    _sin_mov.append(nombre_colab)
+                    continue
+                _d, _f = ui_dni_foto(nombre_colab)
+                st.markdown(ui_desc_card(nombre_colab, df_c, _d, _f), unsafe_allow_html=True)
+            if _sin_mov:
+                st.markdown('<div class="tp-card"><div class="tp-note-t">Sin descuadres en el mes</div><div class="tp-chips" style="justify-content:flex-start">' + "".join(ui_chip(_html.escape(n), "neutral") for n in _sin_mov) + '</div></div>', unsafe_allow_html=True)
         else:
-            st.info(f"No hay descuadres registrados en el mes de {NOMBRES_MESES[mes_desc_sel-1]} de {anio_desc_sel}.")
+            st.info(f"No hay descuadres registrados en el mes de {_per}.")
 
         st.markdown("---")
 
@@ -4060,12 +4062,9 @@ elif choice == "Historial de Descuadres":
             balance = df_desc_filtrado["monto_num"].sum()
 
             m1, m2, m3 = st.columns(3)
-            with m1:
-                st.markdown(f'<div class="info-card"><div class="info-label">Total Sobrantes (+)</div><div class="info-value" style="color:#00A959;">S/. {sobrantes:.2f}</div></div>', unsafe_allow_html=True)
-            with m2:
-                st.markdown(f'<div class="info-card"><div class="info-label">Total Faltantes (-)</div><div class="info-value" style="color:#EC3237;">S/. {abs(faltantes):.2f}</div></div>', unsafe_allow_html=True)
-            with m3:
-                st.markdown(f'<div class="info-card"><div class="info-label">Balance Neto</div><div class="info-value" style="color:{"#00A959" if balance >= 0 else "#EC3237"};">S/. {balance:.2f}</div></div>', unsafe_allow_html=True)
+            m1.markdown(ui_kpi("Total sobrantes (+)", f"S/. {sobrantes:.2f}"), unsafe_allow_html=True)
+            m2.markdown(ui_kpi("Total faltantes (-)", f"S/. {abs(faltantes):.2f}"), unsafe_allow_html=True)
+            m3.markdown(ui_kpi("Balance neto", f"S/. {balance:.2f}"), unsafe_allow_html=True)
 
             st.markdown("<br>", unsafe_allow_html=True)
             st.markdown("##### Ranking de Colaboradores (según filtro aplicado)")
@@ -4076,19 +4075,17 @@ elif choice == "Historial de Descuadres":
             if not df_rank_desc.empty:
                 rk1, rk2 = st.columns(2)
                 with rk1:
-                    st.markdown("**⚠️ Mayores Faltantes**")
+                    st.markdown("**Mayores faltantes**")
                     peores = df_rank_desc[df_rank_desc["balance"] < 0].head(5)
                     if not peores.empty:
-                        for _, r_pk in peores.iterrows():
-                            st.markdown(f"- **{r_pk['nombre']}**: <span style='color:#EC3237; font-weight:700;'>S/. {r_pk['balance']:.2f}</span>", unsafe_allow_html=True)
+                        st.markdown(ui_rank_rows(peores, "bad"), unsafe_allow_html=True)
                     else:
                         st.success("Nadie registra faltantes en este período.")
                 with rk2:
-                    st.markdown("**✅ Mejores Balances**")
+                    st.markdown("**Mejores balances**")
                     mejores = df_rank_desc[df_rank_desc["balance"] >= 0].sort_values("balance", ascending=False).head(5)
                     if not mejores.empty:
-                        for _, r_mk in mejores.iterrows():
-                            st.markdown(f"- **{r_mk['nombre']}**: <span style='color:#00A959; font-weight:700;'>+S/. {r_mk['balance']:.2f}</span>", unsafe_allow_html=True)
+                        st.markdown(ui_rank_rows(mejores, "ok"), unsafe_allow_html=True)
                     else:
                         st.info("Sin balances positivos registrados en este período.")
 
@@ -4098,21 +4095,8 @@ elif choice == "Historial de Descuadres":
             st.markdown("#####  Balance de Descuadres por Trabajador")
             
             for nombre_trab, df_trab in df_desc_filtrado.groupby("nombre"):
-                monto_trab_total = df_trab["monto_num"].sum()
-                color_monto = "#00A959" if monto_trab_total >= 0 else "#EC3237"
-                signo_monto = "+" if monto_trab_total > 0 else ""
-                
-                with st.expander(f" **{nombre_trab}** — Balance Neto: {signo_monto} S/. {monto_trab_total:.2f}"):
-                    st.markdown(f"<span style='color:{color_monto}; font-weight:700; font-size:1.1rem;'>Total Acumulado: {signo_monto} S/. {monto_trab_total:.2f}</span>", unsafe_allow_html=True)
-                    st.markdown("**:bar_chart: Detalle de movimientos:**")
-                    
-                    df_trab_sorted = df_trab.sort_values("fecha", ascending=False)
-                    for _, r_t in df_trab_sorted.iterrows():
-                        m_val = r_t["monto_num"]
-                        s_color = "green" if m_val >= 0 else "red"
-                        signo_item = "+" if m_val > 0 else ""
-                        obs_item = f" — *Motivo:* {r_t['observacion']}" if str(r_t.get('observacion', '')).strip() != "" else ""
-                        st.markdown(f"- **El día {r_t['fecha']}:** :{s_color}[{r_t['tipo']} ({signo_item}S/. {m_val:.2f})]{obs_item}")
+                _d, _f = ui_dni_foto(nombre_trab)
+                st.markdown(ui_desc_card(nombre_trab, df_trab, _d, _f), unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown("##### Matriz Consolidada de Descuadres")
