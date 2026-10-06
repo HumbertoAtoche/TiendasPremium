@@ -1215,6 +1215,67 @@ def ui_foto_uri(dni, foto_nom=""):
                     pass
     return ""
 
+import html as _html
+st.markdown("""
+<style>
+/* Ajustes finales: botón de menú, cerrar sesión y opciones */
+[data-testid="stSidebar"] [role="radiogroup"] label>*:not(input):not([data-testid="stMarkdownContainer"]):not(:has([data-testid="stMarkdownContainer"])){display:none!important;}
+[data-testid="stSidebar"] .stButton>button{background:#fff!important;border:1.5px solid var(--tp-red)!important;box-shadow:none!important;}
+[data-testid="stSidebar"] .stButton>button *{color:var(--tp-red)!important;font-weight:650;}
+[data-testid="stSidebar"] .stButton>button:hover{background:var(--tp-red)!important;}
+[data-testid="stSidebar"] .stButton>button:hover *{color:#fff!important;}
+[data-testid="stExpandSidebarButton"],[data-testid="stSidebarCollapsedControl"],[data-testid="collapsedControl"]{background:#fff!important;border:1.5px solid var(--tp-red)!important;}
+[data-testid="stExpandSidebarButton"] *,[data-testid="stSidebarCollapsedControl"] *,[data-testid="collapsedControl"] *{color:var(--tp-red)!important;fill:var(--tp-red)!important;}
+[data-testid="stExpandSidebarButton"] button,[data-testid="stSidebarCollapsedControl"] button{background:transparent!important;}
+[data-testid="stExpandSidebarButton"]:hover,[data-testid="stSidebarCollapsedControl"]:hover,[data-testid="collapsedControl"]:hover{background:var(--tp-red)!important;}
+[data-testid="stExpandSidebarButton"]:hover *,[data-testid="stSidebarCollapsedControl"]:hover *,[data-testid="collapsedControl"]:hover *{color:#fff!important;fill:#fff!important;}
+/* Tarjetas de solicitud + línea de tiempo */
+.tp-card{background:var(--tp-surface);border:1px solid var(--tp-line);border-radius:16px;padding:16px 18px;margin-bottom:12px;box-shadow:var(--tp-sh-1);}
+.tp-card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+.tp-card-title{font-weight:700;font-size:.95rem;} .tp-card-sub{font-size:.76rem;color:var(--tp-mute);margin-top:2px;}
+.tp-card-body{font-size:.86rem;color:var(--tp-ink-2);margin:10px 0 14px;line-height:1.55;}
+.tp-resp{background:#F6F7FA;border-left:3px solid var(--tp-red);border-radius:8px;padding:10px 12px;font-size:.82rem;margin-top:12px;color:var(--tp-ink-2);}
+.tp-tl{display:flex;}
+.tp-tl-step{flex:1;position:relative;text-align:center;font-size:.7rem;font-weight:600;color:var(--tp-mute);}
+.tp-tl-step::before{content:"";position:relative;z-index:1;display:block;width:14px;height:14px;margin:0 auto 6px;border-radius:50%;background:#fff;border:2px solid #CBD2DC;}
+.tp-tl-step::after{content:"";position:absolute;top:6px;left:-50%;width:100%;height:2px;background:#CBD2DC;}
+.tp-tl-step:first-child::after{display:none;}
+.tp-tl-step.done{color:var(--tp-ink-2);} .tp-tl-step.done::before{background:var(--tp-ok);border-color:var(--tp-ok);} .tp-tl-step.done::after{background:var(--tp-ok);}
+.tp-tl-step.now{color:var(--tp-warn);} .tp-tl-step.now::before{background:#F59E0B;border-color:#F59E0B;box-shadow:0 0 0 4px rgba(245,158,11,.2);} .tp-tl-step.now::after{background:var(--tp-ok);}
+.tp-tl-step.bad{color:var(--tp-bad);} .tp-tl-step.bad::before{background:var(--tp-bad);border-color:var(--tp-bad);} .tp-tl-step.bad::after{background:var(--tp-bad);}
+.tp-notif{display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--tp-warn-soft);border-radius:12px;padding:9px 12px;margin:-6px 0 14px;font-size:.78rem;font-weight:650;}
+[data-testid="stSidebar"] .tp-notif,[data-testid="stSidebar"] .tp-notif *{color:var(--tp-warn)!important;}
+/* Tabla en PC, tarjetas en celular */
+.st-key-vista_tarjetas{display:none;}
+@media (max-width:900px){.st-key-vista_tabla{display:none;}.st-key-vista_tarjetas{display:block;}}
+</style>
+""", unsafe_allow_html=True)
+
+def ui_timeline(estado):
+    e = str(estado).strip().lower()
+    if e == "aprobado": c2, c3, t3 = "done", "done", "Aprobada"
+    elif e == "rechazado": c2, c3, t3 = "done", "bad", "Rechazada"
+    else: c2, c3, t3 = "now", "", "Resolución"
+    return f'<div class="tp-tl"><div class="tp-tl-step done">Enviada</div><div class="tp-tl-step {c2}">En revisión</div><div class="tp-tl-step {c3}">{t3}</div></div>'
+
+def ui_solicitud_card(r):
+    est, tipo = str(r["estado"]), str(r["tipo_solicitud"])
+    chip = "warn" if est == "Pendiente" else ("ok" if est == "Aprobado" else "bad")
+    if tipo == "Permiso Laboral":
+        det = f"Fecha del permiso: <b>{r['fecha_permiso']}</b>"
+        if str(r.get("requiere_recuperacion", "No")).strip().lower() in ["sí", "si", "yes", "true", "1"] and str(r.get("fecha_recuperacion", "")).strip():
+            det += f" · Recuperación: <b>{r['fecha_recuperacion']}</b>"
+    elif tipo.startswith("Trabajar Domingo"):
+        det = f"Domingo a trabajar: <b>{r['fecha_permiso']}</b>"
+    else:
+        try: det = f"Monto solicitado: <b>S/. {float(r['monto_adelanto']):.2f}</b>"
+        except Exception: det = "Adelanto de sueldo"
+    resp = str(r.get("respuesta_admin", "")).strip()
+    resp_html = f'<div class="tp-resp"><b>Respuesta:</b> {_html.escape(resp)}</div>' if resp else ""
+    return (f'<div class="tp-card"><div class="tp-card-head"><div><div class="tp-card-title">{_html.escape(tipo)}</div>'
+            f'<div class="tp-card-sub">Registrada el {r["fecha_registro"]}</div></div>{ui_chip(est, chip)}</div>'
+            f'<div class="tp-card-body">{det}<br>{_html.escape(str(r["motivo"]))}</div>{ui_timeline(est)}{resp_html}</div>')
+
 # --- COMPONENTES UI REUTILIZABLES ---
 def ui_iniciales(nombre):
     p = [x for x in str(nombre).split() if x]
@@ -2352,6 +2413,13 @@ st.sidebar.markdown(f"""
         <div><b>{user_actual}</b><span>{str(rol_actual).capitalize()} · DNI {dni_actual}</span></div>
     </div>
 """, unsafe_allow_html=True)
+_sol_n = st.session_state.get("solicitudes")
+if _sol_n is not None and not _sol_n.empty:
+    _pend = _sol_n[_sol_n["estado"].astype(str) == "Pendiente"]
+    if rol_actual != "admin":
+        _pend = _pend[_pend["dni"].astype(str) == str(dni_actual)]
+    if len(_pend):
+        st.sidebar.markdown(f'<div class="tp-notif"><span>{"Solicitudes por revisar" if rol_actual == "admin" else "Tus solicitudes en revisión"}</span><span>{len(_pend)}</span></div>', unsafe_allow_html=True)
 
 if rol_actual == "admin":
     menu = ["Dashboard General", "Centro de Alertas", "Analítica (BI)", "Gestión Colaboradores", "Onboarding / Offboarding", "Gestión de Vacaciones", "Boletas de Pago", "Solicitudes y Permisos", "Historial de Descuadres", "Incidencias y Daños", "Botellas Fiadas", "Historial de Asistencias", "Auditoría y Configuración"]
@@ -2780,29 +2848,9 @@ elif choice == "Solicitar Permiso / Adelanto":
                 st.caption(f"{len(df_mis_sol)} solicitud(es) encontrada(s).")
 
             for _, r_sol in df_mis_sol.iterrows():
-                est = r_sol["estado"]
-                badge_c = "#EAB308" if est == "Pendiente" else ("#00A959" if est == "Aprobado" else "#EC3237")
-
-                if r_sol['tipo_solicitud'] == "Permiso Laboral":
-                    det_txt = f"**Fecha Permiso:** {r_sol['fecha_permiso']}"
-                elif r_sol['tipo_solicitud'] == "Trabajar Domingo (Descanso)":
-                    det_txt = f"**Domingo a Trabajar:** {r_sol['fecha_permiso']}"
-                else:
-                    det_txt = f"**Monto Solicitado:** S/. {float(r_sol['monto_adelanto']):.2f}"
-
-                with st.expander(f" {r_sol['tipo_solicitud']} — {r_sol['fecha_registro']} [{est}]"):
-                    st.markdown(f"<span style='background-color:{badge_c}; color:#fff; padding:3px 10px; border-radius:12px; font-size:0.75rem; font-weight:700;'>{est}</span>", unsafe_allow_html=True)
-                    st.markdown(f"<br>{det_txt}", unsafe_allow_html=True)
-                    st.markdown(f"**Motivo:** {r_sol['motivo']}")
-                    if r_sol['tipo_solicitud'] == "Permiso Laboral":
-                        _req_rec = str(r_sol.get("requiere_recuperacion", "No")).strip().lower()
-                        _f_rec = str(r_sol.get("fecha_recuperacion", "")).strip()
-                        if _req_rec in ["sí", "si", "yes", "true", "1"] and _f_rec:
-                            st.markdown(f"**Recuperación:** {_f_rec}")
-                    if r_sol['tipo_solicitud'] == "Trabajar Domingo (Descanso)" and est == "Aprobado":
-                        st.success("Autorizado. Podrás marcar tu asistencia ese domingo desde 'Marcar Asistencia'.")
-                    if str(r_sol.get('respuesta_admin', '')).strip():
-                        st.markdown(f"**Respuesta Admin:** {r_sol['respuesta_admin']}")
+                st.markdown(ui_solicitud_card(r_sol), unsafe_allow_html=True)
+                if r_sol['tipo_solicitud'] == "Trabajar Domingo (Descanso)" and r_sol["estado"] == "Aprobado":
+                    st.success("Autorizado. Podrás marcar tu asistencia ese domingo desde 'Marcar Asistencia'.")
         else:
             st.info("No registras solicitudes en tu historial.")
 
@@ -4396,11 +4444,21 @@ elif choice == "Historial de Asistencias":
 
             st.markdown("<br>", unsafe_allow_html=True)
             st.markdown("##### Registro Detallado de Asistencias")
-            st.dataframe(
-                df_asist_filtrado,
-                use_container_width=True,
-                hide_index=True
-            )
+            try:
+                _c_tab, _c_tar = st.container(key="vista_tabla"), st.container(key="vista_tarjetas")
+            except TypeError:
+                _c_tab, _c_tar = st.container(), None
+            with _c_tab:
+                st.dataframe(df_asist_filtrado, use_container_width=True, hide_index=True)
+            if _c_tar is not None:
+                with _c_tar:
+                    _flt = ""
+                    for _, _a in df_asist_filtrado.sort_values("fecha_hora", ascending=False).head(40).iterrows():
+                        _ing = str(_a["tipo"]) == "INGRESO"
+                        _ch = ui_chip("Ingreso" if _ing else "Salida", "ok" if _ing else "bad") + (ui_chip("Extra", "warn") if str(_a.get("es_extra", "")) == "SI" else "")
+                        _flt += f'<div class="tp-row">{ui_avatar(_a["nombre"], _a.get("dni", ""), "", 40)}<div class="tp-row-main"><b>{_html.escape(str(_a["nombre"]))}</b><span>{str(_a["fecha_hora"])[:16]}</span></div><div class="tp-chips">{_ch}</div></div>'
+                    st.markdown(_flt, unsafe_allow_html=True)
+                    st.caption("Se muestran las 40 marcaciones más recientes. Exporta a Excel para ver todo.")
             st.download_button("Exportar Asistencias a Excel", to_excel(df_asist_filtrado), "Asistencias_General.xlsx", use_container_width=True)
         else:
             st.info("No se encontraron registros de asistencia para los filtros seleccionados.")
