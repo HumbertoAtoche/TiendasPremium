@@ -1533,6 +1533,96 @@ def ui_card_container(key):
     except TypeError:
         return st.container(border=True)
 
+st.markdown("""
+<style>
+.tp-cols{display:flex;align-items:flex-end;gap:10px;height:var(--h,220px);overflow-x:auto;padding-bottom:2px;}
+.tp-col{flex:1;min-width:46px;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;}
+.tp-bars{display:flex;align-items:flex-end;justify-content:center;gap:4px;width:100%;height:calc(100% - 24px);padding-top:22px;box-sizing:border-box;border-bottom:1px solid var(--tp-line);}
+.tp-bar{position:relative;flex:1;max-width:40px;border-radius:9px 9px 0 0;}
+.tp-bar em{position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-style:normal;font-size:.68rem;font-weight:700;color:var(--tp-ink-2);white-space:nowrap;}
+.tp-col>span{font-size:.7rem;color:var(--tp-mute);margin-top:7px;white-space:nowrap;}
+.tp-legs{display:flex;gap:16px;margin-top:12px;font-size:.76rem;color:var(--tp-ink-2);font-weight:600;}
+.tp-leg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;}
+.tp-hb{display:grid;grid-template-columns:minmax(80px,160px) 1fr auto;gap:12px;align-items:center;margin:11px 0;}
+.tp-hb-l{font-size:.84rem;font-weight:600;color:var(--tp-ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.tp-hb-t{height:10px;background:#EEF1F5;border-radius:999px;overflow:hidden;} .tp-hb-t i{display:block;height:100%;border-radius:999px;}
+.tp-hb-v{font-size:.82rem;font-weight:700;color:var(--tp-ink-2);font-variant-numeric:tabular-nums;}
+.tp-rk{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid #F0F2F6;} .tp-rk:last-child{border-bottom:none;}
+.tp-rk-main{flex:1;min-width:0;} .tp-rk-main b{font-size:.88rem;} .tp-rk-main .tp-prog{margin-top:7px;height:6px;}
+.tp-rk-pct{font-weight:800;min-width:58px;text-align:right;font-variant-numeric:tabular-nums;}
+@media (max-width:640px){.tp-hb{grid-template-columns:1fr auto;}.tp-hb-t{grid-column:1/-1;order:3;}.tp-rk .tp-chips{display:none;}}
+</style>
+""", unsafe_allow_html=True)
+
+_MES_ABR = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
+_MESES_L = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
+
+def _mes_a_num(v):
+    t = str(v).strip()
+    if t.isdigit():
+        return int(t)
+    n = _norm(t)
+    for i, m in enumerate(_MESES_L):
+        if n[:3] == _norm(m)[:3]:
+            return i + 1
+    return 0
+
+def ui_mes_label(ym):
+    try:
+        y, m = str(ym).split("-")
+        return f"{_MES_ABR[int(m) - 1]} {y[2:]}"
+    except Exception:
+        return str(ym)
+
+def ui_dia_label(f):
+    try:
+        d = pd.to_datetime(f)
+        return f"{d.day} {_MES_ABR[d.month - 1]}"
+    except Exception:
+        return str(f)
+
+def ui_panel(titulo, sub, contenido):
+    return f'<div class="tp-card"><div class="tp-card-title">{titulo}</div><div class="tp-card-sub">{sub}</div><div style="margin-top:16px">{contenido}</div></div>'
+
+def ui_columnas(labels, series, alto=220, fmt="{:g}"):
+    mx = max([max(v) for _, v, _ in series] + [1])
+    cols = ""
+    for i, l in enumerate(labels):
+        barras = ""
+        for n, v, c in series:
+            h = max(3, int(v[i] / mx * 100)) if v[i] > 0 else 0
+            barras += f'<div class="tp-bar" style="height:{h}%;background:{c}" title="{n}: {fmt.format(v[i])}"><em>{fmt.format(v[i]) if v[i] else ""}</em></div>'
+        cols += f'<div class="tp-col"><div class="tp-bars">{barras}</div><span>{l}</span></div>'
+    leyenda = "".join(f'<span class="tp-leg"><i style="background:{c}"></i>{n}</span>' for n, _, c in series) if len(series) > 1 else ""
+    return f'<div style="--h:{alto}px"><div class="tp-cols">{cols}</div>{f"<div class=tp-legs>{leyenda}</div>" if leyenda else ""}</div>'
+
+def ui_hbars(items, color="#EC3237", fmt="{:g}"):
+    if not items:
+        return '<div class="tp-card-sub">Sin datos para mostrar.</div>'
+    mx = max([v for _, v in items] + [1])
+    return "".join(f'<div class="tp-hb"><div class="tp-hb-l" title="{_html.escape(str(l))}">{_html.escape(str(l))}</div><div class="tp-hb-t"><i style="width:{max(3, int(v / mx * 100))}%;background:{color}"></i></div><div class="tp-hb-v">{fmt.format(v)}</div></div>' for l, v in items)
+
+def ui_linea(labels, vals, color="#EC3237", fmt="{:g}", suf="", alto=230):
+    n = len(vals)
+    if n == 0:
+        return ""
+    W, H, px, top, bot = 640, alto, 34, 30, 30
+    mx = max(max(vals), 1) * 1.15
+    xs = [W / 2] if n == 1 else [px + (W - 2 * px) * i / (n - 1) for i in range(n)]
+    ys = [H - bot - (H - top - bot) * v / mx for v in vals]
+    linea = " ".join(f"{x:.1f},{y:.1f}" for x, y in zip(xs, ys))
+    area = f"{xs[0]:.1f},{H - bot} {linea} {xs[-1]:.1f},{H - bot}"
+    gid = f"g{abs(hash((tuple(vals), color))) % 10**7}"
+    paso, txt = max(1, -(-n // 8)), ""
+    for i, (x, y, v, l) in enumerate(zip(xs, ys, vals, labels)):
+        txt += f'<circle cx="{x:.1f}" cy="{y:.1f}" r="4.5" fill="#fff" stroke="{color}" stroke-width="2.5"><title>{l}: {fmt.format(v)}{suf}</title></circle>'
+        if i % paso == 0 or i == n - 1:
+            txt += (f'<text x="{x:.1f}" y="{y - 11:.1f}" text-anchor="middle" font-size="11" font-weight="700" fill="#334155">{fmt.format(v)}{suf}</text>'
+                    f'<text x="{x:.1f}" y="{H - 9}" text-anchor="middle" font-size="11" fill="#64748B">{l}</text>')
+    return (f'<svg viewBox="0 0 {W} {H}" width="100%" role="img"><defs><linearGradient id="{gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="{color}" stop-opacity=".28"/>'
+            f'<stop offset="1" stop-color="{color}" stop-opacity="0"/></linearGradient></defs><line x1="{px - 10}" y1="{H - bot}" x2="{W - px + 10}" y2="{H - bot}" stroke="#E3E6EC"/>'
+            f'<polygon points="{area}" fill="url(#{gid})"/><polyline points="{linea}" fill="none" stroke="{color}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>{txt}</svg>')
+
 # --- COMPONENTES UI REUTILIZABLES ---
 def ui_iniciales(nombre):
     p = [x for x in str(nombre).split() if x]
@@ -4535,41 +4625,38 @@ elif choice == "Historial de Asistencias":
             ingresos_cnt = len(df_asist_filtrado[df_asist_filtrado["tipo"] == "INGRESO"])
             colabs_unicos = df_asist_filtrado["nombre"].nunique()
 
-            a1, a2, a3 = st.columns(3)
-            with a1:
-                st.markdown(f'<div class="info-card"><div class="info-label">Total Marcaciones</div><div class="info-value">{total_marcas}</div></div>', unsafe_allow_html=True)
-            with a2:
-                st.markdown(f'<div class="info-card"><div class="info-label">Ingresos Registrados</div><div class="info-value" style="color:#00A959;">{ingresos_cnt}</div></div>', unsafe_allow_html=True)
-            with a3:
-                st.markdown(f'<div class="info-card"><div class="info-label">Colaboradores Activos</div><div class="info-value">{colabs_unicos}</div></div>', unsafe_allow_html=True)
-
-            st.markdown("<br>", unsafe_allow_html=True)
-            st.markdown("##### Ranking de Puntualidad (según filtro aplicado)")
-
             filas_punt = []
             for nom_p in sorted(df_asist_filtrado["nombre"].unique().tolist()):
                 metrica_p = calcular_metricas_puntualidad(df_asist_filtrado, nom_p)
                 if metrica_p["total_ingresos"] > 0:
-                    filas_punt.append({
-                        "Colaborador": nom_p,
-                        "Ingresos": metrica_p["total_ingresos"],
-                        "Puntuales": metrica_p["puntuales"],
-                        "Tardanzas": metrica_p["tardanzas"],
-                        "Minutos Acumulados": metrica_p["minutos_acumulados"],
-                        "% Puntualidad": metrica_p["ratio"]
-                    })
+                    filas_punt.append({"Colaborador": nom_p, "Ingresos": metrica_p["total_ingresos"], "Puntuales": metrica_p["puntuales"],
+                                       "Tardanzas": metrica_p["tardanzas"], "Minutos": metrica_p["minutos_acumulados"], "Pct": metrica_p["ratio"]})
+            tot_i = sum(f["Ingresos"] for f in filas_punt); tot_p = sum(f["Puntuales"] for f in filas_punt)
+            tot_t = sum(f["Tardanzas"] for f in filas_punt); tot_m = sum(f["Minutos"] for f in filas_punt)
+            a1, a2, a3, a4 = st.columns(4)
+            a1.markdown(ui_kpi("Total de marcaciones", str(total_marcas), f"{colabs_unicos} colaborador(es)"), unsafe_allow_html=True)
+            a2.markdown(ui_kpi("Ingresos registrados", str(ingresos_cnt), "marcas de entrada"), unsafe_allow_html=True)
+            a3.markdown(ui_kpi("Puntualidad global", f"{tot_p / tot_i * 100 if tot_i else 100:.1f}%", f"{tot_p} de {tot_i} ingresos a tiempo"), unsafe_allow_html=True)
+            a4.markdown(ui_kpi("Tardanzas", str(tot_t), f"{tot_m} min acumulados"), unsafe_allow_html=True)
+            st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
+
+            por_dia = df_asist_filtrado.groupby("fecha").size().sort_index().tail(31)
+            if len(por_dia) > 1:
+                st.markdown(ui_panel("Actividad por día", "Marcaciones registradas en el período", ui_columnas([ui_dia_label(d) for d in por_dia.index], [("Marcaciones", [int(v) for v in por_dia.values], "#0F172A")], alto=190)), unsafe_allow_html=True)
+                st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
 
             if filas_punt:
-                df_punt = pd.DataFrame(filas_punt).sort_values("% Puntualidad")
-                st.dataframe(
-                    df_punt,
-                    use_container_width=True,
-                    hide_index=True,
-                    column_config={
-                        "% Puntualidad": st.column_config.ProgressColumn("% Puntualidad", format="%.1f%%", min_value=0, max_value=100)
-                    }
-                )
-                st.bar_chart(df_punt.set_index("Colaborador")["Tardanzas"])
+                rk_html = ""
+                for f in sorted(filas_punt, key=lambda x: x["Pct"]):
+                    tono = "ok" if f["Pct"] >= 90 else ("warn" if f["Pct"] >= 75 else "bad")
+                    d_, ft_ = ui_dni_foto(f["Colaborador"])
+                    rk_html += (f'<div class="tp-rk">{ui_avatar(f["Colaborador"], d_, ft_, 40)}<div class="tp-rk-main"><b>{_html.escape(str(f["Colaborador"]))}</b>'
+                                f'<div class="tp-prog {tono}"><i style="width:{f["Pct"]}%"></i></div></div><div class="tp-rk-pct">{f["Pct"]:g}%</div>'
+                                f'<div class="tp-chips">{ui_chip(str(f["Ingresos"]) + " ingresos", "neutral")}{ui_chip(str(f["Tardanzas"]) + " tardanzas", "bad" if f["Tardanzas"] else "ok")}{ui_chip(str(f["Minutos"]) + " min", "warn" if f["Minutos"] else "neutral")}</div></div>')
+                rk1, rk2 = st.columns([1.5, 1])
+                rk1.markdown(ui_panel("Ranking de puntualidad", "Primero quienes necesitan más atención", rk_html), unsafe_allow_html=True)
+                top_t = sorted([(f["Colaborador"], f["Tardanzas"]) for f in filas_punt if f["Tardanzas"] > 0], key=lambda x: -x[1])[:8]
+                rk2.markdown(ui_panel("Tardanzas por colaborador", "Según el filtro aplicado", ui_hbars(top_t, "#EC3237")), unsafe_allow_html=True)
             else:
                 st.info("No hay ingresos registrados para calcular puntualidad en este filtro.")
 
@@ -4936,70 +5023,98 @@ elif choice == "Analítica (BI)":
         </div>
     """, unsafe_allow_html=True)
 
-    tab_bi1, tab_bi2, tab_bi3 = st.tabs(["💰 Costo de Planilla", "🔄 Rotación de Personal", "⏰ Tendencia de Puntualidad"])
+    tab_bi1, tab_bi2, tab_bi3 = st.tabs(["Costo de planilla", "Rotación de personal", "Tendencia de puntualidad"])
 
     with tab_bi1:
-        st.markdown("##### Evolución del Costo de Planilla (Boletas Guardadas)")
         if not st.session_state.boletas_historial.empty:
             df_bh = st.session_state.boletas_historial.copy()
             df_bh["neto_pagar"] = pd.to_numeric(df_bh["neto_pagar"], errors="coerce").fillna(0)
-            df_bh["periodo_bi"] = df_bh["mes"].astype(str) + " " + df_bh["anio"].astype(str)
-            resumen_mes = df_bh.groupby("periodo_bi")["neto_pagar"].sum()
-            st.bar_chart(resumen_mes)
-            st.metric("Costo Total Histórico Registrado", f"S/. {df_bh['neto_pagar'].sum():.2f}")
-            st.dataframe(df_bh.sort_values("fecha_emision", ascending=False), use_container_width=True, hide_index=True)
-            st.download_button("Exportar Historial de Boletas a Excel", to_excel(df_bh), "Boletas_Historial.xlsx", use_container_width=True)
+            df_bh["_ym"] = pd.to_numeric(df_bh["anio"], errors="coerce").fillna(0).astype(int).astype(str) + "-" + df_bh["mes"].apply(_mes_a_num).astype(str).str.zfill(2)
+            res = df_bh.groupby("_ym")["neto_pagar"].sum().sort_index()
+            ult, prev = float(res.iloc[-1]), (float(res.iloc[-2]) if len(res) > 1 else 0)
+            delta = ui_chip(f'{"▲" if ult >= prev else "▼"} {abs((ult - prev) / prev * 100):.1f}% vs período anterior', "neutral") if prev else ""
+            b1, b2, b3, b4 = st.columns(4)
+            b1.markdown(ui_kpi("Costo total histórico", f"S/. {df_bh['neto_pagar'].sum():,.2f}", f"{len(df_bh)} boletas emitidas"), unsafe_allow_html=True)
+            b2.markdown(ui_kpi("Promedio mensual", f"S/. {res.mean():,.2f}", f"{len(res)} período(s) registrados"), unsafe_allow_html=True)
+            b3.markdown(ui_kpi(f"Último período · {ui_mes_label(res.index[-1])}", f"S/. {ult:,.2f}", delta), unsafe_allow_html=True)
+            b4.markdown(ui_kpi("Colaboradores con boleta", str(df_bh["nombre"].nunique()), "en el historial"), unsafe_allow_html=True)
+            st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
+            g1, g2 = st.columns([1.6, 1])
+            g1.markdown(ui_panel("Costo de planilla por período", "Neto a pagar acumulado (S/.)", ui_columnas([ui_mes_label(i) for i in res.index], [("Neto a pagar", [round(v) for v in res.values], "#EC3237")], fmt="{:,.0f}")), unsafe_allow_html=True)
+            top = df_bh.groupby("nombre")["neto_pagar"].sum().sort_values(ascending=False).head(8)
+            g2.markdown(ui_panel("Mayor costo acumulado", "Top 8 colaboradores", ui_hbars(list(top.items()), "#0F172A", "S/. {:,.0f}")), unsafe_allow_html=True)
+            with st.expander("Ver detalle de boletas emitidas"):
+                st.dataframe(df_bh.drop(columns=["_ym"]).sort_values("fecha_emision", ascending=False), use_container_width=True, hide_index=True)
+                st.download_button("Exportar Historial de Boletas a Excel", to_excel(df_bh.drop(columns=["_ym"])), "Boletas_Historial.xlsx", use_container_width=True)
         else:
             st.info("Aún no hay boletas guardadas en el historial. Ve a 'Boletas de Pago', genera una boleta y usa el botón 'Guardar esta Boleta en el Historial'.")
 
     with tab_bi2:
-        st.markdown("##### Altas y Bajas de Personal por Mes")
         df_emp_bi = st.session_state.empleados.copy()
-        altas_por_mes = {}
-        bajas_por_mes = {}
+        altas_por_mes, bajas_por_mes = {}, {}
         for _, r_bi in df_emp_bi.iterrows():
             f_alta = _parsear_fecha_nac_cumple(r_bi.get("fecha_inicio", ""))
             if f_alta:
-                key_a = f_alta.strftime("%Y-%m")
-                altas_por_mes[key_a] = altas_por_mes.get(key_a, 0) + 1
+                altas_por_mes[f_alta.strftime("%Y-%m")] = altas_por_mes.get(f_alta.strftime("%Y-%m"), 0) + 1
             f_baja = _parsear_fecha_nac_cumple(r_bi.get("fecha_cese", ""))
             if f_baja:
-                key_b = f_baja.strftime("%Y-%m")
-                bajas_por_mes[key_b] = bajas_por_mes.get(key_b, 0) + 1
-
-        meses_todos_bi = sorted(set(list(altas_por_mes.keys()) + list(bajas_por_mes.keys())))
+                bajas_por_mes[f_baja.strftime("%Y-%m")] = bajas_por_mes.get(f_baja.strftime("%Y-%m"), 0) + 1
+        meses_todos_bi = sorted(set(altas_por_mes) | set(bajas_por_mes))
         if meses_todos_bi:
-            df_rot = pd.DataFrame({
-                "Altas": [altas_por_mes.get(m, 0) for m in meses_todos_bi],
-                "Bajas": [bajas_por_mes.get(m, 0) for m in meses_todos_bi]
-            }, index=meses_todos_bi)
-            st.bar_chart(df_rot)
-            total_activos_bi = len(df_emp_bi[df_emp_bi["estado"].astype(str).str.lower() == "activo"])
-            total_bajas_bi = sum(bajas_por_mes.values())
-            r1, r2 = st.columns(2)
-            r1.metric("Colaboradores Activos Hoy", total_activos_bi)
-            r2.metric("Total de Bajas Históricas", total_bajas_bi)
+            rango = [str(x) for x in pd.period_range(meses_todos_bi[0], meses_todos_bi[-1], freq="M")][-18:]
+            act_bi = df_emp_bi[df_emp_bi["estado"].astype(str).str.lower() == "activo"]
+            n_baj = sum(bajas_por_mes.values())
+            hoy_bi, ants = obtener_ahora_peru().date(), []
+            for _, ra in act_bi.iterrows():
+                fa = _parsear_fecha_nac_cumple(ra.get("fecha_inicio", ""))
+                if fa:
+                    ants.append((hoy_bi - (fa.date() if hasattr(fa, "date") else fa)).days / 365.25)
+            r1, r2, r3, r4 = st.columns(4)
+            r1.markdown(ui_kpi("Colaboradores activos", str(len(act_bi)), "equipo actual"), unsafe_allow_html=True)
+            r2.markdown(ui_kpi("Altas históricas", str(sum(altas_por_mes.values())), "ingresos registrados"), unsafe_allow_html=True)
+            r3.markdown(ui_kpi("Bajas históricas", str(n_baj), f"rotación {n_baj / max(1, len(act_bi) + n_baj) * 100:.0f}% del total"), unsafe_allow_html=True)
+            r4.markdown(ui_kpi("Antigüedad promedio", f"{sum(ants) / len(ants):.1f} años" if ants else "-", "del personal activo"), unsafe_allow_html=True)
+            st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
+            g1, g2 = st.columns([1.6, 1])
+            g1.markdown(ui_panel("Altas y bajas por mes", "Últimos 18 meses con movimiento", ui_columnas([ui_mes_label(m) for m in rango], [("Altas", [altas_por_mes.get(m, 0) for m in rango], "#0B8F57"), ("Bajas", [bajas_por_mes.get(m, 0) for m in rango], "#EC3237")])), unsafe_allow_html=True)
+            cargos = act_bi["cargo"].astype(str).value_counts()
+            g2.markdown(ui_panel("Equipo activo por cargo", "Distribución actual", ui_hbars(list(cargos.items()), "#0F172A")), unsafe_allow_html=True)
         else:
             st.info("No hay suficientes datos de fechas de ingreso/cese para calcular rotación.")
 
     with tab_bi3:
-        st.markdown("##### Tardanzas Totales por Mes (Todos los Colaboradores)")
         if not st.session_state.asistencia.empty:
             df_asist_bi = st.session_state.asistencia.copy()
             df_asist_bi["fecha_dt_bi"] = pd.to_datetime(df_asist_bi["fecha"], errors="coerce")
             df_asist_bi = df_asist_bi.dropna(subset=["fecha_dt_bi"])
             df_asist_bi["periodo_bi"] = df_asist_bi["fecha_dt_bi"].dt.strftime("%Y-%m")
-
-            tardanzas_por_mes = {}
+            _solo_col = obtener_solo_colaboradores()
+            por_mes, por_persona = {}, {}
             for periodo_m, grupo_m in df_asist_bi.groupby("periodo_bi"):
-                total_tard_mes = 0
-                for nom_m in grupo_m["nombre"].unique():
-                    met_m = calcular_metricas_puntualidad(grupo_m, nom_m)
-                    total_tard_mes += met_m["tardanzas"]
-                tardanzas_por_mes[periodo_m] = total_tard_mes
-
-            if tardanzas_por_mes:
-                st.bar_chart(pd.Series(tardanzas_por_mes, name="Tardanzas"))
+                acc = {"ing": 0, "pun": 0, "tar": 0, "min": 0}
+                for nom_m in [n for n in grupo_m["nombre"].unique() if n in _solo_col]:
+                    mt = calcular_metricas_puntualidad(grupo_m, nom_m)
+                    acc["ing"] += mt["total_ingresos"]; acc["pun"] += mt["puntuales"]; acc["tar"] += mt["tardanzas"]; acc["min"] += mt["minutos_acumulados"]
+                    por_persona[nom_m] = por_persona.get(nom_m, 0) + mt["tardanzas"]
+                por_mes[periodo_m] = acc
+            if por_mes:
+                meses_p = sorted(por_mes)
+                tot_i = sum(a["ing"] for a in por_mes.values()); tot_p = sum(a["pun"] for a in por_mes.values())
+                tot_t = sum(a["tar"] for a in por_mes.values()); tot_m = sum(a["min"] for a in por_mes.values())
+                peor = max(meses_p, key=lambda m: por_mes[m]["tar"])
+                p1, p2, p3, p4 = st.columns(4)
+                p1.markdown(ui_kpi("Puntualidad global", f"{tot_p / tot_i * 100 if tot_i else 100:.1f}%", f"{tot_i} ingresos evaluados"), unsafe_allow_html=True)
+                p2.markdown(ui_kpi("Tardanzas totales", str(tot_t), f"{tot_m} min acumulados"), unsafe_allow_html=True)
+                p3.markdown(ui_kpi("Mes con más tardanzas", ui_mes_label(peor), f"{por_mes[peor]['tar']} tardanza(s)"), unsafe_allow_html=True)
+                p4.markdown(ui_kpi("Minutos por tardanza", f"{tot_m / tot_t:.1f}" if tot_t else "0", "promedio"), unsafe_allow_html=True)
+                st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
+                lbl = [ui_mes_label(m) for m in meses_p]
+                g1, g2 = st.columns(2)
+                g1.markdown(ui_panel("Tardanzas por mes", "Todos los colaboradores", ui_linea(lbl, [por_mes[m]["tar"] for m in meses_p], "#EC3237")), unsafe_allow_html=True)
+                g2.markdown(ui_panel("Puntualidad por mes", "% de ingresos a tiempo", ui_linea(lbl, [round(por_mes[m]["pun"] / por_mes[m]["ing"] * 100, 1) if por_mes[m]["ing"] else 100 for m in meses_p], "#0B8F57", "{:g}", "%")), unsafe_allow_html=True)
+                top_t = sorted([(n, v) for n, v in por_persona.items() if v > 0], key=lambda x: -x[1])[:8]
+                st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
+                st.markdown(ui_panel("Colaboradores con más tardanzas", "Acumulado histórico", ui_hbars(top_t, "#EC3237")), unsafe_allow_html=True)
             else:
                 st.info("No hay tardanzas registradas todavía.")
         else:
