@@ -1147,13 +1147,85 @@ div[data-testid="stForm"],div[data-testid="stExpander"]{border-radius:var(--tp-r
 </style>
 """, unsafe_allow_html=True)
 
+import streamlit.components.v1 as components
+st.markdown("""
+<style>
+/* Barra lateral clara */
+[data-testid="stSidebar"]{background:#FFFFFF!important;border-right:1px solid var(--tp-line)!important;}
+[data-testid="stSidebar"] *{color:var(--tp-ink)!important;}
+[data-testid="stSidebar"] [role="radiogroup"] label>div:not(:has([data-testid="stMarkdownContainer"])){display:none!important;}
+[data-testid="stSidebar"] [role="radiogroup"] label p{color:var(--tp-ink-2)!important;font-weight:550;}
+[data-testid="stSidebar"] [role="radiogroup"] label:hover{background:#F3F4F7;}
+[data-testid="stSidebar"] [role="radiogroup"] label:has(input:checked){background:var(--tp-red-soft);}
+[data-testid="stSidebar"] [role="radiogroup"] label:has(input:checked) p{color:var(--tp-red-dk)!important;font-weight:700;}
+[data-testid="stSidebarCollapseButton"] *{color:var(--tp-mute)!important;}
+.tp-user{background:#F6F7FA;border:1px solid var(--tp-line);}
+.tp-user b{color:var(--tp-ink)!important;} .tp-user span{color:var(--tp-mute)!important;}
+[data-testid="stSidebar"] .tp-avatar{color:#fff!important;}
+.tp-avatar{width:46px;height:46px;object-fit:cover;box-shadow:0 0 0 2px #fff,0 0 0 4px var(--tp-red);}
+.tp-brand{padding:2px 2px 16px;} .tp-brand-name{font-weight:800;font-size:1rem;letter-spacing:-.01em;}
+[data-testid="stSidebar"] .tp-brand-name span{color:var(--tp-red)!important;} .tp-brand-sub{font-size:.72rem;color:var(--tp-mute)!important;}
+.btn-logout>button{background:#fff!important;border:1px solid var(--tp-line)!important;}
+.btn-logout>button:hover{background:var(--tp-red-soft)!important;border-color:var(--tp-red)!important;}
+/* Marcación: tarjeta de estado y lista */
+.tp-hero{box-sizing:border-box;min-height:132px;background:var(--tp-surface);border:1px solid var(--tp-line);border-radius:var(--tp-r-lg);padding:18px 20px;box-shadow:var(--tp-sh-1);}
+.tp-hero-top{display:flex;gap:14px;align-items:center;margin-bottom:16px;}
+.tp-hero-hi{font-weight:700;font-size:1.08rem;margin-bottom:5px;}
+.tp-prog-lbl{display:flex;justify-content:space-between;font-size:.76rem;color:var(--tp-mute);font-weight:600;margin-bottom:6px;}
+.tp-prog{height:8px;background:#EEF1F5;border-radius:999px;overflow:hidden;}
+.tp-prog i{display:block;height:100%;background:linear-gradient(90deg,var(--tp-red),#F26B6F);border-radius:999px;}
+.tp-row{display:flex;align-items:center;gap:12px;background:var(--tp-surface);border:1px solid var(--tp-line);border-radius:14px;padding:12px 14px;margin-bottom:8px;}
+.tp-row-time{font-weight:700;font-variant-numeric:tabular-nums;min-width:48px;}
+.tp-row-main{flex:1;min-width:0;} .tp-row-main b{display:block;font-size:.9rem;}
+.tp-row-main span{display:block;font-size:.78rem;color:var(--tp-mute);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.tp-chips{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;}
+/* Barra inferior (celular) */
+.st-key-tp_bottomnav{display:none;}
+@media (max-width:900px){
+  .st-key-tp_bottomnav{display:block;position:fixed;left:0;right:0;bottom:0;z-index:999;background:rgba(255,255,255,.96);backdrop-filter:blur(10px);
+    border-top:1px solid var(--tp-line);padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px));box-shadow:0 -8px 24px -12px rgba(15,23,42,.25);}
+  .st-key-tp_bottomnav [data-testid="stHorizontalBlock"]{flex-wrap:nowrap!important;gap:4px!important;}
+  .st-key-tp_bottomnav [data-testid="stColumn"],.st-key-tp_bottomnav [data-testid="column"]{min-width:0!important;flex:1 1 0!important;width:auto!important;}
+  .st-key-tp_bottomnav button{background:transparent!important;color:var(--tp-mute)!important;box-shadow:none!important;border:none!important;min-height:56px!important;padding:4px 2px!important;border-radius:12px!important;}
+  .st-key-tp_bottomnav button>div{display:flex;flex-direction:column;align-items:center;gap:2px;}
+  .st-key-tp_bottomnav button p{font-size:.68rem!important;font-weight:650!important;margin:0;color:inherit!important;}
+  .st-key-tp_bottomnav button[kind="primary"],.st-key-tp_bottomnav [data-testid="stBaseButton-primary"]{background:var(--tp-red-soft)!important;color:var(--tp-red-dk)!important;}
+  .st-key-tp_bottomnav button:hover{transform:none!important;}
+  .tp-row{padding:10px 12px;}
+}
+</style>
+""", unsafe_allow_html=True)
+
+@st.cache_data(show_spinner=False, ttl=300)
+def ui_foto_uri(dni, foto_nom=""):
+    """Foto del colaborador desde la carpeta fotos/ (la misma de la ficha personal)."""
+    cands = []
+    if str(foto_nom).strip() not in ("", "nan", "None"):
+        cands.append(str(foto_nom).strip())
+    cands += [f"{dni}.{e}" for e in ("png", "jpg", "jpeg", "webp")]
+    for base in (BASE_DIR, os.getcwd()):
+        for c in cands:
+            ruta = os.path.join(base, "fotos", c)
+            if os.path.isfile(ruta):
+                try:
+                    mime = mimetypes.guess_type(ruta)[0] or "image/png"
+                    with open(ruta, "rb") as f:
+                        return f"data:{mime};base64,{base64.b64encode(f.read()).decode('ascii')}"
+                except Exception:
+                    pass
+    return ""
+
 # --- COMPONENTES UI REUTILIZABLES ---
 def ui_iniciales(nombre):
     p = [x for x in str(nombre).split() if x]
     return (p[0][0] + (p[1][0] if len(p) > 1 else "")).upper() if p else "?"
 
-def ui_avatar(nombre):
-    return f'<span class="tp-avatar">{ui_iniciales(nombre)}</span>'
+def ui_avatar(nombre, dni="", foto="", size=46):
+    uri = ui_foto_uri(str(dni), str(foto)) if dni else ""
+    dim = f"width:{size}px;height:{size}px;"
+    if uri:
+        return f'<img class="tp-avatar" src="{uri}" alt="{nombre}" style="{dim}">'
+    return f'<span class="tp-avatar" style="{dim}">{ui_iniciales(nombre)}</span>'
 
 def ui_chip(texto, tipo="neutral"):
     """tipo: ok | warn | bad | info | neutral"""
@@ -1306,12 +1378,13 @@ if not st.session_state.usuario_login:
                 </div>
             """, unsafe_allow_html=True)
             
-            usuario_sel = st.selectbox("Usuario", list(USUARIOS.keys()))
-            clave_input = st.text_input("Contraseña", type="password")
+            dni_input = st.text_input("DNI", placeholder="Tu número de DNI", max_chars=12)
+            clave_input = st.text_input("Contraseña", type="password", placeholder="Tu contraseña")
             st.markdown("<br>", unsafe_allow_html=True)
             
             if st.button("Ingresar al Sistema", use_container_width=True):
-                if clave_input == USUARIOS[usuario_sel]["clave"]:
+                usuario_sel = next((n for n, d in USUARIOS.items() if str(d["dni"]).strip() == dni_input.strip()), None)
+                if usuario_sel and clave_input == USUARIOS[usuario_sel]["clave"]:
                     st.session_state.usuario_login = usuario_sel
                     st.session_state.login_timestamp = time.time()
                     st.session_state.ultima_actividad = time.time()
@@ -1319,7 +1392,7 @@ if not st.session_state.usuario_login:
                     time.sleep(0.3)
                     st.rerun()
                 else:
-                    st.error("Credenciales incorrectas")
+                    st.error("DNI o contraseña incorrectos. Revisa los datos e intenta de nuevo.")
     st.stop()
 
 # --- NUEVO: CONTROL DE EXPIRACIÓN DE SESIÓN ---
@@ -2269,18 +2342,13 @@ def renderizar_calendario_colaborador(nombre_colab, anio, mes):
 
 # --- SIDEBAR ---
 st.sidebar.markdown(f'<div style="text-align:center; padding: 8px 0 14px 0;">{logo_tag_app39(58)}</div>', unsafe_allow_html=True)
-st.sidebar.markdown("""
-    <div style='padding: 8px 0 16px 0;'>
-        <div style='font-size: 0.85rem; font-weight: 700; letter-spacing: 1px; color: #FFFFFF;'>
-            TIENDAS <span style='color: #EC3237;'>PREMIUM</span>
-        </div>
-        <div style='font-size: 0.7rem; color: #6B7280; margin-top:2px;'>Sistema de Control Interno</div>
-    </div>
-""", unsafe_allow_html=True)
+st.sidebar.markdown('<div class="tp-brand"><div class="tp-brand-name">Tiendas <span>Premium</span></div><div class="tp-brand-sub">Sistema de control interno</div></div>', unsafe_allow_html=True)
 
+_fila_me = st.session_state.empleados[st.session_state.empleados["dni"].astype(str) == str(dni_actual)]
+_foto_actual = str(_fila_me.iloc[0].get("foto", "")) if not _fila_me.empty else ""
 st.sidebar.markdown(f"""
     <div class="tp-user">
-        {ui_avatar(user_actual)}
+        {ui_avatar(user_actual, dni_actual, _foto_actual)}
         <div><b>{user_actual}</b><span>{str(rol_actual).capitalize()} · DNI {dni_actual}</span></div>
     </div>
 """, unsafe_allow_html=True)
@@ -2290,7 +2358,27 @@ if rol_actual == "admin":
 else:
     menu = ["Marcar Asistencia", "Registrar Descuadre", "Registrar Incidencia", "Botellas Fiadas", "Mi Ficha Técnica", "Mis Vacaciones", "Solicitar Permiso / Adelanto", "Mi Dashboard Mensual"]
 
-choice = st.sidebar.radio("Navegación", menu)
+if st.session_state.get("nav_radio") not in menu:
+    st.session_state["nav_radio"] = menu[0]
+choice = st.sidebar.radio("Navegación", menu, key="nav_radio")
+
+def _ir_a(destino):
+    st.session_state["nav_radio"] = destino
+
+if rol_actual == "admin":
+    _nav_items = [("Dashboard General", "Resumen", ":material/dashboard:"), ("Centro de Alertas", "Alertas", ":material/notifications:"),
+                  ("Historial de Asistencias", "Asistencia", ":material/schedule:"), ("Solicitudes y Permisos", "Solicitudes", ":material/inbox:")]
+else:
+    _nav_items = [("Marcar Asistencia", "Marcar", ":material/fingerprint:"), ("Mi Dashboard Mensual", "Mi mes", ":material/calendar_month:"),
+                  ("Solicitar Permiso / Adelanto", "Permisos", ":material/edit_note:"), ("Mi Ficha Técnica", "Ficha", ":material/badge:")]
+try:
+    with st.container(key="tp_bottomnav"):
+        for _col, (_dest, _lbl, _ico) in zip(st.columns(len(_nav_items)), _nav_items):
+            with _col:
+                st.button(_lbl, key=f"bn_{_dest}", icon=_ico, use_container_width=True,
+                          type="primary" if choice == _dest else "secondary", on_click=_ir_a, args=(_dest,))
+except Exception:
+    pass  # versiones antiguas de Streamlit: se usa solo el menú lateral
 
 st.sidebar.markdown("<br><br>", unsafe_allow_html=True)
 st.sidebar.markdown('<div class="btn-logout">', unsafe_allow_html=True)
@@ -2310,6 +2398,27 @@ if choice == "Marcar Asistencia":
             <p>Colaborador activo: <b>{user_actual}</b> | Jornada laboral requerida: <b>5h 45m</b></p>
         </div>
     """, unsafe_allow_html=True)
+
+    _hoy_h = obtener_ahora_peru().strftime("%Y-%m-%d")
+    _estado, _chip, _lab_h = "Aún no marcas ingreso hoy", "neutral", 0
+    if not st.session_state.asistencia.empty:
+        _mh = st.session_state.asistencia[(st.session_state.asistencia["fecha"].astype(str) == _hoy_h) & (st.session_state.asistencia["dni"].astype(str) == str(dni_actual))].copy()
+        _mh["dt"] = pd.to_datetime(_mh["fecha_hora"], errors="coerce")
+        _mh = _mh.dropna(subset=["dt"]).sort_values("dt")
+        if not _mh.empty:
+            _u = _mh.iloc[-1]
+            if _u["tipo"] == "INGRESO":
+                _estado, _chip = f"En turno desde las {_u['dt'].strftime('%H:%M')}", "ok"
+            else:
+                _estado, _chip = f"Salida registrada a las {_u['dt'].strftime('%H:%M')}", "info"
+            _lab_h = calcular_jornada_y_horas_extras(_mh)[0]
+    _pct_h = min(100, int(_lab_h * 100 / JORNADA_MINUTOS_BASE))
+    _hc1, _hc2 = st.columns([1.5, 1])
+    with _hc1:
+        st.markdown(f'<div class="tp-hero"><div class="tp-hero-top">{ui_avatar(user_actual, dni_actual, _foto_actual, 54)}<div><div class="tp-hero-hi">Hola, {user_actual.split()[0]}</div>{ui_chip(_estado, _chip)}</div></div><div class="tp-prog-lbl"><span>Jornada de hoy</span><span>{formatear_horas_minutos(_lab_h)} de 5h 45m</span></div><div class="tp-prog"><i style="width:{_pct_h}%"></i></div></div>', unsafe_allow_html=True)
+    with _hc2:
+        components.html("""<body style="margin:0;font-family:Montserrat,Arial,sans-serif"><div style="box-sizing:border-box;height:132px;background:#fff;border:1px solid #E3E6EC;border-radius:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(15,23,42,.05)"><div id="t" style="font-size:2.3rem;font-weight:700;color:#0F172A;font-variant-numeric:tabular-nums">--:--:--</div><div id="d" style="font-size:.8rem;color:#64748B;font-weight:600;text-transform:capitalize"></div></div><script>function u(){var n=new Date(),o={timeZone:"America/Lima"};document.getElementById("t").textContent=n.toLocaleTimeString("es-PE",{timeZone:"America/Lima",hour12:false});document.getElementById("d").textContent=n.toLocaleDateString("es-PE",{timeZone:"America/Lima",weekday:"long",day:"numeric",month:"long"})}u();setInterval(u,1000)</script></body>""", height=134)
+    st.markdown("<div style='height:14px'></div>", unsafe_allow_html=True)
 
     col_main, col_preview = st.columns([1.1, 1])
 
@@ -2366,17 +2475,13 @@ if choice == "Marcar Asistencia":
             ].copy()
 
             if not df_mismarcas.empty:
-                st.dataframe(
-                    df_mismarcas[["tipo", "fecha_hora", "observacion", "es_extra"]],
-                    use_container_width=True,
-                    hide_index=True,
-                    column_config={
-                        "tipo": "TIPO", 
-                        "fecha_hora": "FECHA / HORA",
-                        "observacion": "OBSERVACIÓN",
-                        "es_extra": "EXTRA"
-                    }
-                )
+                _filas = ""
+                for _, _r in df_mismarcas.sort_values("fecha_hora", ascending=False).iterrows():
+                    _es_ing = str(_r["tipo"]) == "INGRESO"
+                    _obs = str(_r.get("observacion", "")).strip() or "Sin observación"
+                    _chips = ui_chip("Ingreso" if _es_ing else "Salida", "ok" if _es_ing else "bad") + (ui_chip("Extra", "warn") if str(_r.get("es_extra", "")) == "SI" else "")
+                    _filas += f'<div class="tp-row"><div class="tp-row-time">{str(_r["fecha_hora"])[11:16]}</div><div class="tp-row-main"><b>{"Ingreso" if _es_ing else "Salida"}</b><span>{_obs}</span></div><div class="tp-chips">{_chips}</div></div>'
+                st.markdown(_filas, unsafe_allow_html=True)
                 
                 df_mismarcas["dt"] = pd.to_datetime(df_mismarcas["fecha_hora"])
                 mins_lab, mins_ext, mins_tot, _ = calcular_jornada_y_horas_extras(df_mismarcas)
