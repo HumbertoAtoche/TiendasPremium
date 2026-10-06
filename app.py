@@ -1,3 +1,4 @@
+import re
 import streamlit as st
 import pandas as pd
 from datetime import datetime, date, timedelta, time as dt_time
@@ -1258,7 +1259,7 @@ def ui_timeline(estado):
     else: c2, c3, t3 = "now", "", "Resolución"
     return f'<div class="tp-tl"><div class="tp-tl-step done">Enviada</div><div class="tp-tl-step {c2}">En revisión</div><div class="tp-tl-step {c3}">{t3}</div></div>'
 
-def ui_solicitud_card(r):
+def ui_solicitud_card(r, admin=False):
     est, tipo = str(r["estado"]), str(r["tipo_solicitud"])
     chip = "warn" if est == "Pendiente" else ("ok" if est == "Aprobado" else "bad")
     if tipo == "Permiso Laboral":
@@ -1272,9 +1273,64 @@ def ui_solicitud_card(r):
         except Exception: det = "Adelanto de sueldo"
     resp = str(r.get("respuesta_admin", "")).strip()
     resp_html = f'<div class="tp-resp"><b>Respuesta:</b> {_html.escape(resp)}</div>' if resp else ""
-    return (f'<div class="tp-card"><div class="tp-card-head"><div><div class="tp-card-title">{_html.escape(tipo)}</div>'
-            f'<div class="tp-card-sub">Registrada el {r["fecha_registro"]}</div></div>{ui_chip(est, chip)}</div>'
+    if admin:
+        quien = (f'<div class="tp-op-head" style="margin:0">{ui_avatar(r["nombre"], r["dni"], "", 44)}<div><div class="tp-card-title">{_html.escape(str(r["nombre"]))}</div>'
+                 f'<div class="tp-card-sub">DNI {r["dni"]} · {_html.escape(tipo)} · {r["fecha_registro"]}</div></div></div>')
+    else:
+        quien = f'<div><div class="tp-card-title">{_html.escape(tipo)}</div><div class="tp-card-sub">Registrada el {r["fecha_registro"]}</div></div>'
+    return (f'<div class="tp-card{" flat" if admin else ""}"><div class="tp-card-head">{quien}{ui_chip(est, chip)}</div>'
             f'<div class="tp-card-body">{det}<br>{_html.escape(str(r["motivo"]))}</div>{ui_timeline(est)}{resp_html}</div>')
+
+st.markdown("""
+<style>
+.tp-card.flat{border:none;box-shadow:none;padding:0;margin:0 0 8px;}
+[class*="st-key-ap_"] button{background:var(--tp-ok)!important;color:#fff!important;border:none!important;}
+[class*="st-key-ap_"] button:hover{background:#087548!important;}
+[class*="st-key-rec_"] button{background:#fff!important;border:1.5px solid var(--tp-red)!important;}
+[class*="st-key-rec_"] button *{color:var(--tp-red)!important;}
+[class*="st-key-rec_"] button:hover{background:var(--tp-red-soft)!important;}
+[class*="st-key-ap_"] button *{color:#fff!important;}
+.tp-sec{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:6px 0 16px;}
+.tp-sec-title{font-size:1.12rem;font-weight:700;color:var(--tp-ink);} .tp-sec-sub{font-size:.8rem;color:var(--tp-mute);}
+.tp-op-head{display:flex;align-items:center;gap:12px;margin-bottom:16px;} .tp-op-head .tp-chip{margin-left:auto;}
+.tp-mgrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:14px;}
+.tp-m{background:#F6F7FA;border-radius:12px;padding:12px 14px;}
+.tp-m-l{font-size:.66rem;font-weight:700;color:var(--tp-mute);text-transform:uppercase;letter-spacing:.07em;}
+.tp-m-v{font-size:1.05rem;font-weight:700;margin-top:5px;color:var(--tp-ink);font-variant-numeric:tabular-nums;} .tp-m-v.pos{color:var(--tp-ok);}
+.tp-m .tp-prog{margin-top:9px;height:6px;}
+.tp-ngrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px;}
+.tp-note{border:1px solid var(--tp-line);border-radius:12px;padding:12px 14px;}
+.tp-note-t{font-size:.66rem;font-weight:700;color:var(--tp-mute);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;}
+.tp-note ul{margin:0;padding-left:16px;font-size:.84rem;color:var(--tp-ink-2);line-height:1.8;} .tp-note li.mute{color:var(--tp-mute);list-style:none;margin-left:-16px;}
+@media (max-width:900px){.tp-mgrid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+</style>
+""", unsafe_allow_html=True)
+
+def ui_op_card(nombre, d, dni="", foto=""):
+    e = _html.escape
+    est_txt = re.sub(r"[^\w\s/-]", "", str(d["estado"])).strip() or "Sin estado"
+    ch = "ok" if "turno" in est_txt.lower() else ("info" if "conclu" in est_txt.lower() else "neutral")
+    m = re.search(r"(\d+)h\s*(\d+)m\s*/\s*(\d+)h\s*(\d+)m", str(d["horas_laborales_str"]))
+    pct = min(100, int((int(m[1]) * 60 + int(m[2])) * 100 / max(1, int(m[3]) * 60 + int(m[4])))) if m else 0
+    def kp(l, v, c=""):
+        return f'<div class="tp-m"><div class="tp-m-l">{l}</div><div class="tp-m-v {c}">{v}</div></div>'
+    kpis = (kp("1er ingreso", e(str(d["primer_ingreso"]))) + kp("Última salida", e(str(d["ultima_salida"]))) +
+            f'<div class="tp-m"><div class="tp-m-l">Jornada base</div><div class="tp-m-v">{e(str(d["horas_laborales_str"]))}</div><div class="tp-prog"><i style="width:{pct}%"></i></div></div>' +
+            kp("Horas extras", e(str(d["horas_extras_str"])), "pos" if d["minutos_extras"] > 0 else "") +
+            kp("Puntualidad", ui_chip(e(re.sub(r"[^\w\s()+:.-]", "", str(d["tardanza"])).strip()), "ok" if "Puntual" in str(d["tardanza"]) else "bad")))
+    li_t = "".join(f'<li><b>{e(str(t["tipo"]))} · {e(str(t["hora"]))}</b> {e(str(t["detalle"]))}</li>' for t in d["turnos_adicionales"]) or '<li class="mute">Sin marcaciones fuera de horario</li>'
+    li_c = ""
+    for x in d["descuadres_detalle"]:
+        mv = float(x["monto"])
+        li_c += f'<li><b>{e(str(x["tipo"]))}</b> {ui_chip(f"S/. {mv:.2f}", "ok" if mv >= 0 else "bad")} {e(str(x["obs"])) if x["obs"] else ""}</li>'
+    li_c = li_c or '<li class="mute">Sin descuadres registrados</li>'
+    notas = (f'<div class="tp-note"><div class="tp-note-t">Turnos adicionales</div><ul>{li_t}</ul></div>'
+             f'<div class="tp-note"><div class="tp-note-t">Caja y descuadres</div><ul>{li_c}</ul></div>')
+    if d["obs_asistencia"]:
+        notas += f'<div class="tp-note"><div class="tp-note-t">Observaciones de marcación</div><ul>{"".join(f"<li>{e(str(o))}</li>" for o in d["obs_asistencia"])}</ul></div>'
+    return (f'<div class="tp-card"><div class="tp-op-head">{ui_avatar(nombre, dni, foto, 48)}<div><div class="tp-card-title">{e(str(nombre))}</div>'
+            f'<div class="tp-card-sub">Total trabajado: {e(str(d["tiempo_total_str"]))}</div></div>{ui_chip(est_txt, ch)}</div>'
+            f'<div class="tp-mgrid">{kpis}</div><div class="tp-ngrid">{notas}</div></div>')
 
 # --- COMPONENTES UI REUTILIZABLES ---
 def ui_iniciales(nombre):
@@ -3244,57 +3300,13 @@ elif choice == "Dashboard General":
     st.markdown("<br>", unsafe_allow_html=True)
 
     if fichas_colaboradores:
-        st.markdown("<h4 style='font-size:1rem; color:#111827; margin-bottom:15px;'> Control Operativo y Horas Extras por Colaborador</h4>", unsafe_allow_html=True)
-
+        st.markdown(f'<div class="tp-sec"><div><div class="tp-sec-title">Control operativo del día</div><div class="tp-sec-sub">Horas, puntualidad y caja por colaborador · {f_dash_str}</div></div>{ui_chip(f"{len(fichas_colaboradores)} colaboradores", "neutral")}</div>', unsafe_allow_html=True)
+        _emp_op = st.session_state.empleados
         for nombre_col, datos in fichas_colaboradores.items():
-            with st.expander(f" {nombre_col} — {datos['estado']} | Total Trab.: {datos['tiempo_total_str']} | Extras: {datos['horas_extras_str']}", expanded=True):
-                fc1, fc2, fc3, fc4, fc5 = st.columns(5)
-                
-                with fc1:
-                    st.caption("🕒 1ER INGRESO")
-                    st.markdown(f"**{datos['primer_ingreso']}**")
-                
-                with fc2:
-                    st.caption("🛑 ÚLTIMA SALIDA")
-                    st.markdown(f"**{datos['ultima_salida']}**")
-                
-                with fc3:
-                    st.caption("⏱️ JORNADA BASE")
-                    st.markdown(f"**{datos['horas_laborales_str']}**")
-
-                with fc4:
-                    st.caption("⭐ HORAS EXTRAS")
-                    color_ext = "#00A959" if datos["minutos_extras"] > 0 else "#111827"
-                    st.markdown(f"<span style='color:{color_ext}; font-weight:700;'>{datos['horas_extras_str']}</span>", unsafe_allow_html=True)
-
-                with fc5:
-                    st.caption("⏰ PUNTUALIDAD")
-                    color_tard = "#00A959" if "Puntual" in datos["tardanza"] else "#EC3237"
-                    st.markdown(f"<span style='color:{color_tard}; font-weight:700;'>{datos['tardanza']}</span>", unsafe_allow_html=True)
-
-                st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
-                
-                if datos["turnos_adicionales"]:
-                    st.markdown("**:alarm_clock: Turnos Adicionales / Coberturas Marcadas:**")
-                    for t_add in datos["turnos_adicionales"]:
-                        st.markdown(f"- **[{t_add['tipo']} - {t_add['hora']}]:** {t_add['detalle']}")
-                else:
-                    st.markdown("**:alarm_clock: Turnos Adicionales:** No registró marcaciones fuera de horario hoy.")
-
-                if datos["descuadres_detalle"]:
-                    st.markdown("**:bar_chart: Detalle de Caja / Descuadre:**")
-                    for d_item in datos["descuadres_detalle"]:
-                        m_val = float(d_item['monto'])
-                        signo_color = "green" if m_val >= 0 else "red"
-                        obs_txt = f" — *Sustento:* {d_item['obs']}" if d_item['obs'] else ""
-                        st.markdown(f"- **{d_item['tipo']}:** :{signo_color}[S/. {m_val:.2f}]{obs_txt}")
-                else:
-                    st.markdown("**:bar_chart: Detalle de Caja:** Sin descuadres registrados en la fecha.")
-
-                if datos["obs_asistencia"]:
-                    st.markdown("**:speech_balloon: Observaciones de Marcación:**")
-                    for obs_item in datos["obs_asistencia"]:
-                        st.markdown(f"- {obs_item}")
+            _fm = _emp_op[_emp_op["nombre"] == nombre_col]
+            _dni_c = str(_fm.iloc[0]["dni"]) if not _fm.empty else ""
+            _foto_c = str(_fm.iloc[0].get("foto", "")) if not _fm.empty else ""
+            st.markdown(ui_op_card(nombre_col, datos, _dni_c, _foto_c), unsafe_allow_html=True)
 
     else:
         st.info(f"No hay registros de marcación para la fecha {f_dash_str}.")
@@ -3911,60 +3923,35 @@ elif choice == "Solicitudes y Permisos":
             tipo_s = row_sol["tipo_solicitud"]
             est_s = row_sol["estado"]
             
-            color_st = "#EAB308" if est_s == "Pendiente" else ("#00A959" if est_s == "Aprobado" else "#EC3237")
-            icono_tipo = "🗓️" if tipo_s == "Permiso Laboral" else ("💰" if tipo_s == "Adelanto de Sueldo" else "☀️")
-            
-            with st.expander(f"{icono_tipo} {tipo_s} - {nom_s} ({row_sol['fecha_registro']}) [{est_s}]"):
-                c_sol1, c_sol2 = st.columns([2, 1])
-                
-                with c_sol1:
-                    st.markdown(f"**Trabajador:** {nom_s} (DNI: {row_sol['dni']})")
-                    st.markdown(f"**Tipo de Solicitud:** {tipo_s}")
-                    if tipo_s == "Permiso Laboral":
-                        st.markdown(f"**Fecha Solicitada:** {row_sol['fecha_permiso']}")
-                        fecha_rec_admin = str(row_sol.get("fecha_recuperacion", "")).strip()
-                        if fecha_rec_admin:
-                            st.markdown(f"**Fecha de Recuperación:** {fecha_rec_admin}")
-                            if pd.notna(pd.to_datetime(fecha_rec_admin, errors="coerce")):
-                                fecha_rec_dt = pd.to_datetime(fecha_rec_admin, errors="coerce")
-                                if fecha_rec_dt.dayofweek == 6:
-                                    st.caption("🟢 La recuperación está programada para domingo.")
-                    elif tipo_s == "Trabajar Domingo (Descanso)":
-                        st.markdown(f"**Domingo que desea trabajar:** {row_sol['fecha_permiso']}")
-                        st.caption("☀ Este domingo es normalmente su día de descanso semanal. Al aprobar, el colaborador podrá marcar asistencia ese día y se reflejará como día adicional en su boleta.")
-                    else:
-                        st.markdown(f"**Monto Solicitado:** S/. {float(row_sol['monto_adelanto']):.2f}")
-                    st.markdown(f"**Motivo:** {row_sol['motivo']}")
-                    st.markdown(f"**Estado Actual:** <span style='color:{color_st}; font-weight:700;'>{est_s}</span>", unsafe_allow_html=True)
-
-                with c_sol2:
-                    if est_s == "Pendiente":
-                        st.markdown("**:gear: Acciones:**")
-                        resp_admin_input = st.text_input(f"Observación Admin", key=f"resp_{id_s}")
-                        
-                        btn_col1, btn_col2 = st.columns(2)
-                        if btn_col1.button("Aprobar", key=f"ap_{id_s}", use_container_width=True):
-                            idx_real = st.session_state.solicitudes[st.session_state.solicitudes["id_solicitud"] == id_s].index
-                            st.session_state.solicitudes.loc[idx_real, "estado"] = "Aprobado"
-                            st.session_state.solicitudes.loc[idx_real, "respuesta_admin"] = resp_admin_input
-                            actualizar_hoja_completa("Solicitudes", st.session_state.solicitudes)
-                            registrar_auditoria("Aprobar Solicitud", "Solicitudes", f"{tipo_s} de {nom_s} ({id_s})")
-                            st.toast("Solicitud Aprobada")
-                            time.sleep(0.3)
-                            st.rerun()
-
-                        if btn_col2.button("Rechazar", key=f"rec_{id_s}", use_container_width=True):
-                            idx_real = st.session_state.solicitudes[st.session_state.solicitudes["id_solicitud"] == id_s].index
-                            st.session_state.solicitudes.loc[idx_real, "estado"] = "Rechazado"
-                            st.session_state.solicitudes.loc[idx_real, "respuesta_admin"] = resp_admin_input
-                            actualizar_hoja_completa("Solicitudes", st.session_state.solicitudes)
-                            registrar_auditoria("Rechazar Solicitud", "Solicitudes", f"{tipo_s} de {nom_s} ({id_s})")
-                            st.toast("Solicitud Rechazada")
-                            time.sleep(0.3)
-                            st.rerun()
-                    else:
-                        if str(row_sol.get("respuesta_admin", "")).strip():
-                            st.markdown(f"**Respuesta emitida:** {row_sol['respuesta_admin']}")
+            with st.container(border=True):
+                st.markdown(ui_solicitud_card(row_sol, admin=True), unsafe_allow_html=True)
+                if tipo_s == "Permiso Laboral":
+                    _fr = pd.to_datetime(str(row_sol.get("fecha_recuperacion", "")).strip(), errors="coerce")
+                    if pd.notna(_fr) and _fr.dayofweek == 6:
+                        st.caption("La recuperación está programada para domingo.")
+                elif tipo_s == "Trabajar Domingo (Descanso)":
+                    st.caption("Este domingo es normalmente su día de descanso semanal. Al aprobar, el colaborador podrá marcar asistencia ese día y se reflejará como día adicional en su boleta.")
+                if est_s == "Pendiente":
+                    c_obs, c_ap, c_rc = st.columns([2.4, 1, 1])
+                    resp_admin_input = c_obs.text_input("Observación", key=f"resp_{id_s}", placeholder="Observación para el colaborador (opcional)", label_visibility="collapsed")
+                    if c_ap.button("Aprobar", key=f"ap_{id_s}", use_container_width=True):
+                        idx_real = st.session_state.solicitudes[st.session_state.solicitudes["id_solicitud"] == id_s].index
+                        st.session_state.solicitudes.loc[idx_real, "estado"] = "Aprobado"
+                        st.session_state.solicitudes.loc[idx_real, "respuesta_admin"] = resp_admin_input
+                        actualizar_hoja_completa("Solicitudes", st.session_state.solicitudes)
+                        registrar_auditoria("Aprobar Solicitud", "Solicitudes", f"{tipo_s} de {nom_s} ({id_s})")
+                        st.toast("Solicitud Aprobada")
+                        time.sleep(0.3)
+                        st.rerun()
+                    if c_rc.button("Rechazar", key=f"rec_{id_s}", use_container_width=True):
+                        idx_real = st.session_state.solicitudes[st.session_state.solicitudes["id_solicitud"] == id_s].index
+                        st.session_state.solicitudes.loc[idx_real, "estado"] = "Rechazado"
+                        st.session_state.solicitudes.loc[idx_real, "respuesta_admin"] = resp_admin_input
+                        actualizar_hoja_completa("Solicitudes", st.session_state.solicitudes)
+                        registrar_auditoria("Rechazar Solicitud", "Solicitudes", f"{tipo_s} de {nom_s} ({id_s})")
+                        st.toast("Solicitud Rechazada")
+                        time.sleep(0.3)
+                        st.rerun()
 
         st.markdown("<br>", unsafe_allow_html=True)
         st.download_button("Exportar Solicitudes Filtradas a Excel", to_excel(df_sol), "Solicitudes.xlsx", use_container_width=True)
