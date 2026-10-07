@@ -1734,13 +1734,15 @@ st.markdown("""
 
 st.markdown("""
 <style>
-.st-key-tipo_sol_radio [role="radiogroup"]{gap:10px;flex-wrap:wrap;}
-.st-key-tipo_sol_radio label{border:1.5px solid var(--tp-line);background:#fff;border-radius:14px;padding:12px 18px;cursor:pointer;transition:all .12s ease;box-shadow:var(--tp-sh-1);}
-.st-key-tipo_sol_radio label>*:not(input):not([data-testid="stMarkdownContainer"]):not(:has([data-testid="stMarkdownContainer"])){display:none!important;}
-.st-key-tipo_sol_radio label p{font-weight:650;font-size:.9rem;color:var(--tp-ink-2);margin:0;}
-.st-key-tipo_sol_radio label:hover{border-color:#CBD2DC;}
-.st-key-tipo_sol_radio label:has(input:checked){border-color:var(--tp-red);background:var(--tp-red-soft);}
-.st-key-tipo_sol_radio label:has(input:checked) p{color:var(--tp-red-dk);}
+.st-key-tipo_sol_radio [role="radiogroup"]{gap:10px;flex-wrap:wrap;justify-content:center;}
+.st-key-tipo_sol_radio [data-testid="stWidgetLabel"]{justify-content:center;margin-bottom:6px;}
+.st-key-tipo_sol_radio [data-testid="stWidgetLabel"] p{font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--tp-mute);text-align:center;}
+.st-key-tipo_sol_radio [role="radiogroup"] label{border:1.5px solid var(--tp-line);background:#fff;border-radius:14px;padding:12px 18px;cursor:pointer;transition:all .12s ease;box-shadow:var(--tp-sh-1);}
+.st-key-tipo_sol_radio [role="radiogroup"] label>*:not(input):not([data-testid="stMarkdownContainer"]):not(:has([data-testid="stMarkdownContainer"])){display:none!important;}
+.st-key-tipo_sol_radio [role="radiogroup"] label p{font-weight:650;font-size:.9rem;color:var(--tp-ink-2);margin:0;}
+.st-key-tipo_sol_radio [role="radiogroup"] label:hover{border-color:#CBD2DC;}
+.st-key-tipo_sol_radio [role="radiogroup"] label:has(input:checked){border-color:var(--tp-red);background:var(--tp-red-soft);}
+.st-key-tipo_sol_radio [role="radiogroup"] label:has(input:checked) p{color:var(--tp-red-dk);}
 [class*="st-key-form_nuevo_"] button,[class*="st-key-form_domingo"] button{background:linear-gradient(135deg,#EC3237,#C9262B)!important;border:none!important;box-shadow:0 14px 26px -12px rgba(236,50,55,.6);}
 [class*="st-key-form_nuevo_"] button *,[class*="st-key-form_domingo"] button *{color:#fff!important;font-weight:700;}
 .tp-callout{display:flex;gap:12px;align-items:flex-start;border-radius:14px;padding:14px 16px;margin:6px 0 14px;font-size:.88rem;line-height:1.55;color:var(--tp-ink-2);border:1px solid var(--tp-line);}
@@ -1754,6 +1756,65 @@ def ui_callout(texto, tono="info"):
     t = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", _html.escape(str(texto)))
     ic = {"info": "i", "ok": "✓", "warn": "!"}[tono]
     st.markdown(f'<div class="tp-callout {tono}"><i>{ic}</i><div>{t}</div></div>', unsafe_allow_html=True)
+
+def render_hist_puntualidad(dfa, dias_corte=None):
+    SP = "<div style='height:14px'></div>"
+    dfa = dfa.copy()
+    dfa["fecha_dt"] = pd.to_datetime(dfa["fecha"], errors="coerce")
+    dfa = dfa.dropna(subset=["fecha_dt"])
+    if dias_corte is not None:
+        dfa = dfa[dfa["fecha_dt"] >= dias_corte]
+    ing = dfa[(dfa["tipo"] == "INGRESO") & (dfa["es_extra"].astype(str) != "SI")].copy()
+    if ing.empty:
+        ui_callout("Aún no tienes ingresos registrados en este período para mostrar tu histórico.", "info")
+        return
+    tp = ing["fecha_hora"].apply(calcular_tardanza_ingreso)
+    ing["tard"] = tp.map(lambda t: bool(t[1]))
+    ing["mins"] = tp.map(lambda t: int(t[0]) if t[1] else 0)
+    ing["ym"] = ing["fecha_dt"].dt.strftime("%Y-%m")
+    ing["dow"] = ing["fecha_dt"].dt.dayofweek
+    tard = ing[ing["tard"]]
+    pm = ing.groupby("ym").agg(n=("tard", "size"), t=("tard", "sum"), m=("mins", "sum"))
+    meses = list(pm.index)
+    n_i, n_t, n_m = int(pm["n"].sum()), int(pm["t"].sum()), int(pm["m"].sum())
+    p1, p2, p3, p4 = st.columns(4)
+    p1.markdown(ui_kpi("Puntualidad global", f"{(n_i - n_t) / n_i * 100:.1f}%", f"{n_i} ingresos evaluados"), unsafe_allow_html=True)
+    p2.markdown(ui_kpi("Tardanzas totales", str(n_t), f"{n_m} min acumulados"), unsafe_allow_html=True)
+    p3.markdown(ui_kpi("Tiempo perdido", f"{n_m / 60:.1f} h", "por tardanzas en el período"), unsafe_allow_html=True)
+    p4.markdown(ui_kpi("Tardanza más larga", f"{int(tard['mins'].max())} min" if n_t else "-", ui_dia_label(tard.loc[tard["mins"].idxmax(), "fecha"]) if n_t else "¡Sin tardanzas!"), unsafe_allow_html=True)
+    st.markdown(SP, unsafe_allow_html=True)
+    lbl = [ui_mes_label(m) for m in meses]
+    g1, g2 = st.columns(2)
+    g1.markdown(ui_panel("Tus tardanzas por mes", "Evolución en el período", ui_linea(lbl, [int(pm.loc[m, "t"]) for m in meses], "#EC3237")), unsafe_allow_html=True)
+    g2.markdown(ui_panel("Tu puntualidad por mes", "% de ingresos a tiempo", ui_linea(lbl, [round(100 - pm.loc[m, "t"] / pm.loc[m, "n"] * 100, 1) for m in meses], "#0B8F57", "{:g}", "%")), unsafe_allow_html=True)
+    st.markdown(SP, unsafe_allow_html=True)
+    dias_n = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"]
+    dow_t = tard.groupby("dow").size().reindex(range(7), fill_value=0)
+    etq = ["1–5 min", "6–15 min", "16–30 min", "31–60 min", "+60 min"]
+    grav = pd.cut(tard["mins"], bins=[0, 5, 15, 30, 60, 10**5], labels=etq).value_counts().reindex(etq, fill_value=0)
+    k1, k2 = st.columns(2)
+    k1.markdown(ui_panel("Tardanzas por día de la semana", "¿Qué días llegas más tarde?", ui_columnas(dias_n, [("Tardanzas", [int(v) for v in dow_t.values], "#EC3237")], alto=200)), unsafe_allow_html=True)
+    k2.markdown(ui_panel("Gravedad de tus tardanzas", "Cuántos minutos llegas tarde", ui_columnas(etq, [("Tardanzas", [int(v) for v in grav.values], "#F59E0B")], alto=200)), unsafe_allow_html=True)
+    por_dia = tard.groupby("fecha")["mins"].sum().sort_index().tail(31)
+    if len(por_dia) > 1:
+        st.markdown(SP, unsafe_allow_html=True)
+        st.markdown(ui_panel("Minutos de tardanza por día", "Últimos 31 días con tardanzas", ui_columnas([ui_dia_label(d) for d in por_dia.index], [("Minutos", [int(v) for v in por_dia.values], "#0F172A")], alto=190)), unsafe_allow_html=True)
+    st.markdown(SP, unsafe_allow_html=True)
+    ext = {}
+    try:
+        for f_x, gx in dfa.groupby("fecha"):
+            gx = gx.copy()
+            gx["dt"] = pd.to_datetime(gx["fecha_hora"], errors="coerce")
+            gx = gx.dropna(subset=["dt"])
+            if not gx.empty:
+                ext[str(f_x)[:7]] = ext.get(str(f_x)[:7], 0) + calcular_jornada_y_horas_extras(gx)[1]
+    except Exception:
+        ext = {}
+    ult_t = tard.sort_values("fecha_hora", ascending=False).head(5)
+    filas_u = "".join(f'<div class="tp-row"><div class="tp-row-time">{ui_dia_label(r["fecha"])}</div><div class="tp-row-main"><b>Ingreso a las {str(r["fecha_hora"])[11:16]}</b></div><div class="tp-chips">{ui_chip(str(int(r["mins"])) + " min tarde", "bad")}</div></div>' for _, r in ult_t.iterrows()) or '<div class="tp-card-sub">¡Sin tardanzas en el período, felicitaciones!</div>'
+    e1, e2 = st.columns(2)
+    e1.markdown(ui_panel("Tus horas extras por mes", "Tiempo trabajado sobre la jornada base de 5h 45m", ui_linea(lbl, [round(ext.get(m, 0) / 60, 1) for m in meses], "#F59E0B", "{:g}", " h")), unsafe_allow_html=True)
+    e2.markdown(ui_panel("Tus últimas tardanzas", "Las 5 más recientes", filas_u), unsafe_allow_html=True)
 
 # --- COMPONENTES UI REUTILIZABLES ---
 def ui_iniciales(nombre):
@@ -3502,6 +3563,17 @@ elif choice == "Mi Dashboard Mensual":
         st.markdown(ui_desc_card(user_actual, _d_me, dni_actual, _foto_actual), unsafe_allow_html=True)
     else:
         ui_callout(f"Sin registros de descuadres en {periodo_dash}.", "ok")
+
+    st.markdown("<div style='height:18px'></div>", unsafe_allow_html=True)
+    st.markdown('<div class="tp-sec"><div><div class="tp-sec-title">Tu histórico de puntualidad</div><div class="tp-sec-sub">Cómo ha evolucionado tu asistencia en el tiempo. Solo tú puedes ver esta información.</div></div></div>', unsafe_allow_html=True)
+    rango_h = st.selectbox("Período del histórico", ["Últimos 3 meses", "Últimos 6 meses", "Todo mi historial"], index=1, key="mi_hist_rango")
+    _meses_h = {"Últimos 3 meses": 3, "Últimos 6 meses": 6}.get(rango_h)
+    _corte_h = (pd.Timestamp(ahora_dash.replace(day=1).date()) - pd.DateOffset(months=_meses_h - 1)) if _meses_h else None
+    if st.session_state.asistencia.empty:
+        ui_callout("Aún no hay marcaciones registradas para mostrar tu histórico.", "info")
+    else:
+        _asist_me = st.session_state.asistencia[st.session_state.asistencia["dni"].astype(str) == str(dni_actual)]
+        render_hist_puntualidad(_asist_me, _corte_h)
 
 # -------------------- MÓDULOS ADMIN --------------------
 
