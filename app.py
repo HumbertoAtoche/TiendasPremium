@@ -1878,8 +1878,10 @@ if not st.session_state.usuario_login:
 .tp-lg-feat{display:grid;gap:10px;margin-top:26px;max-width:460px;}
 .tp-lg-feat div{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:12px 14px;font-size:.87rem;font-weight:600;color:#E6ECF8;}
 .tp-lg-feat i{flex:0 0 auto;width:32px;height:32px;border-radius:10px;background:rgba(236,50,55,.2);color:#FF8A8E;display:flex;align-items:center;justify-content:center;}
-.tp-lg-stats{display:flex;gap:30px;flex-wrap:wrap;margin-top:26px;color:#8EA0BE;font-size:.76rem;}
-.tp-lg-stats b{display:block;font-size:1.6rem;color:#fff;font-weight:800;line-height:1.1;}
+.tp-lg-quote{position:relative;margin-top:26px;padding:18px 20px 18px 24px;border-radius:16px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);}
+.tp-lg-quote::before{content:"";position:absolute;left:0;top:16px;bottom:16px;width:4px;border-radius:4px;background:#EC3237;}
+.tp-lg-quote small{display:block;font-size:.68rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#FF8A8E;margin-bottom:8px;}
+.tp-lg-quote p{margin:0;font-size:1.1rem;font-weight:600;line-height:1.5;color:#fff;}
 .tp-lg-spacer{height:64px;}
 .tp-lg-who{display:flex;flex-direction:column;align-items:center;text-align:center;margin-bottom:10px;animation:tpPop .4s ease;}
 .tp-lg-who .tp-avatar{box-shadow:0 0 0 3px #fff,0 0 0 6px var(--tp-red),0 14px 30px -10px rgba(236,50,55,.55);}
@@ -1892,7 +1894,7 @@ if not st.session_state.usuario_login:
 .st-key-tpc_login_form .stButton>button{min-height:52px;border:none!important;background:linear-gradient(135deg,#EC3237,#C9262B)!important;box-shadow:0 14px 26px -12px rgba(236,50,55,.7);}
 .st-key-tpc_login_form .stButton>button *{color:#fff!important;font-weight:700;}
 .tp-lg-note{display:flex;gap:8px;align-items:center;justify-content:center;font-size:.76rem;color:var(--tp-mute);margin-top:14px;}
-@media (max-width:900px){.tp-lg-hero{min-height:0;padding:22px;border-radius:22px;}.tp-lg-k{margin-top:20px;}.tp-lg-h{font-size:1.5rem;}.tp-lg-feat,.tp-lg-stats,.tp-lg-spacer{display:none;}}
+@media (max-width:900px){.tp-lg-hero{min-height:0;padding:22px;border-radius:22px;}.tp-lg-k{margin-top:20px;}.tp-lg-h{font-size:1.5rem;}.tp-lg-feat,.tp-lg-spacer{display:none;}.tp-lg-quote{margin-top:16px;padding:14px 16px 14px 20px;}.tp-lg-quote p{font-size:.95rem;}}
 </style>
 """, unsafe_allow_html=True)
 
@@ -1901,10 +1903,28 @@ if not st.session_state.usuario_login:
     _i2 = _ico("<path d='M7 3h7l4 4v14H7z'/><path d='M14 3v4h4M9.5 13h5M9.5 17h5'/>")
     _i3 = _ico("<path d='M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z'/><path d='M9 12l2 2 4-4'/>")
     _lock = _ico("<rect x='5' y='11' width='14' height='9' rx='2'/><path d='M8 11V8a4 4 0 018 0v3'/>")
-    _n_col = sum(1 for _d in USUARIOS.values() if isinstance(_d, dict) and _d.get("rol") != "admin")
+    _FRASES = [
+        "Cada cliente que sale con una sonrisa es una venta que vuelve.",
+        "Hoy es un buen día para superar la meta de ayer.",
+        "Una buena actitud vende más que cualquier oferta.",
+        "Atender con ganas es la mejor estrategia de ventas.",
+        "Saluda, sonríe y ofrece: los pequeños detalles hacen grandes ventas.",
+        "El éxito del equipo se construye una venta a la vez.",
+        "Tu energía se contagia: empieza con pilas y se nota en la caja.",
+        "Cada cliente es una oportunidad de hacerle el día mejor.",
+        "La constancia convierte un buen turno en un gran mes.",
+        "Trabajando en equipo, las metas se hacen más pequeñas.",
+        "Una venta bien atendida es un cliente para toda la vida.",
+        "Actitud positiva, ventas positivas.",
+        "Tú eres la cara de Premium: haz que te recuerden.",
+        "Hoy cuenta: ofrece, sonríe y deja huella.",
+    ]
+    _ahora_lg = obtener_ahora_peru()
+    _frase = _FRASES[_ahora_lg.toordinal() % len(_FRASES)]
+    _saludo_h = "Buenos días" if _ahora_lg.hour < 12 else ("Buenas tardes" if _ahora_lg.hour < 19 else "Buenas noches")
     _hero = f"""<div class="tp-lg-hero"><div>
 <span class="tp-lg-logo">{logo_tag_app39(40)}</span>
-<div class="tp-lg-k">Sistema de control interno</div>
+<div class="tp-lg-k">{_saludo_h}, equipo Premium</div>
 <div class="tp-lg-h">Tu equipo y tu operación, <em>en un solo lugar.</em></div>
 <p class="tp-lg-p">Asistencia, planillas, vacaciones y solicitudes de Tiendas Premium, con información clara y al instante.</p>
 <div class="tp-lg-feat">
@@ -1912,7 +1932,7 @@ if not st.session_state.usuario_login:
 <div><i>{_i2}</i>Boletas, vacaciones y permisos en línea</div>
 <div><i>{_i3}</i>Acceso protegido con cierre automático de sesión</div>
 </div></div>
-<div class="tp-lg-stats"><div><b>{_n_col}</b>colaboradores en el sistema</div><div><b>5h 45m</b>jornada base</div></div></div>"""
+<div class="tp-lg-quote"><small>Frase del día</small><p>{_frase}</p></div></div>"""
     c_hero, c_form = st.columns([1.15, 1], gap="large")
     with c_hero:
         st.markdown("".join(x.strip() for x in _hero.splitlines()), unsafe_allow_html=True)
