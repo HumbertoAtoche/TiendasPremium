@@ -1734,7 +1734,12 @@ st.markdown("""
 
 st.markdown("""
 <style>
-.st-key-tipo_sol_radio [role="radiogroup"]{gap:10px;flex-wrap:wrap;justify-content:center;}
+.st-key-tipo_sol_radio{width:100%!important;}
+.st-key-tipo_sol_radio [data-testid="stRadio"]{width:100%;display:flex;flex-direction:column;align-items:center;}
+.st-key-tipo_sol_radio [data-testid="stWidgetLabel"]{width:100%;}
+.st-key-tipo_sol_radio [role="radiogroup"]{gap:10px;flex-wrap:wrap;justify-content:center;width:100%;}
+.stFormSubmitButton>button{background:linear-gradient(135deg,#EC3237,#C9262B)!important;border:none!important;box-shadow:0 14px 26px -12px rgba(236,50,55,.6);}
+.stFormSubmitButton>button *{color:#fff!important;font-weight:700;}
 .st-key-tipo_sol_radio [data-testid="stWidgetLabel"]{justify-content:center;margin-bottom:6px;}
 .st-key-tipo_sol_radio [data-testid="stWidgetLabel"] p{font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--tp-mute);text-align:center;}
 .st-key-tipo_sol_radio [role="radiogroup"] label{border:1.5px solid var(--tp-line);background:#fff;border-radius:14px;padding:12px 18px;cursor:pointer;transition:all .12s ease;box-shadow:var(--tp-sh-1);}
