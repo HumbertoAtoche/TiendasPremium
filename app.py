@@ -1631,6 +1631,77 @@ def ui_linea(labels, vals, color="#EC3237", fmt="{:g}", suf="", alto=230):
             f'<stop offset="1" stop-color="{color}" stop-opacity="0"/></linearGradient></defs><line x1="{px - 10}" y1="{H - bot}" x2="{W - px + 10}" y2="{H - bot}" stroke="#E3E6EC"/>'
             f'<polygon points="{area}" fill="url(#{gid})"/><polyline points="{linea}" fill="none" stroke="{color}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>{txt}</svg>')
 
+st.markdown("""
+<style>
+[data-testid="stElementContainer"]:has(iframe[height="0"]){display:none;}
+.tp-steps{margin:2px 0 14px;padding:0;list-style:none;counter-reset:paso;}
+.tp-steps li{counter-increment:paso;position:relative;padding:5px 0 5px 34px;font-size:.84rem;line-height:1.45;color:var(--tp-ink-2);}
+.tp-steps li::before{content:counter(paso);position:absolute;left:0;top:4px;width:23px;height:23px;border-radius:50%;background:var(--tp-red-soft);color:var(--tp-red-dk);font-weight:700;font-size:.74rem;display:flex;align-items:center;justify-content:center;}
+.tp-steps-t{font-size:.7rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--tp-mute);margin:8px 0 4px;display:flex;gap:8px;align-items:center;}
+</style>
+""", unsafe_allow_html=True)
+
+@st.cache_resource(show_spinner=False)
+def ui_icono_app():
+    """Ícono cuadrado con fondo blanco y el logo centrado (180 px iPhone, 512 px Android)."""
+    import io
+    from PIL import Image, ImageDraw, ImageFont
+    def _icono(sz):
+        im = Image.new("RGBA", (sz, sz), (255, 255, 255, 255))
+        try:
+            ruta = FAVICON_PATH if os.path.exists(FAVICON_PATH) else LOGO_PATH
+            lg = Image.open(ruta).convert("RGBA")
+            lg.thumbnail((int(sz * 0.74), int(sz * 0.74)), Image.LANCZOS)
+            im.paste(lg, ((sz - lg.width) // 2, (sz - lg.height) // 2), lg)
+        except Exception:
+            d = ImageDraw.Draw(im)
+            d.rounded_rectangle((sz * .12, sz * .12, sz * .88, sz * .88), radius=sz * .2, fill=(236, 50, 55, 255))
+            try:
+                d.text((sz * .5, sz * .5), "P", fill="white", anchor="mm", font=ImageFont.load_default(size=int(sz * .5)))
+            except Exception:
+                pass
+        buf = io.BytesIO()
+        im.convert("RGB").save(buf, "PNG")
+        return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode("ascii")
+    return _icono(180), _icono(512)
+
+def ui_pwa_inyectar():
+    """Pide al celular: ícono propio, nombre corto, color de marca y pantalla completa al añadir a inicio."""
+    try:
+        i180, i512 = ui_icono_app()
+    except Exception:
+        return
+    js = """<script>(function(){try{
+var d=window.parent.document,h=d.head;
+function meta(n,c){var m=d.querySelector('meta[name="'+n+'"]');if(!m){m=d.createElement('meta');m.name=n;h.appendChild(m);}m.content=c;}
+d.querySelectorAll('link[rel="apple-touch-icon"],link[rel="manifest"]').forEach(function(e){e.remove();});
+var a=d.createElement('link');a.rel='apple-touch-icon';a.setAttribute('sizes','180x180');a.href='__I180__';h.appendChild(a);
+meta('apple-mobile-web-app-capable','yes');meta('mobile-web-app-capable','yes');
+meta('apple-mobile-web-app-title','Premium');meta('application-name','Premium');
+meta('apple-mobile-web-app-status-bar-style','default');meta('theme-color','#EC3237');
+var L=window.parent.location,mf={name:'Tiendas Premium',short_name:'Premium',start_url:L.origin+L.pathname,scope:L.origin+'/',display:'standalone',
+background_color:'#FFFFFF',theme_color:'#EC3237',icons:[{src:'__I512__',sizes:'512x512',type:'image/png',purpose:'any'}]};
+var m=d.createElement('link');m.rel='manifest';m.href='data:application/manifest+json,'+encodeURIComponent(JSON.stringify(mf));h.appendChild(m);
+}catch(e){}})();</script>"""
+    components.html(js.replace("__I180__", i180).replace("__I512__", i512), height=0)
+
+def ui_guia_instalar(cont):
+    ua = ""
+    try:
+        ua = str(st.context.headers.get("User-Agent", ""))
+    except Exception:
+        pass
+    es_ios, es_and = any(x in ua for x in ("iPhone", "iPad", "iPod")), "Android" in ua
+    ios = ('<div class="tp-steps-t">iPhone · Safari ' + (ui_chip("Tu dispositivo", "ok") if es_ios else "") + '</div><ol class="tp-steps">'
+           '<li>Abre esta página en <b>Safari</b>.</li><li>Toca el botón <b>Compartir</b> (cuadro con flecha hacia arriba).</li>'
+           '<li>Elige <b>Añadir a pantalla de inicio</b>.</li><li>Toca <b>Añadir</b>. Listo: aparece el ícono de Premium.</li></ol>')
+    andr = ('<div class="tp-steps-t">Android · Chrome ' + (ui_chip("Tu dispositivo", "ok") if es_and else "") + '</div><ol class="tp-steps">'
+            '<li>Abre esta página en <b>Chrome</b>.</li><li>Toca el menú <b>⋮</b> (arriba a la derecha).</li>'
+            '<li>Elige <b>Instalar app</b> o <b>Añadir a pantalla de inicio</b>.</li><li>Confirma con <b>Instalar</b>.</li></ol>')
+    with cont.expander("Instalar en tu celular"):
+        st.markdown((andr + ios) if es_and else (ios + andr), unsafe_allow_html=True)
+        st.caption("Cada vez que abras la app te pedirá tu DNI y contraseña por seguridad.")
+
 # --- COMPONENTES UI REUTILIZABLES ---
 def ui_iniciales(nombre):
     p = [x for x in str(nombre).split() if x]
@@ -1780,6 +1851,8 @@ for _, row in st.session_state.empleados.iterrows():
             "dni": str(row["dni"])
         }
 
+ui_pwa_inyectar()
+
 # --- LOGIN MINIMALISTA ---
 if not st.session_state.usuario_login:
     st.markdown("<br><br>", unsafe_allow_html=True)
@@ -1809,6 +1882,8 @@ if not st.session_state.usuario_login:
                     st.rerun()
                 else:
                     st.error("DNI o contraseña incorrectos. Revisa los datos e intenta de nuevo.")
+    with c_log2:
+        ui_guia_instalar(st)
     st.stop()
 
 # --- NUEVO: CONTROL DE EXPIRACIÓN DE SESIÓN ---
@@ -2765,6 +2840,7 @@ except Exception:
 
 st.sidebar.markdown("<br><br>", unsafe_allow_html=True)
 st.sidebar.markdown('<div class="btn-logout">', unsafe_allow_html=True)
+ui_guia_instalar(st.sidebar)
 if st.sidebar.button("Cerrar Sesión", use_container_width=True):
     registrar_auditoria("Cierre de Sesión", "Usuarios", f"{user_actual} cerró sesión.")
     st.session_state.usuario_login = None
