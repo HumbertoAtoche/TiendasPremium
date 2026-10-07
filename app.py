@@ -1714,11 +1714,12 @@ st.markdown("""
 .tp-al-ico{flex:0 0 auto;width:42px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;}
 .tp-al-ico.bad{background:var(--tp-bad-soft);color:var(--tp-bad);} .tp-al-ico.warn{background:var(--tp-warn-soft);color:var(--tp-warn);} .tp-al-ico.info{background:var(--tp-info-soft);color:var(--tp-info);} .tp-al-ico.ok{background:var(--tp-ok-soft);color:var(--tp-ok);}
 /* Saludo de cumpleaños */
-.tp-bd{overflow:hidden;border-radius:22px;border:1px solid var(--tp-line);background:#fff;}
-.tp-bd-top{position:relative;height:150px;background:linear-gradient(135deg,#EC3237 0%,#A3202A 55%,#0F172A 135%);overflow:hidden;}
+.tp-bd{position:relative;overflow:hidden;border-radius:22px;border:1px solid var(--tp-line);background:#fff;}
+.tp-bd-top{position:relative;height:150px;background:linear-gradient(135deg,#EC3237 0%,#A3202A 55%,#0F172A 135%);}
+.tp-bd-conf{position:absolute;inset:0;overflow:hidden;}
 .tp-bd-top i{position:absolute;top:-16px;width:9px;height:15px;border-radius:2px;opacity:.95;animation:tpFall 3.4s linear infinite;}
 @keyframes tpFall{to{transform:translateY(200px) rotate(320deg);opacity:0;}}
-.tp-bd-photo{position:absolute;left:50%;bottom:-52px;transform:translateX(-50%);z-index:2;}
+.tp-bd-photo{position:absolute;left:50%;top:94px;transform:translateX(-50%);z-index:2;}
 .tp-bd-photo .tp-avatar{box-shadow:0 0 0 5px #fff,0 18px 34px -12px rgba(15,23,42,.5);}
 .tp-bd-body{padding:68px 26px 22px;text-align:center;}
 .tp-bd-k{font-size:.7rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--tp-red);}
@@ -2074,12 +2075,12 @@ def _mostrar_modal_cumpleanos(nombre_usuario):
     confeti = "".join(f'<i style="left:{(i * 53) % 97 + 1}%;background:{colores[i % 8]};animation-delay:{(i % 7) * 0.45:.2f}s;animation-duration:{3 + (i % 4) * 0.5:.1f}s"></i>' for i in range(22))
     primer_nombre = _html.escape(nombre_usuario.split(" ")[0])
     chip_edad = ui_chip(f"Hoy cumples {edad} años", "ok") if 14 <= edad <= 90 else ""
-    html_bd = (f'<div class="tp-bd"><div class="tp-bd-top">{confeti}<div class="tp-bd-photo">{ui_avatar(nombre_usuario, dni_c, foto_c, 112)}</div></div>'
+    html_bd = (f'<div class="tp-bd"><div class="tp-bd-top"><div class="tp-bd-conf">{confeti}</div></div><div class="tp-bd-photo">{ui_avatar(nombre_usuario, dni_c, foto_c, 112)}</div>'
                f'<div class="tp-bd-body"><div class="tp-bd-k">Hoy es tu día</div><div class="tp-bd-h">¡Feliz cumpleaños, {primer_nombre}!</div>{chip_edad}'
-               '<div class="tp-bd-msg">De parte de todo el equipo de <b>Tiendas Premium E.I.R.L.</b>, te deseamos un día lleno de alegría junto a tus seres queridos. '
-               'Gracias por tu compromiso, esfuerzo y dedicación. ¡Que este nuevo año de vida venga con muchos éxitos, salud y metas cumplidas!</div>'
-               '<div class="tp-bd-big">¡Feliz cumpleaños y a seguir creciendo juntos!</div>'
-               '<div class="tp-bd-sign">Con cariño,<br><b>Tiendas Premium E.I.R.L.</b></div></div></div>')
+               '<div class="tp-bd-msg">Hoy el protagonista eres tú. En Premium valoramos de verdad tu esfuerzo y todo lo que aportas cada día: tu trabajo hace la diferencia y este equipo no sería el mismo sin ti. '
+               'Queremos que te sientas aquí como en casa, escuchado y respaldado. Que este nuevo año de vida te regale salud, alegrías y muchos motivos para sonreír.</div>'
+               '<div class="tp-bd-big">Gracias por ser parte de esta familia.</div>'
+               '<div class="tp-bd-sign">Con cariño,<br><b>tu familia Premium</b> · Tiendas Premium E.I.R.L.</div></div></div>')
 
     @st.dialog("Un día muy especial")
     def _dialogo_cumpleanos():
