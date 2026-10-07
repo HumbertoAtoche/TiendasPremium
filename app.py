@@ -1892,20 +1892,23 @@ if not st.session_state.usuario_login:
 <style>
 .stApp:has(.tp-lg-hero){background:radial-gradient(1100px 560px at 8% -10%,#FDECEC 0%,transparent 60%),radial-gradient(900px 520px at 100% 110%,#E4EBF8 0%,transparent 58%),var(--tp-bg);}
 .stApp:has(.tp-lg-hero) .block-container{padding-top:1rem;padding-bottom:1rem;max-width:1120px;}
-.tp-lg-hero{position:relative;overflow:hidden;border-radius:26px;padding:28px 32px;min-height:min(540px,calc(100vh - 56px));color:#fff;display:flex;flex-direction:column;justify-content:space-between;gap:18px;
+.tp-lg-hero{position:relative;overflow:hidden;border-radius:26px;padding:28px 32px;min-height:min(560px,calc(100vh - 56px));color:#fff;display:flex;flex-direction:column;justify-content:space-between;gap:18px;
   background:linear-gradient(150deg,#0B1220 0%,#111C33 55%,#1B2A4A 100%);box-shadow:0 30px 60px -30px rgba(15,23,42,.6);}
 .tp-lg-hero::before{content:"";position:absolute;width:540px;height:540px;right:-190px;top:-170px;border-radius:50%;background:radial-gradient(circle,rgba(236,50,55,.55),rgba(236,50,55,0) 68%);}
 .tp-lg-hero::after{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px);background-size:44px 44px;-webkit-mask-image:linear-gradient(180deg,#000,transparent 88%);mask-image:linear-gradient(180deg,#000,transparent 88%);}
 .tp-lg-hero>*{position:relative;z-index:1;}
 .tp-lg-logo{display:inline-flex;background:#fff;border-radius:14px;padding:8px 16px;box-shadow:0 12px 30px -12px rgba(0,0,0,.6);}
-.tp-lg-k{font-size:.74rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#FF8A8E;margin:26px 0 4px;}
-.tp-lg-lbl{font-size:.68rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#9FB0CC;}
-.tp-lg-phrase{font-size:clamp(1.6rem,2.1vw + .8rem,2.4rem);font-weight:800;line-height:1.2;letter-spacing:-.02em;color:#fff;margin:12px 0 0;padding-left:20px;border-left:5px solid #EC3237;}
-.tp-lg-sub{color:#B7C2D9;font-size:.95rem;margin-top:16px;}
-.tp-lg-chips{display:flex;gap:8px;flex-wrap:wrap;}
-.tp-lg-chips div{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:6px 12px 6px 7px;font-size:.76rem;font-weight:600;color:#E6ECF8;}
-.tp-lg-chips i{width:22px;height:22px;border-radius:50%;background:rgba(236,50,55,.25);color:#FF8A8E;display:flex;align-items:center;justify-content:center;}
-.tp-lg-chips svg{width:13px;height:13px;}
+.tp-lg-k{font-size:.72rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#FF8A8E;margin:22px 0 8px;}
+.tp-lg-h{font-size:clamp(1.55rem,1.5vw + 1rem,1.95rem);font-weight:800;line-height:1.15;letter-spacing:-.02em;margin:0 0 10px;color:#fff;}
+.tp-lg-h em{font-style:normal;color:#FF6B70;}
+.tp-lg-p{color:#B7C2D9;font-size:.88rem;line-height:1.55;max-width:430px;margin:0;}
+.tp-lg-feat{display:grid;gap:8px;margin-top:18px;max-width:440px;}
+.tp-lg-feat div{display:flex;align-items:center;gap:11px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:13px;padding:9px 12px;font-size:.82rem;font-weight:600;color:#E6ECF8;}
+.tp-lg-feat i{flex:0 0 auto;width:28px;height:28px;border-radius:9px;background:rgba(236,50,55,.2);color:#FF8A8E;display:flex;align-items:center;justify-content:center;}
+.tp-lg-quote{position:relative;padding:15px 18px 15px 24px;border-radius:15px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);}
+.tp-lg-quote::before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:4px;border-radius:4px;background:#EC3237;}
+.tp-lg-quote small{display:block;font-size:.66rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#FF8A8E;margin-bottom:6px;}
+.tp-lg-quote p{margin:0;font-size:1.08rem;font-weight:700;line-height:1.45;color:#fff;}
 .tp-lg-who{display:flex;flex-direction:column;align-items:center;text-align:center;margin-bottom:6px;animation:tpPop .4s ease;}
 .tp-lg-who .tp-avatar{box-shadow:0 0 0 3px #fff,0 0 0 6px var(--tp-red),0 14px 30px -10px rgba(236,50,55,.55);}
 .tp-lg-t{font-size:1.4rem;font-weight:800;color:var(--tp-ink);margin-top:12px;letter-spacing:-.01em;}
@@ -1917,8 +1920,8 @@ if not st.session_state.usuario_login:
 .st-key-tpc_login_form .stButton>button{min-height:50px;border:none!important;background:linear-gradient(135deg,#EC3237,#C9262B)!important;box-shadow:0 14px 26px -12px rgba(236,50,55,.7);}
 .st-key-tpc_login_form .stButton>button *{color:#fff!important;font-weight:700;}
 .tp-lg-note{text-align:center;font-size:.74rem;color:var(--tp-mute);margin-top:10px;}
-@media (max-height:760px){.tp-lg-sub,.tp-lg-chips{display:none;}.tp-lg-hero{min-height:0;}}
-@media (max-width:900px){.tp-lg-hero{min-height:0;padding:20px 22px;border-radius:22px;}.tp-lg-chips,.tp-lg-sub{display:none;}.tp-lg-phrase{font-size:1.35rem;}.tp-lg-k{margin-top:14px;}}
+@media (max-height:800px){.tp-lg-feat{display:none;}.tp-lg-hero{min-height:0;}}
+@media (max-width:900px){.tp-lg-hero{min-height:0;padding:20px 22px;border-radius:22px;}.tp-lg-feat,.tp-lg-p{display:none;}.tp-lg-h{font-size:1.4rem;}.tp-lg-k{margin-top:14px;}.tp-lg-quote{padding:12px 14px 12px 20px;}.tp-lg-quote p{font-size:.95rem;}}
 </style>
 """, unsafe_allow_html=True)
 
@@ -1947,12 +1950,15 @@ if not st.session_state.usuario_login:
     _frase = _FRASES[_ahora_lg.toordinal() % len(_FRASES)]
     _saludo_h = "Buenos días" if _ahora_lg.hour < 12 else ("Buenas tardes" if _ahora_lg.hour < 19 else "Buenas noches")
     _hero = f"""<div class="tp-lg-hero"><div>
-<span class="tp-lg-logo">{logo_tag_app39(34)}</span>
+<span class="tp-lg-logo">{logo_tag_app39(36)}</span>
 <div class="tp-lg-k">{_saludo_h}, equipo Premium</div>
-<div class="tp-lg-lbl">Frase del día</div>
-<div class="tp-lg-phrase">{_frase}</div>
-<div class="tp-lg-sub">Que tengas un excelente turno y muchas ventas.</div></div>
-<div class="tp-lg-chips"><div><i>{_i1}</i>Asistencia en tiempo real</div><div><i>{_i2}</i>Boletas y permisos en línea</div><div><i>{_i3}</i>Acceso protegido</div></div></div>"""
+<div class="tp-lg-h">Tu equipo y tu operación, <em>en un solo lugar.</em></div>
+<p class="tp-lg-p">Asistencia, planillas, vacaciones y solicitudes de Tiendas Premium, con información clara y al instante.</p>
+<div class="tp-lg-feat">
+<div><i>{_i1}</i>Asistencia y jornada en tiempo real</div>
+<div><i>{_i2}</i>Boletas, vacaciones y permisos en línea</div>
+</div></div>
+<div class="tp-lg-quote"><small>Frase del día</small><p>{_frase}</p></div></div>"""
     try:
         c_hero, c_form = st.columns([1.15, 1], gap="large", vertical_alignment="center")
     except TypeError:
