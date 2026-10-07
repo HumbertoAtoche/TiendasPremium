@@ -1732,6 +1732,29 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+st.markdown("""
+<style>
+.st-key-tipo_sol_radio [role="radiogroup"]{gap:10px;flex-wrap:wrap;}
+.st-key-tipo_sol_radio label{border:1.5px solid var(--tp-line);background:#fff;border-radius:14px;padding:12px 18px;cursor:pointer;transition:all .12s ease;box-shadow:var(--tp-sh-1);}
+.st-key-tipo_sol_radio label>*:not(input):not([data-testid="stMarkdownContainer"]):not(:has([data-testid="stMarkdownContainer"])){display:none!important;}
+.st-key-tipo_sol_radio label p{font-weight:650;font-size:.9rem;color:var(--tp-ink-2);margin:0;}
+.st-key-tipo_sol_radio label:hover{border-color:#CBD2DC;}
+.st-key-tipo_sol_radio label:has(input:checked){border-color:var(--tp-red);background:var(--tp-red-soft);}
+.st-key-tipo_sol_radio label:has(input:checked) p{color:var(--tp-red-dk);}
+[class*="st-key-form_nuevo_"] button,[class*="st-key-form_domingo"] button{background:linear-gradient(135deg,#EC3237,#C9262B)!important;border:none!important;box-shadow:0 14px 26px -12px rgba(236,50,55,.6);}
+[class*="st-key-form_nuevo_"] button *,[class*="st-key-form_domingo"] button *{color:#fff!important;font-weight:700;}
+.tp-callout{display:flex;gap:12px;align-items:flex-start;border-radius:14px;padding:14px 16px;margin:6px 0 14px;font-size:.88rem;line-height:1.55;color:var(--tp-ink-2);border:1px solid var(--tp-line);}
+.tp-callout.info{background:var(--tp-info-soft);border-color:#C7D8FB;} .tp-callout.ok{background:var(--tp-ok-soft);border-color:#BFE8D2;} .tp-callout.warn{background:var(--tp-warn-soft);border-color:#F8DE95;}
+.tp-callout i{flex:0 0 auto;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-style:normal;font-weight:800;font-size:.8rem;background:#fff;}
+.tp-callout.info i{color:var(--tp-info);} .tp-callout.ok i{color:var(--tp-ok);} .tp-callout.warn i{color:var(--tp-warn);}
+</style>
+""", unsafe_allow_html=True)
+
+def ui_callout(texto, tono="info"):
+    t = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", _html.escape(str(texto)))
+    ic = {"info": "i", "ok": "✓", "warn": "!"}[tono]
+    st.markdown(f'<div class="tp-callout {tono}"><i>{ic}</i><div>{t}</div></div>', unsafe_allow_html=True)
+
 # --- COMPONENTES UI REUTILIZABLES ---
 def ui_iniciales(nombre):
     p = [x for x in str(nombre).split() if x]
@@ -3184,10 +3207,17 @@ elif choice == "Solicitar Permiso / Adelanto":
         </div>
     """, unsafe_allow_html=True)
 
+    _sol_me = st.session_state.solicitudes[st.session_state.solicitudes["dni"].astype(str) == str(dni_actual)] if not st.session_state.solicitudes.empty else pd.DataFrame(columns=["estado"])
+    _cnt = lambda e: int((_sol_me["estado"] == e).sum()) if not _sol_me.empty else 0
+    _q1, _q2, _q3 = st.columns(3)
+    _q1.markdown(ui_kpi("En revisión", str(_cnt("Pendiente")), "esperan respuesta"), unsafe_allow_html=True)
+    _q2.markdown(ui_kpi("Aprobadas", str(_cnt("Aprobado")), "en tu historial"), unsafe_allow_html=True)
+    _q3.markdown(ui_kpi("Rechazadas", str(_cnt("Rechazado")), "en tu historial"), unsafe_allow_html=True)
+    st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
     t_sol, t_hist = st.tabs(["Nueva Solicitud", "Mi Historial de Solicitudes"])
 
     with t_sol:
-        tipo_sol = st.selectbox("Tipo de Solicitud", ["Permiso Laboral", "Adelanto de Sueldo", "Trabajar Domingo (Descanso)"])
+        tipo_sol = st.radio("Tipo de solicitud", ["Permiso Laboral", "Adelanto de Sueldo", "Trabajar Domingo (Descanso)"], horizontal=True, key="tipo_sol_radio")
 
         hoy_peru = obtener_ahora_peru().date()
         fecha_minima_permiso = hoy_peru + timedelta(days=7)
@@ -3197,14 +3227,14 @@ elif choice == "Solicitar Permiso / Adelanto":
         fecha_recuperacion_sel = None
 
         if tipo_sol == "Permiso Laboral":
-            st.info("**Regla de Permisos:** Toda solicitud de permiso debe realizarse con un mínimo de **7 días de anticipación**.")
+            ui_callout("**Regla de Permisos:** Toda solicitud de permiso debe realizarse con un mínimo de **7 días de anticipación**.")
             f_permiso_sel = st.date_input("Fecha solicitada para el permiso", value=fecha_minima_permiso, min_value=fecha_minima_permiso, key="fecha_permiso_nueva")
             f_permiso_val = str(f_permiso_sel)
 
             st.markdown("##### Recuperación del día")
             requiere_recuperacion = st.checkbox("¿Deseas recuperar el día del permiso?", value=False, key="requiere_recuperacion_nueva")
             if requiere_recuperacion:
-                st.success("Selecciona el día en que deseas recuperar el permiso. **Los domingos también están habilitados.**")
+                ui_callout("Selecciona el día en que deseas recuperar el permiso. **Los domingos también están habilitados.**", "ok")
                 fecha_min_rec = f_permiso_sel + timedelta(days=1)
                 fecha_recuperacion_sel = st.date_input("Día a recuperar", value=fecha_min_rec, min_value=fecha_min_rec, key="fecha_recuperacion_nueva", help="Puedes seleccionar cualquier fecha, incluido domingo.")
                 dias_semana = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
@@ -3215,7 +3245,7 @@ elif choice == "Solicitar Permiso / Adelanto":
                 enviar_solicitud = st.form_submit_button("Enviar Solicitud", use_container_width=True)
 
         elif tipo_sol == "Trabajar Domingo (Descanso)":
-            st.info("**Trabajar tu día de descanso:** Si tu descanso semanal es el domingo y deseas trabajar ese día, solicita autorización previa aquí. Una vez aprobada, podrás marcar tu asistencia ese domingo y en tu boleta se reflejará claramente como un día adicional trabajado (no como una falta ni un domingo normal de descanso).")
+            ui_callout("**Trabajar tu día de descanso:** Si tu descanso semanal es el domingo y deseas trabajar ese día, solicita autorización previa aquí. Una vez aprobada, podrás marcar tu asistencia ese domingo y en tu boleta se reflejará claramente como un día adicional trabajado (no como una falta ni un domingo normal de descanso).")
 
             proximos_domingos = []
             cursor_dom = hoy_peru
@@ -3236,7 +3266,7 @@ elif choice == "Solicitar Permiso / Adelanto":
                 motivo_sol = st.text_area("Motivo o Justificación (opcional)", placeholder="Ej. Necesito cubrir turno, quiero generar ingreso adicional, etc.")
                 enviar_solicitud = st.form_submit_button("Enviar Solicitud", use_container_width=True)
         else:
-            st.info("**Adelanto de Sueldo:** Ingresa el monto total a solicitar y la justificación.")
+            ui_callout("**Adelanto de Sueldo:** Ingresa el monto total a solicitar y la justificación.")
             with st.form("form_nuevo_adelanto", clear_on_submit=True):
                 monto_adel_val = st.number_input("Monto a Solicitar (S/.)", min_value=10.0, step=10.0, format="%.2f")
                 f_permiso_val = str(hoy_peru)
@@ -3379,10 +3409,7 @@ elif choice == "Mi Dashboard Mensual":
     )
 
     periodo_dash = f"{NOMBRES_MESES_DASH[mes_dash_sel - 1]} {int(anio_dash_sel)}"
-    st.caption(
-        f"Indicadores correspondientes únicamente a **{periodo_dash}**. "
-        "Las horas extras y demás métricas no acumulan meses anteriores."
-    )
+    ui_callout(f"Indicadores correspondientes únicamente a **{periodo_dash}**. Las horas extras y demás métricas no acumulan meses anteriores.")
 
     df_mis_desc = pd.DataFrame()
     df_mis_asist = pd.DataFrame()
@@ -3422,65 +3449,59 @@ elif choice == "Mi Dashboard Mensual":
     )
 
     minutos_extras_mes = 0
+    por_dia_dash = {}
     if not df_mis_asist.empty:
         df_mis_asist["dt"] = pd.to_datetime(df_mis_asist["fecha_hora"], errors="coerce")
-        for _, grupo_dia in df_mis_asist.groupby("fecha"):
-            _, mins_e, _, _ = calcular_jornada_y_horas_extras(grupo_dia)
+        for f_dia, grupo_dia in df_mis_asist.groupby("fecha"):
+            m_lab, mins_e, _, _ = calcular_jornada_y_horas_extras(grupo_dia)
             minutos_extras_mes += mins_e
+            por_dia_dash[str(f_dia)] = (m_lab, mins_e)
 
     metricas_p = calcular_metricas_puntualidad(df_mis_asist, user_actual)
+    pct_p = metricas_p["ratio"] if metricas_p["total_ingresos"] else 100
+    tono_p = "ok" if pct_p >= 90 else ("warn" if pct_p >= 75 else "bad")
+    if dias_trabajados == 0:
+        msg_p, chip_p = f"Aún sin marcaciones en {periodo_dash}", "neutral"
+    elif metricas_p["minutos_acumulados"] == 0:
+        msg_p, chip_p = "Mes impecable: ¡sin tardanzas!", "ok"
+    elif pct_p >= 90:
+        msg_p, chip_p = "Vas muy bien este mes", "ok"
+    else:
+        msg_p, chip_p = "Puedes mejorar tu puntualidad", "warn"
+
+    st.markdown(f'<div class="tp-hero"><div class="tp-hero-top">{ui_avatar(user_actual, dni_actual, _foto_actual, 56)}<div><div class="tp-hero-hi">Así va tu {periodo_dash}, {_html.escape(user_actual.split()[0])}</div>{ui_chip(msg_p, chip_p)}</div></div>'
+                f'<div class="tp-prog-lbl"><span>Puntualidad del mes</span><span>{pct_p:g}%</span></div><div class="tp-prog {tono_p}"><i style="width:{min(100, int(pct_p))}%"></i></div></div>', unsafe_allow_html=True)
+    st.markdown("<div style='height:14px'></div>", unsafe_allow_html=True)
+
+    def _kp(lbl, val, sub, tono):
+        return f'<div class="tp-kpi al-{tono}"><div class="tp-kpi-lbl">{lbl}</div><div class="tp-kpi-val">{val}</div><div class="tp-kpi-sub">{sub}</div></div>'
 
     k1, k2, k3, k4 = st.columns(4)
+    k1.markdown(_kp("Días trabajados", str(dias_trabajados), "con marcaciones en el mes", "info"), unsafe_allow_html=True)
+    k2.markdown(_kp("Horas extras", formatear_horas_minutos(minutos_extras_mes), "sobre la jornada base de 5h 45m", "ok" if minutos_extras_mes > 0 else "info"), unsafe_allow_html=True)
+    k3.markdown(_kp("Minutos de tardanza", f"{metricas_p['minutos_acumulados']} m", f"{metricas_p['tardanzas']} tardanza(s) en el mes" if metricas_p["tardanzas"] else "Mes puntual", "ok" if metricas_p["minutos_acumulados"] == 0 else "bad"), unsafe_allow_html=True)
+    k4.markdown(_kp("Balance de descuadres", f"S/. {monto_total:.2f}", "sobrantes menos faltantes", "ok" if monto_total >= 0 else "bad"), unsafe_allow_html=True)
+    st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
 
-    with k1:
-        st.markdown(f"""
-            <div class="info-card">
-                <div class="info-label">Días Trabajados</div>
-                <div class="info-value">{dias_trabajados}</div>
-            </div>
-        """, unsafe_allow_html=True)
-
-    with k2:
-        st.markdown(f"""
-            <div class="info-card">
-                <div class="info-label">Horas Extras Acumuladas</div>
-                <div class="info-value" style="color: #00A959;">{formatear_horas_minutos(minutos_extras_mes)}</div>
-            </div>
-        """, unsafe_allow_html=True)
-
-    with k3:
-        st.markdown(f"""
-            <div class="info-card">
-                <div class="info-label">Minutos Tardanza</div>
-                <div class="info-value" style="color: {'#111827' if metricas_p['minutos_acumulados'] == 0 else '#EC3237'};">{metricas_p['minutos_acumulados']} m</div>
-            </div>
-        """, unsafe_allow_html=True)
-
-    with k4:
-        st.markdown(f"""
-            <div class="info-card">
-                <div class="info-label">Balance Descuadres</div>
-                <div class="info-value" style="color: {'#00A959' if monto_total >= 0 else '#EC3237'};">S/. {monto_total:.2f}</div>
-            </div>
-        """, unsafe_allow_html=True)
-
-    st.markdown(
-        f"<h4 style='font-size:1rem; color:#111827; margin-top:10px;'>"
-        f"Historial Personal — {periodo_dash}</h4>",
-        unsafe_allow_html=True
-    )
-
-    if not df_mis_desc.empty:
-        st.dataframe(
-            df_mis_desc[["fecha", "tipo", "monto", "observacion"]],
-            use_container_width=True,
-            hide_index=True,
-            column_config={
-                "monto": st.column_config.NumberColumn("MONTO", format="S/. %.2f")
-            }
-        )
+    if por_dia_dash:
+        fechas_d = sorted(por_dia_dash)
+        g1, g2 = st.columns([1.6, 1])
+        g1.markdown(ui_panel("Tus horas por día", "Horas trabajadas y horas extras", ui_columnas(
+            [ui_dia_label(f) for f in fechas_d],
+            [("Trabajadas", [round(por_dia_dash[f][0] / 60, 1) for f in fechas_d], "#0F172A"), ("Extras", [round(por_dia_dash[f][1] / 60, 1) for f in fechas_d], "#0B8F57")], alto=200)), unsafe_allow_html=True)
+        g2.markdown(ui_panel("Puntualidad del mes", "Tus ingresos a tiempo",
+                             f'<div class="tp-saldo-n">{pct_p:g}%<span>puntual</span></div><div class="tp-prog {tono_p}"><i style="width:{min(100, int(pct_p))}%"></i></div>'
+                             f'<div class="tp-chips" style="justify-content:flex-start;margin-top:14px">{ui_chip(str(metricas_p["puntuales"]) + " puntuales", "ok")}{ui_chip(str(metricas_p["tardanzas"]) + " tardanzas", "bad" if metricas_p["tardanzas"] else "neutral")}</div>'), unsafe_allow_html=True)
     else:
-        st.info(f"Sin registros de descuadres en {periodo_dash}.")
+        st.markdown(f'<div class="tp-card" style="text-align:center;padding:30px 20px"><div class="tp-card-title">Sin marcaciones en {periodo_dash}</div><div class="tp-card-sub" style="margin-top:6px">Cuando registres tu asistencia verás aquí tus horas y tu puntualidad.</div></div>', unsafe_allow_html=True)
+
+    st.markdown(f"<div class='tp-note-t' style='margin:22px 0 10px'>Tus descuadres de caja · {periodo_dash}</div>", unsafe_allow_html=True)
+    if not df_mis_desc.empty:
+        _d_me = df_mis_desc.copy()
+        _d_me["monto_num"] = pd.to_numeric(_d_me["monto"], errors="coerce").fillna(0)
+        st.markdown(ui_desc_card(user_actual, _d_me, dni_actual, _foto_actual), unsafe_allow_html=True)
+    else:
+        ui_callout(f"Sin registros de descuadres en {periodo_dash}.", "ok")
 
 # -------------------- MÓDULOS ADMIN --------------------
 
