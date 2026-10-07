@@ -1633,7 +1633,10 @@ def ui_linea(labels, vals, color="#EC3237", fmt="{:g}", suf="", alto=230):
 
 st.markdown("""
 <style>
-[data-testid="stElementContainer"]:has(iframe[height="0"]){display:none;}
+/* Quita el espacio vacío superior: los bloques de estilo y el iframe invisible no deben ocupar lugar */
+[data-testid="stElementContainer"]:has(style),.element-container:has(style),[data-testid="stElementContainer"]:has(iframe[height="0"]),.element-container:has(iframe[height="0"]){display:none!important;}
+.stApp:has([data-testid="stSidebar"][aria-expanded="true"]) .block-container{padding-top:3.2rem;}
+[data-testid="stToolbarActions"],[data-testid="stAppDeployButton"]{display:none!important;}
 .tp-steps{margin:2px 0 14px;padding:0;list-style:none;counter-reset:paso;}
 .tp-steps li{counter-increment:paso;position:relative;padding:5px 0 5px 34px;font-size:.84rem;line-height:1.45;color:var(--tp-ink-2);}
 .tp-steps li::before{content:counter(paso);position:absolute;left:0;top:4px;width:23px;height:23px;border-radius:50%;background:var(--tp-red-soft);color:var(--tp-red-dk);font-weight:700;font-size:.74rem;display:flex;align-items:center;justify-content:center;}
