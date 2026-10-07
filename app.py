@@ -1891,37 +1891,34 @@ if not st.session_state.usuario_login:
     st.markdown("""
 <style>
 .stApp:has(.tp-lg-hero){background:radial-gradient(1100px 560px at 8% -10%,#FDECEC 0%,transparent 60%),radial-gradient(900px 520px at 100% 110%,#E4EBF8 0%,transparent 58%),var(--tp-bg);}
-.stApp:has(.tp-lg-hero) .block-container{padding-top:1.6rem;max-width:1180px;}
-.tp-lg-hero{position:relative;overflow:hidden;border-radius:28px;padding:36px 38px;min-height:640px;color:#fff;display:flex;flex-direction:column;justify-content:space-between;
+.stApp:has(.tp-lg-hero) .block-container{padding-top:1rem;padding-bottom:1rem;max-width:1120px;}
+.tp-lg-hero{position:relative;overflow:hidden;border-radius:26px;padding:28px 32px;min-height:min(540px,calc(100vh - 56px));color:#fff;display:flex;flex-direction:column;justify-content:space-between;gap:18px;
   background:linear-gradient(150deg,#0B1220 0%,#111C33 55%,#1B2A4A 100%);box-shadow:0 30px 60px -30px rgba(15,23,42,.6);}
 .tp-lg-hero::before{content:"";position:absolute;width:540px;height:540px;right:-190px;top:-170px;border-radius:50%;background:radial-gradient(circle,rgba(236,50,55,.55),rgba(236,50,55,0) 68%);}
 .tp-lg-hero::after{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px);background-size:44px 44px;-webkit-mask-image:linear-gradient(180deg,#000,transparent 88%);mask-image:linear-gradient(180deg,#000,transparent 88%);}
 .tp-lg-hero>*{position:relative;z-index:1;}
-.tp-lg-logo{display:inline-flex;background:#fff;border-radius:16px;padding:10px 18px;box-shadow:0 12px 30px -12px rgba(0,0,0,.6);}
-.tp-lg-k{font-size:.72rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#FF8A8E;margin:34px 0 10px;}
-.tp-lg-h{font-size:2.2rem;font-weight:800;line-height:1.14;letter-spacing:-.02em;margin:0 0 14px;color:#fff;}
-.tp-lg-h em{font-style:normal;color:#FF6B70;}
-.tp-lg-p{color:#B7C2D9;font-size:.98rem;line-height:1.65;max-width:440px;margin:0;}
-.tp-lg-feat{display:grid;gap:10px;margin-top:26px;max-width:460px;}
-.tp-lg-feat div{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:12px 14px;font-size:.87rem;font-weight:600;color:#E6ECF8;}
-.tp-lg-feat i{flex:0 0 auto;width:32px;height:32px;border-radius:10px;background:rgba(236,50,55,.2);color:#FF8A8E;display:flex;align-items:center;justify-content:center;}
-.tp-lg-quote{position:relative;margin-top:26px;padding:18px 20px 18px 24px;border-radius:16px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);}
-.tp-lg-quote::before{content:"";position:absolute;left:0;top:16px;bottom:16px;width:4px;border-radius:4px;background:#EC3237;}
-.tp-lg-quote small{display:block;font-size:.68rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#FF8A8E;margin-bottom:8px;}
-.tp-lg-quote p{margin:0;font-size:1.1rem;font-weight:600;line-height:1.5;color:#fff;}
-.tp-lg-spacer{height:64px;}
-.tp-lg-who{display:flex;flex-direction:column;align-items:center;text-align:center;margin-bottom:10px;animation:tpPop .4s ease;}
+.tp-lg-logo{display:inline-flex;background:#fff;border-radius:14px;padding:8px 16px;box-shadow:0 12px 30px -12px rgba(0,0,0,.6);}
+.tp-lg-k{font-size:.74rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#FF8A8E;margin:26px 0 4px;}
+.tp-lg-lbl{font-size:.68rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#9FB0CC;}
+.tp-lg-phrase{font-size:clamp(1.6rem,2.1vw + .8rem,2.4rem);font-weight:800;line-height:1.2;letter-spacing:-.02em;color:#fff;margin:12px 0 0;padding-left:20px;border-left:5px solid #EC3237;}
+.tp-lg-sub{color:#B7C2D9;font-size:.95rem;margin-top:16px;}
+.tp-lg-chips{display:flex;gap:8px;flex-wrap:wrap;}
+.tp-lg-chips div{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:6px 12px 6px 7px;font-size:.76rem;font-weight:600;color:#E6ECF8;}
+.tp-lg-chips i{width:22px;height:22px;border-radius:50%;background:rgba(236,50,55,.25);color:#FF8A8E;display:flex;align-items:center;justify-content:center;}
+.tp-lg-chips svg{width:13px;height:13px;}
+.tp-lg-who{display:flex;flex-direction:column;align-items:center;text-align:center;margin-bottom:6px;animation:tpPop .4s ease;}
 .tp-lg-who .tp-avatar{box-shadow:0 0 0 3px #fff,0 0 0 6px var(--tp-red),0 14px 30px -10px rgba(236,50,55,.55);}
-.tp-lg-t{font-size:1.45rem;font-weight:800;color:var(--tp-ink);margin-top:16px;letter-spacing:-.01em;}
-.tp-lg-s{font-size:.86rem;color:var(--tp-mute);margin-top:4px;}
-.tp-lg-lock{width:58px;height:58px;border-radius:18px;background:var(--tp-red-soft);color:var(--tp-red);display:flex;align-items:center;justify-content:center;}
+.tp-lg-t{font-size:1.4rem;font-weight:800;color:var(--tp-ink);margin-top:12px;letter-spacing:-.01em;}
+.tp-lg-s{font-size:.84rem;color:var(--tp-mute);margin-top:3px;}
+.tp-lg-lock{width:52px;height:52px;border-radius:16px;background:var(--tp-red-soft);color:var(--tp-red);display:flex;align-items:center;justify-content:center;}
 @keyframes tpPop{from{opacity:0;transform:translateY(8px) scale(.97);}to{opacity:1;transform:none;}}
-.st-key-tpc_login_form{padding:32px 30px 26px!important;border-radius:26px!important;box-shadow:var(--tp-sh-2)!important;}
-.st-key-tpc_login_form [data-baseweb="input"]{min-height:50px;background:#F6F7FA!important;}
-.st-key-tpc_login_form .stButton>button{min-height:52px;border:none!important;background:linear-gradient(135deg,#EC3237,#C9262B)!important;box-shadow:0 14px 26px -12px rgba(236,50,55,.7);}
+.st-key-tpc_login_form{padding:26px 28px 20px!important;border-radius:24px!important;box-shadow:var(--tp-sh-2)!important;}
+.st-key-tpc_login_form [data-baseweb="input"]{min-height:46px;background:#F6F7FA!important;}
+.st-key-tpc_login_form .stButton>button{min-height:50px;border:none!important;background:linear-gradient(135deg,#EC3237,#C9262B)!important;box-shadow:0 14px 26px -12px rgba(236,50,55,.7);}
 .st-key-tpc_login_form .stButton>button *{color:#fff!important;font-weight:700;}
-.tp-lg-note{display:flex;gap:8px;align-items:center;justify-content:center;font-size:.76rem;color:var(--tp-mute);margin-top:14px;}
-@media (max-width:900px){.tp-lg-hero{min-height:0;padding:22px;border-radius:22px;}.tp-lg-k{margin-top:20px;}.tp-lg-h{font-size:1.5rem;}.tp-lg-feat,.tp-lg-spacer{display:none;}.tp-lg-quote{margin-top:16px;padding:14px 16px 14px 20px;}.tp-lg-quote p{font-size:.95rem;}}
+.tp-lg-note{text-align:center;font-size:.74rem;color:var(--tp-mute);margin-top:10px;}
+@media (max-height:760px){.tp-lg-sub,.tp-lg-chips{display:none;}.tp-lg-hero{min-height:0;}}
+@media (max-width:900px){.tp-lg-hero{min-height:0;padding:20px 22px;border-radius:22px;}.tp-lg-chips,.tp-lg-sub{display:none;}.tp-lg-phrase{font-size:1.35rem;}.tp-lg-k{margin-top:14px;}}
 </style>
 """, unsafe_allow_html=True)
 
@@ -1950,21 +1947,19 @@ if not st.session_state.usuario_login:
     _frase = _FRASES[_ahora_lg.toordinal() % len(_FRASES)]
     _saludo_h = "Buenos días" if _ahora_lg.hour < 12 else ("Buenas tardes" if _ahora_lg.hour < 19 else "Buenas noches")
     _hero = f"""<div class="tp-lg-hero"><div>
-<span class="tp-lg-logo">{logo_tag_app39(40)}</span>
+<span class="tp-lg-logo">{logo_tag_app39(34)}</span>
 <div class="tp-lg-k">{_saludo_h}, equipo Premium</div>
-<div class="tp-lg-h">Tu equipo y tu operación, <em>en un solo lugar.</em></div>
-<p class="tp-lg-p">Asistencia, planillas, vacaciones y solicitudes de Tiendas Premium, con información clara y al instante.</p>
-<div class="tp-lg-feat">
-<div><i>{_i1}</i>Asistencia y jornada en tiempo real</div>
-<div><i>{_i2}</i>Boletas, vacaciones y permisos en línea</div>
-<div><i>{_i3}</i>Acceso protegido con cierre automático de sesión</div>
-</div></div>
-<div class="tp-lg-quote"><small>Frase del día</small><p>{_frase}</p></div></div>"""
-    c_hero, c_form = st.columns([1.15, 1], gap="large")
+<div class="tp-lg-lbl">Frase del día</div>
+<div class="tp-lg-phrase">{_frase}</div>
+<div class="tp-lg-sub">Que tengas un excelente turno y muchas ventas.</div></div>
+<div class="tp-lg-chips"><div><i>{_i1}</i>Asistencia en tiempo real</div><div><i>{_i2}</i>Boletas y permisos en línea</div><div><i>{_i3}</i>Acceso protegido</div></div></div>"""
+    try:
+        c_hero, c_form = st.columns([1.15, 1], gap="large", vertical_alignment="center")
+    except TypeError:
+        c_hero, c_form = st.columns([1.15, 1], gap="large")
     with c_hero:
         st.markdown("".join(x.strip() for x in _hero.splitlines()), unsafe_allow_html=True)
     with c_form:
-        st.markdown('<div class="tp-lg-spacer"></div>', unsafe_allow_html=True)
         with ui_card_container("login_form"):
             _saludo = st.empty()
             dni_input = st.text_input("DNI", placeholder="Tu número de DNI", max_chars=12, key="login_dni")
@@ -1972,7 +1967,7 @@ if not st.session_state.usuario_login:
             _u = next((n for n, d in USUARIOS.items() if str(d["dni"]).strip() == dni_input.strip()), None) if dni_input.strip() else None
             if _u and LOGIN_MOSTRAR_FOTO:
                 _d, _f = ui_dni_foto(_u)
-                _saludo.markdown(f'<div class="tp-lg-who">{ui_avatar(_u, _d, _f, 96)}<div class="tp-lg-t">Hola, {_html.escape(_u.split()[0])}</div><div class="tp-lg-s">Ingresa tu contraseña para continuar</div></div>', unsafe_allow_html=True)
+                _saludo.markdown(f'<div class="tp-lg-who">{ui_avatar(_u, _d, _f, 84)}<div class="tp-lg-t">Hola, {_html.escape(_u.split()[0])}</div><div class="tp-lg-s">Ingresa tu contraseña para continuar</div></div>', unsafe_allow_html=True)
             else:
                 _saludo.markdown(f'<div class="tp-lg-who"><div class="tp-lg-lock">{_lock}</div><div class="tp-lg-t">Bienvenido</div><div class="tp-lg-s">Ingresa con tu DNI y tu contraseña</div></div>', unsafe_allow_html=True)
             st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
@@ -1988,7 +1983,7 @@ if not st.session_state.usuario_login:
                     st.rerun()
                 else:
                     st.error("DNI o contraseña incorrectos. Revisa los datos e intenta de nuevo.")
-            st.markdown('<div class="tp-lg-note">Conexión protegida · La sesión se cierra tras 30 min de inactividad</div>', unsafe_allow_html=True)
+            st.markdown('<div class="tp-lg-note">Conexión protegida · Cierre de sesión por inactividad</div>', unsafe_allow_html=True)
         ui_guia_instalar(st)
     st.stop()
 
