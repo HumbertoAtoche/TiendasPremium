@@ -1856,25 +1856,81 @@ for _, row in st.session_state.empleados.iterrows():
 
 ui_pwa_inyectar()
 
-# --- LOGIN MINIMALISTA ---
+# --- LOGIN EJECUTIVO ---
+# Si prefieres NO mostrar nombre/foto al escribir un DNI (antes de autenticar), pon False.
+LOGIN_MOSTRAR_FOTO = True
+
 if not st.session_state.usuario_login:
-    st.markdown("<br><br>", unsafe_allow_html=True)
-    c_log1, c_log2, c_log3 = st.columns([1, 1, 1])
-    with c_log2:
-        with st.container(border=True):
-            st.markdown(f'<div style="text-align:center; padding: 8px 0 12px 0;">{logo_tag_app39(72)}</div>', unsafe_allow_html=True)
-            st.markdown("""
-                <div style='text-align: center; padding-bottom: 12px;'>
-                    <span style='font-size: 0.75rem; font-weight: 700; letter-spacing: 1.5px; color: #EC3237;'>TIENDAS PREMIUM</span>
-                    <h3 style='margin: 4px 0 0 0; font-weight: 600; color: #111827; font-size: 1.1rem;'>Iniciar Sesión</h3>
-                </div>
-            """, unsafe_allow_html=True)
-            
-            dni_input = st.text_input("DNI", placeholder="Tu número de DNI", max_chars=12)
-            clave_input = st.text_input("Contraseña", type="password", placeholder="Tu contraseña")
-            st.markdown("<br>", unsafe_allow_html=True)
-            
-            if st.button("Ingresar al Sistema", use_container_width=True):
+    st.markdown("""
+<style>
+.stApp:has(.tp-lg-hero){background:radial-gradient(1100px 560px at 8% -10%,#FDECEC 0%,transparent 60%),radial-gradient(900px 520px at 100% 110%,#E4EBF8 0%,transparent 58%),var(--tp-bg);}
+.stApp:has(.tp-lg-hero) .block-container{padding-top:1.6rem;max-width:1180px;}
+.tp-lg-hero{position:relative;overflow:hidden;border-radius:28px;padding:36px 38px;min-height:640px;color:#fff;display:flex;flex-direction:column;justify-content:space-between;
+  background:linear-gradient(150deg,#0B1220 0%,#111C33 55%,#1B2A4A 100%);box-shadow:0 30px 60px -30px rgba(15,23,42,.6);}
+.tp-lg-hero::before{content:"";position:absolute;width:540px;height:540px;right:-190px;top:-170px;border-radius:50%;background:radial-gradient(circle,rgba(236,50,55,.55),rgba(236,50,55,0) 68%);}
+.tp-lg-hero::after{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px);background-size:44px 44px;-webkit-mask-image:linear-gradient(180deg,#000,transparent 88%);mask-image:linear-gradient(180deg,#000,transparent 88%);}
+.tp-lg-hero>*{position:relative;z-index:1;}
+.tp-lg-logo{display:inline-flex;background:#fff;border-radius:16px;padding:10px 18px;box-shadow:0 12px 30px -12px rgba(0,0,0,.6);}
+.tp-lg-k{font-size:.72rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#FF8A8E;margin:34px 0 10px;}
+.tp-lg-h{font-size:2.2rem;font-weight:800;line-height:1.14;letter-spacing:-.02em;margin:0 0 14px;color:#fff;}
+.tp-lg-h em{font-style:normal;color:#FF6B70;}
+.tp-lg-p{color:#B7C2D9;font-size:.98rem;line-height:1.65;max-width:440px;margin:0;}
+.tp-lg-feat{display:grid;gap:10px;margin-top:26px;max-width:460px;}
+.tp-lg-feat div{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:12px 14px;font-size:.87rem;font-weight:600;color:#E6ECF8;}
+.tp-lg-feat i{flex:0 0 auto;width:32px;height:32px;border-radius:10px;background:rgba(236,50,55,.2);color:#FF8A8E;display:flex;align-items:center;justify-content:center;}
+.tp-lg-stats{display:flex;gap:30px;flex-wrap:wrap;margin-top:26px;color:#8EA0BE;font-size:.76rem;}
+.tp-lg-stats b{display:block;font-size:1.6rem;color:#fff;font-weight:800;line-height:1.1;}
+.tp-lg-spacer{height:64px;}
+.tp-lg-who{display:flex;flex-direction:column;align-items:center;text-align:center;margin-bottom:10px;animation:tpPop .4s ease;}
+.tp-lg-who .tp-avatar{box-shadow:0 0 0 3px #fff,0 0 0 6px var(--tp-red),0 14px 30px -10px rgba(236,50,55,.55);}
+.tp-lg-t{font-size:1.45rem;font-weight:800;color:var(--tp-ink);margin-top:16px;letter-spacing:-.01em;}
+.tp-lg-s{font-size:.86rem;color:var(--tp-mute);margin-top:4px;}
+.tp-lg-lock{width:58px;height:58px;border-radius:18px;background:var(--tp-red-soft);color:var(--tp-red);display:flex;align-items:center;justify-content:center;}
+@keyframes tpPop{from{opacity:0;transform:translateY(8px) scale(.97);}to{opacity:1;transform:none;}}
+.st-key-tpc_login_form{padding:32px 30px 26px!important;border-radius:26px!important;box-shadow:var(--tp-sh-2)!important;}
+.st-key-tpc_login_form [data-baseweb="input"]{min-height:50px;background:#F6F7FA!important;}
+.st-key-tpc_login_form .stButton>button{min-height:52px;border:none!important;background:linear-gradient(135deg,#EC3237,#C9262B)!important;box-shadow:0 14px 26px -12px rgba(236,50,55,.7);}
+.st-key-tpc_login_form .stButton>button *{color:#fff!important;font-weight:700;}
+.tp-lg-note{display:flex;gap:8px;align-items:center;justify-content:center;font-size:.76rem;color:var(--tp-mute);margin-top:14px;}
+@media (max-width:900px){.tp-lg-hero{min-height:0;padding:22px;border-radius:22px;}.tp-lg-k{margin-top:20px;}.tp-lg-h{font-size:1.5rem;}.tp-lg-feat,.tp-lg-stats,.tp-lg-spacer{display:none;}}
+</style>
+""", unsafe_allow_html=True)
+
+    _ico = lambda d: f'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">{d}</svg>'
+    _i1 = _ico("<circle cx='12' cy='12' r='9'/><path d='M12 7v5l3 2'/>")
+    _i2 = _ico("<path d='M7 3h7l4 4v14H7z'/><path d='M14 3v4h4M9.5 13h5M9.5 17h5'/>")
+    _i3 = _ico("<path d='M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z'/><path d='M9 12l2 2 4-4'/>")
+    _lock = _ico("<rect x='5' y='11' width='14' height='9' rx='2'/><path d='M8 11V8a4 4 0 018 0v3'/>")
+    _n_col = sum(1 for _d in USUARIOS.values() if isinstance(_d, dict) and _d.get("rol") != "admin")
+    _hero = f"""<div class="tp-lg-hero"><div>
+<span class="tp-lg-logo">{logo_tag_app39(40)}</span>
+<div class="tp-lg-k">Sistema de control interno</div>
+<div class="tp-lg-h">Tu equipo y tu operación, <em>en un solo lugar.</em></div>
+<p class="tp-lg-p">Asistencia, planillas, vacaciones y solicitudes de Tiendas Premium, con información clara y al instante.</p>
+<div class="tp-lg-feat">
+<div><i>{_i1}</i>Asistencia y jornada en tiempo real</div>
+<div><i>{_i2}</i>Boletas, vacaciones y permisos en línea</div>
+<div><i>{_i3}</i>Acceso protegido con cierre automático de sesión</div>
+</div></div>
+<div class="tp-lg-stats"><div><b>{_n_col}</b>colaboradores en el sistema</div><div><b>5h 45m</b>jornada base</div></div></div>"""
+    c_hero, c_form = st.columns([1.15, 1], gap="large")
+    with c_hero:
+        st.markdown("".join(x.strip() for x in _hero.splitlines()), unsafe_allow_html=True)
+    with c_form:
+        st.markdown('<div class="tp-lg-spacer"></div>', unsafe_allow_html=True)
+        with ui_card_container("login_form"):
+            _saludo = st.empty()
+            dni_input = st.text_input("DNI", placeholder="Tu número de DNI", max_chars=12, key="login_dni")
+            clave_input = st.text_input("Contraseña", type="password", placeholder="Tu contraseña", key="login_clave")
+            _u = next((n for n, d in USUARIOS.items() if str(d["dni"]).strip() == dni_input.strip()), None) if dni_input.strip() else None
+            if _u and LOGIN_MOSTRAR_FOTO:
+                _d, _f = ui_dni_foto(_u)
+                _saludo.markdown(f'<div class="tp-lg-who">{ui_avatar(_u, _d, _f, 96)}<div class="tp-lg-t">Hola, {_html.escape(_u.split()[0])}</div><div class="tp-lg-s">Ingresa tu contraseña para continuar</div></div>', unsafe_allow_html=True)
+            else:
+                _saludo.markdown(f'<div class="tp-lg-who"><div class="tp-lg-lock">{_lock}</div><div class="tp-lg-t">Bienvenido</div><div class="tp-lg-s">Ingresa con tu DNI y tu contraseña</div></div>', unsafe_allow_html=True)
+            st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
+            _clic = st.button("Ingresar al sistema", use_container_width=True, key="login_btn")
+            if _clic or (dni_input.strip() and clave_input):
                 usuario_sel = next((n for n, d in USUARIOS.items() if str(d["dni"]).strip() == dni_input.strip()), None)
                 if usuario_sel and clave_input == USUARIOS[usuario_sel]["clave"]:
                     st.session_state.usuario_login = usuario_sel
@@ -1885,7 +1941,7 @@ if not st.session_state.usuario_login:
                     st.rerun()
                 else:
                     st.error("DNI o contraseña incorrectos. Revisa los datos e intenta de nuevo.")
-    with c_log2:
+            st.markdown('<div class="tp-lg-note">Conexión protegida · La sesión se cierra tras 30 min de inactividad</div>', unsafe_allow_html=True)
         ui_guia_instalar(st)
     st.stop()
 
