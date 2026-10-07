@@ -1543,6 +1543,7 @@ st.markdown("""
 .tp-col>span{font-size:.7rem;color:var(--tp-mute);margin-top:7px;white-space:nowrap;}
 .tp-legs{display:flex;gap:16px;margin-top:12px;font-size:.76rem;color:var(--tp-ink-2);font-weight:600;}
 .tp-leg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;}
+.tp-kpi{min-height:128px;}
 .tp-hb{display:grid;grid-template-columns:minmax(80px,160px) 1fr auto;gap:12px;align-items:center;margin:11px 0;}
 .tp-hb-l{font-size:.84rem;font-weight:600;color:var(--tp-ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .tp-hb-t{height:10px;background:#EEF1F5;border-radius:999px;overflow:hidden;} .tp-hb-t i{display:block;height:100%;border-radius:999px;}
@@ -1599,8 +1600,15 @@ def ui_columnas(labels, series, alto=220, fmt="{:g}"):
 def ui_hbars(items, color="#EC3237", fmt="{:g}"):
     if not items:
         return '<div class="tp-card-sub">Sin datos para mostrar.</div>'
-    mx = max([v for _, v in items] + [1])
-    return "".join(f'<div class="tp-hb"><div class="tp-hb-l" title="{_html.escape(str(l))}">{_html.escape(str(l))}</div><div class="tp-hb-t"><i style="width:{max(3, int(v / mx * 100))}%;background:{color}"></i></div><div class="tp-hb-v">{fmt.format(v)}</div></div>' for l, v in items)
+    mx = max([it[1] for it in items] + [1])
+    out = ""
+    for it in items:
+        l, v = it[0], it[1]
+        c = it[2] if len(it) > 2 else color
+        fv = fmt(v) if callable(fmt) else fmt.format(v)
+        out += (f'<div class="tp-hb"><div class="tp-hb-l" title="{_html.escape(str(l))}">{_html.escape(str(l))}</div>'
+                f'<div class="tp-hb-t"><i style="width:{max(3, int(v / mx * 100))}%;background:{c}"></i></div><div class="tp-hb-v">{fv}</div></div>')
+    return out
 
 def ui_linea(labels, vals, color="#EC3237", fmt="{:g}", suf="", alto=230):
     n = len(vals)
@@ -5024,101 +5032,225 @@ elif choice == "Analítica (BI)":
     """, unsafe_allow_html=True)
 
     tab_bi1, tab_bi2, tab_bi3 = st.tabs(["Costo de planilla", "Rotación de personal", "Tendencia de puntualidad"])
+    _hoy_bi = obtener_ahora_peru().date()
+    _a_d = lambda f: ((f.date() if hasattr(f, "date") else f) if f else None)
+    _SP = "<div style='height:14px'></div>"
+    _inicio_todo = pd.Timestamp(2000, 1, 1).date()
+    _fin_todo = pd.Timestamp(2100, 12, 31).date()
 
+    with ui_card_container("bi_filtros"):
+        fb1, fb2, fb3 = st.columns([1, 1.2, 1])
+        pre_bi = fb1.selectbox("Período", ["Todo el historial", "Este mes", "Últimos 3 meses", "Últimos 6 meses", "Este año", "Personalizado"], key="bi_pre")
+        if pre_bi == "Personalizado":
+            rg_bi = fb2.date_input("Rango de fechas (de – hasta)", value=(_hoy_bi.replace(day=1), _hoy_bi), key="bi_rango")
+            rg_bi = list(rg_bi) if isinstance(rg_bi, (tuple, list)) else [rg_bi]
+            d_ini, d_fin = rg_bi[0], (rg_bi[1] if len(rg_bi) > 1 else rg_bi[0])
+        else:
+            _m0 = pd.Timestamp(_hoy_bi.replace(day=1))
+            d_ini = {"Todo el historial": _inicio_todo, "Este mes": _m0.date(), "Últimos 3 meses": (_m0 - pd.DateOffset(months=2)).date(),
+                     "Últimos 6 meses": (_m0 - pd.DateOffset(months=5)).date(), "Este año": _hoy_bi.replace(month=1, day=1)}[pre_bi]
+            d_fin = _fin_todo if pre_bi == "Todo el historial" else _hoy_bi
+            _lbl_rg = "Se analiza todo el registro" if pre_bi == "Todo el historial" else f"{d_ini:%d/%m/%Y} – {d_fin:%d/%m/%Y}"
+            fb2.markdown(f'<div style="padding-top:27px">{ui_chip(_lbl_rg, "info")}</div>', unsafe_allow_html=True)
+        colab_bi = fb3.selectbox("Colaborador", ["Todos"] + sorted(obtener_solo_colaboradores()), key="bi_colab")
+    ym_ini, ym_fin = d_ini.strftime("%Y-%m"), d_fin.strftime("%Y-%m")
+    st.markdown(_SP, unsafe_allow_html=True)
+
+    def _cab_colab():
+        if colab_bi != "Todos":
+            _d, _f = ui_dni_foto(colab_bi)
+            st.markdown(f'<div class="tp-row">{ui_avatar(colab_bi, _d, _f, 44)}<div class="tp-row-main"><b>{_html.escape(colab_bi)}</b><span>Analítica individual dentro del período seleccionado</span></div>{ui_chip("Vista individual", "info")}</div>', unsafe_allow_html=True)
+
+    # ---------------- COSTO DE PLANILLA ----------------
     with tab_bi1:
-        if not st.session_state.boletas_historial.empty:
-            df_bh = st.session_state.boletas_historial.copy()
-            df_bh["neto_pagar"] = pd.to_numeric(df_bh["neto_pagar"], errors="coerce").fillna(0)
-            df_bh["_ym"] = pd.to_numeric(df_bh["anio"], errors="coerce").fillna(0).astype(int).astype(str) + "-" + df_bh["mes"].apply(_mes_a_num).astype(str).str.zfill(2)
-            res = df_bh.groupby("_ym")["neto_pagar"].sum().sort_index()
-            ult, prev = float(res.iloc[-1]), (float(res.iloc[-2]) if len(res) > 1 else 0)
-            delta = ui_chip(f'{"▲" if ult >= prev else "▼"} {abs((ult - prev) / prev * 100):.1f}% vs período anterior', "neutral") if prev else ""
-            b1, b2, b3, b4 = st.columns(4)
-            b1.markdown(ui_kpi("Costo total histórico", f"S/. {df_bh['neto_pagar'].sum():,.2f}", f"{len(df_bh)} boletas emitidas"), unsafe_allow_html=True)
-            b2.markdown(ui_kpi("Promedio mensual", f"S/. {res.mean():,.2f}", f"{len(res)} período(s) registrados"), unsafe_allow_html=True)
-            b3.markdown(ui_kpi(f"Último período · {ui_mes_label(res.index[-1])}", f"S/. {ult:,.2f}", delta), unsafe_allow_html=True)
-            b4.markdown(ui_kpi("Colaboradores con boleta", str(df_bh["nombre"].nunique()), "en el historial"), unsafe_allow_html=True)
-            st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
-            g1, g2 = st.columns([1.6, 1])
-            g1.markdown(ui_panel("Costo de planilla por período", "Neto a pagar acumulado (S/.)", ui_columnas([ui_mes_label(i) for i in res.index], [("Neto a pagar", [round(v) for v in res.values], "#EC3237")], fmt="{:,.0f}")), unsafe_allow_html=True)
-            top = df_bh.groupby("nombre")["neto_pagar"].sum().sort_values(ascending=False).head(8)
-            g2.markdown(ui_panel("Mayor costo acumulado", "Top 8 colaboradores", ui_hbars(list(top.items()), "#0F172A", "S/. {:,.0f}")), unsafe_allow_html=True)
-            with st.expander("Ver detalle de boletas emitidas"):
-                st.dataframe(df_bh.drop(columns=["_ym"]).sort_values("fecha_emision", ascending=False), use_container_width=True, hide_index=True)
-                st.download_button("Exportar Historial de Boletas a Excel", to_excel(df_bh.drop(columns=["_ym"])), "Boletas_Historial.xlsx", use_container_width=True)
-        else:
+        _cab_colab()
+        if st.session_state.boletas_historial.empty:
             st.info("Aún no hay boletas guardadas en el historial. Ve a 'Boletas de Pago', genera una boleta y usa el botón 'Guardar esta Boleta en el Historial'.")
-
-    with tab_bi2:
-        df_emp_bi = st.session_state.empleados.copy()
-        altas_por_mes, bajas_por_mes = {}, {}
-        for _, r_bi in df_emp_bi.iterrows():
-            f_alta = _parsear_fecha_nac_cumple(r_bi.get("fecha_inicio", ""))
-            if f_alta:
-                altas_por_mes[f_alta.strftime("%Y-%m")] = altas_por_mes.get(f_alta.strftime("%Y-%m"), 0) + 1
-            f_baja = _parsear_fecha_nac_cumple(r_bi.get("fecha_cese", ""))
-            if f_baja:
-                bajas_por_mes[f_baja.strftime("%Y-%m")] = bajas_por_mes.get(f_baja.strftime("%Y-%m"), 0) + 1
-        meses_todos_bi = sorted(set(altas_por_mes) | set(bajas_por_mes))
-        if meses_todos_bi:
-            rango = [str(x) for x in pd.period_range(meses_todos_bi[0], meses_todos_bi[-1], freq="M")][-18:]
-            act_bi = df_emp_bi[df_emp_bi["estado"].astype(str).str.lower() == "activo"]
-            n_baj = sum(bajas_por_mes.values())
-            hoy_bi, ants = obtener_ahora_peru().date(), []
-            for _, ra in act_bi.iterrows():
-                fa = _parsear_fecha_nac_cumple(ra.get("fecha_inicio", ""))
-                if fa:
-                    ants.append((hoy_bi - (fa.date() if hasattr(fa, "date") else fa)).days / 365.25)
-            r1, r2, r3, r4 = st.columns(4)
-            r1.markdown(ui_kpi("Colaboradores activos", str(len(act_bi)), "equipo actual"), unsafe_allow_html=True)
-            r2.markdown(ui_kpi("Altas históricas", str(sum(altas_por_mes.values())), "ingresos registrados"), unsafe_allow_html=True)
-            r3.markdown(ui_kpi("Bajas históricas", str(n_baj), f"rotación {n_baj / max(1, len(act_bi) + n_baj) * 100:.0f}% del total"), unsafe_allow_html=True)
-            r4.markdown(ui_kpi("Antigüedad promedio", f"{sum(ants) / len(ants):.1f} años" if ants else "-", "del personal activo"), unsafe_allow_html=True)
-            st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
-            g1, g2 = st.columns([1.6, 1])
-            g1.markdown(ui_panel("Altas y bajas por mes", "Últimos 18 meses con movimiento", ui_columnas([ui_mes_label(m) for m in rango], [("Altas", [altas_por_mes.get(m, 0) for m in rango], "#0B8F57"), ("Bajas", [bajas_por_mes.get(m, 0) for m in rango], "#EC3237")])), unsafe_allow_html=True)
-            cargos = act_bi["cargo"].astype(str).value_counts()
-            g2.markdown(ui_panel("Equipo activo por cargo", "Distribución actual", ui_hbars(list(cargos.items()), "#0F172A")), unsafe_allow_html=True)
         else:
-            st.info("No hay suficientes datos de fechas de ingreso/cese para calcular rotación.")
+            df_bh = st.session_state.boletas_historial.copy()
+            for _c in ["neto_pagar", "total_ingresos", "total_descuentos"]:
+                df_bh[_c] = pd.to_numeric(df_bh[_c], errors="coerce").fillna(0)
+            df_bh["_ym"] = pd.to_numeric(df_bh["anio"], errors="coerce").fillna(0).astype(int).astype(str) + "-" + df_bh["mes"].apply(_mes_a_num).astype(str).str.zfill(2)
+            df_bh = df_bh[(df_bh["_ym"] >= ym_ini) & (df_bh["_ym"] <= ym_fin)]
+            if colab_bi != "Todos":
+                df_bh = df_bh[df_bh["nombre"] == colab_bi]
+            if df_bh.empty:
+                st.info("No hay boletas registradas para el período y colaborador seleccionados.")
+            else:
+                res = df_bh.groupby("_ym")["neto_pagar"].sum().sort_index()
+                ing_m = df_bh.groupby("_ym")["total_ingresos"].sum().sort_index()
+                des_m = df_bh.groupby("_ym")["total_descuentos"].sum().sort_index()
+                ult, prev = float(res.iloc[-1]), (float(res.iloc[-2]) if len(res) > 1 else 0)
+                delta = ui_chip(f'{"▲" if ult >= prev else "▼"} {abs((ult - prev) / prev * 100):.1f}% vs período anterior', "neutral") if prev else ui_chip("Primer período registrado", "neutral")
+                tot_ing, tot_des = df_bh["total_ingresos"].sum(), df_bh["total_descuentos"].sum()
+                b1, b2, b3, b4 = st.columns(4)
+                b1.markdown(ui_kpi("Costo neto de planilla", f"S/. {df_bh['neto_pagar'].sum():,.2f}", f"{len(df_bh)} boletas · {df_bh['nombre'].nunique()} colaborador(es)"), unsafe_allow_html=True)
+                b2.markdown(ui_kpi("Promedio mensual", f"S/. {res.mean():,.2f}", f"{len(res)} período(s) registrados"), unsafe_allow_html=True)
+                b3.markdown(ui_kpi(f"Último período · {ui_mes_label(res.index[-1])}", f"S/. {ult:,.2f}", delta), unsafe_allow_html=True)
+                b4.markdown(ui_kpi("Descuentos acumulados", f"S/. {tot_des:,.2f}", f"{tot_des / tot_ing * 100:.1f}% de los ingresos brutos" if tot_ing else "Sin ingresos registrados"), unsafe_allow_html=True)
+                st.markdown(_SP, unsafe_allow_html=True)
+                lbl = [ui_mes_label(i) for i in res.index]
+                g1, g2 = st.columns([1.6, 1])
+                with g1:
+                    st.markdown(ui_panel("Costo neto por período", "Neto a pagar acumulado (S/.)", ui_columnas(lbl, [("Neto a pagar", [round(v) for v in res.values], "#EC3237")], fmt="{:,.0f}")), unsafe_allow_html=True)
+                    st.markdown(_SP, unsafe_allow_html=True)
+                    st.markdown(ui_panel("Ingresos vs. descuentos", "Evolución mensual (S/.)", ui_columnas(lbl, [("Ingresos", [round(v) for v in ing_m.values], "#0F172A"), ("Descuentos", [round(v) for v in des_m.values], "#F59E0B")], fmt="{:,.0f}")), unsafe_allow_html=True)
+                with g2:
+                    top = df_bh.groupby("nombre")["neto_pagar"].sum().sort_values(ascending=False).head(8)
+                    st.markdown(ui_panel("Mayor costo acumulado", "Top 8 por neto pagado", ui_hbars(list(top.items()), "#0F172A", "S/. {:,.0f}")), unsafe_allow_html=True)
+                    st.markdown(_SP, unsafe_allow_html=True)
+                    topd = df_bh.groupby("nombre")["total_descuentos"].sum().sort_values(ascending=False).head(8)
+                    st.markdown(ui_panel("Descuentos acumulados por trabajador", "Faltas, adelantos, descuadres y otros", ui_hbars([(n, v) for n, v in topd.items() if v > 0], "#F59E0B", "S/. {:,.0f}")), unsafe_allow_html=True)
+                st.markdown(_SP, unsafe_allow_html=True)
+                det = df_bh.groupby("nombre")[["total_ingresos", "total_descuentos", "neto_pagar"]].sum().sort_values("neto_pagar", ascending=False)
+                mxn = max(det["neto_pagar"].max(), 1)
+                filas_t = ""
+                for nom, r in det.iterrows():
+                    d_, f_ = ui_dni_foto(nom)
+                    pd_ = r["total_descuentos"] / r["total_ingresos"] * 100 if r["total_ingresos"] else 0
+                    filas_t += (f'<div class="tp-rk">{ui_avatar(nom, d_, f_, 40)}<div class="tp-rk-main"><b>{_html.escape(str(nom))}</b><div class="tp-prog"><i style="width:{int(r["neto_pagar"] / mxn * 100)}%"></i></div></div>'
+                                f'<div class="tp-chips">{ui_chip("Ingresos S/. " + format(r["total_ingresos"], ",.0f"), "neutral")}{ui_chip("Desc. S/. " + format(r["total_descuentos"], ",.0f"), "warn")}{ui_chip(f"{pd_:.1f}% desc.", "bad" if pd_ >= 20 else "ok")}</div>'
+                                f'<div class="tp-rk-pct" style="min-width:96px">S/. {r["neto_pagar"]:,.0f}</div></div>')
+                st.markdown(ui_panel("Detalle por trabajador", "Neto pagado, ingresos y porcentaje de descuentos", filas_t), unsafe_allow_html=True)
+                with st.expander("Ver detalle de boletas emitidas"):
+                    st.dataframe(df_bh.drop(columns=["_ym"]).sort_values("fecha_emision", ascending=False), use_container_width=True, hide_index=True)
+                    st.download_button("Exportar Historial de Boletas a Excel", to_excel(df_bh.drop(columns=["_ym"])), "Boletas_Historial.xlsx", use_container_width=True)
 
+    # ---------------- ROTACIÓN Y PERMANENCIA ----------------
+    with tab_bi2:
+        _cab_colab()
+        emp_bi = st.session_state.empleados.copy()
+        if "rol" in emp_bi.columns:
+            emp_bi = emp_bi[emp_bi["rol"] != "admin"]
+        if colab_bi != "Todos":
+            emp_bi = emp_bi[emp_bi["nombre"] == colab_bi]
+        filas_e = []
+        for _, r in emp_bi.iterrows():
+            fi = _a_d(_parsear_fecha_nac_cumple(r.get("fecha_inicio", "")))
+            fc = _a_d(_parsear_fecha_nac_cumple(r.get("fecha_cese", "")))
+            if not fi:
+                continue
+            filas_e.append({"nombre": r["nombre"], "cargo": str(r.get("cargo", "")), "fi": fi, "fc": fc,
+                            "activo": fc is None and str(r.get("estado", "")).lower() == "activo", "meses": max(0.0, ((fc or _hoy_bi) - fi).days / 30.4375)})
+        if not filas_e:
+            st.info("No hay suficientes datos de fechas de ingreso/cese para calcular rotación.")
+        else:
+            dft = pd.DataFrame(filas_e)
+            fmt_t = lambda m: f"{int(m // 12)} a {int(m % 12)} m" if m >= 12 else f"{m:.1f} meses"
+            altas_p = dft[(dft["fi"] >= d_ini) & (dft["fi"] <= d_fin)]
+            bajas_p = dft[dft["fc"].apply(lambda x: x is not None and d_ini <= x <= d_fin)]
+            n_act = int(dft["activo"].sum())
+            altas_m = altas_p["fi"].apply(lambda x: x.strftime("%Y-%m")).value_counts().to_dict()
+            bajas_m = bajas_p["fc"].apply(lambda x: x.strftime("%Y-%m")).value_counts().to_dict()
+            r1, r2, r3, r4 = st.columns(4)
+            r1.markdown(ui_kpi("Colaboradores activos", str(n_act), "equipo actual"), unsafe_allow_html=True)
+            r2.markdown(ui_kpi("Altas en el período", str(len(altas_p)), "nuevos ingresos"), unsafe_allow_html=True)
+            r3.markdown(ui_kpi("Bajas en el período", str(len(bajas_p)), "ceses registrados"), unsafe_allow_html=True)
+            r4.markdown(ui_kpi("Tasa de rotación", f"{len(bajas_p) / max(1, n_act + len(bajas_p)) * 100:.0f}%", "bajas sobre el total del equipo"), unsafe_allow_html=True)
+            st.markdown(_SP, unsafe_allow_html=True)
+            d_baja, d_act = dft[~dft["activo"]], dft[dft["activo"]]
+            mayor = dft.sort_values("meses", ascending=False).iloc[0]
+            q1, q2, q3, q4 = st.columns(4)
+            q1.markdown(ui_kpi("Permanencia promedio", fmt_t(dft["meses"].mean()), f"{len(dft)} colaborador(es) analizados"), unsafe_allow_html=True)
+            q2.markdown(ui_kpi("Permanencia de quienes se fueron", fmt_t(d_baja["meses"].mean()) if len(d_baja) else "-", f"{len(d_baja)} baja(s) registradas" if len(d_baja) else "Aún sin bajas"), unsafe_allow_html=True)
+            q3.markdown(ui_kpi("Antigüedad del personal activo", fmt_t(d_act["meses"].mean()) if len(d_act) else "-", "promedio actual"), unsafe_allow_html=True)
+            q4.markdown(ui_kpi("Mayor permanencia", fmt_t(mayor["meses"]), _html.escape(str(mayor["nombre"]))), unsafe_allow_html=True)
+            st.markdown(_SP, unsafe_allow_html=True)
+            ev = [x.strftime("%Y-%m") for x in list(dft["fi"]) + [c for c in dft["fc"] if c is not None]]
+            ini_m, fin_m = max(ym_ini, min(ev)), min(ym_fin, _hoy_bi.strftime("%Y-%m"))
+            rango = [str(x) for x in pd.period_range(ini_m, fin_m, freq="M")][-24:] if ini_m <= fin_m else []
+            g1, g2 = st.columns([1.6, 1])
+            with g1:
+                if rango:
+                    st.markdown(ui_panel("Altas y bajas por mes", "Hasta 24 meses dentro del período", ui_columnas([ui_mes_label(m) for m in rango], [("Altas", [altas_m.get(m, 0) for m in rango], "#0B8F57"), ("Bajas", [bajas_m.get(m, 0) for m in rango], "#EC3237")])), unsafe_allow_html=True)
+                else:
+                    st.info("No hay movimientos dentro del período seleccionado.")
+            with g2:
+                cargos = d_act["cargo"].value_counts()
+                st.markdown(ui_panel("Equipo activo por cargo", "Distribución actual", ui_hbars(list(cargos.items()), "#0F172A")), unsafe_allow_html=True)
+            st.markdown(_SP, unsafe_allow_html=True)
+            h1, h2 = st.columns([1.3, 1])
+            top_p = dft.sort_values("meses", ascending=False).head(12)
+            h1.markdown(ui_panel("Permanencia por colaborador", "Oscuro: activo · Rojo: dado de baja", ui_hbars([(r["nombre"], r["meses"], "#0F172A" if r["activo"] else "#EC3237") for _, r in top_p.iterrows()], fmt=fmt_t)), unsafe_allow_html=True)
+            etq = ["< 3 meses", "3–6 meses", "6–12 meses", "1–2 años", "2+ años"]
+            cat = pd.cut(dft["meses"], bins=[-0.01, 3, 6, 12, 24, 10**4], labels=etq)
+            cnt_a = cat[dft["activo"]].value_counts().reindex(etq, fill_value=0)
+            cnt_b = cat[~dft["activo"]].value_counts().reindex(etq, fill_value=0)
+            h2.markdown(ui_panel("Distribución de permanencia", "Cuántos colaboradores hay en cada tramo", ui_columnas(etq, [("Activos", [int(v) for v in cnt_a.values], "#0F172A"), ("Dados de baja", [int(v) for v in cnt_b.values], "#EC3237")], alto=210)), unsafe_allow_html=True)
+
+    # ---------------- PUNTUALIDAD ----------------
     with tab_bi3:
-        if not st.session_state.asistencia.empty:
-            df_asist_bi = st.session_state.asistencia.copy()
-            df_asist_bi["fecha_dt_bi"] = pd.to_datetime(df_asist_bi["fecha"], errors="coerce")
-            df_asist_bi = df_asist_bi.dropna(subset=["fecha_dt_bi"])
-            df_asist_bi["periodo_bi"] = df_asist_bi["fecha_dt_bi"].dt.strftime("%Y-%m")
-            _solo_col = obtener_solo_colaboradores()
-            por_mes, por_persona = {}, {}
-            for periodo_m, grupo_m in df_asist_bi.groupby("periodo_bi"):
-                acc = {"ing": 0, "pun": 0, "tar": 0, "min": 0}
-                for nom_m in [n for n in grupo_m["nombre"].unique() if n in _solo_col]:
-                    mt = calcular_metricas_puntualidad(grupo_m, nom_m)
-                    acc["ing"] += mt["total_ingresos"]; acc["pun"] += mt["puntuales"]; acc["tar"] += mt["tardanzas"]; acc["min"] += mt["minutos_acumulados"]
-                    por_persona[nom_m] = por_persona.get(nom_m, 0) + mt["tardanzas"]
-                por_mes[periodo_m] = acc
-            if por_mes:
-                meses_p = sorted(por_mes)
-                tot_i = sum(a["ing"] for a in por_mes.values()); tot_p = sum(a["pun"] for a in por_mes.values())
-                tot_t = sum(a["tar"] for a in por_mes.values()); tot_m = sum(a["min"] for a in por_mes.values())
-                peor = max(meses_p, key=lambda m: por_mes[m]["tar"])
+        _cab_colab()
+        if st.session_state.asistencia.empty:
+            st.info("No hay datos de asistencia registrados.")
+        else:
+            dfa = st.session_state.asistencia.copy()
+            dfa["fecha_dt"] = pd.to_datetime(dfa["fecha"], errors="coerce")
+            dfa = dfa.dropna(subset=["fecha_dt"])
+            dfa = dfa[(dfa["fecha_dt"].dt.date >= d_ini) & (dfa["fecha_dt"].dt.date <= d_fin) & (dfa["nombre"].isin(obtener_solo_colaboradores()))]
+            if colab_bi != "Todos":
+                dfa = dfa[dfa["nombre"] == colab_bi]
+            ing = dfa[(dfa["tipo"] == "INGRESO") & (dfa["es_extra"].astype(str) != "SI")].copy()
+            if ing.empty:
+                st.info("No hay ingresos registrados para el período y colaborador seleccionados.")
+            else:
+                tp = ing["fecha_hora"].apply(calcular_tardanza_ingreso)
+                ing["tard"] = tp.map(lambda t: bool(t[1]))
+                ing["mins"] = tp.map(lambda t: int(t[0]) if t[1] else 0)
+                ing["ym"] = ing["fecha_dt"].dt.strftime("%Y-%m")
+                ing["dow"] = ing["fecha_dt"].dt.dayofweek
+                tard = ing[ing["tard"]]
+                pm = ing.groupby("ym").agg(n=("tard", "size"), t=("tard", "sum"), m=("mins", "sum"))
+                meses_p = list(pm.index)
+                n_i, n_t, n_m = int(pm["n"].sum()), int(pm["t"].sum()), int(pm["m"].sum())
+                dias_n = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"]
+                dow_t = tard.groupby("dow").size().reindex(range(7), fill_value=0)
+                por_per = ing.groupby("nombre")["tard"].sum()
                 p1, p2, p3, p4 = st.columns(4)
-                p1.markdown(ui_kpi("Puntualidad global", f"{tot_p / tot_i * 100 if tot_i else 100:.1f}%", f"{tot_i} ingresos evaluados"), unsafe_allow_html=True)
-                p2.markdown(ui_kpi("Tardanzas totales", str(tot_t), f"{tot_m} min acumulados"), unsafe_allow_html=True)
-                p3.markdown(ui_kpi("Mes con más tardanzas", ui_mes_label(peor), f"{por_mes[peor]['tar']} tardanza(s)"), unsafe_allow_html=True)
-                p4.markdown(ui_kpi("Minutos por tardanza", f"{tot_m / tot_t:.1f}" if tot_t else "0", "promedio"), unsafe_allow_html=True)
-                st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
+                p1.markdown(ui_kpi("Puntualidad global", f"{(n_i - n_t) / n_i * 100:.1f}%", f"{n_i} ingresos evaluados"), unsafe_allow_html=True)
+                p2.markdown(ui_kpi("Tardanzas totales", str(n_t), f"{n_m} min acumulados"), unsafe_allow_html=True)
+                p3.markdown(ui_kpi("Mes con más tardanzas", ui_mes_label(pm["t"].idxmax()) if n_t else "-", f"{int(pm['t'].max())} tardanza(s)" if n_t else "Sin tardanzas"), unsafe_allow_html=True)
+                p4.markdown(ui_kpi("Minutos por tardanza", f"{n_m / n_t:.1f}" if n_t else "0", "promedio"), unsafe_allow_html=True)
+                st.markdown(_SP, unsafe_allow_html=True)
+                q1, q2, q3, q4 = st.columns(4)
+                q1.markdown(ui_kpi("Colaboradores 100% puntuales", f"{int((por_per == 0).sum())} de {len(por_per)}", "sin ninguna tardanza"), unsafe_allow_html=True)
+                q2.markdown(ui_kpi("Día más crítico", dias_n[int(dow_t.idxmax())] if n_t else "-", f"{int(dow_t.max())} tardanza(s)" if n_t else "Sin tardanzas"), unsafe_allow_html=True)
+                q3.markdown(ui_kpi("Tiempo perdido", f"{n_m / 60:.1f} h", "por tardanzas en el período"), unsafe_allow_html=True)
+                q4.markdown(ui_kpi("Tardanza más larga", f"{int(tard['mins'].max())} min" if n_t else "-", _html.escape(str(tard.loc[tard['mins'].idxmax(), 'nombre'])) if n_t else "Sin tardanzas"), unsafe_allow_html=True)
+                st.markdown(_SP, unsafe_allow_html=True)
                 lbl = [ui_mes_label(m) for m in meses_p]
                 g1, g2 = st.columns(2)
-                g1.markdown(ui_panel("Tardanzas por mes", "Todos los colaboradores", ui_linea(lbl, [por_mes[m]["tar"] for m in meses_p], "#EC3237")), unsafe_allow_html=True)
-                g2.markdown(ui_panel("Puntualidad por mes", "% de ingresos a tiempo", ui_linea(lbl, [round(por_mes[m]["pun"] / por_mes[m]["ing"] * 100, 1) if por_mes[m]["ing"] else 100 for m in meses_p], "#0B8F57", "{:g}", "%")), unsafe_allow_html=True)
-                top_t = sorted([(n, v) for n, v in por_persona.items() if v > 0], key=lambda x: -x[1])[:8]
-                st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
-                st.markdown(ui_panel("Colaboradores con más tardanzas", "Acumulado histórico", ui_hbars(top_t, "#EC3237")), unsafe_allow_html=True)
-            else:
-                st.info("No hay tardanzas registradas todavía.")
-        else:
-            st.info("No hay datos de asistencia registrados.")
+                g1.markdown(ui_panel("Tardanzas por mes", "Evolución en el período", ui_linea(lbl, [int(pm.loc[m, "t"]) for m in meses_p], "#EC3237")), unsafe_allow_html=True)
+                g2.markdown(ui_panel("Puntualidad por mes", "% de ingresos a tiempo", ui_linea(lbl, [round(100 - pm.loc[m, "t"] / pm.loc[m, "n"] * 100, 1) for m in meses_p], "#0B8F57", "{:g}", "%")), unsafe_allow_html=True)
+                st.markdown(_SP, unsafe_allow_html=True)
+                k1, k2 = st.columns(2)
+                k1.markdown(ui_panel("Tardanzas por día de la semana", "¿Qué días se llega más tarde?", ui_columnas(dias_n, [("Tardanzas", [int(v) for v in dow_t.values], "#EC3237")], alto=200)), unsafe_allow_html=True)
+                grav = pd.cut(tard["mins"], bins=[0, 5, 15, 30, 60, 10**5], labels=["1–5 min", "6–15 min", "16–30 min", "31–60 min", "+60 min"]).value_counts().reindex(["1–5 min", "6–15 min", "16–30 min", "31–60 min", "+60 min"], fill_value=0)
+                k2.markdown(ui_panel("Gravedad de las tardanzas", "Cuántos minutos se llega tarde", ui_columnas(list(grav.index), [("Tardanzas", [int(v) for v in grav.values], "#F59E0B")], alto=200)), unsafe_allow_html=True)
+                por_dia = tard.groupby("fecha")["mins"].sum().sort_index().tail(31)
+                if len(por_dia) > 1:
+                    st.markdown(_SP, unsafe_allow_html=True)
+                    st.markdown(ui_panel("Minutos de tardanza por día", "Últimos 31 días con tardanzas", ui_columnas([ui_dia_label(d) for d in por_dia.index], [("Minutos", [int(v) for v in por_dia.values], "#0F172A")], alto=190)), unsafe_allow_html=True)
+                st.markdown(_SP, unsafe_allow_html=True)
+                ext = {}
+                try:
+                    for (nom_x, f_x), gx in dfa.groupby(["nombre", "fecha"]):
+                        gx = gx.copy()
+                        gx["dt"] = pd.to_datetime(gx["fecha_hora"], errors="coerce")
+                        gx = gx.dropna(subset=["dt"])
+                        if not gx.empty:
+                            ext[str(f_x)[:7]] = ext.get(str(f_x)[:7], 0) + calcular_jornada_y_horas_extras(gx)[1]
+                except Exception:
+                    ext = {}
+                e1, e2 = st.columns(2)
+                e1.markdown(ui_panel("Horas extras por mes", "Tiempo trabajado sobre la jornada base de 5h 45m", ui_linea(lbl, [round(ext.get(m, 0) / 60, 1) for m in meses_p], "#F59E0B", "{:g}", " h")), unsafe_allow_html=True)
+                if colab_bi == "Todos":
+                    top_t = sorted([(n, int(v)) for n, v in por_per.items() if v > 0], key=lambda x: -x[1])[:8]
+                    e2.markdown(ui_panel("Colaboradores con más tardanzas", "Acumulado en el período", ui_hbars(top_t, "#EC3237")), unsafe_allow_html=True)
+                else:
+                    ult_t = tard.sort_values("fecha_hora", ascending=False).head(8)
+                    filas_u = "".join(f'<div class="tp-row"><div class="tp-row-time">{ui_dia_label(r["fecha"])}</div><div class="tp-row-main"><b>Ingreso a las {str(r["fecha_hora"])[11:16]}</b></div><div class="tp-chips">{ui_chip(str(int(r["mins"])) + " min tarde", "bad")}</div></div>' for _, r in ult_t.iterrows()) or '<div class="tp-card-sub">Sin tardanzas en el período.</div>'
+                    e2.markdown(ui_panel("Últimas tardanzas", "Detalle del colaborador", filas_u), unsafe_allow_html=True)
 
 elif choice == "Onboarding / Offboarding":
     st.markdown("""
