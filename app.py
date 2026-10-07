@@ -1705,6 +1705,32 @@ def ui_guia_instalar(cont):
         st.markdown((andr + ios) if es_and else (ios + andr), unsafe_allow_html=True)
         st.caption("Cada vez que abras la app te pedirá tu DNI y contraseña por seguridad.")
 
+st.markdown("""
+<style>
+.tp-kpi.al-bad{border-left:4px solid var(--tp-bad);} .tp-kpi.al-warn{border-left:4px solid #F59E0B;} .tp-kpi.al-info{border-left:4px solid var(--tp-info);} .tp-kpi.al-ok{border-left:4px solid var(--tp-ok);}
+.tp-banner{display:flex;align-items:center;gap:16px;border-radius:20px;padding:20px 24px;border:1px solid var(--tp-line);box-shadow:var(--tp-sh-1);}
+.tp-banner.ok{background:linear-gradient(120deg,#E3F6EC,#F4FBF7);border-color:#BFE8D2;} .tp-banner.warn{background:linear-gradient(120deg,#FEF3C7,#FFFBEB);border-color:#F8DE95;} .tp-banner.bad{background:linear-gradient(120deg,#FEE4E2,#FFF5F4);border-color:#F9C4C0;}
+.tp-banner b{font-size:1.1rem;color:var(--tp-ink);display:block;} .tp-banner span.s{font-size:.84rem;color:var(--tp-ink-2);}
+.tp-al-ico{flex:0 0 auto;width:42px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;}
+.tp-al-ico.bad{background:var(--tp-bad-soft);color:var(--tp-bad);} .tp-al-ico.warn{background:var(--tp-warn-soft);color:var(--tp-warn);} .tp-al-ico.info{background:var(--tp-info-soft);color:var(--tp-info);} .tp-al-ico.ok{background:var(--tp-ok-soft);color:var(--tp-ok);}
+/* Saludo de cumpleaños */
+.tp-bd{overflow:hidden;border-radius:22px;border:1px solid var(--tp-line);background:#fff;}
+.tp-bd-top{position:relative;height:150px;background:linear-gradient(135deg,#EC3237 0%,#A3202A 55%,#0F172A 135%);overflow:hidden;}
+.tp-bd-top i{position:absolute;top:-16px;width:9px;height:15px;border-radius:2px;opacity:.95;animation:tpFall 3.4s linear infinite;}
+@keyframes tpFall{to{transform:translateY(200px) rotate(320deg);opacity:0;}}
+.tp-bd-photo{position:absolute;left:50%;bottom:-52px;transform:translateX(-50%);z-index:2;}
+.tp-bd-photo .tp-avatar{box-shadow:0 0 0 5px #fff,0 18px 34px -12px rgba(15,23,42,.5);}
+.tp-bd-body{padding:68px 26px 22px;text-align:center;}
+.tp-bd-k{font-size:.7rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--tp-red);}
+.tp-bd-h{font-size:1.65rem;font-weight:800;color:var(--tp-ink);letter-spacing:-.02em;margin:6px 0 10px;line-height:1.2;}
+.tp-bd-msg{font-size:.92rem;line-height:1.65;color:var(--tp-ink-2);max-width:420px;margin:14px auto 0;}
+.tp-bd-big{font-size:1rem;font-weight:700;color:var(--tp-ink);margin:14px 0 0;}
+.tp-bd-sign{margin-top:16px;padding-top:14px;border-top:1px solid var(--tp-line);font-size:.8rem;color:var(--tp-mute);}
+[data-testid="stDialog"] .stButton>button{min-height:52px;border:none!important;background:linear-gradient(135deg,#EC3237,#C9262B)!important;box-shadow:0 14px 26px -12px rgba(236,50,55,.7);}
+[data-testid="stDialog"] .stButton>button *{color:#fff!important;font-weight:700;}
+</style>
+""", unsafe_allow_html=True)
+
 # --- COMPONENTES UI REUTILIZABLES ---
 def ui_iniciales(nombre):
     p = [x for x in str(nombre).split() if x]
@@ -2037,38 +2063,28 @@ def _mostrar_modal_cumpleanos(nombre_usuario):
     if st.session_state.get(clave_flag, False):
         return
 
-    # Se marca como "ya mostrado" de inmediato (no al cerrar el modal),
-    # para que aparezca una sola vez tras el login y no se reabra al
-    # navegar por las secciones del sidebar.
+    # Se marca como "ya mostrado" de inmediato para que aparezca una sola vez tras el login.
     st.session_state[clave_flag] = True
+    st.balloons()
 
-    @st.dialog(" ¡Feliz Cumpleaños! ")
+    f_nac = _parsear_fecha_nac_cumple(fecha_nac_usuario)
+    edad = hoy_peru.year - f_nac.year if f_nac else 0
+    dni_c, foto_c = ui_dni_foto(nombre_usuario)
+    colores = ["#FFFFFF", "#FFD166", "#06D6A0", "#FF8A8E", "#9CC9FF", "#FFFFFF", "#FFD166", "#FF8A8E"]
+    confeti = "".join(f'<i style="left:{(i * 53) % 97 + 1}%;background:{colores[i % 8]};animation-delay:{(i % 7) * 0.45:.2f}s;animation-duration:{3 + (i % 4) * 0.5:.1f}s"></i>' for i in range(22))
+    primer_nombre = _html.escape(nombre_usuario.split(" ")[0])
+    chip_edad = ui_chip(f"Hoy cumples {edad} años", "ok") if 14 <= edad <= 90 else ""
+    html_bd = (f'<div class="tp-bd"><div class="tp-bd-top">{confeti}<div class="tp-bd-photo">{ui_avatar(nombre_usuario, dni_c, foto_c, 112)}</div></div>'
+               f'<div class="tp-bd-body"><div class="tp-bd-k">Hoy es tu día</div><div class="tp-bd-h">¡Feliz cumpleaños, {primer_nombre}!</div>{chip_edad}'
+               '<div class="tp-bd-msg">De parte de todo el equipo de <b>Tiendas Premium E.I.R.L.</b>, te deseamos un día lleno de alegría junto a tus seres queridos. '
+               'Gracias por tu compromiso, esfuerzo y dedicación. ¡Que este nuevo año de vida venga con muchos éxitos, salud y metas cumplidas!</div>'
+               '<div class="tp-bd-big">¡Feliz cumpleaños y a seguir creciendo juntos!</div>'
+               '<div class="tp-bd-sign">Con cariño,<br><b>Tiendas Premium E.I.R.L.</b></div></div></div>')
+
+    @st.dialog("Un día muy especial")
     def _dialogo_cumpleanos():
-        st.markdown(f"""
-            <div style="text-align:center; padding: 10px 0 4px 0;">
-                <div style="font-size: 3rem; line-height: 1;">🎉🎂🎈</div>
-                <h2 style="margin: 12px 0 4px 0; color:#EC3237;">¡Feliz Cumpleaños, {nombre_usuario.split(' ')[0]}!</h2>
-                <p style="font-size: 0.98rem; color:#374151; margin: 14px auto 0 auto; max-width: 400px; line-height: 1.6; text-align:left;">
-                    De parte de todo el equipo de <strong>Tiendas Premium E.I.R.L.</strong>, queremos
-                    desearte un excelente día, lleno de alegría y buenos momentos junto a tus seres queridos.
-                </p>
-                <p style="font-size: 0.98rem; color:#374151; margin: 12px auto 0 auto; max-width: 400px; line-height: 1.6; text-align:left;">
-                    Agradecemos tu compromiso, esfuerzo y dedicación como parte de nuestro equipo.
-                </p>
-                <p style="font-size: 0.98rem; color:#374151; margin: 12px auto 0 auto; max-width: 400px; line-height: 1.6; text-align:left;">
-                    ¡Que este nuevo año de vida venga acompañado de muchos éxitos, salud y nuevas metas cumplidas!
-                </p>
-                <p style="font-size: 1.02rem; color:#111827; font-weight:600; margin: 14px auto 0 auto; max-width: 400px; line-height: 1.6;">
-                    ¡Feliz cumpleaños y a seguir creciendo juntos!
-                </p>
-                <p style="font-size: 0.95rem; color:#6B7280; margin: 18px 0 0 0; font-style: italic;">
-                    Con cariño,<br>
-                    <strong>Tiendas Premium E.I.R.L.</strong> ❤️💚
-                </p>
-                <div style="font-size: 2rem; margin-top: 14px;"></div>
-            </div>
-        """, unsafe_allow_html=True)
-        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown(html_bd, unsafe_allow_html=True)
+        st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
         if st.button("¡Gracias! Continuar", use_container_width=True):
             st.rerun()
 
@@ -4903,71 +4919,64 @@ elif choice == "Centro de Alertas":
             (st.session_state.vacaciones["estado_recuperacion"] != "Recuperado")
         ])
 
-    al1, al2, al3, al4, al5 = st.columns(5)
-    with al1:
-        st.markdown(f'<div class="info-card"><div class="info-label">Contratos por Vencer</div><div class="info-value" style="color:{"#EC3237" if contratos_por_vencer else "#111827"};">{len(contratos_por_vencer)}</div></div>', unsafe_allow_html=True)
-    with al2:
-        st.markdown(f'<div class="info-card"><div class="info-label">Cumpleaños esta Semana</div><div class="info-value" style="color:#EC3237;">{len(cumples_prox)}</div></div>', unsafe_allow_html=True)
-    with al3:
-        st.markdown(f'<div class="info-card"><div class="info-label">Tardanzas Recurrentes</div><div class="info-value" style="color:{"#EC3237" if tardanzas_recurrentes else "#111827"};">{len(tardanzas_recurrentes)}</div></div>', unsafe_allow_html=True)
-    with al4:
-        st.markdown(f'<div class="info-card"><div class="info-label">Solicitudes Pendientes</div><div class="info-value" style="color:{"#EC3237" if solicitudes_pend else "#111827"};">{solicitudes_pend}</div></div>', unsafe_allow_html=True)
-    with al5:
-        st.markdown(f'<div class="info-card"><div class="info-label">Permisos de Salud sin Recuperar</div><div class="info-value" style="color:{"#EC3237" if permisos_pend_recup else "#111827"};">{permisos_pend_recup}</div></div>', unsafe_allow_html=True)
+    e_ = _html.escape
+    _svg = lambda d: f"<svg width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'>{d}</svg>"
+    _IC = {
+        "contratos": _svg("<rect x='4' y='5' width='16' height='15' rx='2'/><path d='M8 3v4M16 3v4M4 10h16'/>"),
+        "tardanzas": _svg("<circle cx='12' cy='12' r='9'/><path d='M12 7v5l3 2'/>"),
+        "solicitudes": _svg("<path d='M4 13l2-8h12l2 8v6H4z'/><path d='M4 13h5l1 2h4l1-2h5'/>"),
+        "permisos": _svg("<rect x='4' y='4' width='16' height='16' rx='3'/><path d='M12 8v8M8 12h8'/>"),
+        "ok": _svg("<path d='M5 12l4 4 10-10'/>"),
+        "cumples": _svg("<rect x='3' y='9' width='18' height='12' rx='2'/><path d='M12 9v12M3 14h18'/><path d='M12 9c-3 0-4-4-1.5-4S12 9 12 9zM12 9c3 0 4-4 1.5-4S12 9 12 9z'/>"),
+    }
+    sol_df = st.session_state.solicitudes
+    sol_pend_df = sol_df[sol_df["estado"] == "Pendiente"] if not sol_df.empty else sol_df
+    vac_df = st.session_state.vacaciones
+    perm_df = vac_df[(vac_df["tipo"] == "Permiso de Salud (a recuperar)") & (vac_df["estado_recuperacion"] != "Recuperado")] if not vac_df.empty else vac_df
 
-    st.markdown("<br>", unsafe_allow_html=True)
+    def _fila(nombre, sub, chip_html):
+        d_, f_ = ui_dni_foto(nombre)
+        return f'<div class="tp-row">{ui_avatar(nombre, d_, f_, 42)}<div class="tp-row-main"><b>{e_(str(nombre))}</b><span class="wrap">{sub}</span></div><div class="tp-chips">{chip_html}</div></div>'
 
-    with st.container(border=True):
-        st.markdown("##### ⏳ Contratos próximos a vencer (15 días)")
-        if contratos_por_vencer:
-            for nom_c, f_c, d_r in sorted(contratos_por_vencer, key=lambda x: x[2]):
-                st.warning(f"**{nom_c}** — Cese programado el **{f_c.strftime('%d/%m/%Y')}** (en {d_r} día(s)). Evaluar renovación o cese.")
-        else:
-            st.success("No hay contratos por vencer en los próximos 15 días.")
+    g_contr = [_fila(n, f"Cese programado el {f.strftime('%d/%m/%Y')} · evaluar renovación o cese", ui_chip(f"en {d} día(s)", "bad" if d <= 5 else "warn")) for n, f, d in sorted(contratos_por_vencer, key=lambda x: x[2])]
+    g_tard = [_fila(n, f"{c} tardanzas este mes · {m} min de retraso acumulado", ui_chip(f"{c} tardanzas", "bad")) for n, c, m in sorted(tardanzas_recurrentes, key=lambda x: -x[1])]
+    g_sol = [_fila(r["nombre"], f"{e_(str(r['tipo_solicitud']))} · {str(r['fecha_registro'])[:10]}", ui_chip("Pendiente", "warn")) for _, r in sol_pend_df.sort_values("fecha_registro", ascending=False).head(6).iterrows()]
+    if len(sol_pend_df) > 6:
+        g_sol.append(f'<div class="tp-card-sub" style="padding:4px 4px 0">y {len(sol_pend_df) - 6} solicitud(es) más…</div>')
+    g_perm = [_fila(r["nombre"], f"Recuperar el {r['fecha_recuperacion']} · {e_(str(r['horario_recuperacion']) or 'horario no especificado')}", ui_chip("Sin recuperar", "warn")) for _, r in perm_df.iterrows()]
+    g_cum = [_fila(n, f"Cumple años el {f.strftime('%d/%m')}", ui_chip("¡Hoy!", "ok") if d == 0 else ui_chip(f"en {d} día(s)", "info")) for n, f, d in sorted(cumples_prox, key=lambda x: x[2])]
 
-    st.markdown("<br>", unsafe_allow_html=True)
+    grupos = [
+        {"k": "contratos", "t": "Contratos por vencer", "s": "Próximos 15 días", "n": len(contratos_por_vencer), "tono": "bad" if any(d <= 5 for _, _, d in contratos_por_vencer) else "warn", "f": g_contr, "dest": "Gestión Colaboradores", "btn": "Ir a Colaboradores"},
+        {"k": "tardanzas", "t": "Tardanzas recurrentes", "s": "3 o más en el mes actual", "n": len(tardanzas_recurrentes), "tono": "bad", "f": g_tard, "dest": "Historial de Asistencias", "btn": "Ver asistencias"},
+        {"k": "solicitudes", "t": "Solicitudes pendientes", "s": "Esperan tu respuesta", "n": len(sol_pend_df), "tono": "warn", "f": g_sol, "dest": "Solicitudes y Permisos", "btn": "Revisar solicitudes"},
+        {"k": "permisos", "t": "Permisos de salud sin recuperar", "s": "Horas por recuperar", "n": len(perm_df), "tono": "warn", "f": g_perm, "dest": "Gestión de Vacaciones", "btn": "Ir a Vacaciones"},
+        {"k": "cumples", "t": "Cumpleaños de la semana", "s": "Próximos 7 días", "n": len(cumples_prox), "tono": "info", "f": g_cum, "dest": None, "btn": ""},
+    ]
+    urgentes = sum(g["n"] for g in grupos if g["k"] != "cumples")
+    if urgentes == 0:
+        st.markdown(f'<div class="tp-banner ok"><span class="tp-al-ico ok">{_IC["ok"]}</span><div><b>Todo en orden</b><span class="s">No hay alertas que requieran tu atención ahora mismo.</span></div></div>', unsafe_allow_html=True)
+    else:
+        resumen = "".join(ui_chip(f"{g['n']} · {g['t']}", g["tono"]) for g in grupos if g["n"] and g["k"] != "cumples")
+        st.markdown(f'<div class="tp-banner {"bad" if any(g["tono"] == "bad" and g["n"] for g in grupos) else "warn"}"><div><b>Tienes {urgentes} alerta(s) que requieren atención</b><span class="s" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">{resumen}</span></div></div>', unsafe_allow_html=True)
+    st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
 
-    with st.container(border=True):
-        st.markdown("##### 🎂 Cumpleaños de la próxima semana")
-        if cumples_prox:
-            for nom_c, f_c, d_r in sorted(cumples_prox, key=lambda x: x[2]):
-                etiqueta = "¡Hoy!" if d_r == 0 else f"en {d_r} día(s)"
-                st.info(f"**{nom_c}** cumple años el **{f_c.strftime('%d/%m')}** ({etiqueta}).")
-        else:
-            st.info("Sin cumpleaños en los próximos 7 días.")
+    for col_k, g in zip(st.columns(5), grupos):
+        tono_k = g["tono"] if g["n"] else "ok"
+        col_k.markdown(f'<div class="tp-kpi al-{tono_k}"><div class="tp-kpi-lbl">{g["t"]}</div><div class="tp-kpi-val">{g["n"]}</div><div class="tp-kpi-sub">{"Requiere atención" if g["n"] and g["k"] != "cumples" else ("Para saludar" if g["n"] else "Sin novedades")}</div></div>', unsafe_allow_html=True)
+    st.markdown("<div style='height:18px'></div>", unsafe_allow_html=True)
 
-    st.markdown("<br>", unsafe_allow_html=True)
+    orden = {"bad": 0, "warn": 1, "info": 2}
+    for g in sorted([x for x in grupos if x["n"]], key=lambda x: orden[x["tono"]]):
+        with ui_card_container(f"al_{g['k']}"):
+            st.markdown(f'<div class="tp-card flat"><div class="tp-card-head"><div class="tp-op-head" style="margin:0"><span class="tp-al-ico {g["tono"]}">{_IC[g["k"]]}</span><div><div class="tp-card-title">{g["t"]}</div><div class="tp-card-sub">{g["s"]}</div></div></div>{ui_chip(str(g["n"]), g["tono"])}</div></div><div style="height:10px"></div>' + "".join(g["f"]), unsafe_allow_html=True)
+            if g["dest"]:
+                _b1, _b2 = st.columns([3, 1.3])
+                _b2.button(g["btn"], key=f"al_btn_{g['k']}", on_click=_gs_ir, args=(g["dest"],), use_container_width=True)
 
-    with st.container(border=True):
-        st.markdown("##### ⏰ Colaboradores con tardanzas recurrentes (mes actual)")
-        if tardanzas_recurrentes:
-            for nom_c, cnt_t, mins_t in sorted(tardanzas_recurrentes, key=lambda x: -x[1]):
-                st.error(f"**{nom_c}** — {cnt_t} tardanza(s) este mes, acumulando {mins_t} minuto(s) de retraso.")
-        else:
-            st.success("Ningún colaborador supera las 3 tardanzas este mes.")
-
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    with st.container(border=True):
-        st.markdown("##### 📝 Solicitudes esperando respuesta")
-        if solicitudes_pend:
-            st.warning(f"Tienes **{solicitudes_pend}** solicitud(es) pendiente(s) de revisión en la sección 'Solicitudes y Permisos'.")
-        else:
-            st.success("No hay solicitudes pendientes por atender.")
-
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    with st.container(border=True):
-        st.markdown("##### 🏥 Permisos de salud sin recuperar")
-        if permisos_pend_recup:
-            df_pend_recup_alerta = st.session_state.vacaciones[
-                (st.session_state.vacaciones["tipo"] == "Permiso de Salud (a recuperar)") &
-                (st.session_state.vacaciones["estado_recuperacion"] != "Recuperado")
-            ]
-            for _, r_pr_a in df_pend_recup_alerta.iterrows():
-                st.warning(f"**{r_pr_a['nombre']}** debe recuperar el **{r_pr_a['fecha_recuperacion']}** ({r_pr_a['horario_recuperacion'] or 'horario no especificado'}). Gestionar en 'Gestión de Vacaciones'.")
-        else:
-            st.success("No hay permisos de salud pendientes de recuperación.")
+    sin_nov = [g for g in grupos if not g["n"]]
+    if sin_nov:
+        st.markdown('<div class="tp-card"><div class="tp-note-t">Sin novedades</div><div class="tp-chips" style="justify-content:flex-start">' + "".join(ui_chip(g["t"], "ok") for g in sin_nov) + '</div></div>', unsafe_allow_html=True)
 
 
 elif choice == "Gestión de Vacaciones":
