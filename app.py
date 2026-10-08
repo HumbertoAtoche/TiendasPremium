@@ -1840,7 +1840,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-def ui_inc_card(r):
+def ui_inc_card(r, admin=False, flat=False):
     e = _html.escape
     est = str(r.get("estado", "")).strip() or "Pendiente"
     try:
@@ -1848,7 +1848,13 @@ def ui_inc_card(r):
     except Exception:
         val = "-"
     detalle = str(r.get("detalle", "")).strip() or "Sin detalle"
-    return (f'<div class="tp-card"><div class="tp-card-head"><div><div class="tp-card-title">{e(str(r["tipo_incidencia"]))}</div><div class="tp-card-sub">{e(str(r["fecha"])[:10])}</div></div>'
+    if admin:
+        d_, f_ = ui_dni_foto(str(r.get("nombre", "")))
+        quien = (f'<div class="tp-op-head" style="margin:0">{ui_avatar(r["nombre"], d_, f_, 44)}<div><div class="tp-card-title">{e(str(r["nombre"]))}</div>'
+                 f'<div class="tp-card-sub">{e(str(r["tipo_incidencia"]))} · {e(str(r["fecha"])[:10])}</div></div></div>')
+    else:
+        quien = f'<div><div class="tp-card-title">{e(str(r["tipo_incidencia"]))}</div><div class="tp-card-sub">{e(str(r["fecha"])[:10])}</div></div>'
+    return (f'<div class="tp-card{" flat" if flat else ""}"><div class="tp-card-head">{quien}'
             f'<div class="tp-chips">{ui_chip(val, "info")}{ui_chip(e(est), "warn" if "pend" in est.lower() else "ok")}</div></div><div class="tp-card-body" style="margin-bottom:0">{e(detalle)}</div></div>')
 
 # --- COMPONENTES UI REUTILIZABLES ---
@@ -3653,7 +3659,18 @@ elif choice == "Dashboard General":
         </div>
     """, unsafe_allow_html=True)
 
-    st.markdown("##### Calendarios Mensuales de Asistencia")
+    col_f1, col_f2 = st.columns([1.5, 1])
+    with col_f1:
+        fecha_dash = st.date_input("Fecha de Consulta", obtener_ahora_peru(), key="dash_fecha")
+    f_dash_str = str(fecha_dash)
+    colaboradores_ops = obtener_solo_colaboradores(fecha_eval=fecha_dash)
+    with col_f2:
+        lista_colabs = ["Todos"] + colaboradores_ops
+        colab_dash = st.selectbox("Filtrar Colaborador", lista_colabs, key="dash_colab")
+    kpi_slot = st.empty()
+    ops_slot = st.empty()
+
+    st.markdown('<div class="tp-sec" style="margin-top:8px"><div><div class="tp-sec-title">Calendarios mensuales de asistencia</div><div class="tp-sec-sub">Elige el mes para revisar la asistencia de cada trabajador</div></div></div>', unsafe_allow_html=True)
     col_mes, col_anio = st.columns(2)
     
     ahora_p = obtener_ahora_peru()
@@ -3717,18 +3734,6 @@ elif choice == "Dashboard General":
         </div>
     """, unsafe_allow_html=True)
 
-    st.markdown("##### Filtros de Consulta")
-    col_f1, col_f2 = st.columns([1.5, 1])
-    
-    with col_f1:
-        fecha_dash = st.date_input("Fecha de Consulta", obtener_ahora_peru(), key="dash_fecha")
-    
-    f_dash_str = str(fecha_dash)
-    colaboradores_ops = obtener_solo_colaboradores(fecha_eval=fecha_dash)
-
-    with col_f2:
-        lista_colabs = ["Todos"] + colaboradores_ops
-        colab_dash = st.selectbox("Filtrar Colaborador", lista_colabs, key="dash_colab")
 
     if colaboradores_ops:
         colabs_a_renderizar = colaboradores_ops if colab_dash == "Todos" else [colab_dash]
@@ -3744,7 +3749,6 @@ elif choice == "Dashboard General":
     st.markdown("---")
 
     # --- CÁLCULO DE HORAS EXTRAS MENSUALES POR TRABAJADOR ---
-    st.markdown(f"##### Horas Extras Mensuales del Período ({NOMBRES_MESES[mes_sel-1]} {int(anio_sel)})")
     
     df_asist_mes = st.session_state.asistencia.copy()
     horas_extras_mensuales = {}
@@ -3769,19 +3773,10 @@ elif choice == "Dashboard General":
             horas_extras_mensuales[nom_col] = mins_extras_colab
 
     if horas_extras_mensuales:
-        cols_he = st.columns(min(len(horas_extras_mensuales), 4))
-        for idx_he, (nom_he, mins_he) in enumerate(horas_extras_mensuales.items()):
-            col_target = cols_he[idx_he % min(len(horas_extras_mensuales), 4)]
-            with col_target:
-                color_he = "#00A959" if mins_he > 0 else "#6B7280"
-                st.markdown(f'''
-                    <div class="info-card">
-                        <div class="info-label">{nom_he}</div>
-                        <div class="info-value" style="color: {color_he};">{formatear_horas_minutos(mins_he)}</div>
-                    </div>
-                ''', unsafe_allow_html=True)
+        _he_items = sorted(horas_extras_mensuales.items(), key=lambda x: -x[1])
+        st.markdown(ui_panel("Horas extras del período", f"{NOMBRES_MESES[mes_sel-1]} {int(anio_sel)} · por colaborador", ui_hbars([(n, m, "#0B8F57" if m > 0 else "#CBD2DC") for n, m in _he_items], fmt=formatear_horas_minutos)), unsafe_allow_html=True)
     else:
-        st.info(f"No hay registros de horas extras para el mes de {NOMBRES_MESES[mes_sel-1]} {int(anio_sel)}.")
+        ui_callout(f"No hay registros de horas extras para el mes de {NOMBRES_MESES[mes_sel-1]} {int(anio_sel)}.")
 
     st.markdown("---")
 
@@ -3879,34 +3874,29 @@ elif choice == "Dashboard General":
             df_desc_dash = df_desc_dash[df_desc_dash["nombre"].isin(colaboradores_ops)]
         total_descuadre_monto = pd.to_numeric(df_desc_dash["monto"], errors="coerce").sum() if not df_desc_dash.empty else 0.0
 
-    st.markdown("<br>", unsafe_allow_html=True)
-    k1, k2, k3, k4, k5 = st.columns(5)
     metricas_gen = calcular_metricas_puntualidad(st.session_state.asistencia)
-    
-    with k1:
-        st.markdown(f'<div class="info-card"><div class="info-label">En Turno Ahora</div><div class="info-value" style="color: #00A959;">{en_turno_cnt}</div></div>', unsafe_allow_html=True)
-    with k2:
-        st.markdown(f'<div class="info-card"><div class="info-label">Turno Concluido</div><div class="info-value" style="color: #6B7280;">{concluido_cnt}</div></div>', unsafe_allow_html=True)
-    with k3:
-        st.markdown(f'<div class="info-card"><div class="info-label">Horas Extras Hoy</div><div class="info-value" style="color: #00A959;">{formatear_horas_minutos(total_minutos_extras_dia)}</div></div>', unsafe_allow_html=True)
-    with k4:
-        st.markdown(f'<div class="info-card"><div class="info-label">Puntualidad Global</div><div class="info-value" style="color: {"#00A959" if metricas_gen["ratio"] >= 90 else "#EC3237"};">{metricas_gen["ratio"]}%</div></div>', unsafe_allow_html=True)
-    with k5:
-        st.markdown(f'<div class="info-card"><div class="info-label">Balance Descuadres</div><div class="info-value" style="color: {"#00A959" if total_descuadre_monto >= 0 else "#EC3237"};">S/. {total_descuadre_monto:.2f}</div></div>', unsafe_allow_html=True)
+    _pg = metricas_gen["ratio"]
+    kpi_slot.markdown('<div class="tp-gridk">' +
+                      ui_kpi_acc("En turno ahora", str(en_turno_cnt), "colaboradores trabajando", "ok" if en_turno_cnt else "info") +
+                      ui_kpi_acc("Turno concluido", str(concluido_cnt), "ya marcaron salida", "info") +
+                      ui_kpi_acc("Horas extras hoy", formatear_horas_minutos(total_minutos_extras_dia), "sobre la jornada base", "ok" if total_minutos_extras_dia else "info") +
+                      ui_kpi_acc("Puntualidad global", f"{_pg:g}%", "de todos los ingresos", "ok" if _pg >= 90 else ("warn" if _pg >= 75 else "bad")) +
+                      ui_kpi_acc("Balance descuadres", f"S/. {total_descuadre_monto:.2f}", "sobrantes menos faltantes del día", "ok" if total_descuadre_monto >= 0 else "bad") + '</div>', unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
 
     if fichas_colaboradores:
-        st.markdown(f'<div class="tp-sec"><div><div class="tp-sec-title">Control operativo del día</div><div class="tp-sec-sub">Horas, puntualidad y caja por colaborador · {f_dash_str}</div></div>{ui_chip(f"{len(fichas_colaboradores)} colaboradores", "neutral")}</div>', unsafe_allow_html=True)
         _emp_op = st.session_state.empleados
+        _partes_op = [f'<div class="tp-sec"><div><div class="tp-sec-title">Control operativo del día</div><div class="tp-sec-sub">Horas, puntualidad y caja por colaborador · {f_dash_str}</div></div>{ui_chip(str(len(fichas_colaboradores)) + " colaboradores", "neutral")}</div>']
         for nombre_col, datos in fichas_colaboradores.items():
             _fm = _emp_op[_emp_op["nombre"] == nombre_col]
             _dni_c = str(_fm.iloc[0]["dni"]) if not _fm.empty else ""
             _foto_c = str(_fm.iloc[0].get("foto", "")) if not _fm.empty else ""
-            st.markdown(ui_op_card(nombre_col, datos, _dni_c, _foto_c), unsafe_allow_html=True)
-
+            _partes_op.append(ui_op_card(nombre_col, datos, _dni_c, _foto_c))
+        ops_slot.markdown("".join(_partes_op), unsafe_allow_html=True)
     else:
-        st.info(f"No hay registros de marcación para la fecha {f_dash_str}.")
+        with ops_slot.container():
+            ui_callout(f"No hay registros de marcación para la fecha {f_dash_str}.")
 
 elif choice == "Gestión Colaboradores":
     st.markdown("""
@@ -4112,7 +4102,7 @@ elif choice == "Boletas de Pago":
                 st.info("No hay feriados registrados.")
 
     with tab_boleta:
-        st.markdown("<h4 style='font-size:1rem; color:#111827; margin-bottom:12px;'>Parámetros y Selección de Trabajador</h4>", unsafe_allow_html=True)
+        st.markdown('<div class="tp-sec"><div><div class="tp-sec-title">Parámetros de la boleta</div><div class="tp-sec-sub">Elige al colaborador y el período a liquidar</div></div></div>', unsafe_allow_html=True)
         
         b_c1, b_c2, b_c3 = st.columns([1.5, 1, 1])
         colabs_list = obtener_solo_colaboradores()
@@ -4135,6 +4125,10 @@ elif choice == "Boletas de Pago":
         dni_b_val = str(row_trab.iloc[0]["dni"]) if not row_trab.empty and "dni" in row_trab.columns else "-"
         cargo_b_val = str(row_trab.iloc[0]["cargo"]) if not row_trab.empty and "cargo" in row_trab.columns else "-"
         finicio_b_val = str(row_trab.iloc[0]["fecha_inicio"]) if not row_trab.empty and "fecha_inicio" in row_trab.columns else "-"
+        _foto_b = str(row_trab.iloc[0].get("foto", "")) if not row_trab.empty else ""
+        st.markdown(f'<div class="tp-card"><div class="tp-op-head" style="margin:0">{ui_avatar(colab_b_sel, dni_b_val, _foto_b, 58)}<div><div class="tp-card-title">{_html.escape(colab_b_sel)}</div>'
+                    f'<div class="tp-card-sub">{_html.escape(cargo_b_val)} · DNI {_html.escape(dni_b_val)} · Ingreso {_html.escape(finicio_b_val)}</div></div>'
+                    f'{ui_chip(NOMBRES_MESES_B[mes_b_sel - 1] + " " + str(int(anio_b_sel)), "info")}</div></div>', unsafe_allow_html=True)
 
         # --- RECOPILACIÓN Y CÁLCULOS AUTOMÁTICOS ---
         df_asist_b = st.session_state.asistencia.copy()
@@ -4306,44 +4300,45 @@ elif choice == "Boletas de Pago":
                 incidencias_cnt = len(df_inc_u)
                 incidencias_monto = float(pd.to_numeric(df_inc_u["valor_reparacion"], errors="coerce").fillna(0).sum())
 
-        st.markdown("---")
-        st.markdown("##### Valores y Conceptos Calculados")
+        st.markdown('<div class="tp-sec" style="margin-top:18px"><div><div class="tp-sec-title">Valores y conceptos calculados</div><div class="tp-sec-sub">Los valores se calculan solos desde asistencia, solicitudes y caja; puedes ajustarlos si hace falta</div></div></div>', unsafe_allow_html=True)
+        resumen_slot = st.empty()
         
         if permisos_recuperados_cnt > 0:
-            st.info("🔄 **Permisos recuperados (no se cuentan como falta):** " + " | ".join(permisos_recuperados_detalle))
+            ui_callout("**Permisos recuperados (no se cuentan como falta):** " + " | ".join(permisos_recuperados_detalle), "ok")
 
+        st.markdown('<div class="tp-grp ok">Ingresos</div>', unsafe_allow_html=True)
         c_i1, c_i2, c_i3 = st.columns(3)
         sueldo_basico_in = c_i1.number_input("Sueldo Básico (S/.)", min_value=0.0, value=530.0, step=10.0, format="%.2f")
         dias_trab_in = c_i2.number_input("Días Laborados", min_value=0, max_value=31, value=int(dias_trabajados_cnt))
         feriados_trab_in = c_i3.number_input("Feriados Trab. (Adicional)", min_value=0, max_value=10, value=int(feriados_trabajados_cnt))
 
-        c_i4, c_i5, c_i6 = st.columns(3)
+        c_i4, c_i10 = st.columns(2)
         hrs_extras_in = c_i4.number_input("Horas Extras (Hrs)", min_value=0.0, value=float(hrs_extras_totales), step=0.5, format="%.2f")
-        adelanto_in = c_i5.number_input("Adelanto de Sueldo (S/.)", min_value=0.0, value=float(adelanto_sueldo_monto), step=5.0, format="%.2f")
-        dias_faltas_in = c_i6.number_input("Días Faltas", min_value=0, max_value=30, value=int(dias_faltas_cnt))
-
-        c_i7, c_i8, c_i9 = st.columns(3)
-        descuadre_caja_in = c_i7.number_input("Descuadre / Faltante Caja (S/.)", min_value=0.0, value=float(descuadre_caja_monto), step=1.0, format="%.2f")
-        desc_inventario_in = c_i8.number_input("Descuadre Inventario (S/.)", min_value=0.0, value=0.0, step=1.0, format="%.2f")
-        consumos_in = c_i9.number_input("Consumos por Pagar (S/.)", min_value=0.0, value=0.0, step=1.0, format="%.2f")
-
-        c_i10, c_i11 = st.columns(2)
         domingo_volunt_in = c_i10.number_input(
             "Días de Descanso Trabajados Voluntariamente (Domingo)", min_value=0, max_value=5, value=int(domingos_voluntarios_cnt),
             help="Domingos marcados en Terminal de Asistencia como 'Trabajo Voluntario en Domingo (Día de Descanso)', o registrados manualmente aquí."
         )
-        with c_i11:
-            st.caption("Se paga como día adicional (100% del valor día), separado del sueldo básico, dejando constancia de que originalmente era su descanso.")
-
-        c_inc1, c_inc2 = st.columns(2)
-        incidencias_in = c_inc1.number_input("Incidencias / Daños (S/.)", min_value=0.0, value=float(incidencias_monto), step=1.0, format="%.2f", key=f"boleta_incidencias_{colab_b_sel}_{mes_b_sel}_{anio_b_sel}")
-        with c_inc2:
-            st.caption(f"Se descuentan las incidencias del mes registradas por el colaborador ({incidencias_cnt} registrada(s)), excepto las marcadas como 'Resuelto / Condonado'.")
+        ui_callout("Los domingos trabajados voluntariamente se pagan como día adicional (100% del valor día), separado del sueldo básico, dejando constancia de que originalmente era su descanso.")
 
         c_b1, c_b2, c_b3 = st.columns(3)
         bono_puntualidad_in = c_b1.number_input("Bono por Puntualidad (S/.)", min_value=0.0, value=0.0, step=5.0, format="%.2f", key="boleta_bono_puntualidad")
         bono_presencia_in = c_b2.number_input("Bono Presencia y Uniforme (S/.)", min_value=0.0, value=0.0, step=5.0, format="%.2f", key="boleta_bono_presencia")
         bono_orden_in = c_b3.number_input("Bono Orden y Limpieza (S/.)", min_value=0.0, value=0.0, step=5.0, format="%.2f", key="boleta_bono_orden")
+
+        st.markdown('<div class="tp-grp bad">Descuentos</div>', unsafe_allow_html=True)
+        c_i5, c_i6, c_i7 = st.columns(3)
+        adelanto_in = c_i5.number_input("Adelanto de Sueldo (S/.)", min_value=0.0, value=float(adelanto_sueldo_monto), step=5.0, format="%.2f")
+        dias_faltas_in = c_i6.number_input("Días Faltas", min_value=0, max_value=30, value=int(dias_faltas_cnt))
+        descuadre_caja_in = c_i7.number_input("Descuadre / Faltante Caja (S/.)", min_value=0.0, value=float(descuadre_caja_monto), step=1.0, format="%.2f")
+
+        c_i8, c_i9 = st.columns(2)
+        desc_inventario_in = c_i8.number_input("Descuadre Inventario (S/.)", min_value=0.0, value=0.0, step=1.0, format="%.2f")
+        consumos_in = c_i9.number_input("Consumos por Pagar (S/.)", min_value=0.0, value=0.0, step=1.0, format="%.2f")
+
+        c_inc1, c_inc2 = st.columns(2)
+        incidencias_in = c_inc1.number_input("Incidencias / Daños (S/.)", min_value=0.0, value=float(incidencias_monto), step=1.0, format="%.2f", key=f"boleta_incidencias_{colab_b_sel}_{mes_b_sel}_{anio_b_sel}")
+        with c_inc2:
+            ui_callout(f"Se descuentan las incidencias del mes registradas por el colaborador ({incidencias_cnt} registrada(s)), excepto las marcadas como 'Resuelto / Condonado'.")
 
         # FÓRMULAS DE CÁLCULO
         valor_dia = sueldo_basico_in / 30.0 if sueldo_basico_in > 0 else 0.0
@@ -4389,6 +4384,11 @@ elif choice == "Boletas de Pago":
             "total_descuentos": total_descuentos_calc,
             "neto_pagar": neto_pagar_calc
         }
+
+        resumen_slot.markdown('<div class="tp-gridk">' +
+                              ui_kpi_acc("Total ingresos", f"S/. {total_ingresos_calc:,.2f}", "sueldo, extras y bonos", "ok") +
+                              ui_kpi_acc("Total descuentos", f"S/. {total_descuentos_calc:,.2f}", "faltas, adelantos y otros", "bad") +
+                              ui_kpi_acc("Neto a pagar", f"S/. {neto_pagar_calc:,.2f}", "monto final de la boleta", "info") + '</div>', unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown("##### Previsualización de la Boleta de Pago")
@@ -4762,17 +4762,13 @@ elif choice == "Incidencias y Daños":
         df_inc_admin = st.session_state.incidencias.copy()
         df_inc_admin["valor_reparacion"] = pd.to_numeric(df_inc_admin["valor_reparacion"], errors="coerce").fillna(0)
 
-        im1, im2, im3, im4 = st.columns(4)
-        with im1:
-            st.markdown(f'<div class="info-card"><div class="info-label">Total Incidencias</div><div class="info-value">{len(df_inc_admin)}</div></div>', unsafe_allow_html=True)
-        with im2:
-            st.markdown(f'<div class="info-card"><div class="info-label">Valor Total a Reparar</div><div class="info-value" style="color:#EC3237;">S/. {df_inc_admin["valor_reparacion"].sum():.2f}</div></div>', unsafe_allow_html=True)
-        with im3:
-            pend_inc_cnt = len(df_inc_admin[df_inc_admin["estado"] == "Pendiente"])
-            st.markdown(f'<div class="info-card"><div class="info-label">Pendientes de Resolver</div><div class="info-value" style="color:{"#EAB308" if pend_inc_cnt else "#111827"};">{pend_inc_cnt}</div></div>', unsafe_allow_html=True)
-        with im4:
-            billetes_falsos_total = df_inc_admin[df_inc_admin["tipo_incidencia"] == "Billete Falso"]["valor_reparacion"].sum()
-            st.markdown(f'<div class="info-card"><div class="info-label">Total en Billetes Falsos</div><div class="info-value">S/. {billetes_falsos_total:.2f}</div></div>', unsafe_allow_html=True)
+        pend_inc_cnt = len(df_inc_admin[df_inc_admin["estado"] == "Pendiente"])
+        billetes_falsos_total = df_inc_admin[df_inc_admin["tipo_incidencia"] == "Billete Falso"]["valor_reparacion"].sum()
+        st.markdown('<div class="tp-gridk">' +
+                    ui_kpi_acc("Total de incidencias", str(len(df_inc_admin)), "registradas por el personal", "info") +
+                    ui_kpi_acc("Valor total a reparar", f"S/. {df_inc_admin['valor_reparacion'].sum():.2f}", "suma de todas las incidencias", "bad") +
+                    ui_kpi_acc("Pendientes de resolver", str(pend_inc_cnt), "requieren tu decisión" if pend_inc_cnt else "Todo al día", "warn" if pend_inc_cnt else "ok") +
+                    ui_kpi_acc("Total en billetes falsos", f"S/. {billetes_falsos_total:.2f}", "valor recibido", "info") + '</div>', unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
 
@@ -4790,38 +4786,48 @@ elif choice == "Incidencias y Daños":
         if colab_inc_filtro != "Todos":
             df_inc_filtrado = df_inc_filtrado[df_inc_filtrado["nombre"] == colab_inc_filtro]
 
-        st.markdown("##### Ranking por Colaborador (valor total a reparar)")
         df_rank_inc = df_inc_filtrado.groupby("nombre")["valor_reparacion"].sum().reset_index().sort_values("valor_reparacion", ascending=False)
         if not df_rank_inc.empty:
-            st.bar_chart(df_rank_inc.set_index("nombre")["valor_reparacion"])
+            st.markdown(ui_panel("Ranking por colaborador", "Valor total a reparar según el filtro", ui_hbars([(r["nombre"], float(r["valor_reparacion"])) for _, r in df_rank_inc.head(8).iterrows()], "#EC3237", "S/. {:,.2f}")), unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown("##### Detalle de Incidencias")
-        st.dataframe(
-            df_inc_filtrado.sort_values("fecha_registro", ascending=False),
-            use_container_width=True,
-            hide_index=True
-        )
+        st.markdown("<div class='tp-note-t' style='margin:6px 0 10px'>Detalle de incidencias</div>", unsafe_allow_html=True)
+        _inc_ord = df_inc_filtrado.sort_values("fecha_registro", ascending=False)
+        try:
+            _c_tab, _c_tar = st.container(key="vista_tabla"), st.container(key="vista_tarjetas")
+        except TypeError:
+            _c_tab, _c_tar = st.container(), None
+        with _c_tab:
+            st.dataframe(_inc_ord, use_container_width=True, hide_index=True)
+        if _c_tar is not None:
+            with _c_tar:
+                st.markdown("".join(ui_inc_card(_r, admin=True) for _, _r in _inc_ord.head(30).iterrows()), unsafe_allow_html=True)
+                st.caption("Se muestran las 30 incidencias más recientes. Exporta a Excel para ver todo.")
         st.download_button("Exportar Incidencias a Excel", to_excel(df_inc_filtrado), "Incidencias.xlsx", use_container_width=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
-        with st.expander("Marcar Incidencia como Resuelta / Descontada"):
-            opciones_inc_resolver = [
-                f"{i} | {r['nombre']} | {r['tipo_incidencia']} | S/. {r['valor_reparacion']:.2f} | {r['estado']}"
-                for i, r in st.session_state.incidencias.iterrows()
-            ]
-            sel_inc_resolver = st.selectbox("Seleccionar Incidencia", opciones_inc_resolver, key="inc_resolver_sel")
-            nuevo_estado_inc = st.selectbox("Nuevo Estado", ["Pendiente", "Descontado en Boleta", "Resuelto / Condonado"], key="inc_nuevo_estado")
-            if st.button("Actualizar Estado", use_container_width=True, key="inc_resolver_btn"):
-                idx_inc_resolver = int(sel_inc_resolver.split(" | ")[0])
-                st.session_state.incidencias.at[idx_inc_resolver, "estado"] = nuevo_estado_inc
-                actualizar_hoja_completa("Incidencias", st.session_state.incidencias)
-                registrar_auditoria("Actualizar Estado de Incidencia", "Incidencias", f"Incidencia #{idx_inc_resolver} → {nuevo_estado_inc}")
-                st.toast("Estado actualizado")
-                time.sleep(0.3)
-                st.rerun()
+        st.markdown("<div class='tp-note-t' style='margin:6px 0 10px'>Pendientes de resolver</div>", unsafe_allow_html=True)
+        _pend_inc = st.session_state.incidencias[st.session_state.incidencias["estado"] == "Pendiente"]
+        if _pend_inc.empty:
+            ui_callout("No hay incidencias pendientes de resolver.", "ok")
+        for idx_inc_resolver, _rp in _pend_inc.iterrows():
+            with ui_card_container(f"inc_{idx_inc_resolver}"):
+                st.markdown(ui_inc_card(_rp, admin=True, flat=True), unsafe_allow_html=True)
+                _bd, _br = st.columns(2)
+                _nuevo = None
+                if _bd.button("Descontar en boleta", key=f"inc_desc_{idx_inc_resolver}", use_container_width=True):
+                    _nuevo = "Descontado en Boleta"
+                if _br.button("Resuelto / Condonado", key=f"inc_res_{idx_inc_resolver}", use_container_width=True):
+                    _nuevo = "Resuelto / Condonado"
+                if _nuevo:
+                    st.session_state.incidencias.at[idx_inc_resolver, "estado"] = _nuevo
+                    actualizar_hoja_completa("Incidencias", st.session_state.incidencias)
+                    registrar_auditoria("Actualizar Estado de Incidencia", "Incidencias", f"Incidencia #{idx_inc_resolver} → {_nuevo}")
+                    st.toast("Estado actualizado")
+                    time.sleep(0.3)
+                    st.rerun()
     else:
-        st.info("No hay incidencias registradas todavía.")
+        ui_callout("No hay incidencias registradas todavía.")
 
 elif choice == "Botellas Fiadas":
     st.markdown(f"""
