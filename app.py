@@ -1821,6 +1821,36 @@ def render_hist_puntualidad(dfa, dias_corte=None):
     e1.markdown(ui_panel("Tus horas extras por mes", "Tiempo trabajado sobre la jornada base de 5h 45m", ui_linea(lbl, [round(ext.get(m, 0) / 60, 1) for m in meses], "#F59E0B", "{:g}", " h")), unsafe_allow_html=True)
     e2.markdown(ui_panel("Tus últimas tardanzas", "Las 5 más recientes", filas_u), unsafe_allow_html=True)
 
+st.markdown("""
+<style>
+[class*="st-key-seg_"]{width:100%!important;}
+[class*="st-key-seg_"] [data-testid="stRadio"]{width:100%;display:flex;flex-direction:column;align-items:center;}
+[class*="st-key-seg_"] [data-testid="stWidgetLabel"]{width:100%;justify-content:center;margin-bottom:6px;}
+[class*="st-key-seg_"] [data-testid="stWidgetLabel"] p{font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--tp-mute);text-align:center;}
+[class*="st-key-seg_"] [role="radiogroup"]{gap:10px;flex-wrap:wrap;justify-content:center;width:100%;}
+[class*="st-key-seg_"] [role="radiogroup"] label{border:1.5px solid var(--tp-line);background:#fff;border-radius:14px;padding:12px 18px;cursor:pointer;transition:all .12s ease;box-shadow:var(--tp-sh-1);}
+[class*="st-key-seg_"] [role="radiogroup"] label>*:not(input):not([data-testid="stMarkdownContainer"]):not(:has([data-testid="stMarkdownContainer"])){display:none!important;}
+[class*="st-key-seg_"] [role="radiogroup"] label p{font-weight:650;font-size:.9rem;color:var(--tp-ink-2);margin:0;}
+[class*="st-key-seg_"] [role="radiogroup"] label:hover{border-color:#CBD2DC;}
+[class*="st-key-seg_"] [role="radiogroup"] label:has(input:checked){border-color:var(--tp-red);background:var(--tp-red-soft);}
+[class*="st-key-seg_"] [role="radiogroup"] label:has(input:checked) p{color:var(--tp-red-dk);}
+[class*="st-key-bf_dev_"] button{background:var(--tp-ok)!important;border:none!important;}
+[class*="st-key-bf_dev_"] button *{color:#fff!important;font-weight:700;}
+[class*="st-key-bf_dev_"] button:hover{background:#087548!important;}
+</style>
+""", unsafe_allow_html=True)
+
+def ui_inc_card(r):
+    e = _html.escape
+    est = str(r.get("estado", "")).strip() or "Pendiente"
+    try:
+        val = f"S/. {float(r['valor_reparacion']):.2f}"
+    except Exception:
+        val = "-"
+    detalle = str(r.get("detalle", "")).strip() or "Sin detalle"
+    return (f'<div class="tp-card"><div class="tp-card-head"><div><div class="tp-card-title">{e(str(r["tipo_incidencia"]))}</div><div class="tp-card-sub">{e(str(r["fecha"])[:10])}</div></div>'
+            f'<div class="tp-chips">{ui_chip(val, "info")}{ui_chip(e(est), "warn" if "pend" in est.lower() else "ok")}</div></div><div class="tp-card-body" style="margin-bottom:0">{e(detalle)}</div></div>')
+
 # --- COMPONENTES UI REUTILIZABLES ---
 def ui_iniciales(nombre):
     p = [x for x in str(nombre).split() if x]
@@ -3153,17 +3183,30 @@ elif choice == "Registrar Descuadre":
         </div>
     """, unsafe_allow_html=True)
 
+    _dm = st.session_state.descuadres
+    _mio = _dm[_dm["dni"].astype(str) == str(dni_actual)].copy() if not _dm.empty else _dm.copy()
+    if not _mio.empty:
+        _mio["monto_num"] = pd.to_numeric(_mio["monto"], errors="coerce").fillna(0)
+        _mes_d = _mio[pd.to_datetime(_mio["fecha"], errors="coerce").dt.strftime("%Y-%m") == obtener_ahora_peru().strftime("%Y-%m")]
+    else:
+        _mes_d = _mio
+    _sob = float(_mes_d[_mes_d["monto_num"] > 0]["monto_num"].sum()) if not _mes_d.empty else 0.0
+    _fal = float(_mes_d[_mes_d["monto_num"] < 0]["monto_num"].sum()) if not _mes_d.empty else 0.0
+    _kd1, _kd2, _kd3 = st.columns(3)
+    _kd1.markdown(ui_kpi("Sobrantes del mes", f"S/. {_sob:.2f}", "a tu favor"), unsafe_allow_html=True)
+    _kd2.markdown(ui_kpi("Faltantes del mes", f"S/. {abs(_fal):.2f}", "por justificar"), unsafe_allow_html=True)
+    _kd3.markdown(ui_kpi("Balance del mes", f"S/. {_sob + _fal:.2f}", "sobrantes menos faltantes"), unsafe_allow_html=True)
+    st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
+    ui_callout("Registra la diferencia de caja de tu turno. Un **motivo claro** ayuda a resolverla más rápido.")
+
     with st.form("form_descuadre_user", clear_on_submit=True):
-        st.markdown("<h4 style='margin:0; font-size:1rem; color:#111827; margin-bottom:16px;'>Detalle del Movimiento</h4>", unsafe_allow_html=True)
-        
+        tipo_desc = st.radio("Tipo de diferencia", ["Sobrante (+)", "Faltante (-)"], horizontal=True, key="seg_desc_tipo")
         c1, c2 = st.columns(2)
-        f_operacion = c1.date_input("Fecha Operativa", obtener_ahora_peru())
-        tipo_desc = c2.selectbox("Tipo de Diferencia", ["Sobrante (+)", "Faltante (-)"])
+        f_operacion = c1.date_input("Fecha operativa", obtener_ahora_peru())
+        monto = c2.number_input("Monto (S/.)", min_value=0.01, step=0.50, format="%.2f")
+        obs = st.text_area("Sustento o motivo", placeholder="Cuéntanos qué pasó con la diferencia de caja…")
 
-        monto = st.number_input("Monto (S/.)", min_value=0.01, step=0.50, format="%.2f")
-        obs = st.text_area("Sustento o motivo")
-
-        if st.form_submit_button("Guardar Registro", use_container_width=True):
+        if st.form_submit_button("Guardar registro", use_container_width=True):
             monto_final = monto if "+" in tipo_desc else -monto
             tipo_final = "Sobrante" if "+" in tipo_desc else "Faltante"
             f_reg = obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S")
@@ -3183,6 +3226,18 @@ elif choice == "Registrar Descuadre":
             time.sleep(0.3)
             st.rerun()
 
+    if not _mio.empty:
+        st.markdown("<div class='tp-note-t' style='margin:22px 0 10px'>Tus últimos registros</div>", unsafe_allow_html=True)
+        _MES_A = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
+        _filas_r = ""
+        for _, _r in _mio.sort_values("fecha_registro", ascending=False).head(5).iterrows():
+            _dt = pd.to_datetime(_r["fecha"], errors="coerce")
+            _mv = float(_r["monto_num"])
+            _filas_r += (f'<div class="tp-row"><div class="tp-row-time">{(str(_dt.day) + " " + _MES_A[_dt.month - 1]) if pd.notnull(_dt) else str(_r["fecha"])}</div>'
+                         f'<div class="tp-row-main"><b>{_html.escape(str(_r["tipo"]))}</b><span class="wrap">{_html.escape(str(_r["observacion"]).strip() or "Sin motivo registrado")}</span></div>'
+                         f'<div class="tp-chips">{ui_chip(("+" if _mv > 0 else "") + f"S/. {_mv:.2f}", "ok" if _mv >= 0 else "bad")}</div></div>')
+        st.markdown(_filas_r, unsafe_allow_html=True)
+
 elif choice == "Registrar Incidencia":
     st.markdown(f"""
         <div class="market-header">
@@ -3191,12 +3246,23 @@ elif choice == "Registrar Incidencia":
         </div>
     """, unsafe_allow_html=True)
 
-    st.caption("Registra aquí cualquier billete falso recibido, botella rota (gaseosa o cerveza), o cualquier otro daño (silla, pared, vitrina, etc.). El valor de reparación queda visible para administración.")
+    ui_callout("Registra aquí cualquier billete falso recibido, botella rota (gaseosa o cerveza), o cualquier otro daño (silla, pared, vitrina, etc.). El valor de reparación queda visible para administración.")
 
-    tipo_inc_sel = st.selectbox(
-        "Tipo de Incidencia",
+    _inc_all = st.session_state.incidencias
+    _inc_mias = _inc_all[_inc_all["nombre"] == user_actual].copy() if not _inc_all.empty else _inc_all.copy()
+    _n_pend = int(_inc_mias["estado"].astype(str).str.lower().str.contains("pend").sum()) if not _inc_mias.empty else 0
+    _v_pend = float(pd.to_numeric(_inc_mias[_inc_mias["estado"].astype(str).str.lower().str.contains("pend")]["valor_reparacion"], errors="coerce").fillna(0).sum()) if not _inc_mias.empty else 0.0
+    _ki1, _ki2, _ki3 = st.columns(3)
+    _ki1.markdown(ui_kpi("Incidencias registradas", str(len(_inc_mias)), "en tu historial"), unsafe_allow_html=True)
+    _ki2.markdown(ui_kpi("Pendientes", str(_n_pend), "en revisión"), unsafe_allow_html=True)
+    _ki3.markdown(ui_kpi("Valor pendiente", f"S/. {_v_pend:.2f}", "de reparación o reposición"), unsafe_allow_html=True)
+    st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
+
+    tipo_inc_sel = st.radio(
+        "Tipo de incidencia",
         ["Billete Falso", "Botella Rota (Gaseosa)", "Botella Rota (Cerveza)", "Otro Daño (Silla, Pared, Vitrina, etc.)"],
-        key="inc_tipo_sel"
+        horizontal=True,
+        key="seg_inc_tipo"
     )
 
     with st.form("form_incidencia_user", clear_on_submit=True):
@@ -3210,7 +3276,7 @@ elif choice == "Registrar Incidencia":
             valor_unit_bot = st.number_input("Valor de Reposición por Botella (S/.)", min_value=0.0, step=0.50, format="%.2f", key="inc_valor_unit_botella")
             valor_inc = cantidad_bot_rota * valor_unit_bot
             detalle_inc = st.text_area("Detalle (cómo ocurrió)", key="inc_detalle_botella")
-            st.caption(f"Valor total estimado de reparación: **S/. {valor_inc:.2f}**")
+            ui_callout(f"Valor total estimado de reparación: **S/. {valor_inc:.2f}**", "ok")
         else:
             detalle_inc = st.text_area("Describe el daño (ej: 'Rompió la silla del área de mesas', 'Golpeó la pared del almacén')", key="inc_detalle_otro")
             valor_inc = st.number_input("Valor Estimado de Reparación (S/.)", min_value=0.0, step=1.0, format="%.2f", key="inc_valor_otro")
@@ -3237,15 +3303,12 @@ elif choice == "Registrar Incidencia":
                 st.rerun()
 
     st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("##### Mis Incidencias Registradas")
+    st.markdown("<div class='tp-note-t' style='margin:6px 0 10px'>Mis incidencias registradas</div>", unsafe_allow_html=True)
     if not st.session_state.incidencias.empty:
         mis_inc = st.session_state.incidencias[st.session_state.incidencias["nombre"] == user_actual]
         if not mis_inc.empty:
-            st.dataframe(
-                mis_inc[["fecha", "tipo_incidencia", "detalle", "valor_reparacion", "estado"]].sort_values("fecha", ascending=False),
-                use_container_width=True,
-                hide_index=True
-            )
+            for _, _ri in mis_inc.sort_values("fecha", ascending=False).iterrows():
+                st.markdown(ui_inc_card(_ri), unsafe_allow_html=True)
         else:
             st.info("Aún no tienes incidencias registradas.")
     else:
@@ -4768,7 +4831,17 @@ elif choice == "Botellas Fiadas":
         </div>
     """, unsafe_allow_html=True)
 
-    st.caption("Registra aquí cuando se le fíen botellas (gaseosa o cerveza) a un cliente. Cualquier colaborador o el administrador podrá ver este registro en cualquier turno, hasta que las botellas sean devueltas.")
+    ui_callout("Registra aquí cuando se le fíen botellas (gaseosa o cerveza) a un cliente. Cualquier colaborador o el administrador podrá ver este registro en cualquier turno, hasta que las botellas sean devueltas.")
+
+    _bf = st.session_state.botellas_fiadas
+    _pend_k = _bf[_bf["estado"] != "Devuelta"] if not _bf.empty else _bf
+    _tot_bot = int(pd.to_numeric(_pend_k["cantidad_botellas"], errors="coerce").fillna(0).sum()) if not _pend_k.empty else 0
+    _gar = float(pd.to_numeric(_pend_k[_pend_k["dejo_dinero"].astype(str).str.lower().isin(["sí", "si"])]["monto_dejado"], errors="coerce").fillna(0).sum()) if not _pend_k.empty else 0.0
+    _kb1, _kb2, _kb3 = st.columns(3)
+    _kb1.markdown(ui_kpi("Registros pendientes", str(len(_pend_k)), "clientes con botellas por devolver"), unsafe_allow_html=True)
+    _kb2.markdown(ui_kpi("Botellas por devolver", str(_tot_bot), "entre todos los turnos"), unsafe_allow_html=True)
+    _kb3.markdown(ui_kpi("Garantía retenida", f"S/. {_gar:.2f}", "dejada por los clientes"), unsafe_allow_html=True)
+    st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
 
     with st.container(border=True):
         st.markdown("##### Registrar Botellas Fiadas")
@@ -4818,40 +4891,41 @@ elif choice == "Botellas Fiadas":
                         st.rerun()
 
     st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("##### 🍾 Botellas Pendientes de Devolución (todos los turnos)")
+    st.markdown("<div class='tp-note-t' style='margin:6px 0 10px'>Botellas pendientes de devolución · todos los turnos</div>", unsafe_allow_html=True)
 
     if not st.session_state.botellas_fiadas.empty:
         df_bf_pend = st.session_state.botellas_fiadas[st.session_state.botellas_fiadas["estado"] != "Devuelta"]
         if not df_bf_pend.empty:
             for idx_bf, r_bf in df_bf_pend.iterrows():
-                with st.container(border=True):
-                    cbf1, cbf2 = st.columns([3, 1])
-                    with cbf1:
-                        st.markdown(f"**{r_bf['cliente_nombre']}** — DNI: {r_bf['cliente_dni'] or 'No registrado'}")
-                        st.caption(f"📍 {r_bf['cliente_direccion'] or 'Sin dirección registrada'}")
-                        st.markdown(f"**{r_bf['cantidad_botellas']} botella(s)** de **{r_bf['tipo_botella']}** — Fiado el {r_bf['fecha_prestamo']} por {r_bf['registrado_por']}")
-                        if str(r_bf['dejo_dinero']).strip().lower() in ["sí", "si"]:
-                            st.success(f"💰 Dejó S/. {float(r_bf['monto_dejado']):.2f} de garantía")
-                        else:
-                            st.warning("⚠️ No dejó dinero de garantía")
-                        if str(r_bf.get("observacion", "")).strip():
-                            st.caption(f"Obs: {r_bf['observacion']}")
-                    with cbf2:
-                        if st.button("✅ Marcar Devueltas", key=f"bf_dev_{idx_bf}", use_container_width=True):
-                            st.session_state.botellas_fiadas.at[idx_bf, "estado"] = "Devuelta"
-                            st.session_state.botellas_fiadas.at[idx_bf, "fecha_devolucion"] = obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S")
-                            actualizar_hoja_completa("BotellasFiadas", st.session_state.botellas_fiadas)
-                            registrar_auditoria("Marcar Botellas Devueltas", "BotellasFiadas", f"{r_bf['cliente_nombre']} — {r_bf['cantidad_botellas']} botella(s)")
-                            st.toast("Botellas marcadas como devueltas")
-                            time.sleep(0.3)
-                            st.rerun()
+                tiene_g = str(r_bf["dejo_dinero"]).strip().lower() in ["sí", "si"]
+                try:
+                    dias_bf = (obtener_ahora_peru().date() - pd.to_datetime(r_bf["fecha_prestamo"]).date()).days
+                except Exception:
+                    dias_bf = 0
+                chip_g = ui_chip(f"Garantía S/. {float(r_bf['monto_dejado']):.2f}", "ok") if tiene_g else ui_chip("Sin garantía", "warn")
+                chip_d = ui_chip("Hoy" if dias_bf <= 0 else f"hace {dias_bf} día(s)", "warn" if dias_bf >= 3 else "neutral")
+                obs_txt = str(r_bf.get("observacion", "")).strip()
+                with ui_card_container(f"bf_{idx_bf}"):
+                    st.markdown(
+                        f'<div class="tp-card flat"><div class="tp-card-head"><div class="tp-op-head" style="margin:0">{ui_avatar(r_bf["cliente_nombre"], "", "", 44)}<div>'
+                        f'<div class="tp-card-title">{_html.escape(str(r_bf["cliente_nombre"]))}</div><div class="tp-card-sub">DNI {_html.escape(str(r_bf["cliente_dni"]) or "No registrado")} · {_html.escape(str(r_bf["cliente_direccion"]) or "Sin dirección registrada")}</div></div></div>'
+                        f'<div class="tp-chips">{chip_d}</div></div><div class="tp-card-body" style="margin-bottom:8px"><b>{r_bf["cantidad_botellas"]} botella(s)</b> de <b>{_html.escape(str(r_bf["tipo_botella"]))}</b> · fiado el {str(r_bf["fecha_prestamo"])[:16]} por {_html.escape(str(r_bf["registrado_por"]))}'
+                        f'{("<br>Obs: " + _html.escape(obs_txt)) if obs_txt else ""}</div><div class="tp-chips" style="justify-content:flex-start">{chip_g}</div></div>', unsafe_allow_html=True)
+                    if st.button("Marcar devueltas", key=f"bf_dev_{idx_bf}", use_container_width=True):
+                        st.session_state.botellas_fiadas.at[idx_bf, "estado"] = "Devuelta"
+                        st.session_state.botellas_fiadas.at[idx_bf, "fecha_devolucion"] = obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S")
+                        actualizar_hoja_completa("BotellasFiadas", st.session_state.botellas_fiadas)
+                        registrar_auditoria("Marcar Botellas Devueltas", "BotellasFiadas", f"{r_bf['cliente_nombre']} — {r_bf['cantidad_botellas']} botella(s)")
+                        st.toast("Botellas marcadas como devueltas")
+                        time.sleep(0.3)
+                        st.rerun()
         else:
-            st.success("No hay botellas pendientes de devolución en este momento.")
+            ui_callout("No hay botellas pendientes de devolución en este momento.", "ok")
     else:
         st.info("No hay registros de botellas fiadas todavía.")
 
     st.markdown("<br>", unsafe_allow_html=True)
-    with st.expander("📜 Historial de Botellas Ya Devueltas"):
+    with st.expander("Historial de botellas ya devueltas"):
         if not st.session_state.botellas_fiadas.empty:
             df_bf_devueltas = st.session_state.botellas_fiadas[st.session_state.botellas_fiadas["estado"] == "Devuelta"]
             if not df_bf_devueltas.empty:
