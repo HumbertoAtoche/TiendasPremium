@@ -1857,6 +1857,23 @@ def ui_inc_card(r, admin=False, flat=False):
     return (f'<div class="tp-card{" flat" if flat else ""}"><div class="tp-card-head">{quien}'
             f'<div class="tp-chips">{ui_chip(val, "info")}{ui_chip(e(est), "warn" if "pend" in est.lower() else "ok")}</div></div><div class="tp-card-body" style="margin-bottom:0">{e(detalle)}</div></div>')
 
+st.markdown("""
+<style>
+.legend-container{display:flex;flex-wrap:wrap;gap:8px;background:#fff;border:1px solid var(--tp-line);border-radius:16px;padding:14px 16px;box-shadow:var(--tp-sh-1);margin:8px 0 14px;}
+.legend-item{display:inline-flex;align-items:center;gap:8px;background:#F6F7FA;border-radius:999px;padding:5px 12px 5px 8px;font-size:.76rem;font-weight:600;color:var(--tp-ink-2);}
+.legend-badge{width:14px;height:14px;border-radius:50%;display:inline-block;}
+.tp-gridk{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:6px 0 18px;} .tp-gridk .tp-kpi{min-height:118px;}
+.tp-grp{display:flex;align-items:center;gap:10px;margin:22px 0 10px;font-size:.78rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;}
+.tp-grp::before{content:"";width:10px;height:10px;border-radius:50%;background:currentColor;}
+.tp-grp.ok{color:var(--tp-ok);} .tp-grp.bad{color:var(--tp-bad);} .tp-grp.info{color:var(--tp-info);}
+[class*="st-key-inc_res_"] button{background:var(--tp-ok)!important;border:none!important;}
+[class*="st-key-inc_res_"] button *{color:#fff!important;font-weight:700;}
+</style>
+""", unsafe_allow_html=True)
+
+def ui_kpi_acc(lbl, val, sub, tono):
+    return f'<div class="tp-kpi al-{tono}"><div class="tp-kpi-lbl">{lbl}</div><div class="tp-kpi-val">{val}</div><div class="tp-kpi-sub">{sub}</div></div>'
+
 # --- COMPONENTES UI REUTILIZABLES ---
 def ui_iniciales(nombre):
     p = [x for x in str(nombre).split() if x]
