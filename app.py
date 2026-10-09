@@ -3926,7 +3926,7 @@ elif choice == "Gestión Colaboradores":
     tab_fichas, tab_nuevo, tab_directorio = st.tabs(["Fichas Técnicas", "Registrar Colaborador", "Directorio General"])
 
     with tab_fichas:
-        st.markdown("<h4 style='font-size:1rem; color:#111827; margin-bottom:15px;'>Tarjetas de Identificación del Personal</h4>", unsafe_allow_html=True)
+        st.markdown('<div class="tp-sec"><div><div class="tp-sec-title">Tarjetas de identificación del personal</div><div class="tp-sec-sub">Busca por nombre, DNI o cargo, y filtra por estado</div></div></div>', unsafe_allow_html=True)
         
         colabs_df = st.session_state.empleados.copy()
         
@@ -3935,6 +3935,22 @@ elif choice == "Gestión Colaboradores":
         else:
             colabs_df["orden_estado"] = colabs_df["estado"].astype(str).str.lower().apply(lambda x: 0 if x == "activo" else 1)
             colabs_df = colabs_df.sort_values(by="orden_estado").reset_index(drop=True)
+            _act = int((colabs_df["orden_estado"] == 0).sum())
+            _baj = len(colabs_df) - _act
+            st.markdown('<div class="tp-gridk">' + ui_kpi_acc("Colaboradores", str(len(colabs_df)), "registrados en el sistema", "info") + ui_kpi_acc("Activos", str(_act), "equipo actual", "ok") +
+                        ui_kpi_acc("Dados de baja", str(_baj), "con fecha de cese", "warn" if _baj else "ok") + '</div>', unsafe_allow_html=True)
+            _fb1, _fb2 = st.columns([1.2, 1])
+            _q_f = _fb1.text_input("Buscar colaborador", placeholder="Buscar por nombre, DNI o cargo…", key="ficha_buscar", label_visibility="collapsed")
+            _est_f = _fb2.radio("Mostrar", ["Activos", "Dados de baja", "Todos"], horizontal=True, key="seg_ficha_estado", label_visibility="collapsed")
+            if _est_f == "Activos":
+                colabs_df = colabs_df[colabs_df["orden_estado"] == 0]
+            elif _est_f == "Dados de baja":
+                colabs_df = colabs_df[colabs_df["orden_estado"] == 1]
+            if _q_f.strip():
+                colabs_df = colabs_df[colabs_df.apply(lambda r: _gs_hit(_q_f, r.get("nombre", ""), r.get("dni", ""), r.get("cargo", "")), axis=1)]
+            colabs_df = colabs_df.reset_index(drop=True)
+            if colabs_df.empty:
+                ui_callout("No hay colaboradores que coincidan con el filtro.")
 
             grid_cols = st.columns(2)
             for i, row in colabs_df.iterrows():
@@ -3944,12 +3960,13 @@ elif choice == "Gestión Colaboradores":
 
     with tab_nuevo:
         with st.form("form_emp_completo", clear_on_submit=True):
-            st.markdown("<h4 style='margin:0; font-size:0.95rem; color:#111827; margin-bottom:12px;'>Datos Personales del Trabajador</h4>", unsafe_allow_html=True)
+            st.markdown('<div class="tp-grp info" style="margin-top:0">Datos personales</div>', unsafe_allow_html=True)
             
             f1, f2 = st.columns(2)
             dni_in = f1.text_input("DNI / Identificación")
             nom_in = f2.text_input("Nombre y Apellidos Completos")
 
+            st.markdown('<div class="tp-grp info">Puesto y planilla</div>', unsafe_allow_html=True)
             f3, f4 = st.columns(2)
             cargo_in = f3.selectbox("Cargo", ["Cajero", "Supervisora", "Reposidor", "Gerente de Tienda"])
             rol_in = f4.selectbox("Rol de Sistema", ["operativo", "admin"])
@@ -3957,6 +3974,7 @@ elif choice == "Gestión Colaboradores":
             f3b, f4b = st.columns(2)
             en_planilla_in = f3b.selectbox("¿Está en Planilla?", ["Sí", "No"], index=0, help="Marca 'No' para trabajadores jóvenes/informales que no están en planilla formal. No se les calculará beneficio vacacional.")
 
+            st.markdown('<div class="tp-grp info">Contacto y acceso</div>', unsafe_allow_html=True)
             f5, f6 = st.columns(2)
             dir_in = f5.text_input("Dirección de Domicilio")
             tel_in = f6.text_input("Número de Contacto / Teléfono")
@@ -3967,7 +3985,7 @@ elif choice == "Gestión Colaboradores":
 
             finicio_in = st.date_input("Fecha de Inicio de Labores", value=obtener_ahora_peru().date())
 
-            st.markdown("<h4 style='margin:12px 0 0 0; font-size:0.95rem; color:#111827;'>Información de Emergencia y Ubicación</h4>", unsafe_allow_html=True)
+            st.markdown('<div class="tp-grp info">Emergencia y ubicación</div>', unsafe_allow_html=True)
             
             e1, e2 = st.columns(2)
             c_emerg_in = e1.text_input("Contacto de Emergencia (Nombre / Parentesco)", placeholder="Ej. Maria Insapillo (Madre)")
@@ -3975,7 +3993,7 @@ elif choice == "Gestión Colaboradores":
 
             link_maps_in = st.text_input("Enlace Ubicación Domicilio (Google Maps Link)", placeholder="https://maps.app.goo.gl/...")
 
-            st.caption("Nota: La imagen debe guardarse en la carpeta `fotos/` del repositorio como: `<DNI>.png` o `<DNI>.jpg`")
+            ui_callout("Nota: La imagen debe guardarse en la carpeta `fotos/` del repositorio como: `<DNI>.png` o `<DNI>.jpg`")
 
             if st.form_submit_button("Guardar Registro", use_container_width=True):
                 if not dni_in or not nom_in or not clave_in:
@@ -4017,21 +4035,35 @@ elif choice == "Gestión Colaboradores":
                     st.rerun()
 
     with tab_directorio:
-        st.markdown("<h4 style='margin:0; font-size:0.95rem; color:#111827; margin-bottom:12px;'>Directorio Consolidado</h4>", unsafe_allow_html=True)
+        st.markdown('<div class="tp-sec"><div><div class="tp-sec-title">Directorio consolidado</div><div class="tp-sec-sub">Todos los colaboradores y sus datos de contacto</div></div></div>', unsafe_allow_html=True)
         cols_mostrar = [
             c for c in ["dni", "nombre", "cargo", "rol", "telefono", "direccion", "fecha_nacimiento", "contacto_emergencia", "numero_emergencia", "estado", "fecha_inicio", "fecha_cese", "en_planilla"] 
             if c in st.session_state.empleados.columns
         ]
-        st.dataframe(
-            st.session_state.empleados[cols_mostrar],
-            use_container_width=True,
-            hide_index=True
-        )
+        _dir_q = st.text_input("Buscar en el directorio", placeholder="Buscar por nombre, DNI, cargo o teléfono…", key="dir_buscar", label_visibility="collapsed")
+        _dir_df = st.session_state.empleados
+        if _dir_q.strip():
+            _dir_df = _dir_df[_dir_df.apply(lambda r: _gs_hit(_dir_q, r.get("nombre", ""), r.get("dni", ""), r.get("cargo", ""), r.get("telefono", "")), axis=1)]
+        try:
+            _c_tab, _c_tar = st.container(key="vista_tabla"), st.container(key="vista_tarjetas")
+        except TypeError:
+            _c_tab, _c_tar = st.container(), None
+        with _c_tab:
+            st.dataframe(_dir_df[cols_mostrar], use_container_width=True, hide_index=True)
+        if _c_tar is not None:
+            with _c_tar:
+                _filas_dir = ""
+                for _, _rd in _dir_df.iterrows():
+                    _ok = str(_rd.get("estado", "")).lower() == "activo"
+                    _filas_dir += (f'<div class="tp-row">{ui_avatar(_rd["nombre"], _rd["dni"], str(_rd.get("foto", "")), 44)}<div class="tp-row-main"><b>{_html.escape(str(_rd["nombre"]))}</b>'
+                                   f'<span>{_html.escape(str(_rd.get("cargo", "")))} · {_html.escape(str(_rd.get("telefono", "")) or "sin teléfono")}</span></div>'
+                                   f'<div class="tp-chips">{ui_chip("Activo" if _ok else "Baja", "ok" if _ok else "neutral")}</div></div>')
+                st.markdown(_filas_dir or "<div class='tp-card-sub'>Sin resultados.</div>", unsafe_allow_html=True)
 
         if rol_actual == "admin" and not st.session_state.empleados.empty:
             st.markdown("<br>", unsafe_allow_html=True)
             with st.expander("Actualizar Estado de Planilla (REMYPE)"):
-                st.caption("Los trabajadores marcados como 'No' (jóvenes/informales sin planilla) no acumulan beneficio vacacional en el sistema.")
+                ui_callout("Los trabajadores marcados como **'No'** (jóvenes/informales sin planilla) no acumulan beneficio vacacional en el sistema.")
                 colabs_todos_ep = st.session_state.empleados["nombre"].tolist()
                 if colabs_todos_ep:
                     colab_ep_sel = st.selectbox("Seleccionar colaborador", colabs_todos_ep, key="ep_sel")
@@ -5621,12 +5653,27 @@ elif choice == "Onboarding / Offboarding":
     """, unsafe_allow_html=True)
 
     if st.session_state.checklist.empty:
-        st.info("No hay checklists generados todavía. Se crean automáticamente al registrar un nuevo colaborador o al dar de baja a uno existente.")
+        ui_callout("No hay checklists generados todavía. Se crean automáticamente al registrar un nuevo colaborador o al dar de baja a uno existente.")
     else:
         colabs_con_checklist = sorted(st.session_state.checklist["nombre"].unique().tolist())
         colab_chk_sel = st.selectbox("Seleccionar Colaborador", colabs_con_checklist, key="chk_colab_sel")
 
         df_chk_colab = st.session_state.checklist[st.session_state.checklist["nombre"] == colab_chk_sel]
+        _d_ck, _f_ck = ui_dni_foto(colab_chk_sel)
+        _emp_ck = st.session_state.empleados[st.session_state.empleados["nombre"] == colab_chk_sel]
+        _cargo_ck = str(_emp_ck.iloc[0].get("cargo", "")) if not _emp_ck.empty else ""
+        _activo_ck = (not _emp_ck.empty) and str(_emp_ck.iloc[0].get("estado", "")).lower() == "activo"
+        st.markdown(f'<div class="tp-card"><div class="tp-op-head" style="margin:0">{ui_avatar(colab_chk_sel, _d_ck, _f_ck, 56)}<div><div class="tp-card-title">{_html.escape(colab_chk_sel)}</div>'
+                    f'<div class="tp-card-sub">{_html.escape(_cargo_ck)} · DNI {_html.escape(_d_ck)}</div></div>{ui_chip("Activo" if _activo_ck else "Dado de baja", "ok" if _activo_ck else "neutral")}</div></div>', unsafe_allow_html=True)
+        _pct_t = {}
+        for _t in ["Onboarding", "Offboarding"]:
+            _dt_ = df_chk_colab[df_chk_colab["tipo"] == _t]
+            _pct_t[_t] = int(len(_dt_[_dt_["estado"] == "Completado"]) * 100 / len(_dt_)) if len(_dt_) else None
+        _pend_ck = int((df_chk_colab["estado"] != "Completado").sum())
+        st.markdown('<div class="tp-gridk">' +
+                    ui_kpi_acc("Onboarding", f"{_pct_t['Onboarding']}%" if _pct_t["Onboarding"] is not None else "—", "incorporación completada" if _pct_t["Onboarding"] is not None else "No aplica", "ok" if _pct_t["Onboarding"] == 100 else "info") +
+                    ui_kpi_acc("Offboarding", f"{_pct_t['Offboarding']}%" if _pct_t["Offboarding"] is not None else "—", "salida completada" if _pct_t["Offboarding"] is not None else "No aplica", "ok" if _pct_t["Offboarding"] == 100 else "info") +
+                    ui_kpi_acc("Tareas pendientes", str(_pend_ck), "por completar" if _pend_ck else "Todo al día", "warn" if _pend_ck else "ok") + '</div>', unsafe_allow_html=True)
 
         for tipo_chk in ["Onboarding", "Offboarding"]:
             df_tipo_chk = df_chk_colab[df_chk_colab["tipo"] == tipo_chk]
@@ -5637,10 +5684,12 @@ elif choice == "Onboarding / Offboarding":
             total_items = len(df_tipo_chk)
             pct_chk = int((completados / total_items) * 100) if total_items else 0
 
-            with st.container(border=True):
-                icono_chk = "🚀" if tipo_chk == "Onboarding" else "🚪"
-                st.markdown(f"##### {icono_chk} Checklist de {tipo_chk} ({completados}/{total_items})")
-                st.progress(pct_chk / 100.0)
+            with ui_card_container(f"chk_{tipo_chk}"):
+                _tono_ck = "ok" if pct_chk == 100 else "warn"
+                st.markdown(f'<div class="tp-card flat"><div class="tp-card-head"><div><div class="tp-card-title">Checklist de {tipo_chk}</div>'
+                            f'<div class="tp-card-sub">{"Incorporación del colaborador" if tipo_chk == "Onboarding" else "Proceso de salida del colaborador"}</div></div>'
+                            f'{ui_chip(str(completados) + " de " + str(total_items) + " completadas", _tono_ck)}</div>'
+                            f'<div class="tp-prog {_tono_ck}" style="margin:14px 0 4px"><i style="width:{pct_chk}%"></i></div></div>', unsafe_allow_html=True)
 
                 for idx_chk, row_chk in df_tipo_chk.iterrows():
                     marcado = row_chk["estado"] == "Completado"
@@ -5663,7 +5712,7 @@ elif choice == "Auditoría y Configuración":
         </div>
     """, unsafe_allow_html=True)
 
-    tab_aud, tab_cfg = st.tabs(["📋 Registro de Auditoría", "⚙️ Configuración"])
+    tab_aud, tab_cfg = st.tabs(["Registro de auditoría", "Configuración"])
 
     with tab_aud:
         if not st.session_state.auditoria.empty:
@@ -5681,14 +5730,38 @@ elif choice == "Auditoría y Configuración":
             if accion_aud_filtro != "Todas":
                 df_aud = df_aud[df_aud["accion"] == accion_aud_filtro]
 
-            st.dataframe(df_aud.sort_values("fecha_hora", ascending=False), use_container_width=True, hide_index=True)
+            _aud_ord = df_aud.sort_values("fecha_hora", ascending=False)
+            if _aud_ord.empty:
+                ui_callout("No hay eventos con los filtros seleccionados.")
+            else:
+                _top_acc = _aud_ord["accion"].value_counts().index[0]
+                st.markdown('<div class="tp-gridk">' + ui_kpi_acc("Eventos registrados", str(len(_aud_ord)), "según el filtro", "info") +
+                            ui_kpi_acc("Usuarios distintos", str(_aud_ord["usuario"].nunique()), "con actividad", "info") +
+                            ui_kpi_acc("Acción más frecuente", _html.escape(str(_top_acc)), f"{int((_aud_ord['accion'] == _top_acc).sum())} vez/veces", "warn") +
+                            ui_kpi_acc("Último evento", str(_aud_ord.iloc[0]["fecha_hora"])[:16], _html.escape(str(_aud_ord.iloc[0]["usuario"])), "ok") + '</div>', unsafe_allow_html=True)
+            try:
+                _c_tab, _c_tar = st.container(key="vista_tabla"), st.container(key="vista_tarjetas")
+            except TypeError:
+                _c_tab, _c_tar = st.container(), None
+            with _c_tab:
+                st.dataframe(_aud_ord, use_container_width=True, hide_index=True)
+            if _c_tar is not None:
+                with _c_tar:
+                    _filas_a = ""
+                    for _, _ra in _aud_ord.head(40).iterrows():
+                        _du, _fu = ui_dni_foto(str(_ra["usuario"]))
+                        _sub = " · ".join(x for x in [str(_ra["usuario"]), str(_ra.get("modulo", "")).strip(), str(_ra.get("detalle", "")).strip()] if x and x != "nan")
+                        _filas_a += (f'<div class="tp-row">{ui_avatar(str(_ra["usuario"]), _du, _fu, 40)}<div class="tp-row-main"><b>{_html.escape(str(_ra["accion"]))}</b>'
+                                     f'<span class="wrap">{_html.escape(_sub)}</span></div><div class="tp-chips">{ui_chip(str(_ra["fecha_hora"])[5:16], "neutral")}</div></div>')
+                    st.markdown(_filas_a, unsafe_allow_html=True)
+                    st.caption("Se muestran los 40 eventos más recientes. Exporta a Excel para ver todo.")
             st.download_button("Exportar Auditoría a Excel", to_excel(df_aud), "Auditoria.xlsx", use_container_width=True)
         else:
-            st.info("Aún no hay eventos registrados en la auditoría.")
+            ui_callout("Aún no hay eventos registrados en la auditoría.")
 
     with tab_cfg:
-        st.markdown("##### 🔒 Sesión")
-        st.caption(f"Las sesiones se cierran automáticamente tras 30 minutos de inactividad o 10 horas desde el inicio de sesión. Sesión actual iniciada: {datetime.fromtimestamp(st.session_state.login_timestamp).strftime('%d/%m/%Y %H:%M:%S')}.")
+        st.markdown('<div class="tp-sec"><div><div class="tp-sec-title">Sesión y seguridad</div><div class="tp-sec-sub">Reglas de acceso al sistema</div></div></div>', unsafe_allow_html=True)
+        ui_callout(f"Las sesiones se cierran automáticamente tras 30 minutos de inactividad o 10 horas desde el inicio de sesión. Sesión actual iniciada: {datetime.fromtimestamp(st.session_state.login_timestamp).strftime('%d/%m/%Y %H:%M:%S')}.")
 
 # --- PIE DE PÁGINA (FOOTER ESTILO WEB/APP) ---
 st.markdown("""
