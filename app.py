@@ -2049,6 +2049,34 @@ if not hasattr(st, "_tp_toast_orig"):
     st._tp_toast_orig = st.toast
 st.toast = _tp_toast
 
+_b64_ld = _logo_base64_app39()
+_logo_css = f"url(data:{LOGO_MIME};base64,{_b64_ld})" if _b64_ld else "none"
+st.markdown("""
+<style>
+/* Transición entre pestañas: la página entra suavemente */
+@keyframes tpPgA{from{opacity:.5;transform:translateY(12px);}to{opacity:1;transform:none;}}
+@keyframes tpPgB{from{opacity:.5;transform:translateY(12px);}to{opacity:1;transform:none;}}
+.stApp:has(.tp-pg-a) .block-container{animation:tpPgA .45s cubic-bezier(.2,.7,.2,1);}
+.stApp:has(.tp-pg-b) .block-container{animation:tpPgB .45s cubic-bezier(.2,.7,.2,1);}
+[data-testid="stElementContainer"]:has(.tp-pg-a),[data-testid="stElementContainer"]:has(.tp-pg-b),.element-container:has(.tp-pg-a),.element-container:has(.tp-pg-b){display:none!important;}
+/* Mientras la app trabaja: barra roja arriba y, si tarda, el logo pulsando */
+[data-testid="stStatusWidget"]{display:none!important;}
+@keyframes tpBar{from{background-position:200% 0;}to{background-position:-200% 0;}}
+@keyframes tpLoadIn{to{opacity:1;}}
+@keyframes tpPulse{0%,100%{background-size:104px auto;}50%{background-size:126px auto;}}
+.stApp:has([data-testid="stStatusWidget"])::before{content:"";position:fixed;top:0;left:0;width:100%;height:3px;z-index:100001;pointer-events:none;
+  background:linear-gradient(90deg,transparent 0%,#EC3237 40%,#FF6B70 60%,transparent 100%);background-size:200% 100%;animation:tpBar 1.1s linear infinite;}
+[data-stale="true"],.stale-element{opacity:.45!important;transition:opacity .25s ease;}
+</style>
+""", unsafe_allow_html=True)
+st.markdown(f"""
+<style>
+.stApp:has([data-testid="stStatusWidget"])::after{{content:"";position:fixed;inset:0;z-index:100000;pointer-events:none;opacity:0;
+  background:rgba(244,245,247,.62) {_logo_css} center / 112px auto no-repeat;-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);
+  animation:tpLoadIn .3s ease .5s forwards,tpPulse 1.3s ease-in-out .8s infinite;}}
+</style>
+""", unsafe_allow_html=True)
+
 # --- COMPONENTES UI REUTILIZABLES ---
 def ui_iniciales(nombre):
     p = [x for x in str(nombre).split() if x]
@@ -3353,6 +3381,12 @@ if _vc:
     st.markdown(f'<div class="tp-banner warn"><span class="tp-al-ico warn">{_eye}</span><div><b>Vista previa como {_html.escape(_vc)}</b><span class="s">Solo para ver el diseño: no se guarda ni se modifica ningún dato.</span></div></div>', unsafe_allow_html=True)
     st.button("Salir de la vista previa", key="salir_preview", on_click=_salir_preview)
     st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+
+_pid = str(choice) + ("|buscar" if len(str(st.session_state.get("gs_q", "")).strip()) >= 2 else "")
+if st.session_state.get("_pg_prev") != _pid:       # cambió de pestaña: se alterna la animación para que se repita
+    st.session_state["_pg_prev"] = _pid
+    st.session_state["_pg_n"] = st.session_state.get("_pg_n", 0) + 1
+st.markdown(f'<div class="tp-pg-{"a" if st.session_state["_pg_n"] % 2 == 0 else "b"}"></div>', unsafe_allow_html=True)
 
 _gq = str(st.session_state.get("gs_q", "")).strip()
 if len(_gq) >= 2:
