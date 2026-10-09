@@ -248,6 +248,9 @@ def obtener_colaboradores_gsheets():
     ])
 
 def guardar_colaborador_gsheets(dni, nombre, cargo, estado, clave, rol, direccion="", telefono="", fecha_nacimiento="", foto="", contacto_emergencia="", numero_emergencia="", link_domicilio="", fecha_inicio="", fecha_cese="", en_planilla="Sí"):
+    if st.session_state.get("ver_como"):
+        st.toast("Vista previa: no se guardó ningún dato")
+        return
     if doc_sheets:
         try:
             hoja = doc_sheets.worksheet("Colaboradores")
@@ -276,6 +279,9 @@ def calcular_edad(fecha_nac):
         return "-"
 
 def guardar_asistencia_gsheets(dni, nombre, tipo, fecha_hora, fecha, observacion="", es_extra="NO"):
+    if st.session_state.get("ver_como"):
+        st.toast("Vista previa: no se guardó ningún dato")
+        return
     if doc_sheets:
         try:
             hoja = doc_sheets.worksheet("Asistencia")
@@ -284,6 +290,9 @@ def guardar_asistencia_gsheets(dni, nombre, tipo, fecha_hora, fecha, observacion
             st.error(f"Error al guardar asistencia: {e}")
 
 def guardar_descuadre_gsheets(fecha, dni, nombre, tipo, monto, observacion, fecha_registro):
+    if st.session_state.get("ver_como"):
+        st.toast("Vista previa: no se guardó ningún dato")
+        return
     if doc_sheets:
         try:
             hoja = doc_sheets.worksheet("Descuadres")
@@ -316,6 +325,9 @@ def obtener_incidencias_gsheets():
     return pd.DataFrame(columns=columnas_inc)
 
 def guardar_incidencia_gsheets(id_inc, dni, nombre, fecha, tipo_incidencia, detalle, valor_reparacion, fecha_registro, registrado_por, estado="Pendiente"):
+    if st.session_state.get("ver_como"):
+        st.toast("Vista previa: no se guardó ningún dato")
+        return
     if doc_sheets:
         try:
             try:
@@ -360,6 +372,9 @@ def obtener_botellas_fiadas_gsheets():
     return pd.DataFrame(columns=columnas_bf)
 
 def guardar_botella_fiada_gsheets(id_bf, cliente_nombre, cliente_dni, cliente_direccion, cantidad, tipo_botella, dejo_dinero, monto_dejado, fecha_prestamo, registrado_por, estado="Pendiente", fecha_devolucion="", observacion=""):
+    if st.session_state.get("ver_como"):
+        st.toast("Vista previa: no se guardó ningún dato")
+        return
     if doc_sheets:
         try:
             try:
@@ -381,6 +396,9 @@ def guardar_botella_fiada_gsheets(id_bf, cliente_nombre, cliente_dni, cliente_di
         return False
 
 def guardar_solicitud_gsheets(id_sol, fecha_reg, dni, nombre, tipo_sol, f_permiso, monto_adel, motivo, estado="Pendiente", respuesta="", requiere_recuperacion="No", fecha_recuperacion=""):
+    if st.session_state.get("ver_como"):
+        st.toast("Vista previa: no se guardó ningún dato")
+        return
     if doc_sheets:
         try:
             hoja = doc_sheets.worksheet("Solicitudes")
@@ -394,6 +412,9 @@ def guardar_solicitud_gsheets(id_sol, fecha_reg, dni, nombre, tipo_sol, f_permis
             st.error(f"Error al guardar solicitud: {e}")
 
 def guardar_feriado_gsheets(fecha, descripcion):
+    if st.session_state.get("ver_como"):
+        st.toast("Vista previa: no se guardó ningún dato")
+        return
     if doc_sheets:
         try:
             try:
@@ -431,6 +452,9 @@ def obtener_vacaciones_gsheets():
     return pd.DataFrame(columns=columnas_vac)
 
 def guardar_vacacion_gsheets(id_vac, dni, nombre, tipo, fecha_inicio, fecha_fin, dias_tomados, observacion, fecha_registro, registrado_por, fecha_recuperacion="", horario_recuperacion="", estado_recuperacion=""):
+    if st.session_state.get("ver_como"):
+        st.toast("Vista previa: no se guardó ningún dato")
+        return
     if doc_sheets:
         try:
             try:
@@ -511,6 +535,8 @@ def obtener_auditoria_gsheets():
     return pd.DataFrame(columns=columnas_aud)
 
 def registrar_auditoria(accion, entidad, detalle=""):
+    if st.session_state.get("ver_como"):
+        return
     """Deja constancia de quién hizo qué y cuándo. Se llama en cada acción
     administrativa sensible (editar, eliminar, aprobar, dar de baja, etc.)."""
     try:
@@ -582,6 +608,9 @@ def obtener_checklist_gsheets():
     return pd.DataFrame(columns=columnas_chk)
 
 def guardar_item_checklist_gsheets(id_item, dni, nombre, tipo, tarea, estado, fecha_creacion, fecha_completado=""):
+    if st.session_state.get("ver_como"):
+        st.toast("Vista previa: no se guardó ningún dato")
+        return
     if doc_sheets:
         try:
             try:
@@ -638,6 +667,9 @@ def obtener_boletas_historial_gsheets():
     return pd.DataFrame(columns=columnas_bh)
 
 def guardar_boleta_historial_gsheets(datos_b):
+    if st.session_state.get("ver_como"):
+        st.toast("Vista previa: no se guardó ningún dato")
+        return
     if doc_sheets:
         try:
             try:
@@ -658,6 +690,9 @@ def guardar_boleta_historial_gsheets(datos_b):
     return None
 
 def actualizar_hoja_completa(nombre_hoja, df):
+    if st.session_state.get("ver_como"):
+        st.toast("Vista previa: no se guardó ningún dato")
+        return
     if doc_sheets:
         try:
             hoja = doc_sheets.worksheet(nombre_hoja)
@@ -2025,6 +2060,37 @@ for _, row in st.session_state.empleados.iterrows():
 
 ui_pwa_inyectar()
 
+import threading
+
+LOGIN_MAX_INTENTOS = 5      # intentos distintos incorrectos permitidos
+LOGIN_VENTANA_SEG = 600     # ventana en la que se cuentan los intentos (10 min)
+LOGIN_BLOQUEO_SEG = 180     # bloqueo temporal: 3 minutos
+
+@st.cache_resource
+def _login_guard():
+    """Memoria compartida del servidor: cuenta intentos fallidos por DNI (no se reinicia al recargar la página)."""
+    return {"lock": threading.Lock(), "fails": {}, "locked_until": {}}
+
+_DATOS_SESION = ["empleados", "asistencia", "descuadres", "solicitudes", "feriados", "vacaciones",
+                 "auditoria", "checklist", "boletas_historial", "incidencias", "botellas_fiadas"]
+
+def _cambiar_preview():
+    """Admin: entra o sale de la vista previa de un colaborador (solo lectura)."""
+    sel = st.session_state.get("ver_como_sel")
+    nuevo = None if sel in (None, "Mi vista (admin)") else sel
+    st.session_state["ver_como"] = None            # primero se libera, para poder auditar
+    if nuevo:
+        registrar_auditoria("Vista previa de la app", "Usuarios", f"{st.session_state.get('usuario_login')} vio la app como {nuevo} (solo lectura)")
+    st.session_state["ver_como"] = nuevo
+    for k in _DATOS_SESION:                         # descarta cualquier cambio en memoria y recarga desde Sheets
+        st.session_state.pop(k, None)
+    st.session_state["nav_radio"] = None
+    st.session_state["gs_q"] = ""
+
+def _salir_preview():
+    st.session_state["ver_como_sel"] = "Mi vista (admin)"
+    _cambiar_preview()
+
 # --- LOGIN EJECUTIVO ---
 # Si prefieres NO mostrar nombre/foto al escribir un DNI (antes de autenticar), pon False.
 LOGIN_MOSTRAR_FOTO = True
@@ -2120,16 +2186,46 @@ if not st.session_state.usuario_login:
             st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
             _clic = st.button("Ingresar al sistema", use_container_width=True, key="login_btn")
             if _clic or (dni_input.strip() and clave_input):
-                usuario_sel = next((n for n, d in USUARIOS.items() if str(d["dni"]).strip() == dni_input.strip()), None)
-                if usuario_sel and clave_input == USUARIOS[usuario_sel]["clave"]:
-                    st.session_state.usuario_login = usuario_sel
-                    st.session_state.login_timestamp = time.time()
-                    st.session_state.ultima_actividad = time.time()
-                    st.success("Acceso concedido")
-                    time.sleep(0.3)
-                    st.rerun()
+                _dni_k = dni_input.strip()
+                _g = _login_guard()
+                _ahora_l = time.time()
+                with _g["lock"]:
+                    _hasta = _g["locked_until"].get(_dni_k, 0)
+                if _hasta > _ahora_l:
+                    st.error(f"Demasiados intentos fallidos. Por seguridad, espera {int((_hasta - _ahora_l) // 60) + 1} minuto(s) e inténtalo de nuevo.")
                 else:
-                    st.error("DNI o contraseña incorrectos. Revisa los datos e intenta de nuevo.")
+                    usuario_sel = next((n for n, d in USUARIOS.items() if str(d["dni"]).strip() == _dni_k), None)
+                    if usuario_sel and clave_input == USUARIOS[usuario_sel]["clave"]:
+                        with _g["lock"]:
+                            _g["fails"].pop(_dni_k, None)
+                        st.session_state.usuario_login = usuario_sel
+                        st.session_state["ver_como"] = None
+                        st.session_state["ver_como_sel"] = "Mi vista (admin)"
+                        st.session_state.login_timestamp = time.time()
+                        st.session_state.ultima_actividad = time.time()
+                        st.success("Acceso concedido")
+                        time.sleep(0.3)
+                        st.rerun()
+                    else:
+                        _bloqueado = False
+                        if st.session_state.get("login_ult_intento") != (_dni_k, clave_input):   # solo cuenta intentos distintos
+                            st.session_state["login_ult_intento"] = (_dni_k, clave_input)
+                            with _g["lock"]:
+                                _lista = [t for t in _g["fails"].get(_dni_k, []) if _ahora_l - t < LOGIN_VENTANA_SEG] + [_ahora_l]
+                                if len(_lista) >= LOGIN_MAX_INTENTOS:
+                                    _g["locked_until"][_dni_k] = _ahora_l + LOGIN_BLOQUEO_SEG
+                                    _g["fails"][_dni_k] = []
+                                    _bloqueado = True
+                                else:
+                                    _g["fails"][_dni_k] = _lista
+                            if _bloqueado:
+                                registrar_auditoria("Bloqueo temporal de acceso", "Usuarios", f"DNI {_dni_k}: {LOGIN_MAX_INTENTOS} intentos fallidos. Bloqueado {LOGIN_BLOQUEO_SEG // 60} min.")
+                        if _bloqueado:
+                            st.error(f"Demasiados intentos fallidos. Por seguridad, espera {LOGIN_BLOQUEO_SEG // 60} minutos e inténtalo de nuevo.")
+                        else:
+                            with _g["lock"]:
+                                _quedan = max(0, LOGIN_MAX_INTENTOS - len([t for t in _g["fails"].get(_dni_k, []) if _ahora_l - t < LOGIN_VENTANA_SEG]))
+                            st.error(f"DNI o contraseña incorrectos. Te quedan {_quedan} intento(s) antes de un bloqueo temporal.")
             st.markdown('<div class="tp-lg-note">Conexión protegida · La sesión se cierra tras 30 min de inactividad</div>', unsafe_allow_html=True)
         ui_guia_instalar(st)
     st.stop()
@@ -2158,12 +2254,18 @@ if _tiempo_desde_login > SESION_MAX_SEGUNDOS or _tiempo_inactivo > INACTIVIDAD_M
 
 st.session_state.ultima_actividad = _ahora_sesion
 
-user_actual = st.session_state.usuario_login
+user_real = st.session_state.usuario_login
+rol_real = USUARIOS[user_real]["rol"]
+_vc = st.session_state.get("ver_como")
+if rol_real != "admin" or _vc not in USUARIOS or USUARIOS[_vc]["rol"] == "admin":
+    st.session_state["ver_como"] = None
+    _vc = None
+user_actual = _vc or user_real      # en vista previa, la app se comporta como ese colaborador
 rol_actual = USUARIOS[user_actual]["rol"]
 dni_actual = USUARIOS[user_actual]["dni"]
 
 if not st.session_state.get("login_auditado", False):
-    registrar_auditoria("Inicio de Sesión", "Usuarios", f"{user_actual} ({rol_actual}) inició sesión.")
+    registrar_auditoria("Inicio de Sesión", "Usuarios", f"{user_real} ({rol_real}) inició sesión.")
     st.session_state.login_auditado = True
 
 # =========================================================
@@ -3031,12 +3133,14 @@ def renderizar_calendario_colaborador(nombre_colab, anio, mes):
 st.sidebar.markdown(f'<div style="text-align:center; padding: 8px 0 14px 0;">{logo_tag_app39(58)}</div>', unsafe_allow_html=True)
 st.sidebar.markdown('<div class="tp-brand"><div class="tp-brand-name">Tiendas <span>Premium</span></div><div class="tp-brand-sub">Sistema de control interno</div></div>', unsafe_allow_html=True)
 
+_dni_real = USUARIOS[user_real]["dni"]
+_foto_real = ui_dni_foto(user_real)[1]
 _fila_me = st.session_state.empleados[st.session_state.empleados["dni"].astype(str) == str(dni_actual)]
 _foto_actual = str(_fila_me.iloc[0].get("foto", "")) if not _fila_me.empty else ""
 st.sidebar.markdown(f"""
     <div class="tp-user">
-        {ui_avatar(user_actual, dni_actual, _foto_actual)}
-        <div><b>{user_actual}</b><span>{str(rol_actual).capitalize()} · DNI {dni_actual}</span></div>
+        {ui_avatar(user_real, _dni_real, _foto_real)}
+        <div><b>{user_real}</b><span>{str(rol_real).capitalize()} · DNI {_dni_real}</span></div>
     </div>
 """, unsafe_allow_html=True)
 _sol_n = st.session_state.get("solicitudes")
@@ -3052,6 +3156,12 @@ if rol_actual == "admin":
 else:
     menu = ["Marcar Asistencia", "Registrar Descuadre", "Registrar Incidencia", "Botellas Fiadas", "Mi Ficha Técnica", "Mis Vacaciones", "Solicitar Permiso / Adelanto", "Mi Dashboard Mensual"]
 
+if rol_real == "admin":
+    _opc_vc = ["Mi vista (admin)"] + sorted(n for n, d in USUARIOS.items() if d["rol"] != "admin")
+    if st.session_state.get("ver_como_sel") not in _opc_vc:
+        st.session_state["ver_como_sel"] = "Mi vista (admin)"
+    st.sidebar.markdown('<div class="tp-note-t" style="margin:2px 2px 6px">Ver como colaborador</div>', unsafe_allow_html=True)
+    st.sidebar.selectbox("Ver como colaborador", _opc_vc, key="ver_como_sel", on_change=_cambiar_preview, label_visibility="collapsed")
 st.sidebar.text_input("Buscar", key="gs_q", placeholder="Buscar personas, solicitudes, secciones…", label_visibility="collapsed")
 if st.session_state.get("nav_radio") not in menu:
     st.session_state["nav_radio"] = menu[0]
@@ -3087,6 +3197,12 @@ if st.sidebar.button("Cerrar Sesión", use_container_width=True):
 st.sidebar.markdown('</div>', unsafe_allow_html=True)
 
 # -------------------- MÓDULOS OPERATIVOS --------------------
+
+if _vc:
+    _eye = "<svg width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z'/><circle cx='12' cy='12' r='3'/></svg>"
+    st.markdown(f'<div class="tp-banner warn"><span class="tp-al-ico warn">{_eye}</span><div><b>Vista previa como {_html.escape(_vc)}</b><span class="s">Solo para ver el diseño: no se guarda ni se modifica ningún dato.</span></div></div>', unsafe_allow_html=True)
+    st.button("Salir de la vista previa", key="salir_preview", on_click=_salir_preview)
+    st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
 
 _gq = str(st.session_state.get("gs_q", "")).strip()
 if len(_gq) >= 2:
