@@ -1909,6 +1909,44 @@ st.markdown("""
 def ui_kpi_acc(lbl, val, sub, tono):
     return f'<div class="tp-kpi al-{tono}"><div class="tp-kpi-lbl">{lbl}</div><div class="tp-kpi-val">{val}</div><div class="tp-kpi-sub">{sub}</div></div>'
 
+st.markdown("""
+<style>
+/* Notificaciones (toasts) con la identidad de la app */
+[data-testid="stToast"]{background:linear-gradient(135deg,#0F172A 0%,#1B2A4A 100%)!important;border:1px solid rgba(255,255,255,.12)!important;border-left:6px solid #EC3237!important;
+  border-radius:18px!important;box-shadow:0 24px 48px -16px rgba(15,23,42,.6)!important;padding:16px 20px!important;min-width:320px;max-width:440px;animation:tpToastIn .38s cubic-bezier(.2,.9,.3,1.2);}
+[data-testid="stToast"] [data-testid="stMarkdownContainer"] p{color:#E6ECF8;font-size:.92rem;line-height:1.45;margin:0 0 2px;}
+[data-testid="stToast"] [data-testid="stMarkdownContainer"] p:first-child{font-size:1rem;}
+[data-testid="stToast"] [data-testid="stToastDynamicIcon"],[data-testid="stToast"] [data-testid="stToastDynamicIcon"] *{font-size:1.7rem;}
+[data-testid="stToast"] button,[data-testid="stToast"] button svg{color:#9FB0CC!important;fill:#9FB0CC!important;}
+@keyframes tpToastIn{from{opacity:0;transform:translateY(16px) scale(.95);}to{opacity:1;transform:none;}}
+/* Avisos en pantalla (st.success / st.error / st.warning / st.info) */
+[data-testid="stAlert"]{border-radius:14px!important;box-shadow:var(--tp-sh-1);}
+[data-testid="stAlert"] p{font-weight:600;}
+</style>
+""", unsafe_allow_html=True)
+
+def _tp_toast(body, *args, **kwargs):
+    """Todas las notificaciones st.toast de la app salen con título de color, ícono y diseño de marca."""
+    txt = str(body)
+    low = txt.lower()
+    if "vista previa" in low or "no se guardó" in low:
+        color, titulo, icono = "blue", "Vista previa", "ℹ️"
+    elif any(k in low for k in ("error", "no se pudo", "incorrect", "falló", "inválid", "obligatori")):
+        color, titulo, icono = "red", "No se pudo completar", "❌"
+    elif any(k in low for k in ("rechaz", "elimin")):
+        color, titulo, icono = "orange", "Actualizado", "⚠️"
+    else:
+        color, titulo, icono = "green", "Guardado con éxito", "✅"
+    kwargs.setdefault("icon", icono)
+    try:
+        return st._tp_toast_orig(f"**:{color}[{titulo}]**\n\n{txt}", *args, **kwargs)
+    except Exception:
+        return st._tp_toast_orig(txt)
+
+if not hasattr(st, "_tp_toast_orig"):
+    st._tp_toast_orig = st.toast
+st.toast = _tp_toast
+
 # --- COMPONENTES UI REUTILIZABLES ---
 def ui_iniciales(nombre):
     p = [x for x in str(nombre).split() if x]
