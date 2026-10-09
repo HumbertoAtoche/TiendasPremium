@@ -217,7 +217,106 @@ def conectar_google_sheets():
         st.sidebar.error(f"⚠️ Error de Conexión: {e}")
         return None
 
-doc_sheets = conectar_google_sheets()
+import threading
+import copy
+
+@st.cache_resource
+def _cache_sheets():
+    """Caché compartida entre todas las sesiones: evita superar el límite de lecturas de Google Sheets."""
+    return {"lock": threading.Lock(), "ws": {}, "datos": {}}
+
+TTL_LECTURA_SEG = 90
+_LEC = {"get_all_records", "get_all_values", "get_values", "col_values", "row_values", "get"}
+_ESC = {"append_row", "append_rows", "update", "update_cell", "update_cells", "batch_update", "clear", "delete_rows", "delete_row",
+        "insert_row", "insert_rows", "resize", "format", "batch_clear", "add_rows", "sort"}
+
+def _marcar_fallo(nombre):
+    st.session_state.setdefault("_hojas_fallidas", set()).add(nombre)
+
+def _marcar_ok(nombre):
+    st.session_state.setdefault("_hojas_fallidas", set()).discard(nombre)
+
+def _error_lectura(msg):
+    print(msg)   # queda en los logs; al usuario se le muestra un aviso amable
+
+class _HojaProxy:
+    def __init__(self, ws, nombre):
+        object.__setattr__(self, "_ws", ws)
+        object.__setattr__(self, "_n", nombre)
+
+    def _invalidar(self):
+        c = _cache_sheets()
+        with c["lock"]:
+            for k in [k for k in c["datos"] if k[0] == self._n]:
+                c["datos"].pop(k, None)
+
+    def _leer(self, attr, real, a, k):
+        c = _cache_sheets()
+        key = (self._n, attr, repr(a), repr(sorted(k.items())))
+        with c["lock"]:
+            hit = c["datos"].get(key)
+            if hit and time.time() - hit[0] < TTL_LECTURA_SEG:
+                _marcar_ok(self._n)
+                return copy.deepcopy(hit[1])
+        for intento in range(4):
+            try:
+                val = real(*a, **k)
+                break
+            except gspread.exceptions.APIError as e:
+                if "429" in str(e) and intento < 3:
+                    time.sleep(2 * (intento + 1))
+                    continue
+                _marcar_fallo(self._n)
+                raise
+            except Exception:
+                _marcar_fallo(self._n)
+                raise
+        with c["lock"]:
+            c["datos"][key] = (time.time(), copy.deepcopy(val))
+        _marcar_ok(self._n)
+        return val
+
+    def __getattr__(self, attr):
+        real = getattr(self._ws, attr)
+        if not callable(real):
+            return real
+        if attr in _LEC:
+            return lambda *a, **k: self._leer(attr, real, a, k)
+        if attr in _ESC:
+            def _escribir(*a, **k):
+                try:
+                    return real(*a, **k)
+                finally:
+                    self._invalidar()
+            return _escribir
+        return real
+
+class _LibroProxy:
+    def __init__(self, libro):
+        object.__setattr__(self, "_libro", libro)
+
+    def worksheet(self, nombre):
+        c = _cache_sheets()
+        with c["lock"]:
+            ws = c["ws"].get(nombre)
+        if ws is None:
+            ws = self._libro.worksheet(nombre)
+            with c["lock"]:
+                c["ws"][nombre] = ws
+        return _HojaProxy(ws, nombre)
+
+    def add_worksheet(self, *a, **k):
+        ws = self._libro.add_worksheet(*a, **k)
+        c = _cache_sheets()
+        with c["lock"]:
+            c["ws"][ws.title] = ws
+        return _HojaProxy(ws, ws.title)
+
+    def __getattr__(self, attr):
+        return getattr(self._libro, attr)
+
+_libro_real = conectar_google_sheets()
+doc_sheets = _LibroProxy(_libro_real) if _libro_real else None
 
 # --- FUNCIONES DE LECTURA Y ESCRITURA EN LA NUBE ---
 def obtener_colaboradores_gsheets():
@@ -238,7 +337,7 @@ def obtener_colaboradores_gsheets():
                         df[col] = ""
                 return df
         except Exception as e:
-            st.error(f"Error al leer Colaboradores: {e}")
+            _error_lectura(f"Error al leer Colaboradores: {e}")
             
     return pd.DataFrame(columns=[
         "dni", "nombre", "cargo", "estado", "clave", "rol", 
@@ -321,7 +420,7 @@ def obtener_incidencias_gsheets():
                         df[col] = ""
                 return df
         except Exception as e:
-            st.warning(f"⚠️ No se pudo leer la hoja 'Incidencias' de Google Sheets: {e}")
+            _error_lectura(f"⚠️ No se pudo leer la hoja 'Incidencias' de Google Sheets: {e}")
     return pd.DataFrame(columns=columnas_inc)
 
 def guardar_incidencia_gsheets(id_inc, dni, nombre, fecha, tipo_incidencia, detalle, valor_reparacion, fecha_registro, registrado_por, estado="Pendiente"):
@@ -368,7 +467,7 @@ def obtener_botellas_fiadas_gsheets():
                         df[col] = ""
                 return df
         except Exception as e:
-            st.warning(f"⚠️ No se pudo leer la hoja 'BotellasFiadas' de Google Sheets: {e}")
+            _error_lectura(f"⚠️ No se pudo leer la hoja 'BotellasFiadas' de Google Sheets: {e}")
     return pd.DataFrame(columns=columnas_bf)
 
 def guardar_botella_fiada_gsheets(id_bf, cliente_nombre, cliente_dni, cliente_direccion, cantidad, tipo_botella, dejo_dinero, monto_dejado, fecha_prestamo, registrado_por, estado="Pendiente", fecha_devolucion="", observacion=""):
@@ -448,7 +547,7 @@ def obtener_vacaciones_gsheets():
                         df[col] = ""
                 return df
         except Exception as e:
-            st.error(f"Error al leer Vacaciones: {e}")
+            _error_lectura(f"Error al leer Vacaciones: {e}")
     return pd.DataFrame(columns=columnas_vac)
 
 def guardar_vacacion_gsheets(id_vac, dni, nombre, tipo, fecha_inicio, fecha_fin, dias_tomados, observacion, fecha_registro, registrado_por, fecha_recuperacion="", horario_recuperacion="", estado_recuperacion=""):
@@ -531,14 +630,14 @@ def obtener_auditoria_gsheets():
                         df[col] = ""
                 return df
         except Exception as e:
-            st.warning(f"⚠️ No se pudo leer la hoja 'Auditoria' de Google Sheets: {e}")
+            _error_lectura(f"⚠️ No se pudo leer la hoja 'Auditoria' de Google Sheets: {e}")
     return pd.DataFrame(columns=columnas_aud)
 
 def registrar_auditoria(accion, entidad, detalle=""):
-    if st.session_state.get("ver_como"):
-        return
     """Deja constancia de quién hizo qué y cuándo. Se llama en cada acción
     administrativa sensible (editar, eliminar, aprobar, dar de baja, etc.)."""
+    if st.session_state.get("ver_como"):
+        return
     try:
         usuario_aud = st.session_state.get("usuario_login", "Desconocido") or "Desconocido"
         _usuarios_globales = globals().get("USUARIOS", {})
@@ -604,7 +703,7 @@ def obtener_checklist_gsheets():
                         df[col] = ""
                 return df
         except Exception as e:
-            st.warning(f"⚠️ No se pudo leer la hoja 'Checklist' de Google Sheets: {e}")
+            _error_lectura(f"⚠️ No se pudo leer la hoja 'Checklist' de Google Sheets: {e}")
     return pd.DataFrame(columns=columnas_chk)
 
 def guardar_item_checklist_gsheets(id_item, dni, nombre, tipo, tarea, estado, fecha_creacion, fecha_completado=""):
@@ -663,7 +762,7 @@ def obtener_boletas_historial_gsheets():
                         df[col] = ""
                 return df
         except Exception as e:
-            st.warning(f"⚠️ No se pudo leer la hoja 'Boletas_Historial' de Google Sheets: {e}")
+            _error_lectura(f"⚠️ No se pudo leer la hoja 'Boletas_Historial' de Google Sheets: {e}")
     return pd.DataFrame(columns=columnas_bh)
 
 def guardar_boleta_historial_gsheets(datos_b):
@@ -692,6 +791,9 @@ def guardar_boleta_historial_gsheets(datos_b):
 def actualizar_hoja_completa(nombre_hoja, df):
     if st.session_state.get("ver_como"):
         st.toast("Vista previa: no se guardó ningún dato")
+        return
+    if nombre_hoja in st.session_state.get("_hojas_fallidas", set()):
+        st.error("No se pudo leer esta hoja desde Google Sheets, por eso se canceló el guardado para no borrar datos. Recarga la página e inténtalo de nuevo.")
         return
     if doc_sheets:
         try:
@@ -2086,7 +2188,13 @@ if "incidencias" not in st.session_state:
 if "botellas_fiadas" not in st.session_state:
     st.session_state.botellas_fiadas = obtener_botellas_fiadas_gsheets()
 
-USUARIOS = {}
+if st.session_state.get("_hojas_fallidas"):
+    for _k in ["empleados", "asistencia", "descuadres", "solicitudes", "feriados", "vacaciones", "auditoria", "checklist", "boletas_historial", "incidencias", "botellas_fiadas"]:
+        st.session_state.pop(_k, None)
+    st.markdown('<div class="tp-banner warn"><div><b>Google Sheets está ocupado en este momento</b><span class="s">Es temporal. Espera unos segundos y presiona el botón para reintentar. No se perdió ningún dato.</span></div></div>', unsafe_allow_html=True)
+    st.button("Reintentar", key="reintentar_lectura")
+    st.stop()
+
 USUARIOS = {}
 for _, row in st.session_state.empleados.iterrows():
     if str(row.get("estado", "")).lower() == "activo":
@@ -2132,6 +2240,10 @@ def _salir_preview():
 # --- LOGIN EJECUTIVO ---
 # Si prefieres NO mostrar nombre/foto al escribir un DNI (antes de autenticar), pon False.
 LOGIN_MOSTRAR_FOTO = True
+import inspect
+_AC_OK = "autocomplete" in inspect.signature(st.text_input).parameters
+_AC_USER = {"autocomplete": "username"} if _AC_OK else {}
+_AC_PASS = {"autocomplete": "current-password"} if _AC_OK else {}
 
 if not st.session_state.usuario_login:
     st.markdown("""
@@ -2213,8 +2325,8 @@ if not st.session_state.usuario_login:
         st.markdown('<div class="tp-lg-spacer"></div>', unsafe_allow_html=True)
         with ui_card_container("login_form"):
             _saludo = st.empty()
-            dni_input = st.text_input("DNI", placeholder="Tu número de DNI", max_chars=12, key="login_dni")
-            clave_input = st.text_input("Contraseña", type="password", placeholder="Tu contraseña", key="login_clave")
+            dni_input = st.text_input("DNI", placeholder="Tu número de DNI", max_chars=12, key="login_dni", **_AC_USER)
+            clave_input = st.text_input("Contraseña", type="password", placeholder="Tu contraseña", key="login_clave", **_AC_PASS)
             _u = next((n for n, d in USUARIOS.items() if str(d["dni"]).strip() == dni_input.strip()), None) if dni_input.strip() else None
             if _u and LOGIN_MOSTRAR_FOTO:
                 _d, _f = ui_dni_foto(_u)
