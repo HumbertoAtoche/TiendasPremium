@@ -2129,7 +2129,7 @@ def _actualizar_boleta(id_b, campos):
         if not fila:
             return False
         for k, v in campos.items():
-            hoja.update_cell(fila, cab.index(k) + 1, v)
+            hoja.update(values=[[str(v)]], range_name=f"{_col_letra(cab.index(k) + 1)}{fila}")
         return True
     except Exception as e:
         st.error(f"No se pudo actualizar la boleta: {e}")
@@ -2192,6 +2192,124 @@ def ui_boleta_card(r, colaborador=False):
     return (f'<div class="tp-card"><div class="tp-card-head"><div><div class="tp-card-title">{e(str(r["mes"]))} {e(str(r["anio"]))}</div>{nombre_html}'
             f'<div class="tp-card-sub">Versión {ver} · emitida el {e(str(r.get("fecha_visto_bueno") or r.get("fecha_emision"))[:16])}</div></div>'
             f'<div class="tp-chips">{ui_chip(neto, "info")}{ui_estado_boleta(str(r.get("estado") or "Histórico"), colaborador)}</div></div></div>')
+
+FIRMA_HTML = r"""<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+html,body{margin:0;padding:0;font-family:Montserrat,Arial,sans-serif;background:transparent}
+.wrap{border:1.5px dashed #CBD2DC;border-radius:16px;background:#fff;padding:10px;position:relative;box-sizing:border-box}
+canvas{width:100%;height:170px;display:block;touch-action:none;border-radius:10px;background:#FAFBFC;cursor:crosshair}
+.hint{position:absolute;left:0;right:0;top:84px;text-align:center;color:#B6BFCC;font-size:14px;font-weight:600;pointer-events:none}
+.row{display:flex;gap:8px;margin-top:10px}
+button{flex:1;padding:13px 8px;border-radius:12px;font-weight:700;font-size:14px;cursor:pointer;border:1.5px solid #E3E6EC;background:#fff;color:#334155;font-family:inherit}
+button.ok{background:linear-gradient(135deg,#EC3237,#C9262B);border:none;color:#fff}
+.estado{font-size:12.5px;color:#64748B;margin-top:8px;text-align:center;min-height:16px;font-weight:600}
+.estado.bien{color:#0B8F57}
+</style></head><body>
+<div class="wrap"><div class="hint" id="hint">Firma aquí con tu dedo</div><canvas id="c"></canvas>
+<div class="row"><button id="limpiar">Borrar</button><button class="ok" id="ok">Confirmar firma</button></div>
+<div class="estado" id="estado"></div></div>
+<script>
+function send(type, data){ window.parent.postMessage(Object.assign({isStreamlitMessage:true,type:type}, data||{}), "*"); }
+var c=document.getElementById('c'), ctx=c.getContext('2d'), hint=document.getElementById('hint'), est=document.getElementById('estado');
+var dibujando=false, hay=false;
+function ajustar(){ var r=c.getBoundingClientRect(); c.width=Math.max(300,Math.round(r.width)); c.height=Math.round(r.height);
+  ctx.lineWidth=2.8; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.strokeStyle='#0F172A'; }
+function pos(e){ var r=c.getBoundingClientRect(); return {x:(e.clientX-r.left)*(c.width/r.width), y:(e.clientY-r.top)*(c.height/r.height)}; }
+c.addEventListener('pointerdown',function(e){ e.preventDefault(); try{c.setPointerCapture(e.pointerId);}catch(x){}
+  dibujando=true; var p=pos(e); ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(p.x+0.1,p.y+0.1); ctx.stroke(); hay=true; hint.style.display='none'; est.textContent=''; });
+c.addEventListener('pointermove',function(e){ if(!dibujando) return; e.preventDefault(); var p=pos(e); ctx.lineTo(p.x,p.y); ctx.stroke(); });
+['pointerup','pointercancel','pointerleave'].forEach(function(ev){ c.addEventListener(ev,function(){ dibujando=false; }); });
+document.getElementById('limpiar').addEventListener('click',function(){ ctx.clearRect(0,0,c.width,c.height); hay=false; hint.style.display='block';
+  est.className='estado'; est.textContent=''; send('streamlit:setComponentValue',{value:null,dataType:'json'}); });
+document.getElementById('ok').addEventListener('click',function(){
+  if(!hay){ est.className='estado'; est.textContent='Primero dibuja tu firma en el recuadro.'; return; }
+  send('streamlit:setComponentValue',{value:c.toDataURL('image/png'),dataType:'json'});
+  est.className='estado bien'; est.textContent='Firma confirmada. Ahora presiona "Firmar y dar conformidad".'; });
+send('streamlit:componentReady',{apiVersion:1});
+setTimeout(function(){ ajustar(); send('streamlit:setFrameHeight',{height:278}); },60);
+</script></body></html>"""
+
+@st.cache_resource
+def _componente_firma():
+    """Lienzo táctil de firma: componente propio, sin instalar paquetes (se crea al iniciar)."""
+    import tempfile
+    for base in (BASE_DIR, tempfile.gettempdir()):
+        try:
+            d = os.path.join(base, "_componentes", "firma_pad")
+            os.makedirs(d, exist_ok=True)
+            ruta = os.path.join(d, "index.html")
+            if not os.path.exists(ruta) or open(ruta, encoding="utf-8").read() != FIRMA_HTML:
+                with open(ruta, "w", encoding="utf-8") as f:
+                    f.write(FIRMA_HTML)
+            return components.declare_component("firma_pad_premium", path=d)
+        except Exception:
+            continue
+    return None
+
+def ui_firma_pad(key):
+    try:
+        comp = _componente_firma()
+        return comp(key=key, default=None) if comp else None
+    except Exception:
+        return None
+
+def _procesar_firma(data_url):
+    """Convierte el trazo del lienzo en un PNG pequeño en blanco y negro. Devuelve base64 o None si la firma es muy corta."""
+    from PIL import Image, ImageOps
+    try:
+        crudo = base64.b64decode(str(data_url).split(",", 1)[1])
+        im = Image.open(io.BytesIO(crudo)).convert("RGBA")
+        fondo = Image.new("RGBA", im.size, (255, 255, 255, 255))
+        fondo.alpha_composite(im)
+        g = fondo.convert("L").point(lambda v: 0 if v < 170 else 255)
+        tinta = ImageOps.invert(g)
+        bbox = tinta.getbbox()
+        if not bbox or sum(1 for v in tinta.crop(bbox).getdata() if v) < 250:
+            return None
+        g = g.crop((max(0, bbox[0] - 14), max(0, bbox[1] - 14), min(g.width, bbox[2] + 14), min(g.height, bbox[3] + 14)))
+        for lado in (520, 440, 360, 280):
+            t = g.copy()
+            t.thumbnail((lado, int(lado * 0.4)))
+            buf = io.BytesIO()
+            t.save(buf, "PNG", optimize=True)
+            b64 = base64.b64encode(buf.getvalue()).decode("ascii")
+            if len(b64) < 45000:
+                return b64
+    except Exception:
+        return None
+    return None
+
+def _col_letra(n):
+    r = ""
+    while n:
+        n, resto = divmod(n - 1, 26)
+        r = chr(65 + resto) + r
+    return r
+
+def _codigo_boleta(r):
+    """Código de verificación recalculable: cubre la boleta, la versión y, si existe, la firma y su fecha."""
+    base = f"{r.get('id_boleta')}|{_ver_bol(r.get('version'))}|{r.get('datos_json')}|{r.get('fecha_visto_bueno')}"
+    firma = str(r.get("firma_png_b64", "")).strip()
+    if firma:
+        base += f"|{hashlib.sha256(firma.encode()).hexdigest()}|{r.get('fecha_firma')}"
+    return _codigo_verificacion(base)
+
+def _extra_boleta(r):
+    if not str(r.get("datos_json", "")).strip():
+        return None
+    return {"codigo": str(r.get("codigo_verificacion", "")), "estado": str(r.get("estado", "")), "fecha_emision": str(r.get("fecha_visto_bueno", ""))[:16],
+            "firma_png_b64": str(r.get("firma_png_b64", "")), "fecha_firma": str(r.get("fecha_firma", ""))[:16], "fecha_conformidad": str(r.get("fecha_conformidad", ""))[:16]}
+
+def ui_firma_card(r):
+    """Muestra la firma guardada, el dispositivo y el resultado de la verificación de integridad."""
+    firma = str(r.get("firma_png_b64", "")).strip()
+    ok = _codigo_boleta(r) == str(r.get("codigo_verificacion", "")).strip()
+    chip = ui_chip("Integridad verificada", "ok") if ok else ui_chip("El código no coincide: la boleta pudo ser modificada", "bad")
+    img = f'<img src="data:image/png;base64,{firma}" style="max-width:260px;max-height:90px;display:block;margin:10px 0 4px">' if firma else ""
+    disp = _html.escape(str(r.get("firma_dispositivo", ""))[:120])
+    return (f'<div class="tp-card"><div class="tp-card-head"><div><div class="tp-card-title">Firma del trabajador</div>'
+            f'<div class="tp-card-sub">Firmada el {_html.escape(str(r.get("fecha_firma", ""))[:16])} · Código {_html.escape(str(r.get("codigo_verificacion", "")))}</div></div>{chip}</div>'
+            f'{img}<div class="tp-card-sub">Dispositivo: {disp or "no registrado"}</div></div>')
 
 # --- COMPONENTES UI REUTILIZABLES ---
 def ui_iniciales(nombre):
@@ -2338,6 +2456,14 @@ if st.session_state.get("_hojas_fallidas"):
     st.markdown('<div class="tp-banner warn"><div><b>Google Sheets está ocupado en este momento</b><span class="s">Es temporal. Espera unos segundos y presiona el botón para reintentar. No se perdió ningún dato.</span></div></div>', unsafe_allow_html=True)
     st.button("Reintentar", key="reintentar_lectura")
     st.stop()
+
+# Compatibilidad: si la sesión conserva un historial de boletas con el esquema antiguo, se completan las columnas nuevas
+_bh_ses = st.session_state.get("boletas_historial")
+if _bh_ses is not None:
+    for _c_bh in COLS_BH:
+        if _c_bh not in _bh_ses.columns:
+            _bh_ses[_c_bh] = ""
+    st.session_state["boletas_historial"] = _bh_ses
 
 USUARIOS = {}
 for _, row in st.session_state.empleados.iterrows():
@@ -2974,7 +3100,7 @@ def generar_excel_boleta(datos_b):
 # ---------------------------------------------------------
 # 3) PDF
 # ---------------------------------------------------------
-def generar_pdf_boleta(datos_b):
+def generar_pdf_boleta(datos_b, extra=None):
     if not REPORTLAB_AVAILABLE:
         return None
 
@@ -3150,11 +3276,28 @@ def generar_pdf_boleta(datos_b):
         ("TOPPADDING", (0, 0), (-1, -1), 12), ("BOTTOMPADDING", (0, 0), (-1, -1), 12),
     ]))
     story.append(t_net)
-    story.append(Spacer(1, 52))
+    _firma_img = None
+    if extra and str(extra.get("firma_png_b64", "")).strip():
+        try:
+            from reportlab.platypus import Image as RLImage
+            from PIL import Image as _PILImage
+            _png = base64.b64decode(extra["firma_png_b64"])
+            _wpx, _hpx = _PILImage.open(io.BytesIO(_png)).size
+            _esc = min(160.0 / _wpx, 46.0 / _hpx)
+            _firma_img = RLImage(io.BytesIO(_png), width=_wpx * _esc, height=_hpx * _esc)
+        except Exception:
+            _firma_img = None
 
     # --- Firmas ---
     gap = 60
     cw = (W - gap) / 2.0
+    if _firma_img is not None:
+        story.append(Spacer(1, 6))
+        t_img = Table([["", "", _firma_img]], colWidths=[cw, gap, cw], rowHeights=[48])
+        t_img.setStyle(TableStyle([("ALIGN", (2, 0), (2, 0), "CENTER"), ("VALIGN", (2, 0), (2, 0), "BOTTOM")]))
+        story.append(t_img)
+    else:
+        story.append(Spacer(1, 52))
     t_firm = Table(
         [[Paragraph("EMPLEADOR / TIENDAS PREMIUM", s_sig), "", Paragraph("RECIBÍ CONFORME (TRABAJADOR)", s_sig)]],
         colWidths=[cw, gap, cw]
@@ -3164,11 +3307,17 @@ def generar_pdf_boleta(datos_b):
         ("TOPPADDING", (0, 0), (-1, -1), 6),
     ]))
     story.append(t_firm)
+    if extra and str(extra.get("estado", "")) in ("Firmado", "Conforme"):
+        _txt_c = (f"Firmado electrónicamente el {X(extra.get('fecha_firma', ''))}" if (str(extra.get("estado")) == "Firmado" and _firma_img is not None)
+                  else f"Conformidad registrada el {X(extra.get('fecha_conformidad', ''))}")
+        story.append(Table([["", "", Paragraph(_txt_c, s_foot)]], colWidths=[cw, gap, cw]))
     story.append(Spacer(1, 26))
 
     # --- Pie ---
     story.append(HRFlowable(width="100%", thickness=0.5, color=line_c, spaceAfter=6))
     story.append(Paragraph(f"Documento generado por el Sistema de Control Interno de {X(datos_b['empresa'])} · {fecha_gen}", s_foot))
+    if extra and str(extra.get("codigo", "")).strip():
+        story.append(Paragraph(f"Código de verificación: <b>{X(extra['codigo'])}</b> · Estado: {X(extra.get('estado', ''))} · Visto Bueno: {X(extra.get('fecha_emision', ''))}", s_foot))
 
     doc.build(story)
     return buffer.getvalue()
@@ -3980,21 +4129,45 @@ elif choice == "Mis Boletas":
             if str(_rm.get("respuesta_admin", "")).strip():
                 ui_callout(f"**Respuesta de administración:** {_rm['respuesta_admin']}", "info")
             st.markdown(generar_html_boleta(_dm), unsafe_allow_html=True)
-            _pdf_m = generar_pdf_boleta(_dm)
+            _pdf_m = generar_pdf_boleta(_dm, _extra_boleta(_rm))
             if _pdf_m:
                 st.download_button("Descargar mi boleta en PDF", _pdf_m, f"Boleta_{_dm['periodo'].replace(' ', '_')}.pdf", "application/pdf", use_container_width=True, key=f"misbol_pdf_{_idb}")
             _est_m = str(_rm["estado"])
             if _est_m == "Emitido":
                 st.markdown("<div class='tp-note-t' style='margin:22px 0 10px'>¿Qué deseas hacer con esta boleta?</div>", unsafe_allow_html=True)
-                ui_callout("Revisa el desglose. Si todo está correcto, da tu **conformidad**. Si notas un error, envía una **observación** y administración la revisará.")
+                ui_callout("Revisa el desglose. Si todo está correcto, **firma y da tu conformidad**. Si notas un error, envía una **observación** y administración la revisará.")
+                ui_callout("Firma con tu dedo dentro del recuadro, presiona **Confirmar firma** y luego **Firmar y dar conformidad**.")
                 _chk = st.checkbox("He revisado el detalle de mi boleta y estoy conforme con los montos.", key=f"misbol_chk_{_idb}")
-                if st.button("Dar conformidad", key=f"misbol_ok_{_idb}", disabled=not _chk, use_container_width=True):
-                    if _actualizar_boleta(_idb, {"estado": "Conforme", "fecha_conformidad": obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S")}):
-                        registrar_auditoria("Conformidad de Boleta", "Boletas", f"{user_actual} — {_dm['periodo']}")
-                        st.session_state.boletas_historial = obtener_boletas_historial_gsheets()
-                        st.toast("Conformidad registrada. ¡Gracias!")
-                        time.sleep(0.3)
-                        st.rerun()
+                _firma_val = ui_firma_pad(f"firma_{_idb}")
+                if _firma_val:
+                    st.markdown(ui_chip("Firma lista", "ok"), unsafe_allow_html=True)
+                if st.button("Firmar y dar conformidad", key=f"misbol_ok_{_idb}", disabled=not (_chk and _firma_val), use_container_width=True):
+                    _b64f = _procesar_firma(_firma_val)
+                    if not _b64f:
+                        st.error("La firma es muy corta o está vacía. Bórrala y vuelve a dibujarla.")
+                    else:
+                        _ahora_f = obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S")
+                        try:
+                            _ua = str(st.context.headers.get("User-Agent", ""))[:160]
+                        except Exception:
+                            _ua = ""
+                        _cod = _codigo_boleta({**dict(_rm), "firma_png_b64": _b64f, "fecha_firma": _ahora_f})
+                        if _actualizar_boleta(_idb, {"estado": "Firmado", "fecha_conformidad": _ahora_f, "firma_png_b64": _b64f, "fecha_firma": _ahora_f,
+                                                     "firma_dispositivo": _ua, "codigo_verificacion": _cod}):
+                            registrar_auditoria("Firma de Boleta", "Boletas", f"{user_actual} firmó su boleta de {_dm['periodo']}")
+                            st.session_state.boletas_historial = obtener_boletas_historial_gsheets()
+                            st.toast("Boleta firmada. ¡Gracias!")
+                            time.sleep(0.3)
+                            st.rerun()
+                with st.expander("¿No puedes firmar en pantalla?"):
+                    st.caption("Puedes dar tu conformidad sin firma. Quedará registrada la fecha y hora, pero sin firma manuscrita.")
+                    if st.button("Dar conformidad sin firma", key=f"misbol_ok_sf_{_idb}", disabled=not _chk, use_container_width=True):
+                        if _actualizar_boleta(_idb, {"estado": "Conforme", "fecha_conformidad": obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S")}):
+                            registrar_auditoria("Conformidad de Boleta", "Boletas", f"{user_actual} — {_dm['periodo']} (sin firma)")
+                            st.session_state.boletas_historial = obtener_boletas_historial_gsheets()
+                            st.toast("Conformidad registrada. ¡Gracias!")
+                            time.sleep(0.3)
+                            st.rerun()
                 _obs = st.text_area("Describe qué parte de tu boleta no está correcta", key=f"misbol_obs_{_idb}", placeholder="Ej.: Me descontaron una tardanza del día 12, pero llegué a tiempo.")
                 if st.button("Enviar observación", key=f"misbol_obsbtn_{_idb}", disabled=len(_obs.strip()) < 10, use_container_width=True):
                     if _actualizar_boleta(_idb, {"estado": "Observado", "observacion_colaborador": _obs.strip(), "fecha_observacion": obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S")}):
@@ -4008,6 +4181,8 @@ elif choice == "Mis Boletas":
                 ui_callout(f"Enviaste una observación el {str(_rm['fecha_observacion'])[:16]}: “{_rm['observacion_colaborador']}”. Administración la revisará y emitirá una nueva versión.", "warn")
             else:
                 ui_callout(f"Diste tu conformidad el {str(_rm['fecha_conformidad'])[:16]}. Esta boleta ya está cerrada.", "ok")
+                if str(_rm.get("firma_png_b64", "")).strip():
+                    st.markdown(ui_firma_card(_rm), unsafe_allow_html=True)
             st.caption(f"Código de verificación: {_rm['codigo_verificacion']}")
 
 elif choice == "Mi Dashboard Mensual":
@@ -4598,7 +4773,7 @@ elif choice == "Boletas de Pago":
         </div>
     """, unsafe_allow_html=True)
 
-    tab_boleta, tab_emitidas, tab_feriados = st.tabs(["Generar Boleta de Pago", "Boletas emitidas", "Gestión de Feriados"])
+    tab_boleta, tab_emitidas, tab_feriados = st.tabs(["Generar Boleta de Pago", "Histórico de boletas", "Gestión de Feriados"])
 
     with tab_emitidas:
         _dfh = st.session_state.boletas_historial.copy()
@@ -4662,7 +4837,12 @@ elif choice == "Boletas de Pago":
                     if str(_rs.get("respuesta_admin", "")).strip():
                         ui_callout(f"**Respuesta del administrador:** {_rs['respuesta_admin']}", "info")
                     st.markdown(generar_html_boleta(_ds), unsafe_allow_html=True)
-                    _pdf_s = generar_pdf_boleta(_ds)
+                    if str(_rs["estado"]) in ("Firmado", "Conforme"):
+                        if str(_rs.get("firma_png_b64", "")).strip():
+                            st.markdown(ui_firma_card(_rs), unsafe_allow_html=True)
+                        else:
+                            ui_callout(f"Conformidad registrada el {str(_rs['fecha_conformidad'])[:16]} (sin firma en pantalla).", "ok")
+                    _pdf_s = generar_pdf_boleta(_ds, _extra_boleta(_rs))
                     if _pdf_s:
                         st.download_button("Descargar PDF de esta boleta", _pdf_s, f"Boleta_{str(_rs['nombre']).replace(' ', '_')}_{_ds['periodo'].replace(' ', '_')}_v{_ver_bol(_rs['version'])}.pdf", "application/pdf", use_container_width=True, key="bolh_pdf")
                     st.caption(f"Código de verificación: {_rs['codigo_verificacion']}")
@@ -4679,7 +4859,7 @@ elif choice == "Boletas de Pago":
                         for _, _r in _con_datos.iterrows():
                             try:
                                 _dz = json.loads(str(_r["datos_json"]))
-                                _pz = generar_pdf_boleta(_dz)
+                                _pz = generar_pdf_boleta(_dz, _extra_boleta(_r))
                                 if _pz:
                                     _z.writestr(f"{_r['anio']}/{str(_r['mes'])}/Boleta_{str(_r['nombre']).replace(' ', '_')}_{_dz['periodo'].replace(' ', '_')}_v{_ver_bol(_r['version'])}.pdf", _pz)
                                     _n_pdf += 1
