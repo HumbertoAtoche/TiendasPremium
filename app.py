@@ -745,14 +745,13 @@ def crear_checklist_offboarding(dni, nombre):
 # NUEVO MÓDULO: HISTORIAL DE BOLETAS (para Analítica / BI)
 # =========================================================
 def obtener_boletas_historial_gsheets():
-    columnas_bh = ["id_boleta", "mes", "anio", "dni", "nombre", "cargo", "sueldo_basico",
-                   "total_ingresos", "total_descuentos", "neto_pagar", "fecha_emision", "emitido_por"]
+    columnas_bh = COLS_BH
     if doc_sheets:
         try:
             try:
                 hoja = doc_sheets.worksheet("Boletas_Historial")
             except gspread.exceptions.WorksheetNotFound:
-                hoja = doc_sheets.add_worksheet(title="Boletas_Historial", rows="500", cols="12")
+                hoja = doc_sheets.add_worksheet(title="Boletas_Historial", rows="500", cols="24")
                 hoja.append_row(columnas_bh)
             datos = hoja.get_all_records()
             if datos:
@@ -2062,6 +2061,138 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+import json, numbers, hmac, hashlib, zipfile
+
+COLS_BH = ["id_boleta", "mes", "anio", "dni", "nombre", "cargo", "sueldo_basico", "total_ingresos", "total_descuentos", "neto_pagar", "fecha_emision", "emitido_por",
+           "estado", "version", "datos_json", "fecha_visto_bueno", "observacion_colaborador", "fecha_observacion", "respuesta_admin",
+           "fecha_conformidad", "codigo_verificacion", "firma_png_b64", "fecha_firma", "firma_dispositivo"]
+ESTADOS_BOL_VIGENTES = ("Emitido", "Observado", "Conforme", "Firmado")
+
+def _ver_bol(x):
+    v = pd.to_numeric(x, errors="coerce")
+    return int(v) if pd.notnull(v) else 1
+
+def _mismo_dni(a, b):
+    return str(a).strip().lstrip("0") == str(b).strip().lstrip("0")
+
+def _json_boleta(d):
+    def _conv(o):
+        if isinstance(o, numbers.Integral):
+            return int(o)
+        if isinstance(o, numbers.Real):
+            return float(o)
+        return str(o)
+    return json.dumps(d, ensure_ascii=False, default=_conv, sort_keys=True)
+
+def _codigo_verificacion(texto):
+    """Código corto de verificación. Con la clave BOLETAS_CLAVE en Secrets es una firma HMAC (no falsificable desde la hoja)."""
+    try:
+        clave = str(st.secrets.get("BOLETAS_CLAVE", ""))
+    except Exception:
+        clave = ""
+    dig = hmac.new(clave.encode(), texto.encode(), hashlib.sha256).hexdigest() if clave else hashlib.sha256(texto.encode()).hexdigest()
+    return dig[:16].upper()
+
+def _hoja_boletas():
+    if not doc_sheets:
+        return None
+    try:
+        return doc_sheets.worksheet("Boletas_Historial")
+    except gspread.exceptions.WorksheetNotFound:
+        hoja = doc_sheets.add_worksheet(title="Boletas_Historial", rows="500", cols="24")
+        hoja.append_row(COLS_BH)
+        return hoja
+
+def _asegurar_esquema_boletas(hoja):
+    cab = hoja.row_values(1)
+    faltan = [c for c in COLS_BH if c not in cab]
+    if faltan:
+        if hoja.col_count < len(cab) + len(faltan):
+            hoja.add_cols(len(cab) + len(faltan) - hoja.col_count)
+        for i, c in enumerate(faltan):
+            hoja.update_cell(1, len(cab) + i + 1, c)
+        cab = cab + faltan
+    return cab
+
+def _fila_boleta(hoja, id_b):
+    ids = hoja.col_values(1)
+    return ids.index(id_b) + 1 if id_b in ids else None
+
+def _actualizar_boleta(id_b, campos):
+    if st.session_state.get("ver_como"):
+        st.toast("Vista previa: no se guardó ningún dato")
+        return False
+    try:
+        hoja = _hoja_boletas()
+        cab = _asegurar_esquema_boletas(hoja)
+        fila = _fila_boleta(hoja, id_b)
+        if not fila:
+            return False
+        for k, v in campos.items():
+            hoja.update_cell(fila, cab.index(k) + 1, v)
+        return True
+    except Exception as e:
+        st.error(f"No se pudo actualizar la boleta: {e}")
+        return False
+
+def emitir_boleta_gsheets(d, mes, anio, emitido_por, respuesta_admin=""):
+    """Visto Bueno del admin: crea la boleta en estado 'Emitido' (nueva versión si ya existía una sin cerrar)."""
+    if st.session_state.get("ver_como"):
+        st.toast("Vista previa: no se guardó ningún dato")
+        return None
+    try:
+        hoja = _hoja_boletas()
+        cab = _asegurar_esquema_boletas(hoja)
+        regs = hoja.get_all_records()
+        mismos = [r for r in regs if _mismo_dni(r.get("dni", ""), d["dni"]) and str(r.get("mes", "")) == str(mes) and str(r.get("anio", "")) == str(anio)]
+        if any(str(r.get("estado", "")) in ("Conforme", "Firmado") for r in mismos):
+            return "cerrada"
+        version = 1 + max([int(r.get("version") or 1) for r in mismos if str(r.get("estado", "")) != "" ] + [0])
+        for r in mismos:
+            if str(r.get("estado", "")) in ("Emitido", "Observado"):
+                fila = _fila_boleta(hoja, r.get("id_boleta"))
+                if fila:
+                    hoja.update_cell(fila, cab.index("estado") + 1, "Reemplazado")
+        ahora = obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S")
+        datos_json = _json_boleta(d)
+        id_b = f"BOL-{int(time.time() * 1000)}"
+        fila_n = {"id_boleta": id_b, "mes": mes, "anio": anio, "dni": str(d["dni"]), "nombre": d["colaborador"], "cargo": d["cargo"],
+                  "sueldo_basico": float(d["sueldo_basico"]), "total_ingresos": float(d["total_ingresos"]), "total_descuentos": float(d["total_descuentos"]),
+                  "neto_pagar": float(d["neto_pagar"]), "fecha_emision": ahora, "emitido_por": emitido_por, "estado": "Emitido", "version": version,
+                  "datos_json": datos_json, "fecha_visto_bueno": ahora, "respuesta_admin": respuesta_admin,
+                  "codigo_verificacion": _codigo_verificacion(f"{id_b}|{version}|{datos_json}|{ahora}")}
+        hoja.append_row([fila_n.get(c, "") for c in cab])
+        return id_b
+    except Exception as e:
+        st.error(f"No se pudo emitir la boleta: {e}")
+        return None
+
+def _boletas_orden(df):
+    if df.empty:
+        return df
+    df = df.copy()
+    df["_o"] = pd.to_numeric(df["anio"], errors="coerce").fillna(0) * 100 + df["mes"].apply(_mes_a_num)
+    df["_v"] = pd.to_numeric(df["version"], errors="coerce").fillna(1)
+    return df.sort_values(["_o", "_v"], ascending=False)
+
+def ui_estado_boleta(est, colaborador=False):
+    mapa = {"Emitido": ("Pendiente de tu conformidad" if colaborador else "Emitido", "info"), "Observado": ("Observada", "warn"),
+            "Conforme": ("Conforme", "ok"), "Firmado": ("Firmada", "ok"), "Reemplazado": ("Reemplazada", "neutral"), "Histórico": ("Histórico", "neutral")}
+    t, c = mapa.get(est, (est or "Histórico", "neutral"))
+    return ui_chip(t, c)
+
+def ui_boleta_card(r, colaborador=False):
+    e = _html.escape
+    ver = _ver_bol(r.get("version"))
+    try:
+        neto = f"S/. {float(r['neto_pagar']):,.2f}"
+    except Exception:
+        neto = "-"
+    nombre_html = "" if colaborador else f'<div class="tp-card-sub">{e(str(r["nombre"]))}</div>'
+    return (f'<div class="tp-card"><div class="tp-card-head"><div><div class="tp-card-title">{e(str(r["mes"]))} {e(str(r["anio"]))}</div>{nombre_html}'
+            f'<div class="tp-card-sub">Versión {ver} · emitida el {e(str(r.get("fecha_visto_bueno") or r.get("fecha_emision"))[:16])}</div></div>'
+            f'<div class="tp-chips">{ui_chip(neto, "info")}{ui_estado_boleta(str(r.get("estado") or "Histórico"), colaborador)}</div></div></div>')
+
 # --- COMPONENTES UI REUTILIZABLES ---
 def ui_iniciales(nombre):
     p = [x for x in str(nombre).split() if x]
@@ -3317,7 +3448,7 @@ if _sol_n is not None and not _sol_n.empty:
 if rol_actual == "admin":
     menu = ["Dashboard General", "Centro de Alertas", "Analítica (BI)", "Gestión Colaboradores", "Onboarding / Offboarding", "Gestión de Vacaciones", "Boletas de Pago", "Solicitudes y Permisos", "Historial de Descuadres", "Incidencias y Daños", "Botellas Fiadas", "Historial de Asistencias", "Auditoría y Configuración"]
 else:
-    menu = ["Marcar Asistencia", "Registrar Descuadre", "Registrar Incidencia", "Botellas Fiadas", "Mi Ficha Técnica", "Mis Vacaciones", "Solicitar Permiso / Adelanto", "Mi Dashboard Mensual"]
+    menu = ["Marcar Asistencia", "Registrar Descuadre", "Registrar Incidencia", "Botellas Fiadas", "Mi Ficha Técnica", "Mis Vacaciones", "Mis Boletas", "Solicitar Permiso / Adelanto", "Mi Dashboard Mensual"]
 
 if rol_real == "admin":
     _opc_vc = ["Mi vista (admin)"] + sorted(n for n, d in USUARIOS.items() if d["rol"] != "admin")
@@ -3812,6 +3943,72 @@ elif choice == "Solicitar Permiso / Adelanto":
                     st.success("Autorizado. Podrás marcar tu asistencia ese domingo desde 'Marcar Asistencia'.")
         else:
             st.info("No registras solicitudes en tu historial.")
+
+elif choice == "Mis Boletas":
+    st.markdown("""
+        <div class="market-header">
+            <h1>Mis Boletas de Pago</h1>
+            <p>Revisa tus boletas emitidas, da tu conformidad o envía una observación</p>
+        </div>
+    """, unsafe_allow_html=True)
+    _all = st.session_state.boletas_historial
+    _mias = _all[_all["dni"].apply(lambda x: _mismo_dni(x, dni_actual)) & _all["estado"].astype(str).isin(ESTADOS_BOL_VIGENTES) & (_all["datos_json"].astype(str).str.len() > 2)] if not _all.empty else _all
+    _mias = _boletas_orden(_mias)
+    if _mias.empty:
+        st.markdown('<div class="tp-card" style="text-align:center;padding:34px 20px"><div class="tp-card-title">Aún no tienes boletas emitidas</div><div class="tp-card-sub" style="margin-top:6px">Cuando administración emita tu boleta, aparecerá aquí para que la revises.</div></div>', unsafe_allow_html=True)
+    else:
+        _pend = int((_mias["estado"] == "Emitido").sum())
+        st.markdown('<div class="tp-gridk">' +
+                    ui_kpi_acc("Boletas emitidas", str(len(_mias)), "en tu historial", "info") +
+                    ui_kpi_acc("Pendientes de tu conformidad", str(_pend), "revísalas y responde" if _pend else "Todo al día", "warn" if _pend else "ok") +
+                    ui_kpi_acc("Observadas", str(int((_mias["estado"] == "Observado").sum())), "en revisión de administración", "info") +
+                    ui_kpi_acc("Conformes", str(int(_mias["estado"].isin(["Conforme", "Firmado"]).sum())), "ya cerradas", "ok") + '</div>', unsafe_allow_html=True)
+        st.markdown("".join(ui_boleta_card(_r, colaborador=True) for _, _r in _mias.head(12).iterrows()), unsafe_allow_html=True)
+
+        st.markdown("<div class='tp-note-t' style='margin:22px 0 10px'>Detalle de la boleta</div>", unsafe_allow_html=True)
+        _opc_m = {f"{r['mes']} {r['anio']} · versión {_ver_bol(r['version'])}": r for _, r in _mias.iterrows()}
+        _sel_m = st.selectbox("Boleta", list(_opc_m.keys()), key="misbol_sel", label_visibility="collapsed")
+        _rm = _opc_m[_sel_m]
+        _idb = str(_rm["id_boleta"])
+        try:
+            _dm = json.loads(str(_rm["datos_json"]))
+        except Exception:
+            _dm = None
+        if not _dm:
+            ui_callout("No se pudo leer el detalle de esta boleta. Avisa a administración.", "warn")
+        else:
+            if str(_rm.get("respuesta_admin", "")).strip():
+                ui_callout(f"**Respuesta de administración:** {_rm['respuesta_admin']}", "info")
+            st.markdown(generar_html_boleta(_dm), unsafe_allow_html=True)
+            _pdf_m = generar_pdf_boleta(_dm)
+            if _pdf_m:
+                st.download_button("Descargar mi boleta en PDF", _pdf_m, f"Boleta_{_dm['periodo'].replace(' ', '_')}.pdf", "application/pdf", use_container_width=True, key=f"misbol_pdf_{_idb}")
+            _est_m = str(_rm["estado"])
+            if _est_m == "Emitido":
+                st.markdown("<div class='tp-note-t' style='margin:22px 0 10px'>¿Qué deseas hacer con esta boleta?</div>", unsafe_allow_html=True)
+                ui_callout("Revisa el desglose. Si todo está correcto, da tu **conformidad**. Si notas un error, envía una **observación** y administración la revisará.")
+                _chk = st.checkbox("He revisado el detalle de mi boleta y estoy conforme con los montos.", key=f"misbol_chk_{_idb}")
+                if st.button("Dar conformidad", key=f"misbol_ok_{_idb}", disabled=not _chk, use_container_width=True):
+                    if _actualizar_boleta(_idb, {"estado": "Conforme", "fecha_conformidad": obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S")}):
+                        registrar_auditoria("Conformidad de Boleta", "Boletas", f"{user_actual} — {_dm['periodo']}")
+                        st.session_state.boletas_historial = obtener_boletas_historial_gsheets()
+                        st.toast("Conformidad registrada. ¡Gracias!")
+                        time.sleep(0.3)
+                        st.rerun()
+                _obs = st.text_area("Describe qué parte de tu boleta no está correcta", key=f"misbol_obs_{_idb}", placeholder="Ej.: Me descontaron una tardanza del día 12, pero llegué a tiempo.")
+                if st.button("Enviar observación", key=f"misbol_obsbtn_{_idb}", disabled=len(_obs.strip()) < 10, use_container_width=True):
+                    if _actualizar_boleta(_idb, {"estado": "Observado", "observacion_colaborador": _obs.strip(), "fecha_observacion": obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S")}):
+                        registrar_auditoria("Observación de Boleta", "Boletas", f"{user_actual} — {_dm['periodo']}: {_obs.strip()[:120]}")
+                        st.session_state.boletas_historial = obtener_boletas_historial_gsheets()
+                        st.toast("Observación enviada a administración")
+                        time.sleep(0.3)
+                        st.rerun()
+                st.caption("La observación debe tener al menos 10 caracteres.")
+            elif _est_m == "Observado":
+                ui_callout(f"Enviaste una observación el {str(_rm['fecha_observacion'])[:16]}: “{_rm['observacion_colaborador']}”. Administración la revisará y emitirá una nueva versión.", "warn")
+            else:
+                ui_callout(f"Diste tu conformidad el {str(_rm['fecha_conformidad'])[:16]}. Esta boleta ya está cerrada.", "ok")
+            st.caption(f"Código de verificación: {_rm['codigo_verificacion']}")
 
 elif choice == "Mi Dashboard Mensual":
     ahora_dash = obtener_ahora_peru()
@@ -4401,7 +4598,97 @@ elif choice == "Boletas de Pago":
         </div>
     """, unsafe_allow_html=True)
 
-    tab_boleta, tab_feriados = st.tabs(["Generar Boleta de Pago", "Gestión de Feriados"])
+    tab_boleta, tab_emitidas, tab_feriados = st.tabs(["Generar Boleta de Pago", "Boletas emitidas", "Gestión de Feriados"])
+
+    with tab_emitidas:
+        _dfh = st.session_state.boletas_historial.copy()
+        if _dfh.empty:
+            ui_callout("Aún no hay boletas emitidas. Genera una en la pestaña anterior y presiona 'Emitir boleta (Visto Bueno)'.")
+        else:
+            _dfh["estado"] = _dfh["estado"].astype(str).replace({"": "Histórico", "nan": "Histórico"})
+            st.markdown('<div class="tp-sec"><div><div class="tp-sec-title">Histórico de boletas emitidas</div><div class="tp-sec-sub">Filtra por trabajador, año y mes. Aquí queda el archivo para consultas y fiscalizaciones.</div></div></div>', unsafe_allow_html=True)
+            _f1, _f2, _f3, _f4 = st.columns(4)
+            _ft = _f1.selectbox("Trabajador", ["Todos"] + sorted(_dfh["nombre"].astype(str).unique().tolist()), key="bolh_trab")
+            _anios = sorted({str(a) for a in _dfh["anio"].tolist() if str(a).strip()}, reverse=True)
+            _fa = _f2.selectbox("Año", ["Todos"] + _anios, key="bolh_anio")
+            _fm = _f3.selectbox("Mes", ["Todos"] + _MESES_L, key="bolh_mes")
+            _fe = _f4.selectbox("Estado", ["Vigentes", "Emitido", "Observado", "Conforme", "Firmado", "Reemplazado", "Histórico", "Todos"], key="bolh_est")
+            _base = _dfh
+            if _ft != "Todos":
+                _base = _base[_base["nombre"].astype(str) == _ft]
+            if _fa != "Todos":
+                _base = _base[_base["anio"].astype(str) == _fa]
+            if _fm != "Todos":
+                _base = _base[_base["mes"].astype(str) == _fm]
+            _vig = _base[_base["estado"] != "Reemplazado"]
+            if _fe == "Vigentes":
+                _tab = _vig
+            elif _fe == "Todos":
+                _tab = _base
+            else:
+                _tab = _base[_base["estado"] == _fe]
+            _tab = _boletas_orden(_tab)
+            st.markdown('<div class="tp-gridk">' +
+                        ui_kpi_acc("Boletas vigentes", str(len(_vig)), "según los filtros", "info") +
+                        ui_kpi_acc("Pendientes de conformidad", str(int((_vig["estado"] == "Emitido").sum())), "esperan respuesta del colaborador", "warn" if (_vig["estado"] == "Emitido").any() else "ok") +
+                        ui_kpi_acc("Observadas", str(int((_vig["estado"] == "Observado").sum())), "requieren tu revisión", "bad" if (_vig["estado"] == "Observado").any() else "ok") +
+                        ui_kpi_acc("Conformes / firmadas", str(int(_vig["estado"].isin(["Conforme", "Firmado"]).sum())), "cerradas por el colaborador", "ok") + '</div>', unsafe_allow_html=True)
+            if _tab.empty:
+                ui_callout("No hay boletas con esos filtros.")
+            else:
+                try:
+                    _c_tab, _c_tar = st.container(key="vista_tabla"), st.container(key="vista_tarjetas")
+                except TypeError:
+                    _c_tab, _c_tar = st.container(), None
+                with _c_tab:
+                    _vista = _tab[["nombre", "mes", "anio", "version", "estado", "neto_pagar", "fecha_visto_bueno", "fecha_conformidad", "codigo_verificacion"]].copy()
+                    _vista.columns = ["Trabajador", "Mes", "Año", "Versión", "Estado", "Neto (S/.)", "Emitida", "Conformidad", "Código"]
+                    st.dataframe(_vista, use_container_width=True, hide_index=True)
+                if _c_tar is not None:
+                    with _c_tar:
+                        st.markdown("".join(ui_boleta_card(_r) for _, _r in _tab.head(30).iterrows()), unsafe_allow_html=True)
+
+                st.markdown("<div class='tp-note-t' style='margin:22px 0 10px'>Ver, imprimir o descargar una boleta</div>", unsafe_allow_html=True)
+                _opc = {f"{r['nombre']} · {r['mes']} {r['anio']} · v{_ver_bol(r['version'])} · {r['estado']}": r for _, r in _tab.iterrows()}
+                _sel = st.selectbox("Boleta", list(_opc.keys()), key="bolh_sel", label_visibility="collapsed")
+                _rs = _opc[_sel]
+                try:
+                    _ds = json.loads(str(_rs["datos_json"]))
+                except Exception:
+                    _ds = None
+                if _ds:
+                    if str(_rs["estado"]) == "Observado":
+                        ui_callout(f"**Observación del colaborador** ({str(_rs['fecha_observacion'])[:16]}): {_rs['observacion_colaborador']}. Corrige en 'Generar Boleta de Pago' y emite de nuevo: se creará una nueva versión.", "warn")
+                    if str(_rs.get("respuesta_admin", "")).strip():
+                        ui_callout(f"**Respuesta del administrador:** {_rs['respuesta_admin']}", "info")
+                    st.markdown(generar_html_boleta(_ds), unsafe_allow_html=True)
+                    _pdf_s = generar_pdf_boleta(_ds)
+                    if _pdf_s:
+                        st.download_button("Descargar PDF de esta boleta", _pdf_s, f"Boleta_{str(_rs['nombre']).replace(' ', '_')}_{_ds['periodo'].replace(' ', '_')}_v{_ver_bol(_rs['version'])}.pdf", "application/pdf", use_container_width=True, key="bolh_pdf")
+                    st.caption(f"Código de verificación: {_rs['codigo_verificacion']}")
+                else:
+                    ui_callout("Este registro es histórico: solo conserva los totales, sin el desglose de la boleta.", "info")
+
+                st.markdown("<div class='tp-note-t' style='margin:22px 0 10px'>Archivo para fiscalización</div>", unsafe_allow_html=True)
+                _con_datos = _tab[_tab["datos_json"].astype(str).str.len() > 2]
+                st.caption(f"Se incluirán {len(_con_datos)} boleta(s) con desglose, según los filtros de arriba, ordenadas por año y mes.")
+                if st.button("Preparar ZIP con los PDF", key="bolh_zip", use_container_width=True, disabled=_con_datos.empty):
+                    _buf = io.BytesIO()
+                    _n_pdf = 0
+                    with zipfile.ZipFile(_buf, "w", zipfile.ZIP_DEFLATED) as _z:
+                        for _, _r in _con_datos.iterrows():
+                            try:
+                                _dz = json.loads(str(_r["datos_json"]))
+                                _pz = generar_pdf_boleta(_dz)
+                                if _pz:
+                                    _z.writestr(f"{_r['anio']}/{str(_r['mes'])}/Boleta_{str(_r['nombre']).replace(' ', '_')}_{_dz['periodo'].replace(' ', '_')}_v{_ver_bol(_r['version'])}.pdf", _pz)
+                                    _n_pdf += 1
+                            except Exception:
+                                continue
+                    st.session_state["_zip_boletas"] = (_buf.getvalue(), _n_pdf)
+                if st.session_state.get("_zip_boletas"):
+                    _zb, _zn = st.session_state["_zip_boletas"]
+                    st.download_button(f"Descargar ZIP ({_zn} PDF)", _zb, "Boletas_Archivo.zip", "application/zip", use_container_width=True, key="bolh_zip_dl")
 
     with tab_feriados:
         st.markdown("<h4 style='font-size:1rem; color:#111827; margin-bottom:12px;'>Días Feriados Registrados</h4>", unsafe_allow_html=True)
@@ -4754,16 +5041,32 @@ elif choice == "Boletas de Pago":
             col_exp2.warning("La librería `reportlab` no está instalada en el entorno.")
 
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("💾 Guardar esta Boleta en el Historial (para Analítica / BI)", use_container_width=True):
-            id_bol_hist = guardar_boleta_historial_gsheets({
-                "mes": NOMBRES_MESES_B[mes_b_sel-1], "anio": anio_b_sel, "dni": dni_b_val,
-                "nombre": colab_b_sel, "cargo": cargo_b_val, "sueldo_basico": sueldo_basico_in,
-                "total_ingresos": total_ingresos_calc, "total_descuentos": total_descuentos_calc,
-                "neto_pagar": neto_pagar_calc, "emitido_por": user_actual
-            })
-            if id_bol_hist:
+        _mes_nom_b = NOMBRES_MESES_B[mes_b_sel - 1]
+        _bh = st.session_state.boletas_historial
+        _prev = _bh[_bh["dni"].apply(lambda x: _mismo_dni(x, dni_b_val)) & (_bh["mes"].astype(str) == _mes_nom_b) & (_bh["anio"].astype(str) == str(int(anio_b_sel))) & (_bh["estado"].astype(str).isin(ESTADOS_BOL_VIGENTES))] if not _bh.empty else _bh
+        _resp_nota = ""
+        _bloq = False
+        if not _prev.empty:
+            _pr = _boletas_orden(_prev).iloc[0]
+            _est_p = str(_pr["estado"])
+            if _est_p in ("Conforme", "Firmado"):
+                _bloq = True
+                ui_callout(f"Esta boleta ya fue **{'firmada' if _est_p == 'Firmado' else 'conformada'}** por el colaborador y no se puede modificar.", "ok")
+            else:
+                _obs_t = f" Observación del colaborador: “{_pr['observacion_colaborador']}”." if _est_p == "Observado" else ""
+                ui_callout(f"Ya existe una boleta emitida de este período (versión {_ver_bol(_pr['version'])}, estado **{_est_p}**). Al emitir de nuevo se crea la versión siguiente y la anterior queda como reemplazada.{_obs_t}", "warn")
+                if _est_p == "Observado":
+                    _resp_nota = st.text_input("Respuesta para el colaborador (opcional)", key="bol_resp_nota", placeholder="Ej.: Se corrigió el descuento por tardanzas.")
+        if st.button("Emitir boleta (Visto Bueno)", use_container_width=True, disabled=_bloq, key="bol_emitir"):
+            _res = emitir_boleta_gsheets(datos_boleta, _mes_nom_b, int(anio_b_sel), user_actual, _resp_nota)
+            if _res == "cerrada":
+                st.error("Esta boleta ya fue conformada por el colaborador y no se puede emitir de nuevo.")
+            elif _res:
                 registrar_auditoria("Emitir Boleta", "Boletas", f"{colab_b_sel} — {datos_boleta['periodo']} — Neto: S/. {neto_pagar_calc:.2f}")
-                st.toast("Boleta guardada en el historial de analítica")
+                st.session_state.boletas_historial = obtener_boletas_historial_gsheets()
+                st.toast("Boleta emitida: ya es visible para el colaborador")
+                time.sleep(0.3)
+                st.rerun()
 elif choice == "Solicitudes y Permisos":
     st.markdown("""
         <div class="market-header">
@@ -5440,6 +5743,7 @@ elif choice == "Centro de Alertas":
         "solicitudes": _svg("<path d='M4 13l2-8h12l2 8v6H4z'/><path d='M4 13h5l1 2h4l1-2h5'/>"),
         "permisos": _svg("<rect x='4' y='4' width='16' height='16' rx='3'/><path d='M12 8v8M8 12h8'/>"),
         "ok": _svg("<path d='M5 12l4 4 10-10'/>"),
+        "boletas": _svg("<path d='M7 3h7l4 4v14H7z'/><path d='M14 3v4h4M9.5 13h5M9.5 17h5'/>"),
         "cumples": _svg("<rect x='3' y='9' width='18' height='12' rx='2'/><path d='M12 9v12M3 14h18'/><path d='M12 9c-3 0-4-4-1.5-4S12 9 12 9zM12 9c3 0 4-4 1.5-4S12 9 12 9z'/>"),
     }
     sol_df = st.session_state.solicitudes
@@ -5459,10 +5763,14 @@ elif choice == "Centro de Alertas":
     g_perm = [_fila(r["nombre"], f"Recuperar el {r['fecha_recuperacion']} · {e_(str(r['horario_recuperacion']) or 'horario no especificado')}", ui_chip("Sin recuperar", "warn")) for _, r in perm_df.iterrows()]
     g_cum = [_fila(n, f"Cumple años el {f.strftime('%d/%m')}", ui_chip("¡Hoy!", "ok") if d == 0 else ui_chip(f"en {d} día(s)", "info")) for n, f, d in sorted(cumples_prox, key=lambda x: x[2])]
 
+    _bhx = st.session_state.boletas_historial
+    _obs_bol = _bhx[_bhx["estado"].astype(str) == "Observado"] if not _bhx.empty else _bhx
+    g_bol = [_fila(r["nombre"], f"{r['mes']} {r['anio']} · “{_html.escape(str(r['observacion_colaborador'])[:90])}”", ui_chip("Observada", "warn")) for _, r in _obs_bol.iterrows()]
     grupos = [
         {"k": "contratos", "t": "Contratos por vencer", "s": "Próximos 15 días", "n": len(contratos_por_vencer), "tono": "bad" if any(d <= 5 for _, _, d in contratos_por_vencer) else "warn", "f": g_contr, "dest": "Gestión Colaboradores", "btn": "Ir a Colaboradores"},
         {"k": "tardanzas", "t": "Tardanzas recurrentes", "s": "3 o más en el mes actual", "n": len(tardanzas_recurrentes), "tono": "bad", "f": g_tard, "dest": "Historial de Asistencias", "btn": "Ver asistencias"},
         {"k": "solicitudes", "t": "Solicitudes pendientes", "s": "Esperan tu respuesta", "n": len(sol_pend_df), "tono": "warn", "f": g_sol, "dest": "Solicitudes y Permisos", "btn": "Revisar solicitudes"},
+        {"k": "boletas", "t": "Boletas observadas", "s": "El colaborador pide una revisión", "n": len(_obs_bol), "tono": "warn", "f": g_bol, "dest": "Boletas de Pago", "btn": "Revisar boletas"},
         {"k": "permisos", "t": "Permisos de salud sin recuperar", "s": "Horas por recuperar", "n": len(perm_df), "tono": "warn", "f": g_perm, "dest": "Gestión de Vacaciones", "btn": "Ir a Vacaciones"},
         {"k": "cumples", "t": "Cumpleaños de la semana", "s": "Próximos 7 días", "n": len(cumples_prox), "tono": "info", "f": g_cum, "dest": None, "btn": ""},
     ]
@@ -5474,7 +5782,7 @@ elif choice == "Centro de Alertas":
         st.markdown(f'<div class="tp-banner {"bad" if any(g["tono"] == "bad" and g["n"] for g in grupos) else "warn"}"><div><b>Tienes {urgentes} alerta(s) que requieren atención</b><span class="s" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">{resumen}</span></div></div>', unsafe_allow_html=True)
     st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
 
-    for col_k, g in zip(st.columns(5), grupos):
+    for col_k, g in zip(st.columns(len(grupos)), grupos):
         tono_k = g["tono"] if g["n"] else "ok"
         col_k.markdown(f'<div class="tp-kpi al-{tono_k}"><div class="tp-kpi-lbl">{g["t"]}</div><div class="tp-kpi-val">{g["n"]}</div><div class="tp-kpi-sub">{"Requiere atención" if g["n"] and g["k"] != "cumples" else ("Para saludar" if g["n"] else "Sin novedades")}</div></div>', unsafe_allow_html=True)
     st.markdown("<div style='height:18px'></div>", unsafe_allow_html=True)
@@ -5745,6 +6053,7 @@ elif choice == "Analítica (BI)":
             st.info("Aún no hay boletas guardadas en el historial. Ve a 'Boletas de Pago', genera una boleta y usa el botón 'Guardar esta Boleta en el Historial'.")
         else:
             df_bh = st.session_state.boletas_historial.copy()
+            df_bh = df_bh[df_bh["estado"].astype(str) != "Reemplazado"]
             for _c in ["neto_pagar", "total_ingresos", "total_descuentos"]:
                 df_bh[_c] = pd.to_numeric(df_bh[_c], errors="coerce").fillna(0)
             df_bh["_ym"] = pd.to_numeric(df_bh["anio"], errors="coerce").fillna(0).astype(int).astype(str) + "-" + df_bh["mes"].apply(_mes_a_num).astype(str).str.zfill(2)
