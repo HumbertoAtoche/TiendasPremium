@@ -2311,6 +2311,18 @@ def ui_firma_card(r):
             f'<div class="tp-card-sub">Firmada el {_html.escape(str(r.get("fecha_firma", ""))[:16])} · Código {_html.escape(str(r.get("codigo_verificacion", "")))}</div></div>{chip}</div>'
             f'{img}<div class="tp-card-sub">Dispositivo: {disp or "no registrado"}</div></div>')
 
+NEGOSY_URL = "https://app.negosy.com/accounts/login/"
+st.markdown("""
+<style>
+[data-testid="stSidebar"] a.tp-negosy{display:flex;align-items:center;justify-content:space-between;gap:10px;background:linear-gradient(135deg,#0F172A 0%,#1B2A4A 100%);
+  border-radius:14px;padding:12px 16px;margin:6px 0 12px;text-decoration:none;box-shadow:var(--tp-sh-1);transition:transform .12s ease,box-shadow .12s ease;}
+[data-testid="stSidebar"] a.tp-negosy:hover{transform:translateY(-1px);box-shadow:var(--tp-sh-2);}
+[data-testid="stSidebar"] a.tp-negosy .tp-negosy-t{display:block;font-weight:800;font-size:.95rem;letter-spacing:.01em;color:#FFFFFF!important;}
+[data-testid="stSidebar"] a.tp-negosy .tp-negosy-s{display:block;font-size:.7rem;color:#9FB0CC!important;margin-top:1px;}
+[data-testid="stSidebar"] a.tp-negosy svg{flex:0 0 auto;color:#FF8A8E!important;stroke:#FF8A8E!important;}
+</style>
+""", unsafe_allow_html=True)
+
 # --- COMPONENTES UI REUTILIZABLES ---
 def ui_iniciales(nombre):
     p = [x for x in str(nombre).split() if x]
@@ -3631,6 +3643,10 @@ except Exception:
 
 st.sidebar.markdown("<br><br>", unsafe_allow_html=True)
 st.sidebar.markdown('<div class="btn-logout">', unsafe_allow_html=True)
+st.sidebar.markdown(
+    f'<a class="tp-negosy" href="{NEGOSY_URL}" target="_blank" rel="noopener noreferrer"><span><span class="tp-negosy-t">Negosy</span><span class="tp-negosy-s">Sistema de ventas</span></span>'
+    "<svg width='18' height='18' viewBox='0 0 24 24' fill='none' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M7 17L17 7M9 7h8v8'/></svg></a>",
+    unsafe_allow_html=True)
 ui_guia_instalar(st.sidebar)
 if st.sidebar.button("Cerrar Sesión", use_container_width=True):
     registrar_auditoria("Cierre de Sesión", "Usuarios", f"{user_actual} cerró sesión.")
