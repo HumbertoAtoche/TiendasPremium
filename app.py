@@ -2012,17 +2012,18 @@ def ui_kpi_acc(lbl, val, sub, tono):
 
 st.markdown("""
 <style>
-/* Notificaciones (toasts) con la identidad de la app */
-[data-testid="stToast"]{background:linear-gradient(135deg,#0F172A 0%,#1B2A4A 100%)!important;border:1px solid rgba(255,255,255,.12)!important;border-left:6px solid #EC3237!important;
-  border-radius:18px!important;box-shadow:0 24px 48px -16px rgba(15,23,42,.6)!important;padding:16px 20px!important;min-width:320px;max-width:440px;animation:tpToastIn .38s cubic-bezier(.2,.9,.3,1.2);}
-[data-testid="stToast"] [data-testid="stMarkdownContainer"] p{color:#E6ECF8;font-size:.92rem;line-height:1.45;margin:0 0 2px;}
-[data-testid="stToast"] [data-testid="stMarkdownContainer"] p:first-child{font-size:1rem;}
-[data-testid="stToast"] [data-testid="stToastDynamicIcon"],[data-testid="stToast"] [data-testid="stToastDynamicIcon"] *{font-size:1.7rem;}
-[data-testid="stToast"] button,[data-testid="stToast"] button svg{color:#9FB0CC!important;fill:#9FB0CC!important;}
-@keyframes tpToastIn{from{opacity:0;transform:translateY(16px) scale(.95);}to{opacity:1;transform:none;}}
+/* Notificaciones (toasts): sobrias, compactas y corporativas */
+[data-testid="stToast"]{background:#FFFFFF!important;border:1px solid var(--tp-line)!important;border-radius:14px!important;
+  box-shadow:0 14px 34px -14px rgba(15,23,42,.32)!important;padding:12px 16px!important;width:auto!important;min-width:240px;max-width:min(380px,92vw)!important;
+  animation:tpToastIn .25s ease;}
+[data-testid="stToast"] [data-testid="stMarkdownContainer"] p{color:var(--tp-ink-2)!important;font-size:.82rem!important;line-height:1.45!important;margin:0!important;overflow-wrap:anywhere;}
+[data-testid="stToast"] [data-testid="stMarkdownContainer"] p:first-child{color:var(--tp-ink)!important;font-size:.88rem!important;margin-bottom:3px!important;}
+[data-testid="stToast"] button,[data-testid="stToast"] button svg{color:var(--tp-mute)!important;fill:var(--tp-mute)!important;}
+@keyframes tpToastIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+@media (max-width:900px){[data-testid="stToastContainer"]{bottom:88px!important;}}
 /* Avisos en pantalla (st.success / st.error / st.warning / st.info) */
-[data-testid="stAlert"]{border-radius:14px!important;box-shadow:var(--tp-sh-1);}
-[data-testid="stAlert"] p{font-weight:600;}
+[data-testid="stAlert"]{border-radius:12px!important;box-shadow:none;}
+[data-testid="stAlert"] p{font-weight:500;font-size:.86rem;}
 </style>
 """, unsafe_allow_html=True)
 
@@ -2031,16 +2032,15 @@ def _tp_toast(body, *args, **kwargs):
     txt = str(body)
     low = txt.lower()
     if "vista previa" in low or "no se guardó" in low:
-        color, titulo, icono = "blue", "Vista previa", "ℹ️"
+        color, titulo, icono = "blue", "Vista previa", ""
     elif any(k in low for k in ("error", "no se pudo", "incorrect", "falló", "inválid", "obligatori")):
-        color, titulo, icono = "red", "No se pudo completar", "❌"
+        color, titulo, icono = "red", "No se pudo completar", ""
     elif any(k in low for k in ("rechaz", "elimin")):
-        color, titulo, icono = "orange", "Actualizado", "⚠️"
+        color, titulo, icono = "orange", "Actualizado", ""
     else:
-        color, titulo, icono = "green", "Guardado con éxito", "✅"
-    kwargs.setdefault("icon", icono)
+        color, titulo, icono = "green", "Guardado con éxito", ""
     try:
-        return st._tp_toast_orig(f"**:{color}[{titulo}]**\n\n{txt}", *args, **kwargs)
+        return st._tp_toast_orig(f":{color}[●] **{titulo}**\n\n{txt}", *args, **kwargs)
     except Exception:
         return st._tp_toast_orig(txt)
 
