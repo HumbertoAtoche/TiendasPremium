@@ -74,30 +74,98 @@ HORA_LIMITE_MANANA = dt_time(8, 55)   # 10 min de tolerancia (hasta 8:55 am)
 HORA_INICIO_TARDE = dt_time(15, 15)   # 3:15 pm
 HORA_LIMITE_TARDE = dt_time(15, 25)   # 10 min de tolerancia (hasta 3:25 pm)
 
+# ---------- REGLAS DE HORARIO (con fecha de vigencia) ----------
+import json as _json_h
+import re as _re_h
+
+# Regla base = comportamiento histórico de la app (2 turnos, jornada de 5h 45m). Se usa si no hay reglas registradas.
+_REGLA_DEFECTO = {"id_regla": "REGLA-INICIAL", "nombre": "Regla inicial (2 turnos)", "vigente_desde": "1900-01-01", "jornada_base_min": JORNADA_MINUTOS_BASE,
+                  "turnos": [{"nombre": "Mañana", "entrada": "08:45", "salida": "14:30", "tolerancia_min": 10, "ventana_desde": "00:00"},
+                             {"nombre": "Tarde", "entrada": "15:15", "salida": "21:00", "tolerancia_min": 10, "ventana_desde": "13:00"}]}
+_REGLAS_ACTIVAS = [_REGLA_DEFECTO]
+
+def _hhmm(s):
+    h, m = str(s).strip().split(":")[:2]
+    return dt_time(int(h), int(m))
+
+def _norm_fecha_h(x):
+    t = str(x).strip()[:10]
+    for fmt in ("%Y-%m-%d", "%d/%m/%Y"):
+        try:
+            return datetime.strptime(t, fmt).strftime("%Y-%m-%d")
+        except Exception:
+            continue
+    return ""
+
+def _construir_reglas(df):
+    """Lista ordenada de reglas ACTIVAS (más la regla base para fechas anteriores)."""
+    reglas = [_REGLA_DEFECTO]
+    try:
+        if df is not None and not df.empty:
+            for _, r in df.iterrows():
+                if str(r.get("estado", "")).strip() != "Activa":
+                    continue
+                try:
+                    turnos = _json_h.loads(str(r.get("turnos_json", "")))
+                    desde = _norm_fecha_h(r.get("vigente_desde", ""))
+                    base = int(float(r.get("jornada_base_min") or JORNADA_MINUTOS_BASE))
+                    if turnos and desde:
+                        for t in turnos:
+                            _hhmm(t["entrada"])
+                        reglas.append({"id_regla": str(r.get("id_regla", "")), "nombre": str(r.get("nombre", "")), "vigente_desde": desde, "jornada_base_min": base, "turnos": turnos})
+                except Exception:
+                    continue
+    except Exception:
+        pass
+    reglas.sort(key=lambda x: x["vigente_desde"])
+    return reglas
+
+def _regla_para_fecha(fecha):
+    f = str(fecha)[:10]
+    elegida = _REGLAS_ACTIVAS[0]
+    for r in _REGLAS_ACTIVAS:
+        if r["vigente_desde"] <= f:
+            elegida = r
+        else:
+            break
+    return elegida
+
+def _turno_para_marca(regla, hora):
+    """Asigna la marcación al turno cuya ventana ya comenzó (por defecto, 60 min antes de la entrada)."""
+    turnos = sorted(regla["turnos"], key=lambda t: _hhmm(t["entrada"]))
+    elegido = turnos[0]
+    for i, t in enumerate(turnos):
+        vd = t.get("ventana_desde")
+        if vd:
+            ini = _hhmm(vd)
+        elif i == 0:
+            ini = dt_time(0, 0)
+        else:
+            e = _hhmm(t["entrada"])
+            ini = dt_time(max(0, e.hour * 60 + e.minute - 60) // 60, max(0, e.hour * 60 + e.minute - 60) % 60)
+        if hora >= ini:
+            elegido = t
+    return elegido
+
+def jornada_base_min(fecha=None):
+    f = fecha if fecha else obtener_ahora_peru().strftime("%Y-%m-%d")
+    return int(_regla_para_fecha(f)["jornada_base_min"])
+
+def jornada_base_txt(fecha=None):
+    m = jornada_base_min(fecha)
+    return f"{m // 60}h {m % 60}m" if m % 60 else f"{m // 60}h"
+
 def calcular_tardanza_ingreso(fecha_hora_str):
-    """
-    Evalúa la hora de ingreso según los turnos de mañana y tarde.
-    Retorna: (minutos_tardanza, es_tardanza, turno)
-    """
+    """Devuelve (minutos_de_tardanza, es_tardanza, nombre_del_turno) según la regla vigente en la fecha de la marcación."""
     try:
         dt_marca = datetime.strptime(str(fecha_hora_str), "%Y-%m-%d %H:%M:%S")
-        hora_marca = dt_marca.time()
-
-        if hora_marca < dt_time(13, 0):
-            turno = "Mañana"
-            hora_prog = HORA_INICIO_MANANA
-            hora_limite = HORA_LIMITE_MANANA
-        else:
-            turno = "Tarde"
-            hora_prog = HORA_INICIO_TARDE
-            hora_limite = HORA_LIMITE_TARDE
-
-        if hora_marca <= hora_limite:
-            return 0, False, turno
-        else:
-            dt_prog = datetime.combine(dt_marca.date(), hora_prog)
-            minutos = int((dt_marca - dt_prog).total_seconds() // 60)
-            return max(0, minutos), True, turno
+        regla = _regla_para_fecha(dt_marca.date())
+        t = _turno_para_marca(regla, dt_marca.time())
+        entrada = datetime.combine(dt_marca.date(), _hhmm(t["entrada"]))
+        limite = entrada + timedelta(minutes=int(t.get("tolerancia_min", 10)))
+        if dt_marca <= limite:
+            return 0, False, t["nombre"]
+        return max(0, int((dt_marca - entrada).total_seconds() // 60)), True, t["nombre"]
     except Exception:
         return 0, False, "Desconocido"
 
@@ -140,8 +208,9 @@ def calcular_jornada_y_horas_extras(df_marcas_dia):
 
     minutos_totales = int(segundos_totales // 60)
     
-    minutos_laborales = min(minutos_totales, JORNADA_MINUTOS_BASE)
-    minutos_extras = max(0, minutos_totales - JORNADA_MINUTOS_BASE)
+    _base_dia = jornada_base_min(str(df_ord["fecha"].iloc[0]) if "fecha" in df_ord.columns else None)
+    minutos_laborales = min(minutos_totales, _base_dia)
+    minutos_extras = max(0, minutos_totales - _base_dia)
 
     df_extras = df_ord[df_ord["es_extra"].astype(str) == "SI"]
     turnos_adicionales = []
@@ -1954,7 +2023,7 @@ def render_hist_puntualidad(dfa, dias_corte=None):
     ult_t = tard.sort_values("fecha_hora", ascending=False).head(5)
     filas_u = "".join(f'<div class="tp-row"><div class="tp-row-time">{ui_dia_label(r["fecha"])}</div><div class="tp-row-main"><b>Ingreso a las {str(r["fecha_hora"])[11:16]}</b></div><div class="tp-chips">{ui_chip(str(int(r["mins"])) + " min tarde", "bad")}</div></div>' for _, r in ult_t.iterrows()) or '<div class="tp-card-sub">¡Sin tardanzas en el período, felicitaciones!</div>'
     e1, e2 = st.columns(2)
-    e1.markdown(ui_panel("Tus horas extras por mes", "Tiempo trabajado sobre la jornada base de 5h 45m", ui_linea(lbl, [round(ext.get(m, 0) / 60, 1) for m in meses], "#F59E0B", "{:g}", " h")), unsafe_allow_html=True)
+    e1.markdown(ui_panel("Tus horas extras por mes", f"Tiempo trabajado sobre la jornada base de {jornada_base_txt()}", ui_linea(lbl, [round(ext.get(m, 0) / 60, 1) for m in meses], "#F59E0B", "{:g}", " h")), unsafe_allow_html=True)
     e2.markdown(ui_panel("Tus últimas tardanzas", "Las 5 más recientes", filas_u), unsafe_allow_html=True)
 
 st.markdown("""
@@ -2323,6 +2392,106 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+COLS_HOR = ["id_regla", "nombre", "vigente_desde", "estado", "jornada_base_min", "turnos_json", "creado_por", "fecha_creacion"]
+
+def obtener_horarios_gsheets():
+    """Reglas de horario. Si la hoja no existe, la crea con la regla inicial (el horario histórico de la app)."""
+    vacio = pd.DataFrame(columns=COLS_HOR)
+    if not doc_sheets:
+        return vacio
+    try:
+        try:
+            hoja = doc_sheets.worksheet("Horarios")
+        except gspread.exceptions.WorksheetNotFound:
+            hoja = doc_sheets.add_worksheet(title="Horarios", rows="100", cols=str(len(COLS_HOR)))
+            hoja.append_row(COLS_HOR)
+            ini = dict(_REGLA_DEFECTO["turnos"][0]), dict(_REGLA_DEFECTO["turnos"][1])
+            hoja.append_row(["REGLA-INICIAL", "Regla inicial (2 turnos)", "2000-01-01", "Activa", JORNADA_MINUTOS_BASE,
+                             json.dumps(list(ini), ensure_ascii=False), "Sistema", obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S")])
+        datos = hoja.get_all_records()
+        df = pd.DataFrame(datos) if datos else vacio
+        for c in COLS_HOR:
+            if c not in df.columns:
+                df[c] = ""
+        return df
+    except Exception as e:
+        _error_lectura(f"No se pudo leer la hoja 'Horarios': {e}")
+        return vacio
+
+def crear_regla_horario_gsheets(nombre, desde_iso, base_min, turnos, estado, usuario):
+    if st.session_state.get("ver_como"):
+        st.toast("Vista previa: no se guardó ningún dato")
+        return None
+    try:
+        hoja = doc_sheets.worksheet("Horarios")
+        id_r = f"HOR-{int(time.time() * 1000)}"
+        hoja.append_row([id_r, nombre, desde_iso, estado, int(base_min), json.dumps(turnos, ensure_ascii=False), usuario, obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S")])
+        return id_r
+    except Exception as e:
+        st.error(f"No se pudo guardar el horario: {e}")
+        return None
+
+def actualizar_estado_horario_gsheets(id_r, estado):
+    if st.session_state.get("ver_como"):
+        st.toast("Vista previa: no se guardó ningún dato")
+        return False
+    try:
+        hoja = doc_sheets.worksheet("Horarios")
+        ids = hoja.col_values(1)
+        if id_r not in ids:
+            return False
+        col = hoja.row_values(1).index("estado") + 1
+        hoja.update(values=[[estado]], range_name=f"{_col_letra(col)}{ids.index(id_r) + 1}")
+        return True
+    except Exception as e:
+        st.error(f"No se pudo actualizar el horario: {e}")
+        return False
+
+def _fmt_min(m):
+    m = int(m)
+    return f"{m // 60}h {m % 60}m" if m % 60 and m >= 60 else (f"{m // 60}h" if m >= 60 else f"{m}m")
+
+def _min_hhmm(x):
+    h, m = str(x).split(":")[:2]
+    return int(h) * 60 + int(m)
+
+def _validar_turnos(df):
+    """Convierte la tabla del editor en turnos válidos. Devuelve (turnos, errores)."""
+    turnos, errores, vistos = [], [], set()
+    for i, r in df.iterrows():
+        nom = str(r.get("Turno", "") or "").strip()
+        if not nom and not str(r.get("Entrada", "") or "").strip():
+            continue
+        try:
+            ent = _re_h.fullmatch(r"([01]?\d|2[0-3]):([0-5]\d)", str(r.get("Entrada", "")).strip())
+            sal = _re_h.fullmatch(r"([01]?\d|2[0-3]):([0-5]\d)", str(r.get("Salida", "")).strip())
+            if not nom or not ent or not sal:
+                errores.append(f"Fila {i + 1}: completa el nombre y las horas con formato HH:MM (por ejemplo 07:45).")
+                continue
+            e_txt, s_txt = f"{int(ent.group(1)):02d}:{ent.group(2)}", f"{int(sal.group(1)):02d}:{sal.group(2)}"
+            if _min_hhmm(s_txt) <= _min_hhmm(e_txt):
+                errores.append(f"{nom}: la salida debe ser posterior a la entrada (el turno debe terminar antes de medianoche).")
+                continue
+            if nom.lower() in vistos:
+                errores.append(f"El turno '{nom}' está repetido.")
+                continue
+            vistos.add(nom.lower())
+            tol = int(float(r.get("Tolerancia (min)", 10) or 0))
+            t = {"nombre": nom, "entrada": e_txt, "salida": s_txt, "tolerancia_min": tol}
+            vd = str(r.get("Ventana desde", "") or "").strip()
+            if vd:
+                m = _re_h.fullmatch(r"([01]?\d|2[0-3]):([0-5]\d)", vd)
+                if not m:
+                    errores.append(f"{nom}: 'Ventana desde' debe ser HH:MM o quedar vacía.")
+                    continue
+                t["ventana_desde"] = f"{int(m.group(1)):02d}:{m.group(2)}"
+            turnos.append(t)
+        except Exception:
+            errores.append(f"Fila {i + 1}: datos no válidos.")
+    if not turnos and not errores:
+        errores.append("Agrega al menos un turno.")
+    return turnos, errores
+
 # --- COMPONENTES UI REUTILIZABLES ---
 def ui_iniciales(nombre):
     p = [x for x in str(nombre).split() if x]
@@ -2455,6 +2624,8 @@ if "checklist" not in st.session_state:
 
 if "boletas_historial" not in st.session_state:
     st.session_state.boletas_historial = obtener_boletas_historial_gsheets()
+if "horarios" not in st.session_state:
+    st.session_state.horarios = obtener_horarios_gsheets()
 
 if "incidencias" not in st.session_state:
     st.session_state.incidencias = obtener_incidencias_gsheets()
@@ -2463,7 +2634,7 @@ if "botellas_fiadas" not in st.session_state:
     st.session_state.botellas_fiadas = obtener_botellas_fiadas_gsheets()
 
 if st.session_state.get("_hojas_fallidas"):
-    for _k in ["empleados", "asistencia", "descuadres", "solicitudes", "feriados", "vacaciones", "auditoria", "checklist", "boletas_historial", "incidencias", "botellas_fiadas"]:
+    for _k in ["empleados", "asistencia", "descuadres", "solicitudes", "feriados", "vacaciones", "auditoria", "checklist", "boletas_historial", "incidencias", "botellas_fiadas", "horarios"]:
         st.session_state.pop(_k, None)
     st.markdown('<div class="tp-banner warn"><div><b>Google Sheets está ocupado en este momento</b><span class="s">Es temporal. Espera unos segundos y presiona el botón para reintentar. No se perdió ningún dato.</span></div></div>', unsafe_allow_html=True)
     st.button("Reintentar", key="reintentar_lectura")
@@ -2476,6 +2647,8 @@ if _bh_ses is not None:
         if _c_bh not in _bh_ses.columns:
             _bh_ses[_c_bh] = ""
     st.session_state["boletas_historial"] = _bh_ses
+
+_REGLAS_ACTIVAS = _construir_reglas(st.session_state.get("horarios"))   # reglas de horario vigentes para esta ejecución
 
 USUARIOS = {}
 for _, row in st.session_state.empleados.iterrows():
@@ -2500,7 +2673,7 @@ def _login_guard():
     return {"lock": threading.Lock(), "fails": {}, "locked_until": {}}
 
 _DATOS_SESION = ["empleados", "asistencia", "descuadres", "solicitudes", "feriados", "vacaciones",
-                 "auditoria", "checklist", "boletas_historial", "incidencias", "botellas_fiadas"]
+                 "auditoria", "checklist", "boletas_historial", "incidencias", "botellas_fiadas", "horarios"]
 
 def _cambiar_preview():
     """Admin: entra o sale de la vista previa de un colaborador (solo lectura)."""
@@ -3678,7 +3851,7 @@ if choice == "Marcar Asistencia":
     st.markdown(f"""
         <div class="market-header">
             <h1>Terminal de Asistencia</h1>
-            <p>Colaborador activo: <b>{user_actual}</b> | Jornada laboral requerida: <b>5h 45m</b></p>
+            <p>Colaborador activo: <b>{user_actual}</b> | Jornada laboral requerida: <b>{jornada_base_txt()}</b></p>
         </div>
     """, unsafe_allow_html=True)
 
@@ -3695,10 +3868,10 @@ if choice == "Marcar Asistencia":
             else:
                 _estado, _chip = f"Salida registrada a las {_u['dt'].strftime('%H:%M')}", "info"
             _lab_h = calcular_jornada_y_horas_extras(_mh)[0]
-    _pct_h = min(100, int(_lab_h * 100 / JORNADA_MINUTOS_BASE))
+    _pct_h = min(100, int(_lab_h * 100 / jornada_base_min()))
     _hc1, _hc2 = st.columns([1.5, 1])
     with _hc1:
-        st.markdown(f'<div class="tp-hero"><div class="tp-hero-top">{ui_avatar(user_actual, dni_actual, _foto_actual, 54)}<div><div class="tp-hero-hi">Hola, {user_actual.split()[0]}</div>{ui_chip(_estado, _chip)}</div></div><div class="tp-prog-lbl"><span>Jornada de hoy</span><span>{formatear_horas_minutos(_lab_h)} de 5h 45m</span></div><div class="tp-prog"><i style="width:{_pct_h}%"></i></div></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="tp-hero"><div class="tp-hero-top">{ui_avatar(user_actual, dni_actual, _foto_actual, 54)}<div><div class="tp-hero-hi">Hola, {user_actual.split()[0]}</div>{ui_chip(_estado, _chip)}</div></div><div class="tp-prog-lbl"><span>Jornada de hoy</span><span>{formatear_horas_minutos(_lab_h)} de {jornada_base_txt()}</span></div><div class="tp-prog"><i style="width:{_pct_h}%"></i></div></div>', unsafe_allow_html=True)
     with _hc2:
         components.html("""<body style="margin:0;font-family:Montserrat,Arial,sans-serif"><div style="box-sizing:border-box;height:132px;background:#fff;border:1px solid #E3E6EC;border-radius:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(15,23,42,.05)"><div id="t" style="font-size:2.3rem;font-weight:700;color:#0F172A;font-variant-numeric:tabular-nums">--:--:--</div><div id="d" style="font-size:.8rem;color:#64748B;font-weight:600;text-transform:capitalize"></div></div><script>function u(){var n=new Date(),o={timeZone:"America/Lima"};document.getElementById("t").textContent=n.toLocaleTimeString("es-PE",{timeZone:"America/Lima",hour12:false});document.getElementById("d").textContent=n.toLocaleDateString("es-PE",{timeZone:"America/Lima",weekday:"long",day:"numeric",month:"long"})}u();setInterval(u,1000)</script></body>""", height=134)
     st.markdown("<div style='height:14px'></div>", unsafe_allow_html=True)
@@ -3771,7 +3944,7 @@ if choice == "Marcar Asistencia":
                 
                 st.markdown("---")
                 st.markdown(f"**Horas Trabajadas Hoy:** {formatear_horas_minutos(mins_tot)}")
-                st.markdown(f"**Jornada Completa (5h 45m):** {formatear_horas_minutos(mins_lab)} / 5h 45m")
+                st.markdown(f"**Jornada Completa ({jornada_base_txt()}):** {formatear_horas_minutos(mins_lab)} / {jornada_base_txt()}")
                 if mins_ext > 0:
                     st.markdown(f"**Horas Extras Generadas:** <span style='color:#00A959; font-weight:700;'>{formatear_horas_minutos(mins_ext)}</span>", unsafe_allow_html=True)
             else:
@@ -4303,7 +4476,7 @@ elif choice == "Mi Dashboard Mensual":
 
     k1, k2, k3, k4 = st.columns(4)
     k1.markdown(_kp("Días trabajados", str(dias_trabajados), "con marcaciones en el mes", "info"), unsafe_allow_html=True)
-    k2.markdown(_kp("Horas extras", formatear_horas_minutos(minutos_extras_mes), "sobre la jornada base de 5h 45m", "ok" if minutos_extras_mes > 0 else "info"), unsafe_allow_html=True)
+    k2.markdown(_kp("Horas extras", formatear_horas_minutos(minutos_extras_mes), f"sobre la jornada base de {jornada_base_txt()}", "ok" if minutos_extras_mes > 0 else "info"), unsafe_allow_html=True)
     k3.markdown(_kp("Minutos de tardanza", f"{metricas_p['minutos_acumulados']} m", f"{metricas_p['tardanzas']} tardanza(s) en el mes" if metricas_p["tardanzas"] else "Mes puntual", "ok" if metricas_p["minutos_acumulados"] == 0 else "bad"), unsafe_allow_html=True)
     k4.markdown(_kp("Balance de descuadres", f"S/. {monto_total:.2f}", "sobrantes menos faltantes", "ok" if monto_total >= 0 else "bad"), unsafe_allow_html=True)
     st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
@@ -4545,7 +4718,7 @@ elif choice == "Dashboard General":
                     "primer_ingreso": hora_primer_ingreso,
                     "ultima_salida": hora_ultima_salida,
                     "tiempo_total_str": formatear_horas_minutos(mins_tot),
-                    "horas_laborales_str": f"{formatear_horas_minutos(mins_lab)} / 5h 45m",
+                    "horas_laborales_str": f"{formatear_horas_minutos(mins_lab)} / {jornada_base_txt(f_dash_str)}",
                     "horas_extras_str": formatear_horas_minutos(mins_ext),
                     "minutos_extras": mins_ext,
                     "tardanza": tardanza_txt,
@@ -6425,7 +6598,7 @@ elif choice == "Analítica (BI)":
                 except Exception:
                     ext = {}
                 e1, e2 = st.columns(2)
-                e1.markdown(ui_panel("Horas extras por mes", "Tiempo trabajado sobre la jornada base de 5h 45m", ui_linea(lbl, [round(ext.get(m, 0) / 60, 1) for m in meses_p], "#F59E0B", "{:g}", " h")), unsafe_allow_html=True)
+                e1.markdown(ui_panel("Horas extras por mes", f"Tiempo trabajado sobre la jornada base de {jornada_base_txt()}", ui_linea(lbl, [round(ext.get(m, 0) / 60, 1) for m in meses_p], "#F59E0B", "{:g}", " h")), unsafe_allow_html=True)
                 if colab_bi == "Todos":
                     top_t = sorted([(n, int(v)) for n, v in por_per.items() if v > 0], key=lambda x: -x[1])[:8]
                     e2.markdown(ui_panel("Colaboradores con más tardanzas", "Acumulado en el período", ui_hbars(top_t, "#EC3237")), unsafe_allow_html=True)
@@ -6502,7 +6675,7 @@ elif choice == "Auditoría y Configuración":
         </div>
     """, unsafe_allow_html=True)
 
-    tab_aud, tab_cfg = st.tabs(["Registro de auditoría", "Configuración"])
+    tab_aud, tab_hor, tab_cfg = st.tabs(["Registro de auditoría", "Horarios y turnos", "Configuración"])
 
     with tab_aud:
         if not st.session_state.auditoria.empty:
@@ -6548,6 +6721,111 @@ elif choice == "Auditoría y Configuración":
             st.download_button("Exportar Auditoría a Excel", to_excel(df_aud), "Auditoria.xlsx", use_container_width=True)
         else:
             ui_callout("Aún no hay eventos registrados en la auditoría.")
+
+    with tab_hor:
+        st.markdown('<div class="tp-sec"><div><div class="tp-sec-title">Horarios y turnos</div><div class="tp-sec-sub">Define a qué hora empieza cada turno y cuántas horas cubre el sueldo. Las tardanzas y las horas extra se miden con el horario que regía en la fecha de cada marcación.</div></div></div>', unsafe_allow_html=True)
+        _hoy_h = obtener_ahora_peru().strftime("%Y-%m-%d")
+        _vig_h = _regla_para_fecha(_hoy_h)
+        _hdf = st.session_state.horarios.copy()
+        st.markdown('<div class="tp-gridk">' +
+                    ui_kpi_acc("Horario vigente hoy", _html.escape(_vig_h["nombre"]), f"rige desde {_vig_h['vigente_desde'] if _vig_h['vigente_desde'] > '1900-01-01' else 'el inicio'}", "ok") +
+                    ui_kpi_acc("Jornada base", jornada_base_txt(), "lo que cubre el sueldo; el resto es extra", "info") +
+                    ui_kpi_acc("Turnos", str(len(_vig_h["turnos"])), "en el horario vigente", "info") +
+                    ui_kpi_acc("Reglas registradas", str(len(_hdf)), "incluye borradores y anteriores", "info") + '</div>', unsafe_allow_html=True)
+        ui_callout("Al cambiar un horario, **solo cambia lo que se mida desde la fecha indicada**. Las marcaciones anteriores se siguen midiendo con el horario que regía entonces, así el historial no se altera.", "warn")
+
+        st.markdown("<div class='tp-note-t' style='margin:18px 0 10px'>Reglas de horario</div>", unsafe_allow_html=True)
+        _filas_h = []
+        for _, _rh in _hdf.iterrows():
+            _filas_h.append((_norm_fecha_h(_rh.get("vigente_desde", "")), _rh))
+        for _desde, _rh in sorted(_filas_h, key=lambda x: x[0], reverse=True):
+            try:
+                _tur = _json_h.loads(str(_rh.get("turnos_json", "")))
+            except Exception:
+                _tur = []
+            _est = str(_rh.get("estado", "")).strip()
+            _base = int(float(_rh.get("jornada_base_min") or JORNADA_MINUTOS_BASE))
+            if _est == "Activa":
+                _chip = ui_chip("Vigente hoy", "ok") if str(_rh.get("id_regla", "")) == _vig_h.get("id_regla") else (ui_chip("Programada", "info") if _desde > _hoy_h else ui_chip("Anterior", "neutral"))
+            else:
+                _chip = ui_chip(_html.escape(_est or "Borrador"), "neutral")
+            _lineas = ""
+            for _t in _tur:
+                try:
+                    _dur = _min_hhmm(_t["salida"]) - _min_hhmm(_t["entrada"])
+                    _lineas += (f'<div class="tp-row"><div class="tp-row-main"><b>{_html.escape(str(_t["nombre"]))}</b><span class="wrap">{_t["entrada"]} – {_t["salida"]} · tolerancia {int(_t.get("tolerancia_min", 10))} min · '
+                                f'{_fmt_min(_dur)} de turno</span></div><div class="tp-chips">{ui_chip(_fmt_min(max(0, _dur - _base)) + " extra", "warn" if _dur > _base else "neutral")}</div></div>')
+                except Exception:
+                    continue
+            st.markdown(f'<div class="tp-card"><div class="tp-card-head"><div><div class="tp-card-title">{_html.escape(str(_rh.get("nombre", "")))}</div>'
+                        f'<div class="tp-card-sub">Rige desde {_desde if _desde > "1900-01-01" else "el inicio"} · jornada base {_fmt_min(_base)}</div></div>{_chip}</div><div style="height:10px"></div>{_lineas}</div>', unsafe_allow_html=True)
+
+        if not _hdf.empty:
+            _opc_h = {f"{r.get('nombre', '')} · desde {_norm_fecha_h(r.get('vigente_desde', ''))} · {r.get('estado', '')}": str(r.get("id_regla", "")) for _, r in _hdf.iterrows()}
+            _ch1, _ch2, _ch3 = st.columns([2.2, 1, 1])
+            _sel_h = _ch1.selectbox("Cambiar el estado de una regla", list(_opc_h.keys()), key="hor_sel_estado")
+            _nuevo_h = _ch2.selectbox("Nuevo estado", ["Activa", "Borrador", "Archivada"], key="hor_nuevo_estado")
+            _ch3.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
+            if _ch3.button("Aplicar", key="hor_aplicar", use_container_width=True):
+                if actualizar_estado_horario_gsheets(_opc_h[_sel_h], _nuevo_h):
+                    registrar_auditoria("Cambiar Estado de Horario", "Horarios", f"{_sel_h} → {_nuevo_h}")
+                    st.session_state.horarios = obtener_horarios_gsheets()
+                    st.toast("Estado del horario actualizado")
+                    time.sleep(0.3)
+                    st.rerun()
+
+        st.markdown("<div class='tp-note-t' style='margin:26px 0 10px'>Nueva regla de horarios</div>", unsafe_allow_html=True)
+        _plantillas = {
+            "2 turnos (horario actual)": (345, [{"Turno": "Mañana", "Entrada": "07:45", "Salida": "13:30", "Tolerancia (min)": 10, "Ventana desde": "00:00"},
+                                                {"Turno": "Tarde", "Entrada": "15:15", "Salida": "21:00", "Tolerancia (min)": 10, "Ventana desde": "13:00"}]),
+            "3 turnos (7:00 · 13:00 · 18:45)": (285, [{"Turno": "Turno 1", "Entrada": "07:00", "Salida": "13:00", "Tolerancia (min)": 10, "Ventana desde": ""},
+                                                       {"Turno": "Turno 2", "Entrada": "13:00", "Salida": "18:45", "Tolerancia (min)": 10, "Ventana desde": ""},
+                                                       {"Turno": "Turno 3", "Entrada": "18:45", "Salida": "23:45", "Tolerancia (min)": 10, "Ventana desde": ""}]),
+            "En blanco": (345, [{"Turno": "", "Entrada": "", "Salida": "", "Tolerancia (min)": 10, "Ventana desde": ""}]),
+        }
+        _pl = st.selectbox("Partir de", list(_plantillas.keys()), key="hor_plantilla")
+        _base_pl, _tabla_pl = _plantillas[_pl]
+        _k = _pl.split(" ")[0] + str(len(_tabla_pl))
+        _n1, _n2, _n3 = st.columns([2, 1, 1])
+        _nom_h = _n1.text_input("Nombre de la regla", key=f"hor_nom_{_k}", placeholder="Ej.: Horario desde octubre")
+        _desde_h = _n2.date_input("Rige desde", value=obtener_ahora_peru().date(), key=f"hor_desde_{_k}")
+        _est_h = _n3.selectbox("Estado", ["Activa", "Borrador"], key=f"hor_est_{_k}", help="Una regla en Borrador no se aplica hasta que la actives.")
+        _b1, _b2 = st.columns(2)
+        _bh = _b1.number_input("Jornada base: horas", min_value=0, max_value=12, value=_base_pl // 60, key=f"hor_bh_{_k}")
+        _bm = _b2.number_input("Jornada base: minutos", min_value=0, max_value=59, value=_base_pl % 60, key=f"hor_bm_{_k}")
+        _ed = st.data_editor(pd.DataFrame(_tabla_pl), num_rows="dynamic", use_container_width=True, hide_index=True, key=f"hor_ed_{_k}",
+                             column_config={"Turno": st.column_config.TextColumn("Turno", required=True), "Entrada": st.column_config.TextColumn("Entrada (HH:MM)"),
+                                            "Salida": st.column_config.TextColumn("Salida (HH:MM)"), "Tolerancia (min)": st.column_config.NumberColumn("Tolerancia (min)", min_value=0, max_value=60, step=1),
+                                            "Ventana desde": st.column_config.TextColumn("Ventana desde (opcional)", help="Hora desde la que una marcación se asigna a este turno. Vacío = 60 minutos antes de la entrada.")})
+        st.caption("Todo lo que se trabaje sobre la jornada base cuenta como hora extra. Cada turno debe terminar antes de las 24:00.")
+        if st.button("Guardar regla de horarios", key=f"hor_guardar_{_k}", use_container_width=True):
+            _turnos_ok, _errs = _validar_turnos(_ed)
+            _desde_iso = _desde_h.strftime("%Y-%m-%d")
+            if not _nom_h.strip():
+                _errs.append("Escribe un nombre para la regla.")
+            if int(_bh) * 60 + int(_bm) <= 0:
+                _errs.append("La jornada base debe ser mayor que cero.")
+            if _est_h == "Activa" and any(_norm_fecha_h(r.get("vigente_desde", "")) == _desde_iso and str(r.get("estado", "")) == "Activa" for _, r in _hdf.iterrows()):
+                _errs.append("Ya existe otra regla Activa con esa fecha de inicio. Cambia la fecha o archiva la otra.")
+            if _errs:
+                for _e in _errs:
+                    st.error(_e)
+            else:
+                _idr = crear_regla_horario_gsheets(_nom_h.strip(), _desde_iso, int(_bh) * 60 + int(_bm), _turnos_ok, _est_h, user_real)
+                if _idr:
+                    registrar_auditoria("Crear Regla de Horario", "Horarios", f"{_nom_h.strip()} · desde {_desde_iso} · {len(_turnos_ok)} turno(s) · base {_fmt_min(int(_bh) * 60 + int(_bm))}")
+                    st.session_state.horarios = obtener_horarios_gsheets()
+                    st.toast("Regla de horarios guardada")
+                    time.sleep(0.3)
+                    st.rerun()
+
+        st.markdown("<div class='tp-note-t' style='margin:26px 0 10px'>Probar un horario</div>", unsafe_allow_html=True)
+        _t1, _t2 = st.columns(2)
+        _f_t = _t1.date_input("Fecha de la marcación", value=obtener_ahora_peru().date(), key="hor_test_f")
+        _h_t = _t2.time_input("Hora de la marcación", value=dt_time(7, 50), key="hor_test_h", step=60)
+        _mi, _tard, _tn = calcular_tardanza_ingreso(f"{_f_t} {_h_t.strftime('%H:%M')}:00")
+        _rg = _regla_para_fecha(_f_t)
+        ui_callout(f"Con la regla **{_rg['nombre']}**, una marcación a las {_h_t.strftime('%H:%M')} del {_f_t.strftime('%d/%m/%Y')} corresponde al turno **{_tn}** y " + (f"tiene una **tardanza de {_mi} min**." if _tard else "está **a tiempo**."), "warn" if _tard else "ok")
 
     with tab_cfg:
         st.markdown('<div class="tp-sec"><div><div class="tp-sec-title">Sesión y seguridad</div><div class="tp-sec-sub">Reglas de acceso al sistema</div></div></div>', unsafe_allow_html=True)
