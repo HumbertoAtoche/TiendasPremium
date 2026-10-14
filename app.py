@@ -2492,6 +2492,234 @@ def _validar_turnos(df):
         errores.append("Agrega al menos un turno.")
     return turnos, errores
 
+def _mover_hhmm(txt, delta):
+    try:
+        m = max(0, min(1439, _min_hhmm(txt) + int(delta)))
+        return f"{m // 60:02d}:{m % 60:02d}"
+    except Exception:
+        return txt
+
+def _aplicar_delta(tabla, delta, mover_salidas=True):
+    """Mueve las entradas (y opcionalmente las salidas) de todos los turnos la misma cantidad de minutos."""
+    out = []
+    for f in tabla:
+        g = dict(f)
+        if g.get("Entrada"):
+            g["Entrada"] = _mover_hhmm(g["Entrada"], delta)
+        if mover_salidas and g.get("Salida"):
+            g["Salida"] = _mover_hhmm(g["Salida"], delta)
+        vd = g.get("Ventana desde")
+        if vd and vd != "00:00":
+            g["Ventana desde"] = _mover_hhmm(vd, delta)
+        out.append(g)
+    return out
+
+# ---------- Programación semanal de turnos ----------
+COLS_PROG = ["semana_inicio", "dni", "nombre", "fecha", "turno", "actualizado_por", "fecha_actualizacion"]
+DIAS_ES = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"]
+_AUSENCIAS = ("Vacaciones", "Permiso", "Licencia")
+
+def obtener_programacion_gsheets():
+    vacio = pd.DataFrame(columns=COLS_PROG)
+    if not doc_sheets:
+        return vacio
+    try:
+        try:
+            hoja = doc_sheets.worksheet("Programacion")
+        except gspread.exceptions.WorksheetNotFound:
+            hoja = doc_sheets.add_worksheet(title="Programacion", rows="1000", cols=str(len(COLS_PROG)))
+            hoja.append_row(COLS_PROG)
+        datos = hoja.get_all_records()
+        df = pd.DataFrame(datos) if datos else vacio
+        for c in COLS_PROG:
+            if c not in df.columns:
+                df[c] = ""
+        return df
+    except Exception as e:
+        _error_lectura(f"No se pudo leer la hoja 'Programacion': {e}")
+        return vacio
+
+def _lunes_de(f):
+    return f - timedelta(days=f.weekday())
+
+def _dia_label(d):
+    return f"{DIAS_ES[d.weekday()]} {d.strftime('%d/%m')}"
+
+def _info_turno(nombre, fecha):
+    """Horas de un turno en una fecha, según el horario vigente ese día: duración, base y extra."""
+    regla = _regla_para_fecha(fecha)
+    for t in regla["turnos"]:
+        if str(t["nombre"]).strip().lower() == str(nombre).strip().lower():
+            dur = _min_hhmm(t["salida"]) - _min_hhmm(t["entrada"])
+            base = int(regla["jornada_base_min"])
+            return {"nombre": t["nombre"], "entrada": t["entrada"], "salida": t["salida"], "dur": dur, "base": min(dur, base), "extra": max(0, dur - base)}
+    return None
+
+def _ausencia_en(dni, fecha_iso):
+    """'Vacaciones', 'Licencia' o 'Permiso' si el colaborador tiene algo aprobado ese día."""
+    try:
+        v = st.session_state.get("vacaciones")
+        if v is not None and not v.empty:
+            for _, r in v.iterrows():
+                ini, fin = _norm_fecha_h(r.get("fecha_inicio", "")), _norm_fecha_h(r.get("fecha_fin", ""))
+                if ini and fin and _mismo_dni(r.get("dni", ""), dni) and ini <= fecha_iso <= fin:
+                    t = str(r.get("tipo", ""))
+                    return "Vacaciones" if t.startswith("Vacac") else ("Licencia" if t.startswith("Licen") else "Permiso")
+        sol = st.session_state.get("solicitudes")
+        if sol is not None and not sol.empty:
+            for _, r in sol.iterrows():
+                if (str(r.get("estado", "")) == "Aprobado" and str(r.get("tipo_solicitud", "")) == "Permiso Laboral"
+                        and _mismo_dni(r.get("dni", ""), dni) and _norm_fecha_h(r.get("fecha_permiso", "")) == fecha_iso):
+                    return "Permiso"
+    except Exception:
+        pass
+    return ""
+
+def _prog_base(lunes, fuente=None, vacia=False):
+    """Tabla editable de la semana: guardada, copiada de otra semana, o en blanco (con ausencias ya marcadas)."""
+    lunes_iso = lunes.strftime("%Y-%m-%d")
+    dias = [lunes + timedelta(days=i) for i in range(7)]
+    emp = st.session_state.empleados
+    nombres = obtener_solo_colaboradores(fecha_eval=lunes_iso)
+    prog = st.session_state.get("programacion")
+    fuente_iso = (fuente or lunes).strftime("%Y-%m-%d")
+    guardado = {}
+    if not vacia and prog is not None and not prog.empty:
+        sem = prog[prog["semana_inicio"].apply(_norm_fecha_h) == fuente_iso]
+        for _, r in sem.iterrows():
+            off = (datetime.strptime(_norm_fecha_h(r["fecha"]), "%Y-%m-%d").date() - (fuente or lunes)).days
+            guardado[(str(r["dni"]).lstrip("0"), off)] = str(r["turno"])
+    filas = []
+    for n in nombres:
+        fm = emp[emp["nombre"] == n]
+        dni = str(fm.iloc[0]["dni"]) if not fm.empty else ""
+        fila = {"Colaborador": n}
+        for i, d in enumerate(dias):
+            v = guardado.get((dni.lstrip("0"), i), "")
+            if not v or v in _AUSENCIAS:
+                v = _ausencia_en(dni, d.strftime("%Y-%m-%d")) or ""
+            fila[_dia_label(d)] = v
+        filas.append(fila)
+    return pd.DataFrame(filas) if filas else pd.DataFrame(columns=["Colaborador"] + [_dia_label(d) for d in dias])
+
+def _prog_mover(dias):
+    st.session_state["prog_lunes"] = st.session_state["prog_lunes"] + timedelta(days=dias)
+
+def _prog_ir_hoy():
+    st.session_state["prog_lunes"] = _lunes_de(obtener_ahora_peru().date())
+
+def _prog_copiar_anterior():
+    l = st.session_state["prog_lunes"]
+    st.session_state[f"prog_base_{l:%Y-%m-%d}"] = _prog_base(l, fuente=l - timedelta(days=7))
+    st.session_state["prog_ver"] = st.session_state.get("prog_ver", 0) + 1
+
+def _prog_limpiar():
+    l = st.session_state["prog_lunes"]
+    st.session_state[f"prog_base_{l:%Y-%m-%d}"] = _prog_base(l, vacia=True)
+    st.session_state["prog_ver"] = st.session_state.get("prog_ver", 0) + 1
+
+def _analizar_programacion(df_ed, dias, cols, dni_de):
+    """Totales por persona, cobertura por día y avisos de la semana (todo a partir de la tabla editada)."""
+    e = _html.escape
+    avisos, filas, cob = [], "", {d: {} for d in dias}
+    hay_algo = False
+    tot_base = tot_extra = tot_desc = 0
+    for _, r in df_ed.iterrows():
+        nombre = r["Colaborador"]
+        base_t = extra_t = trab = desc = 0
+        celdas = ""
+        for d, c in zip(dias, cols):
+            v = str(r.get(c) or "").strip()
+            if not v:
+                celdas += '<td class="vacio">—</td>'
+            elif v == "Descanso" or v in _AUSENCIAS:
+                celdas += f'<td class="{"desc" if v == "Descanso" else "aus"}">{e(v)}</td>'
+                desc += 1
+                hay_algo = True
+            else:
+                inf = _info_turno(v, d)
+                hay_algo = True
+                if not inf:
+                    celdas += f'<td class="aus">{e(v)}<span>no existe ese día</span></td>'
+                    avisos.append(f"{nombre}: el turno '{v}' no existe el {_dia_label(d)} (cambió el horario ese día).")
+                    continue
+                trab += 1
+                base_t += inf["base"]
+                extra_t += inf["extra"]
+                cob[d][inf["nombre"]] = cob[d].get(inf["nombre"], 0) + 1
+                if _ausencia_en(dni_de.get(nombre, ""), d.strftime("%Y-%m-%d")):
+                    avisos.append(f"{nombre} está programado el {_dia_label(d)} pero tiene una ausencia aprobada ese día.")
+                celdas += (f'<td class="trab"><b>{e(inf["nombre"])}</b><span>{inf["entrada"]}–{inf["salida"]}</span>'
+                           f'<em>{_fmt_min(inf["base"])} base{(" + " + _fmt_min(inf["extra"]) + " extra") if inf["extra"] else ""}</em></td>')
+        if trab and desc == 0:
+            avisos.append(f"{nombre} no tiene ningún día de descanso en la semana.")
+        tot_base += base_t
+        tot_extra += extra_t
+        tot_desc += desc
+        filas += f'<tr><th class="n">{e(nombre)}</th>{celdas}<td class="tot"><b>{_fmt_min(base_t + extra_t)}</b><span>{_fmt_min(base_t)} base</span><em>{_fmt_min(extra_t)} extra</em></td></tr>'
+    celdas_cob = ""
+    for d in dias:
+        regla = _regla_para_fecha(d)
+        partes = ""
+        for t in regla["turnos"]:
+            n = cob[d].get(t["nombre"], 0)
+            if hay_algo and n == 0:
+                partes += f'<span class="cero">{e(t["nombre"])}: sin cubrir</span>'
+                avisos.append(f"{t['nombre']} sin cubrir el {_dia_label(d)}.")
+            else:
+                partes += f'<span>{e(t["nombre"])}: {n}</span>'
+        celdas_cob += f'<td class="cob">{partes}</td>'
+    cab = "".join(f"<th>{_dia_label(d)}</th>" for d in dias)
+    tabla = (f'<div class="tp-prog-wrap"><table class="tp-prog"><thead><tr><th class="n">Colaborador</th>{cab}<th>Semana</th></tr></thead><tbody>{filas}'
+             f'<tr><th class="n">Cobertura</th>{celdas_cob}<td></td></tr></tbody></table></div>')
+    return tabla, avisos, tot_base, tot_extra, tot_desc
+
+def ui_mi_programacion(dni):
+    """Tarjeta del colaborador: sus turnos de los próximos 7 días."""
+    try:
+        df = st.session_state.get("programacion")
+        if df is None or df.empty:
+            return
+        hoy = obtener_ahora_peru().date()
+        filas = ""
+        mias = df[df["dni"].apply(lambda x: _mismo_dni(x, dni))].copy()
+        mias["_f"] = mias["fecha"].apply(_norm_fecha_h)
+        for i in range(7):
+            d = hoy + timedelta(days=i)
+            m = mias[mias["_f"] == d.strftime("%Y-%m-%d")]
+            if m.empty:
+                continue
+            v = str(m.iloc[-1]["turno"]).strip()
+            etq = "Hoy" if i == 0 else ("Mañana" if i == 1 else _dia_label(d))
+            inf = _info_turno(v, d)
+            if inf:
+                chips = ui_chip(f"{_fmt_min(inf['base'])} base", "info") + (ui_chip(f"+{_fmt_min(inf['extra'])} extra", "warn") if inf["extra"] else "")
+                filas += f'<div class="tp-row"><div class="tp-row-time">{etq}</div><div class="tp-row-main"><b>{_html.escape(inf["nombre"])}</b><span>{inf["entrada"]} – {inf["salida"]}</span></div><div class="tp-chips">{chips}</div></div>'
+            else:
+                filas += f'<div class="tp-row"><div class="tp-row-time">{etq}</div><div class="tp-row-main"><b>{_html.escape(v)}</b></div><div class="tp-chips">{ui_chip("Sin turno", "neutral")}</div></div>'
+        if filas:
+            st.markdown(ui_panel("Tu programación", "Tus turnos de los próximos 7 días", filas), unsafe_allow_html=True)
+            st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
+    except Exception:
+        pass
+
+st.markdown("""
+<style>
+.tp-prog-wrap{overflow-x:auto;background:var(--tp-surface);border:1px solid var(--tp-line);border-radius:16px;padding:8px;box-shadow:var(--tp-sh-1);}
+table.tp-prog{border-collapse:separate;border-spacing:5px;width:100%;min-width:820px;font-size:.74rem;}
+.tp-prog th{font-weight:700;color:var(--tp-mute);font-size:.7rem;text-align:center;padding:4px;}
+.tp-prog th.n{text-align:left;color:var(--tp-ink);font-size:.8rem;white-space:nowrap;padding-right:10px;}
+.tp-prog td{border-radius:12px;padding:8px 6px;text-align:center;vertical-align:middle;line-height:1.35;}
+.tp-prog td span,.tp-prog td em{display:block;font-style:normal;color:var(--tp-ink-2);}
+.tp-prog td.trab{background:#EEF2FF;border:1px solid #D9E1FB;} .tp-prog td.trab b{display:block;color:var(--tp-ink);}
+.tp-prog td.trab em{color:var(--tp-info);font-weight:600;}
+.tp-prog td.desc{background:#F1F3F7;color:var(--tp-mute);font-weight:600;}
+.tp-prog td.aus{background:var(--tp-warn-soft);color:var(--tp-warn);font-weight:600;}
+.tp-prog td.vacio{color:#C3CAD6;} .tp-prog td.tot{background:#F6F7FA;font-weight:600;}
+.tp-prog td.cob{background:#FAFBFC;border:1px dashed var(--tp-line);} .tp-prog td.cob span.cero{color:var(--tp-bad);font-weight:700;}
+</style>
+""", unsafe_allow_html=True)
+
 # --- COMPONENTES UI REUTILIZABLES ---
 def ui_iniciales(nombre):
     p = [x for x in str(nombre).split() if x]
@@ -2626,6 +2854,8 @@ if "boletas_historial" not in st.session_state:
     st.session_state.boletas_historial = obtener_boletas_historial_gsheets()
 if "horarios" not in st.session_state:
     st.session_state.horarios = obtener_horarios_gsheets()
+if "programacion" not in st.session_state:
+    st.session_state.programacion = obtener_programacion_gsheets()
 
 if "incidencias" not in st.session_state:
     st.session_state.incidencias = obtener_incidencias_gsheets()
@@ -2634,7 +2864,7 @@ if "botellas_fiadas" not in st.session_state:
     st.session_state.botellas_fiadas = obtener_botellas_fiadas_gsheets()
 
 if st.session_state.get("_hojas_fallidas"):
-    for _k in ["empleados", "asistencia", "descuadres", "solicitudes", "feriados", "vacaciones", "auditoria", "checklist", "boletas_historial", "incidencias", "botellas_fiadas", "horarios"]:
+    for _k in ["empleados", "asistencia", "descuadres", "solicitudes", "feriados", "vacaciones", "auditoria", "checklist", "boletas_historial", "incidencias", "botellas_fiadas", "horarios", "programacion"]:
         st.session_state.pop(_k, None)
     st.markdown('<div class="tp-banner warn"><div><b>Google Sheets está ocupado en este momento</b><span class="s">Es temporal. Espera unos segundos y presiona el botón para reintentar. No se perdió ningún dato.</span></div></div>', unsafe_allow_html=True)
     st.button("Reintentar", key="reintentar_lectura")
@@ -2673,7 +2903,7 @@ def _login_guard():
     return {"lock": threading.Lock(), "fails": {}, "locked_until": {}}
 
 _DATOS_SESION = ["empleados", "asistencia", "descuadres", "solicitudes", "feriados", "vacaciones",
-                 "auditoria", "checklist", "boletas_historial", "incidencias", "botellas_fiadas", "horarios"]
+                 "auditoria", "checklist", "boletas_historial", "incidencias", "botellas_fiadas", "horarios", "programacion"]
 
 def _cambiar_preview():
     """Admin: entra o sale de la vista previa de un colaborador (solo lectura)."""
@@ -3780,7 +4010,7 @@ if _sol_n is not None and not _sol_n.empty:
         st.sidebar.markdown(f'<div class="tp-notif"><span>{"Solicitudes por revisar" if rol_actual == "admin" else "Tus solicitudes en revisión"}</span><span>{len(_pend)}</span></div>', unsafe_allow_html=True)
 
 if rol_actual == "admin":
-    menu = ["Dashboard General", "Centro de Alertas", "Analítica (BI)", "Gestión Colaboradores", "Onboarding / Offboarding", "Gestión de Vacaciones", "Boletas de Pago", "Solicitudes y Permisos", "Historial de Descuadres", "Incidencias y Daños", "Botellas Fiadas", "Historial de Asistencias", "Auditoría y Configuración"]
+    menu = ["Dashboard General", "Centro de Alertas", "Analítica (BI)", "Gestión Colaboradores", "Onboarding / Offboarding", "Gestión de Vacaciones", "Programación de Turnos", "Boletas de Pago", "Solicitudes y Permisos", "Historial de Descuadres", "Incidencias y Daños", "Botellas Fiadas", "Historial de Asistencias", "Auditoría y Configuración"]
 else:
     menu = ["Marcar Asistencia", "Registrar Descuadre", "Registrar Incidencia", "Botellas Fiadas", "Mi Ficha Técnica", "Mis Vacaciones", "Mis Boletas", "Solicitar Permiso / Adelanto", "Mi Dashboard Mensual"]
 
@@ -3876,6 +4106,7 @@ if choice == "Marcar Asistencia":
         components.html("""<body style="margin:0;font-family:Montserrat,Arial,sans-serif"><div style="box-sizing:border-box;height:132px;background:#fff;border:1px solid #E3E6EC;border-radius:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(15,23,42,.05)"><div id="t" style="font-size:2.3rem;font-weight:700;color:#0F172A;font-variant-numeric:tabular-nums">--:--:--</div><div id="d" style="font-size:.8rem;color:#64748B;font-weight:600;text-transform:capitalize"></div></div><script>function u(){var n=new Date(),o={timeZone:"America/Lima"};document.getElementById("t").textContent=n.toLocaleTimeString("es-PE",{timeZone:"America/Lima",hour12:false});document.getElementById("d").textContent=n.toLocaleDateString("es-PE",{timeZone:"America/Lima",weekday:"long",day:"numeric",month:"long"})}u();setInterval(u,1000)</script></body>""", height=134)
     st.markdown("<div style='height:14px'></div>", unsafe_allow_html=True)
 
+    ui_mi_programacion(dni_actual)
     col_main, col_preview = st.columns([1.1, 1])
 
     with col_main:
@@ -5436,6 +5667,91 @@ elif choice == "Boletas de Pago":
                 st.toast("Boleta emitida: ya es visible para el colaborador")
                 time.sleep(0.3)
                 st.rerun()
+elif choice == "Programación de Turnos":
+    st.markdown("""
+        <div class="market-header">
+            <h1>Programación de Turnos</h1>
+            <p>Arma la semana: quién trabaja qué turno, con las horas base y extra de cada casilla</p>
+        </div>
+    """, unsafe_allow_html=True)
+    if "prog_lunes" not in st.session_state:
+        st.session_state["prog_lunes"] = _lunes_de(obtener_ahora_peru().date())
+    _lunes = st.session_state["prog_lunes"]
+    _lunes_iso = _lunes.strftime("%Y-%m-%d")
+    _dias = [_lunes + timedelta(days=i) for i in range(7)]
+    _cols = [_dia_label(d) for d in _dias]
+    _ver = st.session_state.get("prog_ver", 0)
+
+    _nv1, _nv2, _nv3, _nv4 = st.columns([1, 1, 1.6, 1])
+    _nv1.button("Semana anterior", key="prog_ant", on_click=_prog_mover, args=(-7,), use_container_width=True)
+    _nv2.button("Esta semana", key="prog_hoy", on_click=_prog_ir_hoy, use_container_width=True)
+    _nv3.markdown(f'<div style="text-align:center;padding-top:6px">{ui_chip(_dias[0].strftime("%d/%m/%Y") + " – " + _dias[6].strftime("%d/%m/%Y"), "info")}</div>', unsafe_allow_html=True)
+    _nv4.button("Semana siguiente", key="prog_sig", on_click=_prog_mover, args=(7,), use_container_width=True)
+
+    _reglas_sem = {}
+    for _d in _dias:
+        _r = _regla_para_fecha(_d)
+        _reglas_sem[_r["nombre"]] = _r
+    _nombres_turno = []
+    for _r in _reglas_sem.values():
+        for _t in sorted(_r["turnos"], key=lambda t: _hhmm(t["entrada"])):
+            if _t["nombre"] not in _nombres_turno:
+                _nombres_turno.append(_t["nombre"])
+    if len(_reglas_sem) > 1:
+        ui_callout("En esta semana **cambia el horario** (" + " → ".join(_reglas_sem.keys()) + "). Cada casilla se calcula con el horario que rige ese día.", "warn")
+    else:
+        _r0 = list(_reglas_sem.values())[0]
+        ui_callout(f"Horario aplicado: **{_r0['nombre']}** · jornada base **{_fmt_min(_r0['jornada_base_min'])}** por turno. Lo que exceda la base cuenta como hora extra.")
+
+    _base = st.session_state.get(f"prog_base_{_lunes_iso}")
+    if _base is None:
+        _base = _prog_base(_lunes)
+    if _base.empty:
+        ui_callout("No hay colaboradores activos para programar en esta semana.", "info")
+    else:
+        _opts = ["", "Descanso"] + _nombres_turno + list(_AUSENCIAS)
+        _ed = st.data_editor(_base, hide_index=True, use_container_width=True, disabled=["Colaborador"], key=f"prog_ed_{_lunes_iso}_{_ver}",
+                             column_config={"Colaborador": st.column_config.TextColumn("Colaborador", width="medium"),
+                                            **{c: st.column_config.SelectboxColumn(c, options=_opts, required=False) for c in _cols}})
+        _emp_p = st.session_state.empleados
+        _dni_de = {n: str(_emp_p[_emp_p["nombre"] == n].iloc[0]["dni"]) for n in _ed["Colaborador"] if not _emp_p[_emp_p["nombre"] == n].empty}
+
+        _b1, _b2, _b3 = st.columns(3)
+        _b1.button("Copiar semana anterior", key="prog_copiar", on_click=_prog_copiar_anterior, use_container_width=True)
+        _b2.button("Limpiar semana", key="prog_limpiar", on_click=_prog_limpiar, use_container_width=True)
+        _guardar = _b3.button("Guardar semana", key="prog_guardar", use_container_width=True)
+
+        _tabla_html, _avisos, _tb, _te, _td = _analizar_programacion(_ed, _dias, _cols, _dni_de)
+        st.markdown("<div style='height:8px'></div>" + '<div class="tp-gridk">' +
+                    ui_kpi_acc("Horas base programadas", _fmt_min(_tb), "entre todos, esta semana", "info") +
+                    ui_kpi_acc("Horas extra programadas", _fmt_min(_te), "sobre la jornada base", "warn" if _te else "ok") +
+                    ui_kpi_acc("Días de descanso o ausencia", str(_td), "en la semana", "info") +
+                    ui_kpi_acc("Avisos", str(len(_avisos)), "revisa antes de guardar" if _avisos else "Todo en orden", "bad" if _avisos else "ok") + '</div>', unsafe_allow_html=True)
+        st.markdown("<div class='tp-note-t' style='margin:6px 0 10px'>Vista de la semana: horas base y extra por casilla</div>", unsafe_allow_html=True)
+        st.markdown(_tabla_html, unsafe_allow_html=True)
+        for _av in dict.fromkeys(_avisos):
+            ui_callout(_av, "warn")
+
+        if _guardar:
+            _nuevas = []
+            _ahora_p = obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S")
+            for _, _rp in _ed.iterrows():
+                for _d, _c in zip(_dias, _cols):
+                    _v = str(_rp.get(_c) or "").strip()
+                    if _v:
+                        _nuevas.append({"semana_inicio": _lunes_iso, "dni": _dni_de.get(_rp["Colaborador"], ""), "nombre": _rp["Colaborador"], "fecha": _d.strftime("%Y-%m-%d"),
+                                        "turno": _v, "actualizado_por": user_real, "fecha_actualizacion": _ahora_p})
+            _prog_df = st.session_state.programacion
+            _resto = _prog_df[_prog_df["semana_inicio"].apply(_norm_fecha_h) != _lunes_iso] if not _prog_df.empty else _prog_df
+            _nuevo_df = pd.concat([_resto, pd.DataFrame(_nuevas, columns=COLS_PROG)], ignore_index=True)[COLS_PROG]
+            actualizar_hoja_completa("Programacion", _nuevo_df)
+            registrar_auditoria("Guardar Programación de Turnos", "Programación", f"Semana del {_lunes_iso}: {len(_nuevas)} casilla(s)")
+            st.session_state.programacion = obtener_programacion_gsheets()
+            st.session_state.pop(f"prog_base_{_lunes_iso}", None)
+            st.toast("Programación de la semana guardada. Los colaboradores ya ven su turno.")
+            time.sleep(0.3)
+            st.rerun()
+
 elif choice == "Solicitudes y Permisos":
     st.markdown("""
         <div class="market-header">
@@ -6783,9 +7099,25 @@ elif choice == "Auditoría y Configuración":
                                                        {"Turno": "Turno 3", "Entrada": "18:45", "Salida": "23:45", "Tolerancia (min)": 10, "Ventana desde": ""}]),
             "En blanco": (345, [{"Turno": "", "Entrada": "", "Salida": "", "Tolerancia (min)": 10, "Ventana desde": ""}]),
         }
+        for _, _rc in _hdf.iterrows():
+            try:
+                _tc = _json_h.loads(str(_rc.get("turnos_json", "")))
+                _plantillas[f"Copiar: {_rc.get('nombre', '')} (desde {_norm_fecha_h(_rc.get('vigente_desde', ''))})"] = (
+                    int(float(_rc.get("jornada_base_min") or JORNADA_MINUTOS_BASE)),
+                    [{"Turno": t["nombre"], "Entrada": t["entrada"], "Salida": t["salida"], "Tolerancia (min)": int(t.get("tolerancia_min", 10)), "Ventana desde": t.get("ventana_desde", "")} for t in _tc])
+            except Exception:
+                continue
         _pl = st.selectbox("Partir de", list(_plantillas.keys()), key="hor_plantilla")
         _base_pl, _tabla_pl = _plantillas[_pl]
-        _k = _pl.split(" ")[0] + str(len(_tabla_pl))
+        _s1, _s2 = st.columns([1, 2])
+        _delta = _s1.number_input("Mover todas las entradas (minutos)", min_value=-240, max_value=240, value=0, step=5, key="hor_delta",
+                                  help="Negativo = más temprano. Ejemplo: -60 adelanta todos los turnos una hora.")
+        _mover_sal = _s2.checkbox("Mover también las salidas (cada turno dura lo mismo)", value=True, key="hor_mover_sal")
+        _s2.caption("Ajuste rápido sobre la plantilla o regla elegida. Después puedes afinar cada hora en la tabla.")
+        if _delta:
+            _tabla_pl = _aplicar_delta(_tabla_pl, _delta, _mover_sal)
+        _k = str(abs(hash(_pl)) % 10**6) + str(len(_tabla_pl))
+        _kd = f"{_k}_{_delta}_{int(_mover_sal)}"
         _n1, _n2, _n3 = st.columns([2, 1, 1])
         _nom_h = _n1.text_input("Nombre de la regla", key=f"hor_nom_{_k}", placeholder="Ej.: Horario desde octubre")
         _desde_h = _n2.date_input("Rige desde", value=obtener_ahora_peru().date(), key=f"hor_desde_{_k}")
@@ -6793,7 +7125,7 @@ elif choice == "Auditoría y Configuración":
         _b1, _b2 = st.columns(2)
         _bh = _b1.number_input("Jornada base: horas", min_value=0, max_value=12, value=_base_pl // 60, key=f"hor_bh_{_k}")
         _bm = _b2.number_input("Jornada base: minutos", min_value=0, max_value=59, value=_base_pl % 60, key=f"hor_bm_{_k}")
-        _ed = st.data_editor(pd.DataFrame(_tabla_pl), num_rows="dynamic", use_container_width=True, hide_index=True, key=f"hor_ed_{_k}",
+        _ed = st.data_editor(pd.DataFrame(_tabla_pl), num_rows="dynamic", use_container_width=True, hide_index=True, key=f"hor_ed_{_kd}",
                              column_config={"Turno": st.column_config.TextColumn("Turno", required=True), "Entrada": st.column_config.TextColumn("Entrada (HH:MM)"),
                                             "Salida": st.column_config.TextColumn("Salida (HH:MM)"), "Tolerancia (min)": st.column_config.NumberColumn("Tolerancia (min)", min_value=0, max_value=60, step=1),
                                             "Ventana desde": st.column_config.TextColumn("Ventana desde (opcional)", help="Hora desde la que una marcación se asigna a este turno. Vacío = 60 minutos antes de la entrada.")})
