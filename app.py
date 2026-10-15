@@ -1484,7 +1484,7 @@ def ui_solicitud_card(r, admin=False):
                  f'<div class="tp-card-sub">DNI {r["dni"]} · {_html.escape(tipo)} · {r["fecha_registro"]}</div></div></div>')
     else:
         quien = f'<div><div class="tp-card-title">{_html.escape(tipo)}</div><div class="tp-card-sub">Registrada el {r["fecha_registro"]}</div></div>'
-    return (f'<div class="tp-card{" flat" if admin else ""}"><div class="tp-card-head">{quien}{ui_chip(est, chip)}</div>'
+    return (f'<div class="tp-card{" flat" if admin else ""} {chip}"><div class="tp-card-head">{quien}{ui_chip(est, chip)}</div>'
             f'<div class="tp-card-body">{det}<br>{_html.escape(str(r["motivo"]))}</div>{ui_timeline(est)}{resp_html}</div>')
 
 st.markdown("""
@@ -1627,7 +1627,8 @@ def ui_vac_card(r, admin=False):
         cuerpo += f'{"<br>" if cuerpo else ""}Recuperar el <b>{e(c("fecha_recuperacion") or "-")}</b> · {e(c("horario_recuperacion") or "horario no especificado")}'
         tl = f'<div class="tp-tl"><div class="tp-tl-step done">Permiso</div><div class="tp-tl-step {"done" if rec else "now"}">Por recuperar</div><div class="tp-tl-step {"done" if rec else ""}">Recuperado</div></div>'
     body = f'<div class="tp-card-body">{cuerpo}</div>' if cuerpo else '<div style="height:10px"></div>'
-    return f'<div class="tp-card{" flat" if admin else ""}"><div class="tp-card-head">{quien}{ui_chip(e(tipo), tchip)}</div>{body}{tl}</div>'
+    tono_v = ("ok" if c("estado_recuperacion") == "Recuperado" else "warn") if tipo.startswith("Permiso") else "info"
+    return f'<div class="tp-card{" flat" if admin else ""} {tono_v}"><div class="tp-card-head">{quien}{ui_chip(e(tipo), tchip)}</div>{body}{tl}</div>'
 
 import unicodedata
 
@@ -2060,7 +2061,7 @@ def ui_inc_card(r, admin=False, flat=False):
                  f'<div class="tp-card-sub">{e(str(r["tipo_incidencia"]))} · {e(str(r["fecha"])[:10])}</div></div></div>')
     else:
         quien = f'<div><div class="tp-card-title">{e(str(r["tipo_incidencia"]))}</div><div class="tp-card-sub">{e(str(r["fecha"])[:10])}</div></div>'
-    return (f'<div class="tp-card{" flat" if flat else ""}"><div class="tp-card-head">{quien}'
+    return (f'<div class="tp-card{" flat" if flat else ""} {"warn" if "pend" in est.lower() else "ok"}"><div class="tp-card-head">{quien}'
             f'<div class="tp-chips">{ui_chip(val, "info")}{ui_chip(e(est), "warn" if "pend" in est.lower() else "ok")}</div></div><div class="tp-card-body" style="margin-bottom:0">{e(detalle)}</div></div>')
 
 st.markdown("""
@@ -3193,6 +3194,851 @@ def to_excel(df):
     with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
         df.to_excel(writer, index=False)
     return output.getvalue()
+
+
+# =====================================================================
+#  TEMA GLOBAL · Bento Grid + Glassmorphism sutil · Tiendas Premium E.I.R.L.
+#
+#  Es SOLO presentación: no lee ni escribe Google Sheets y no cambia ningún
+#  nombre de columna ni clave de st.session_state.
+#
+#  1) ui_tema_bento_glass()  -> inyecta UNA vez la capa CSS (se carga al final,
+#                               así sobrescribe los estilos anteriores).
+#  2) ui_estado(tono)        -> línea de acento en una tarjeta st.container.
+#  3) ui_kpi_hero(...)       -> KPI ejecutivo (icono, delta, sparkline).
+#  4) ui_bento(...) / ui_kpi_bento(...) -> rejilla Bento de 12 columnas.
+#
+#  Tonos válidos: "ok" (verde) · "warn" (ámbar) · "bad" (rojo) · "info" (azul)
+# =====================================================================
+from contextlib import contextmanager
+
+_TONOS_TEMA = ("ok", "warn", "bad", "info")
+
+_CSS_TEMA_BENTO_GLASS = """
+<style>
+/* ===== 1. TOKENS ===== */
+:root{
+--c-ok:11,143,87;--c-warn:217,119,6;--c-bad:220,38,38;--c-info:29,78,216;
+--tp-r-xl:24px;
+--g-bg:rgba(255,255,255,.66);--g-bg-2:rgba(255,255,255,.5);
+--g-line:rgba(15,23,42,.08);--g-edge:rgba(255,255,255,.9);
+--g-blur:saturate(165%) blur(16px);
+--g-sh:0 1px 1px rgba(15,23,42,.04),0 14px 32px -16px rgba(15,23,42,.22);
+}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){:root{--g-bg:rgba(255,255,255,.95);--g-bg-2:rgba(255,255,255,.85);}}
+@media (max-width:900px){:root{--g-blur:saturate(150%) blur(10px);--tp-r-xl:20px;}}
+/* ===== 2. FONDO: malla de color muy suave (da profundidad al vidrio) ===== */
+.stApp{background-color:var(--tp-bg);
+background-image:radial-gradient(900px 520px at -4% -8%,rgba(236,50,55,.075),transparent 62%),radial-gradient(820px 500px at 104% -4%,rgba(29,78,216,.075),transparent 60%),radial-gradient(900px 620px at 48% 112%,rgba(11,143,87,.055),transparent 62%);
+background-attachment:fixed;}
+/* ===== 3. SUPERFICIES DE VIDRIO ===== */
+.market-header,.tp-kpi,.tp-card:not(.flat),[data-testid="stMetric"],[class*="st-key-tpc_"],div[data-testid="stForm"],div[data-testid="stExpander"],.legend-container{
+background-color:var(--g-bg);border:1px solid var(--g-line);border-radius:var(--tp-r-xl);
+-webkit-backdrop-filter:var(--g-blur);backdrop-filter:var(--g-blur);
+box-shadow:var(--g-sh),inset 0 1px 0 var(--g-edge);}
+[class*="st-key-tpc_"]{padding:18px 20px;}
+.market-header{padding:24px 28px 22px;}
+/* tarjetas dentro de tarjetas: sin segundo desenfoque (más limpio y más rápido) */
+[class*="st-key-tpc_"] .tp-kpi,[class*="st-key-tpc_"] .tp-card{-webkit-backdrop-filter:none;backdrop-filter:none;background-color:var(--g-bg-2);box-shadow:none;}
+.tp-row{background:var(--g-bg-2);border:1px solid var(--g-line);border-radius:16px;}
+.tp-callout{border-radius:16px;}
+[data-testid="stDataFrame"]{border:1px solid var(--g-line);border-radius:18px;}
+.stButton>button,.stDownloadButton>button,.stFormSubmitButton>button{border-radius:12px!important;}
+[data-baseweb="input"],[data-baseweb="textarea"],[data-baseweb="select"]>div{border-radius:12px!important;background:rgba(255,255,255,.72)!important;border-color:var(--g-line)!important;}
+/* ===== 4. LÍNEAS DE ACENTO POR ESTADO ===== */
+.tp-kpi,.tp-card:not(.flat),[class*="st-key-tpc_"]{position:relative;}
+.tp-kpi::before,.tp-card:not(.flat)::before,[class*="st-key-tpc_"]::before{content:"";position:absolute;left:-1px;top:16px;bottom:16px;width:4px;border-radius:0 4px 4px 0;background:rgb(var(--acc));pointer-events:none;}
+.tp-kpi.al-ok,.tp-card.ok,[class*="st-key-tpc_"]:has(.tp-state.ok){--acc:var(--c-ok);}
+.tp-kpi.al-warn,.tp-card.warn,[class*="st-key-tpc_"]:has(.tp-state.warn){--acc:var(--c-warn);}
+.tp-kpi.al-bad,.tp-card.bad,[class*="st-key-tpc_"]:has(.tp-state.bad){--acc:var(--c-bad);}
+.tp-kpi.al-info,.tp-card.info,[class*="st-key-tpc_"]:has(.tp-state.info){--acc:var(--c-info);}
+.tp-kpi.al-ok,.tp-kpi.al-warn,.tp-kpi.al-bad,.tp-kpi.al-info,.tp-card.ok:not(.flat),.tp-card.warn:not(.flat),.tp-card.bad:not(.flat),.tp-card.info:not(.flat),[class*="st-key-tpc_"]:has(.tp-state){
+background-image:linear-gradient(100deg,rgba(var(--acc),.09),rgba(var(--acc),0) 46%);}
+.tp-kpi.al-ok,.tp-kpi.al-warn,.tp-kpi.al-bad,.tp-kpi.al-info{border-left:1px solid var(--g-line);}
+/* el marcador de estado no ocupa espacio */
+.tp-state{display:none;}
+.element-container:has(> [data-testid="stMarkdown"] .tp-state),[data-testid="stElementContainer"]:has(> [data-testid="stMarkdown"] .tp-state){display:none;}
+/* ===== 5. KPIs EJECUTIVOS: jerarquía por tamaño ===== */
+.tp-kpi{display:flex;flex-direction:column;padding:18px 20px;min-height:128px;transition:transform .18s ease,box-shadow .18s ease;}
+.tp-kpi-lbl{font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--tp-mute);}
+.tp-kpi-val{font-size:1.95rem;font-weight:750;letter-spacing:-.025em;line-height:1.1;margin-top:6px;overflow-wrap:anywhere;}
+.tp-kpi-sub{font-size:.78rem;color:var(--tp-mute);}
+.tp-kpi-txt .tp-kpi-val{font-size:1.2rem;font-weight:700;letter-spacing:-.01em;line-height:1.25;}
+.tp-kpi-hero{padding:22px 24px;min-height:176px;}
+.tp-kpi-hero .tp-kpi-val,.tp-gridk .tp-kpi:first-child:nth-last-child(n+4) .tp-kpi-val{font-size:clamp(2.1rem,4.2vw,2.9rem);font-weight:800;letter-spacing:-.035em;}
+.tp-kpi-hero.tp-kpi-txt .tp-kpi-val{font-size:1.6rem;}
+.tp-kpi-top{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.tp-kpi-ico{width:34px;height:34px;border-radius:12px;display:grid;place-items:center;font-size:1.05rem;background:rgba(var(--acc,100,116,139),.13);}
+.tp-kpi-foot{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;margin-top:auto;padding-top:8px;}
+.tp-delta{display:inline-flex;align-items:center;gap:4px;font-size:.74rem;font-weight:700;padding:2px 9px;border-radius:999px;white-space:nowrap;}
+.tp-delta.up{color:var(--tp-ok);background:var(--tp-ok-soft);} .tp-delta.down{color:var(--tp-bad);background:var(--tp-bad-soft);} .tp-delta.flat{color:var(--tp-ink-2);background:#EEF1F5;}
+.tp-spark{width:100%;height:34px;margin-top:10px;color:rgb(var(--acc,100,116,139));}
+@media (min-width:900px){.tp-gridk .tp-kpi:first-child:nth-last-child(n+4){grid-column:span 2;}}
+@media (hover:hover){.tp-kpi:hover{transform:translateY(-2px);box-shadow:0 18px 38px -18px rgba(15,23,42,.3),inset 0 1px 0 var(--g-edge);}}
+@media (prefers-reduced-motion:reduce){.tp-kpi{transition:none;}.tp-kpi:hover{transform:none;}}
+/* ===== 6. BENTO GRID (12 columnas) ===== */
+.tp-bento{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:14px;margin:6px 0 20px;}
+.tp-bento-tile{min-width:0;}
+.tp-bento-tile>.tp-kpi,.tp-bento-tile>.tp-card{height:100%;margin:0;}
+.bt-3{grid-column:span 3;} .bt-4{grid-column:span 4;} .bt-5{grid-column:span 5;} .bt-6{grid-column:span 6;} .bt-7{grid-column:span 7;} .bt-8{grid-column:span 8;} .bt-9{grid-column:span 9;} .bt-12{grid-column:span 12;}
+.tp-bento-tile.r2{grid-row:span 2;}
+@media (max-width:900px){.tp-bento{grid-template-columns:repeat(6,minmax(0,1fr));}.bt-3{grid-column:span 3;}.bt-4,.bt-5,.bt-6,.bt-7,.bt-8,.bt-9,.bt-12{grid-column:span 6;}.tp-bento-tile.r2{grid-row:auto;}}
+@media (max-width:560px){.tp-bento{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}.bt-3{grid-column:span 1;}.bt-4,.bt-5,.bt-6,.bt-7,.bt-8,.bt-9,.bt-12{grid-column:1/-1;}}
+</style>
+"""
+
+
+def ui_tema_bento_glass():
+    """Inyecta la capa visual global. Llamar una sola vez, DESPUÉS de todo el CSS anterior."""
+    st.markdown(_CSS_TEMA_BENTO_GLASS, unsafe_allow_html=True)
+
+
+def ui_estado(tono):
+    """Línea de acento de color en la tarjeta st.container (ui_card_container) donde se llame.
+    Uso:  with ui_card_container("mi_tarjeta"):  ui_estado("warn")  ..."""
+    t = tono if tono in _TONOS_TEMA else "neutral"
+    st.markdown(f'<span class="tp-state {t}"></span>', unsafe_allow_html=True)
+
+
+@contextmanager
+def ui_tarjeta(clave, tono=None):
+    """Tarjeta de vidrio (st.container con key). `tono` opcional pinta la línea de acento."""
+    with ui_card_container(f"tt_{clave}"):
+        if tono:
+            ui_estado(tono)
+        yield
+
+
+def _ui_sparkline(serie, w=120, h=34):
+    try:
+        v = [float(x) for x in serie if x is not None]
+    except (TypeError, ValueError):
+        return ""
+    if len(v) < 2:
+        return ""
+    mn, mx = min(v), max(v)
+    rng = (mx - mn) or 1.0
+    pts = " ".join(f"{i * w / (len(v) - 1):.1f},{h - 3 - (x - mn) / rng * (h - 6):.1f}" for i, x in enumerate(v))
+    return (f'<svg class="tp-spark" viewBox="0 0 {w} {h}" preserveAspectRatio="none" aria-hidden="true">'
+            f'<polyline points="{pts}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>')
+
+
+def ui_kpi_hero(label, valor, sub="", tono="info", icono="", delta=None, serie=None, hero=True, texto=False):
+    """KPI ejecutivo (devuelve HTML, igual que ui_kpi_acc).
+    delta=("+12%", "up"|"down"|"flat") · serie=[n, n, ...] dibuja una mini-tendencia
+    hero=True -> tamaño grande · texto=True -> para valores largos (nombres)."""
+    esc = _html.escape
+    t = tono if tono in _TONOS_TEMA else "info"
+    clases = "tp-kpi " + ("tp-kpi-hero " if hero else "") + ("tp-kpi-txt " if texto else "") + "al-" + t
+    ico = f'<span class="tp-kpi-ico">{esc(str(icono))}</span>' if icono else ""
+    dl = ""
+    if delta:
+        try:
+            d_txt, d_dir = delta
+        except (TypeError, ValueError):
+            d_txt, d_dir = str(delta), "flat"
+        d_dir = d_dir if d_dir in ("up", "down") else "flat"
+        flecha = {"up": "▲", "down": "▼"}.get(d_dir, "●")
+        dl = f'<span class="tp-delta {d_dir}">{flecha} {esc(str(d_txt))}</span>'
+    return (f'<div class="{clases}"><div class="tp-kpi-top"><div class="tp-kpi-lbl">{esc(str(label))}</div>{ico}</div>'
+            f'<div class="tp-kpi-val">{esc(str(valor))}</div>'
+            f'<div class="tp-kpi-foot"><div class="tp-kpi-sub">{esc(str(sub))}</div>{dl}</div>{_ui_sparkline(serie) if serie else ""}</div>')
+
+
+def ui_bento(tiles):
+    """Rejilla Bento. tiles = [(html, span, clase_extra), ...] con span en 3,4,5,6,7,8,9,12 (de 12 columnas).
+    clase_extra="r2" hace que la celda ocupe 2 filas."""
+    out = []
+    for t in tiles or []:
+        if not t:
+            continue
+        html_t = t[0]
+        span = t[1] if len(t) > 1 and t[1] in (3, 4, 5, 6, 7, 8, 9, 12) else 4
+        extra = t[2] if len(t) > 2 else ""
+        out.append(f'<div class="tp-bento-tile bt-{span} {extra}">{html_t}</div>')
+    return ('<div class="tp-bento">' + "".join(out) + "</div>") if out else ""
+
+
+def ui_kpi_bento(hero_html, otros_html):
+    """Composición lista: 1 KPI grande a la izquierda (2 filas) + hasta 4 KPIs pequeños a la derecha."""
+    otros = [h for h in (otros_html or []) if h][:4]
+    spans = {0: [], 1: [6], 2: [6, 6], 3: [3, 3, 6], 4: [3, 3, 3, 3]}[len(otros)]
+    tiles = [(hero_html, 6 if otros else 12, "r2" if otros else "")]
+    tiles += [(h, s, "") for h, s in zip(otros, spans)]
+    return ui_bento(tiles)
+
+
+ui_tema_bento_glass()
+
+
+# =====================================================================
+#  MÓDULOS REFACTORIZADOS · Tiendas Premium E.I.R.L.
+#    1) Programación de Turnos      -> ASIGNACIÓN OPERATIVA (semana / día)
+#    2) Auditoría y Configuración   -> CONFIGURACIÓN GLOBAL (horarios) + auditoría
+#
+#  DÓNDE PEGARLO: en tu app.py, justo después de `def to_excel(df): ...`
+#  (antes del router `if choice == ...`). Reutiliza los helpers que ya
+#  existen en tu app: ui_card_container, ui_kpi_acc, ui_chip, ui_callout,
+#  ui_avatar, ui_dni_foto, _prog_base, _analizar_programacion,
+#  _regla_para_fecha, _validar_turnos, etc.
+#
+#  Y en el router reemplaza los dos bloques por:
+#      elif choice == "Programación de Turnos":
+#          render_programacion_turnos()
+#      ...
+#      elif choice == "Auditoría y Configuración":
+#          render_auditoria_configuracion()
+# =====================================================================
+import zlib
+
+COLS_AUD = ["id_log", "fecha_hora", "usuario", "rol", "accion", "entidad", "detalle"]
+
+
+# ---------------------------------------------------------------------
+#  UTILIDADES DE UI (usan el CSS .tp-* que ya tiene tu app)
+# ---------------------------------------------------------------------
+def ui_cabecera(titulo, subtitulo):
+    st.markdown(
+        f'<div class="market-header"><h1>{_html.escape(titulo)}</h1><p>{_html.escape(subtitulo)}</p></div>',
+        unsafe_allow_html=True,
+    )
+
+
+def ui_titulo_seccion(icono, titulo, sub="", chip=""):
+    """Título con icono + subtítulo + chip opcional a la derecha (mismo estilo .tp-sec)."""
+    st.markdown(
+        f'<div class="tp-sec"><div><div class="tp-sec-title">{icono} {_html.escape(titulo)}</div>'
+        f'<div class="tp-sec-sub">{_html.escape(sub)}</div></div>{chip}</div>',
+        unsafe_allow_html=True,
+    )
+
+
+# ---------------------------------------------------------------------
+#  VALIDACIONES Y ESTADO SEGURO
+# ---------------------------------------------------------------------
+def _df_seguro(clave, columnas):
+    """DataFrame de session_state siempre válido: nunca None, siempre con las columnas esperadas."""
+    df = st.session_state.get(clave)
+    df = df.copy() if isinstance(df, pd.DataFrame) else pd.DataFrame(columns=columnas)
+    for c in columnas:
+        if c not in df.columns:
+            df[c] = ""
+    return df
+
+
+def _sanear_opcion(clave, opciones):
+    """Si el valor guardado de un selectbox ya no existe entre las opciones, se descarta (evita errores tras recargar datos)."""
+    if clave in st.session_state and st.session_state[clave] not in list(opciones):
+        del st.session_state[clave]
+
+
+def _celda(v):
+    """Texto limpio de una celda del editor (None / NaN -> '')."""
+    if v is None:
+        return ""
+    try:
+        if pd.isna(v):
+            return ""
+    except (TypeError, ValueError):
+        pass
+    return str(v).strip()
+
+
+def _es_admin():
+    return globals().get("rol_actual") == "admin"
+
+
+def _chunks(lista, n):
+    for i in range(0, len(lista), n):
+        yield lista[i:i + n]
+
+
+# =====================================================================
+#  MÓDULO 1 · PROGRAMACIÓN DE TURNOS  (asignación operativa)
+# =====================================================================
+def _prog_estado_init():
+    """Garantiza que la semana activa y su contador de versión existan y tengan el tipo correcto."""
+    lunes = st.session_state.get("prog_lunes")
+    if isinstance(lunes, datetime):
+        lunes = lunes.date()
+    if not isinstance(lunes, date):
+        lunes = obtener_ahora_peru().date()
+    st.session_state["prog_lunes"] = _lunes_de(lunes)
+    if not isinstance(st.session_state.get("prog_ver"), int):
+        st.session_state["prog_ver"] = 0
+    if not isinstance(st.session_state.get("prog_ir_fecha"), date):
+        st.session_state["prog_ir_fecha"] = st.session_state["prog_lunes"]
+
+
+def _prog_nav(dias=0, hoy=False):
+    nuevo = _lunes_de(obtener_ahora_peru().date()) if hoy else st.session_state["prog_lunes"] + timedelta(days=dias)
+    st.session_state["prog_lunes"] = nuevo
+    st.session_state["prog_ir_fecha"] = nuevo
+
+
+def _prog_saltar():
+    f = st.session_state.get("prog_ir_fecha")
+    if isinstance(f, date):
+        st.session_state["prog_lunes"] = _lunes_de(f)
+
+
+def _prog_reglas_semana(dias):
+    reglas = {}
+    for d in dias:
+        r = _regla_para_fecha(d)
+        reglas[r["nombre"]] = r
+    return reglas
+
+
+def _prog_nombres_turno(reglas):
+    out = []
+    for r in reglas.values():
+        for t in sorted(r["turnos"], key=lambda t: _hhmm(t["entrada"])):
+            if t["nombre"] not in out:
+                out.append(t["nombre"])
+    return out
+
+
+def _prog_tabla_base(lunes):
+    """Tabla editable de la semana (la de sesión si es válida; si no, se reconstruye)."""
+    iso = lunes.strftime("%Y-%m-%d")
+    base = st.session_state.get(f"prog_base_{iso}")
+    if isinstance(base, pd.DataFrame) and "Colaborador" in base.columns and not base.empty:
+        return base
+    try:
+        return _prog_base(lunes)
+    except Exception as e:
+        st.error(f"No se pudo armar la tabla de la semana: {e}")
+        return pd.DataFrame(columns=["Colaborador"])
+
+
+def _prog_dni_de(nombres):
+    emp = _df_seguro("empleados", ["nombre", "dni"])
+    mapa = {}
+    for n in nombres:
+        fm = emp[emp["nombre"] == n]
+        if not fm.empty:
+            mapa[n] = str(fm.iloc[0]["dni"])
+    mapa[ADMIN_FILA] = "ADMIN"
+    return mapa
+
+
+def _norm_tabla(df):
+    try:
+        return df.fillna("").astype(str).reset_index(drop=True)
+    except Exception:
+        return df
+
+
+def _prog_guardar(ed, dias, cols, dni_de, lunes_iso):
+    """Valida y guarda la semana. Devuelve True si se guardó."""
+    ahora = obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S")
+    nuevas, sin_dni = [], set()
+    for _, r in ed.iterrows():
+        nombre = r.get("Colaborador")
+        dni = dni_de.get(nombre, "")
+        for d, c in zip(dias, cols):
+            v = _celda(r.get(c))
+            if not v:
+                continue
+            if not dni:
+                sin_dni.add(str(nombre))
+                continue
+            nuevas.append({"semana_inicio": lunes_iso, "dni": dni, "nombre": nombre, "fecha": d.strftime("%Y-%m-%d"),
+                           "turno": v, "actualizado_por": user_real, "fecha_actualizacion": ahora})
+    if sin_dni:
+        st.error("No se guardó: no se encontró el DNI de " + ", ".join(sorted(sin_dni)) + ". Revisa Gestión Colaboradores.")
+        return False
+    prog = _df_seguro("programacion", COLS_PROG)
+    resto = prog[prog["semana_inicio"].apply(_norm_fecha_h) != lunes_iso]
+    nuevo = pd.concat([resto, pd.DataFrame(nuevas, columns=COLS_PROG)], ignore_index=True)[COLS_PROG]
+    actualizar_hoja_completa("Programacion", nuevo)
+    registrar_auditoria("Guardar Programación de Turnos", "Programación", f"Semana del {lunes_iso}: {len(nuevas)} casilla(s)")
+    st.session_state.programacion = obtener_programacion_gsheets()
+    st.session_state.pop(f"prog_base_{lunes_iso}", None)
+    return True
+
+
+# ---------- bloques visuales ----------
+def _ui_selector_semana(lunes, dias):
+    es_actual = lunes == _lunes_de(obtener_ahora_peru().date())
+    rango = f"{dias[0]:%d/%m/%Y} – {dias[6]:%d/%m/%Y}"
+    with ui_tarjeta("prog_semana", "ok" if es_actual else "info"):
+        ui_titulo_seccion("🗓️", "Semana de trabajo", "Navega entre semanas o salta a una fecha",
+                          ui_chip(rango, "ok" if es_actual else "info"))
+        n1, n2, n3, n4 = st.columns([1, 1, 1, 1.5])
+        n1.button("◀ Anterior", key="prog_ant", on_click=_prog_nav, kwargs={"dias": -7}, use_container_width=True)
+        n2.button("Esta semana", key="prog_hoy", on_click=_prog_nav, kwargs={"hoy": True}, use_container_width=True)
+        n3.button("Siguiente ▶", key="prog_sig", on_click=_prog_nav, kwargs={"dias": 7}, use_container_width=True)
+        n4.date_input("Ir a la semana de", key="prog_ir_fecha", on_change=_prog_saltar,
+                      format="DD/MM/YYYY", label_visibility="collapsed")
+
+
+def _ui_horario_vigente(reglas):
+    """Solo LECTURA: el horario global se edita en Auditoría y Configuración."""
+    cambia = len(reglas) > 1
+    with ui_tarjeta("prog_horario", "warn" if cambia else "info"):
+        ui_titulo_seccion("🕒", "Horario que rige esta semana", "Configuración global · solo lectura aquí",
+                          ui_chip("Cambia a mitad de semana", "warn") if cambia else ui_chip("Sin cambios", "ok"))
+        for r in reglas.values():
+            chips = " ".join(ui_chip(f"{_html.escape(str(t['nombre']))} {t['entrada']}–{t['salida']}", "info")
+                             for t in sorted(r["turnos"], key=lambda t: _hhmm(t["entrada"])))
+            st.markdown(f'<div style="margin:2px 0 8px"><b>{_html.escape(str(r["nombre"]))}</b> · jornada base '
+                        f'{_fmt_min(r["jornada_base_min"])} &nbsp; {chips}</div>', unsafe_allow_html=True)
+        if cambia:
+            ui_callout("En esta semana **cambia el horario**. Cada casilla se calcula con el horario que rige ese día.", "warn")
+        else:
+            ui_callout("Lo que exceda la jornada base cuenta como hora extra. Usa la fila **Administrador (cubre)** para los turnos "
+                       "que cubres tú: cuentan en la cobertura, pero no suman horas ni costo.")
+        st.button("⚙️ Configurar horarios", key="prog_ir_cfg", on_click=_gs_ir, args=("Auditoría y Configuración",))
+
+
+def _ui_asignacion_semanal(lunes, dias, cols, reglas):
+    iso = lunes.strftime("%Y-%m-%d")
+    ver = st.session_state["prog_ver"]
+    base = _prog_tabla_base(lunes)
+
+    if len(base) <= 1:
+        ui_callout("No hay colaboradores activos para programar en esta semana. Revisa el estado y las fechas de inicio/cese en Gestión Colaboradores.")
+        return
+
+    opciones = ["", "Descanso"] + _prog_nombres_turno(reglas) + list(_AUSENCIAS)
+
+    # ---- Tarjeta: editor ----
+    with ui_tarjeta("prog_editor"):
+        ui_titulo_seccion("👥", "Asignación por colaborador", "Elige el turno de cada día. Las ausencias aprobadas se marcan solas.")
+        ed = st.data_editor(
+            base, hide_index=True, use_container_width=True, disabled=["Colaborador"], key=f"prog_ed_{iso}_{ver}",
+            column_config={"Colaborador": st.column_config.TextColumn("Colaborador", width="medium"),
+                           **{c: st.column_config.SelectboxColumn(c, options=opciones, required=False) for c in cols}},
+        )
+        ed = ed.fillna("") if isinstance(ed, pd.DataFrame) else base
+        hay_cambios = not _norm_tabla(ed).equals(_norm_tabla(base))
+        ui_estado("warn" if hay_cambios else "ok")
+        st.markdown(ui_chip("Cambios sin guardar", "warn") if hay_cambios else ui_chip("Sin cambios pendientes", "ok"), unsafe_allow_html=True)
+        b1, b2, b3 = st.columns(3)
+        b1.button("📋 Copiar semana anterior", key="prog_copiar", on_click=_prog_copiar_anterior, use_container_width=True)
+        b2.button("🧹 Limpiar semana", key="prog_limpiar", on_click=_prog_limpiar, use_container_width=True)
+        guardar = b3.button("💾 Guardar semana", key="prog_guardar", type="primary", use_container_width=True)
+
+    # ---- Tarjeta: resumen ----
+    dni_de = _prog_dni_de([n for n in ed["Colaborador"] if n != ADMIN_FILA])
+    try:
+        tabla_html, avisos, tb, te, td = _analizar_programacion(ed, dias, cols, dni_de)
+    except Exception as e:
+        ui_callout(f"No se pudo calcular el resumen de la semana: {e}", "warn")
+        return
+    avisos = list(dict.fromkeys(avisos))
+    with ui_tarjeta("prog_resumen", "bad" if avisos else "ok"):
+        ui_titulo_seccion("📊", "Resumen de la semana", "Horas base, extra y cobertura por turno",
+                          ui_chip(f"{len(avisos)} aviso(s)", "warn") if avisos else ui_chip("Todo en orden", "ok"))
+        st.markdown(ui_kpi_bento(
+            ui_kpi_hero("Horas base programadas", _fmt_min(tb), "entre todos, esta semana", "info", "⏱️"),
+            [ui_kpi_hero("Horas extra", _fmt_min(te), "sobre la jornada base", "warn" if te else "ok", "➕", hero=False),
+             ui_kpi_hero("Descanso / ausencia", str(td), "días en la semana", "info", "🛌", hero=False),
+             ui_kpi_hero("Avisos", str(len(avisos)), "revisa antes de guardar" if avisos else "Todo en orden", "bad" if avisos else "ok", "🔔", hero=False)]),
+            unsafe_allow_html=True)
+        st.markdown(tabla_html, unsafe_allow_html=True)
+        for av in avisos:
+            ui_callout(av, "warn")
+
+    if guardar:
+        if _prog_guardar(ed, dias, cols, dni_de, iso):
+            st.toast("Programación guardada. Los colaboradores ya ven su turno." + (f" ({len(avisos)} aviso/s)" if avisos else ""))
+            time.sleep(0.3)
+            st.rerun()
+
+
+def _fila_persona(nombre, sub=""):
+    try:
+        dni, foto = ui_dni_foto(str(nombre))
+        av = ui_avatar(str(nombre), dni, foto, 36)
+    except Exception:
+        av = ""
+    return (f'<div class="tp-row">{av}<div class="tp-row-main"><b>{_html.escape(str(nombre))}</b>'
+            f'<span class="wrap">{_html.escape(sub)}</span></div></div>')
+
+
+def _ui_vista_diaria(dias):
+    """Lectura de lo YA GUARDADO: quién cubre cada turno del día elegido."""
+    prog = _df_seguro("programacion", COLS_PROG)
+    prog["_f"] = prog["fecha"].apply(_norm_fecha_h)
+    hoy = obtener_ahora_peru().date()
+    _sanear_opcion("prog_dia_sel", dias)
+
+    with ui_tarjeta("prog_dia_filtro"):
+        ui_titulo_seccion("📆", "Quién trabaja cada día", "Muestra lo guardado; los cambios sin guardar no aparecen aquí")
+        f1, f2 = st.columns([1, 2])
+        dia = f1.selectbox("Día", dias, index=dias.index(hoy) if hoy in dias else 0, format_func=_dia_label, key="prog_dia_sel")
+        dia_iso = dia.strftime("%Y-%m-%d")
+        delia = prog[prog["_f"] == dia_iso].copy()
+        delia["turno"] = delia["turno"].astype(str).str.strip()
+        f2.markdown(f'<div style="padding-top:27px">{ui_chip(str(len(delia)) + " asignación(es) guardada(s)", "info")}</div>', unsafe_allow_html=True)
+
+    if delia.empty:
+        ui_callout("No hay programación guardada para este día. Arma y guarda la semana en la pestaña «Asignación semanal».")
+        return
+
+    turnos = sorted(_regla_para_fecha(dia_iso)["turnos"], key=lambda t: _hhmm(t["entrada"]))
+    nombres_validos = {str(t["nombre"]).strip().lower() for t in turnos}
+    for fila_n, grupo in enumerate(_chunks(turnos, 3)):
+        cols_v = st.columns(len(grupo))
+        for col, t in zip(cols_v, grupo):
+            personas = delia[delia["turno"].str.lower() == str(t["nombre"]).strip().lower()]
+            with col, ui_tarjeta(f"prog_dia_{fila_n}_{_norm(str(t['nombre']))}", "ok" if len(personas) else "bad"):
+                ui_titulo_seccion("⏱️", str(t["nombre"]), f"{t['entrada']} – {t['salida']}",
+                                  ui_chip(f"{len(personas)} persona(s)", "ok" if len(personas) else "bad"))
+                if personas.empty:
+                    ui_callout("Sin cubrir.", "warn")
+                else:
+                    st.markdown("".join(_fila_persona(r["nombre"]) for _, r in personas.iterrows()), unsafe_allow_html=True)
+
+    resto = delia[~delia["turno"].str.lower().isin(nombres_validos)]
+    descansos = resto[resto["turno"].isin(["Descanso", *_AUSENCIAS])]
+    otros = resto[~resto["turno"].isin(["Descanso", *_AUSENCIAS])]
+    if not descansos.empty:
+        with ui_tarjeta("prog_dia_desc"):
+            ui_titulo_seccion("🛌", "Descanso y ausencias", "", ui_chip(str(len(descansos)), "neutral"))
+            st.markdown("".join(_fila_persona(r["nombre"], r["turno"]) for _, r in descansos.iterrows()), unsafe_allow_html=True)
+    if not otros.empty:
+        ui_callout("Hay casillas con un turno que no existe en el horario de ese día: "
+                   + ", ".join(f"{r['nombre']} ({r['turno']})" for _, r in otros.iterrows()) + ".", "warn")
+
+
+def render_programacion_turnos():
+    ui_cabecera("Programación de Turnos", "Asignación operativa: quién trabaja qué turno, por semana y por día")
+    if not _es_admin():
+        ui_callout("Este módulo es solo para administración.", "warn")
+        return
+    _prog_estado_init()
+    lunes = st.session_state["prog_lunes"]
+    dias = [lunes + timedelta(days=i) for i in range(7)]
+    cols = [_dia_label(d) for d in dias]
+    reglas = _prog_reglas_semana(dias)
+
+    _ui_selector_semana(lunes, dias)
+    _ui_horario_vigente(reglas)
+    tab_asig, tab_dia = st.tabs(["📝 Asignación semanal", "📆 Vista diaria"])
+    with tab_asig:
+        _ui_asignacion_semanal(lunes, dias, cols, reglas)
+    with tab_dia:
+        _ui_vista_diaria(dias)
+
+
+# =====================================================================
+#  MÓDULO 2 · AUDITORÍA Y CONFIGURACIÓN  (configuración global)
+# =====================================================================
+def _ui_auditoria():
+    df = _df_seguro("auditoria", COLS_AUD)
+    for c in COLS_AUD:
+        df[c] = df[c].fillna("").astype(str)
+
+    with ui_tarjeta("aud_filtros"):
+        ui_titulo_seccion("🔎", "Registro de auditoría", "Quién hizo qué y cuándo en el sistema", ui_chip(f"{len(df)} evento(s)", "neutral"))
+        if df.empty:
+            ui_callout("Aún no hay eventos registrados en la auditoría.")
+            return
+        usuarios = ["Todos"] + sorted(u for u in df["usuario"].unique() if u.strip())
+        acciones = ["Todas"] + sorted(a for a in df["accion"].unique() if a.strip())
+        entidades = ["Todas"] + sorted(e for e in df["entidad"].unique() if e.strip())
+        _sanear_opcion("aud_usuario", usuarios)
+        _sanear_opcion("aud_accion", acciones)
+        _sanear_opcion("aud_entidad", entidades)
+        f1, f2, f3, f4 = st.columns([1, 1, 1, 1.3])
+        u = f1.selectbox("Usuario", usuarios, key="aud_usuario")
+        a = f2.selectbox("Acción", acciones, key="aud_accion")
+        e = f3.selectbox("Entidad", entidades, key="aud_entidad")
+        q = f4.text_input("Buscar en el detalle", key="aud_buscar", placeholder="Ej.: Semana del 2026-10-12").strip()
+
+    if u != "Todos":
+        df = df[df["usuario"] == u]
+    if a != "Todas":
+        df = df[df["accion"] == a]
+    if e != "Todas":
+        df = df[df["entidad"] == e]
+    if q:
+        df = df[df["detalle"].str.contains(q, case=False, na=False, regex=False)]
+    df = df.sort_values("fecha_hora", ascending=False)
+
+    with ui_tarjeta("aud_resultados", "info"):
+        if df.empty:
+            ui_callout("No hay eventos con los filtros seleccionados.")
+            return
+        top = df["accion"].value_counts().index[0]
+        hoy_a = obtener_ahora_peru().date()
+        dias14 = [(hoy_a - timedelta(days=i)).strftime("%Y-%m-%d") for i in range(13, -1, -1)]
+        cnt14 = df["fecha_hora"].str[:10].value_counts()
+        serie14 = [int(cnt14.get(d, 0)) for d in dias14]
+        st.markdown(ui_kpi_bento(
+            ui_kpi_hero("Eventos registrados", str(len(df)), "según el filtro · tendencia de 14 días", "info", "📜", serie=serie14),
+            [ui_kpi_hero("Usuarios distintos", str(df["usuario"].nunique()), "con actividad", "info", "👥", hero=False),
+             ui_kpi_hero("Acción más frecuente", str(top), f"{int((df['accion'] == top).sum())} vez/veces", "warn", "🔁", hero=False, texto=True),
+             ui_kpi_hero("Último evento", df.iloc[0]["fecha_hora"][:16], df.iloc[0]["usuario"], "ok", "🕒", hero=False, texto=True)]),
+            unsafe_allow_html=True)
+        try:
+            c_tab, c_tar = st.container(key="vista_tabla"), st.container(key="vista_tarjetas")
+        except TypeError:
+            c_tab, c_tar = st.container(), None
+        with c_tab:
+            st.dataframe(df[["fecha_hora", "usuario", "rol", "accion", "entidad", "detalle"]], use_container_width=True, hide_index=True, height=420)
+        if c_tar is not None:
+            with c_tar:
+                filas = ""
+                for _, r in df.head(40).iterrows():
+                    try:
+                        dni, foto = ui_dni_foto(r["usuario"])
+                        av = ui_avatar(r["usuario"], dni, foto, 40)
+                    except Exception:
+                        av = ""
+                    sub = " · ".join(x for x in [r["usuario"], r["entidad"].strip(), r["detalle"].strip()] if x)
+                    filas += (f'<div class="tp-row">{av}<div class="tp-row-main"><b>{_html.escape(r["accion"])}</b>'
+                              f'<span class="wrap">{_html.escape(sub)}</span></div>'
+                              f'<div class="tp-chips">{ui_chip(r["fecha_hora"][5:16], "neutral")}</div></div>')
+                st.markdown(filas, unsafe_allow_html=True)
+                st.caption("Se muestran los 40 eventos más recientes. Exporta a Excel para ver todo.")
+        st.download_button("⬇️ Exportar auditoría a Excel", to_excel(df), "Auditoria.xlsx", key="aud_export", use_container_width=True)
+
+
+# ---------- Configuración global de horarios ----------
+def _plantillas_horario(hdf):
+    p = {
+        "2 turnos (horario actual)": (345, [{"Turno": "Mañana", "Entrada": "07:45", "Salida": "13:30", "Tolerancia (min)": 10, "Ventana desde": "00:00"},
+                                            {"Turno": "Tarde", "Entrada": "15:15", "Salida": "21:00", "Tolerancia (min)": 10, "Ventana desde": "13:00"}]),
+        "3 turnos (7:00 · 13:00 · 18:45)": (285, [{"Turno": "Turno 1", "Entrada": "07:00", "Salida": "13:00", "Tolerancia (min)": 10, "Ventana desde": ""},
+                                                  {"Turno": "Turno 2", "Entrada": "13:00", "Salida": "18:45", "Tolerancia (min)": 10, "Ventana desde": ""},
+                                                  {"Turno": "Turno 3", "Entrada": "18:45", "Salida": "23:45", "Tolerancia (min)": 10, "Ventana desde": ""}]),
+        "En blanco": (345, [{"Turno": "", "Entrada": "", "Salida": "", "Tolerancia (min)": 10, "Ventana desde": ""}]),
+    }
+    for _, r in hdf.iterrows():
+        try:
+            tc = _json_h.loads(str(r.get("turnos_json", "")))
+            p[f"Copiar: {r.get('nombre', '')} (desde {_norm_fecha_h(r.get('vigente_desde', ''))})"] = (
+                int(float(r.get("jornada_base_min") or JORNADA_MINUTOS_BASE)),
+                [{"Turno": t["nombre"], "Entrada": t["entrada"], "Salida": t["salida"], "Tolerancia (min)": int(t.get("tolerancia_min", 10)),
+                  "Ventana desde": t.get("ventana_desde", "")} for t in tc])
+        except Exception:
+            continue
+    return p
+
+
+def _turnos_huerfanos(turnos_ok, desde_iso, hdf):
+    """Casillas YA programadas que quedarían con un turno inexistente si la regla nueva entra en vigor."""
+    prog = _df_seguro("programacion", COLS_PROG)
+    if prog.empty or not turnos_ok:
+        return prog.iloc[0:0]
+    prog["_f"] = prog["fecha"].apply(_norm_fecha_h)
+    prog["_t"] = prog["turno"].astype(str).str.strip().str.lower()
+    fut = prog[(prog["_f"] >= desde_iso) & (prog["_f"] != "")]
+    siguientes = sorted(d for d in (_norm_fecha_h(r.get("vigente_desde", "")) for _, r in hdf.iterrows()
+                                    if str(r.get("estado", "")).strip() == "Activa") if d and d > desde_iso)
+    if siguientes:
+        fut = fut[fut["_f"] < siguientes[0]]
+    validos = {str(t["nombre"]).strip().lower() for t in turnos_ok} | {"descanso"} | {x.lower() for x in _AUSENCIAS} | {""}
+    return fut[~fut["_t"].isin(validos)]
+
+
+def _cfg_resumen(hdf, vig, hoy):
+    desde_txt = vig["vigente_desde"] if vig["vigente_desde"] > "1900-01-01" else "el inicio"
+    with ui_tarjeta("cfg_resumen", "ok"):
+        ui_titulo_seccion("🕒", "Horario global", "Define a qué hora empieza cada turno y cuántas horas cubre el sueldo",
+                          ui_chip("Vigente hoy: " + _html.escape(str(vig["nombre"])), "ok"))
+        st.markdown(ui_kpi_bento(
+            ui_kpi_hero("Jornada base", jornada_base_txt(), "lo que cubre el sueldo; el resto es extra", "info", "⏳"),
+            [ui_kpi_hero("Horario vigente hoy", str(vig["nombre"]), f"rige desde {desde_txt}", "ok", "✅", hero=False, texto=True),
+             ui_kpi_hero("Turnos", str(len(vig["turnos"])), "en el horario vigente", "info", "🔀", hero=False),
+             ui_kpi_hero("Reglas registradas", str(len(hdf)), "incluye borradores y anteriores", "info", "📚", hero=False)]),
+            unsafe_allow_html=True)
+        ui_callout("Al cambiar un horario, **solo cambia lo que se mida desde la fecha indicada**. Las marcaciones anteriores se siguen "
+                   "midiendo con el horario que regía entonces, así el historial no se altera.", "warn")
+        ui_callout("Aquí solo se define el horario **global**. Quién trabaja qué turno cada día se asigna en Programación de Turnos.")
+        st.button("🗓️ Ir a Programación de Turnos", key="cfg_ir_prog", on_click=_gs_ir, args=("Programación de Turnos",))
+
+
+def _cfg_reglas(hdf, vig, hoy):
+    with ui_tarjeta("cfg_reglas", "info"):
+        ui_titulo_seccion("📚", "Reglas registradas", "Historial de horarios, de la más reciente a la más antigua")
+        if hdf.empty:
+            ui_callout("Aún no hay reglas guardadas: el sistema usa la regla inicial (2 turnos). Crea la primera más abajo.")
+            return
+        filas = sorted([(_norm_fecha_h(r.get("vigente_desde", "")), r) for _, r in hdf.iterrows()], key=lambda x: x[0], reverse=True)
+        for i, (desde, r) in enumerate(filas):
+            try:
+                tur = _json_h.loads(str(r.get("turnos_json", "")))
+            except Exception:
+                tur = []
+            est = str(r.get("estado", "")).strip()
+            try:
+                base = int(float(r.get("jornada_base_min") or JORNADA_MINUTOS_BASE))
+            except (TypeError, ValueError):
+                base = JORNADA_MINUTOS_BASE
+            if est == "Activa":
+                if str(r.get("id_regla", "")) == vig.get("id_regla"):
+                    chip = ui_chip("Vigente hoy", "ok")
+                else:
+                    chip = ui_chip("Programada", "info") if desde > hoy else ui_chip("Anterior", "neutral")
+            else:
+                chip = ui_chip(_html.escape(est or "Borrador"), "neutral")
+            lineas = ""
+            for t in tur:
+                try:
+                    dur = _min_hhmm(t["salida"]) - _min_hhmm(t["entrada"])
+                    lineas += (f'<div class="tp-row"><div class="tp-row-main"><b>{_html.escape(str(t["nombre"]))}</b>'
+                               f'<span class="wrap">{t["entrada"]} – {t["salida"]} · tolerancia {int(t.get("tolerancia_min", 10))} min · {_fmt_min(dur)} de turno</span></div>'
+                               f'<div class="tp-chips">{ui_chip(_fmt_min(max(0, dur - base)) + " extra", "warn" if dur > base else "neutral")}</div></div>')
+                except Exception:
+                    continue
+            sep = '<div style="border-top:1px solid var(--tp-line);margin:14px 0 12px"></div>' if i else ""
+            st.markdown(f'{sep}<div class="tp-card-head"><div><div class="tp-card-title">{_html.escape(str(r.get("nombre", "")))}</div>'
+                        f'<div class="tp-card-sub">Rige desde {desde if desde > "1900-01-01" else "el inicio"} · jornada base {_fmt_min(base)}</div></div>{chip}</div>'
+                        f'<div style="height:8px"></div>{lineas}', unsafe_allow_html=True)
+
+        # --- cambiar estado ---
+        st.markdown("<div class='tp-note-t' style='margin:18px 0 8px'>Cambiar el estado de una regla</div>", unsafe_allow_html=True)
+        opc = {}
+        for _, r in hdf.iterrows():
+            et = f"{r.get('nombre', '')} · desde {_norm_fecha_h(r.get('vigente_desde', ''))} · {r.get('estado', '')}"
+            if et in opc:
+                et += f" ({r.get('id_regla', '')})"
+            opc[et] = str(r.get("id_regla", ""))
+        _sanear_opcion("hor_sel_estado", opc.keys())
+        c1, c2, c3 = st.columns([2.2, 1, 1])
+        sel = c1.selectbox("Regla", list(opc.keys()), key="hor_sel_estado")
+        nuevo = c2.selectbox("Nuevo estado", ["Activa", "Borrador", "Archivada"], key="hor_nuevo_estado")
+        c3.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
+        if c3.button("Aplicar", key="hor_aplicar", use_container_width=True):
+            if actualizar_estado_horario_gsheets(opc[sel], nuevo):
+                registrar_auditoria("Cambiar Estado de Horario", "Horarios", f"{sel} → {nuevo}")
+                st.session_state.horarios = obtener_horarios_gsheets()
+                st.toast("Estado del horario actualizado")
+                time.sleep(0.3)
+                st.rerun()
+
+
+def _cfg_nueva_regla(hdf, hoy):
+    hoy_d = obtener_ahora_peru().date()
+    with ui_tarjeta("cfg_nueva"):
+        ui_titulo_seccion("➕", "Nueva regla de horarios", "Parte de una plantilla, ajusta las horas y guarda")
+        plantillas = _plantillas_horario(hdf)
+        pl = st.selectbox("Partir de", list(plantillas.keys()), key="hor_plantilla")
+        if pl not in plantillas:
+            pl = next(iter(plantillas))
+        base_pl, tabla_pl = plantillas[pl]
+
+        s1, s2 = st.columns([1, 2])
+        delta = s1.number_input("Mover todas las entradas (min)", min_value=-240, max_value=240, value=0, step=5, key="hor_delta",
+                                help="Negativo = más temprano. Ejemplo: -60 adelanta todos los turnos una hora.")
+        mover_sal = s2.checkbox("Mover también las salidas (cada turno dura lo mismo)", value=True, key="hor_mover_sal")
+        s2.caption("Ajuste rápido sobre la plantilla elegida. Después puedes afinar cada hora en la tabla.")
+        if delta:
+            tabla_pl = _aplicar_delta(tabla_pl, delta, mover_sal)
+
+        k = f"{zlib.crc32(pl.encode('utf-8')):x}{len(tabla_pl)}"
+        kd = f"{k}_{delta}_{int(mover_sal)}"
+        n1, n2, n3 = st.columns([2, 1, 1])
+        nom = n1.text_input("Nombre de la regla", key=f"hor_nom_{k}", placeholder="Ej.: Horario desde octubre").strip()
+        desde = n2.date_input("Rige desde", value=hoy_d, key=f"hor_desde_{k}", format="DD/MM/YYYY")
+        est = n3.selectbox("Estado", ["Activa", "Borrador"], key=f"hor_est_{k}", help="Una regla en Borrador no se aplica hasta que la actives.")
+        bh_col, bm_col = st.columns(2)
+        bh = bh_col.number_input("Jornada base: horas", min_value=0, max_value=12, value=base_pl // 60, key=f"hor_bh_{k}")
+        bm = bm_col.number_input("Jornada base: minutos", min_value=0, max_value=59, value=base_pl % 60, key=f"hor_bm_{k}")
+
+        ed = st.data_editor(
+            pd.DataFrame(tabla_pl), num_rows="dynamic", use_container_width=True, hide_index=True, key=f"hor_ed_{kd}",
+            column_config={"Turno": st.column_config.TextColumn("Turno", required=True),
+                           "Entrada": st.column_config.TextColumn("Entrada (HH:MM)"),
+                           "Salida": st.column_config.TextColumn("Salida (HH:MM)"),
+                           "Tolerancia (min)": st.column_config.NumberColumn("Tolerancia (min)", min_value=0, max_value=60, step=1),
+                           "Ventana desde": st.column_config.TextColumn("Ventana desde (opcional)",
+                                                                       help="Hora desde la que una marcación se asigna a este turno. Vacío = 60 minutos antes de la entrada.")})
+        st.caption("Todo lo que se trabaje sobre la jornada base cuenta como hora extra. Cada turno debe terminar antes de las 24:00.")
+
+        desde_iso = desde.strftime("%Y-%m-%d") if isinstance(desde, date) else hoy
+        base_min = int(bh) * 60 + int(bm)
+        turnos_ok, errs_live = _validar_turnos(ed if isinstance(ed, pd.DataFrame) else pd.DataFrame(tabla_pl))
+
+        # --- avisos de integración con la programación operativa ---
+        if desde_iso < hoy:
+            ui_callout("La fecha de inicio **ya pasó**: las marcaciones desde esa fecha se medirán con este horario (se recalcula ese tramo del historial).", "warn")
+        if est == "Activa" and not errs_live:
+            huerf = _turnos_huerfanos(turnos_ok, desde_iso, hdf)
+            if not huerf.empty:
+                ejemplos = ", ".join(f"{r['nombre']} · {r['turno']} ({_norm_fecha_h(r['fecha'])})" for _, r in huerf.head(3).iterrows())
+                ui_callout(f"Con esta regla, **{len(huerf)} casilla(s)** ya programadas quedarían con un turno que no existe (p. ej. {ejemplos}). "
+                           "Tendrás que reasignarlas en Programación de Turnos.", "warn")
+
+        if st.button("💾 Guardar regla de horarios", key=f"hor_guardar_{k}", type="primary", use_container_width=True):
+            errs = list(errs_live)
+            if not nom:
+                errs.append("Escribe un nombre para la regla.")
+            if base_min <= 0:
+                errs.append("La jornada base debe ser mayor que cero.")
+            if est == "Activa" and any(_norm_fecha_h(r.get("vigente_desde", "")) == desde_iso and str(r.get("estado", "")) == "Activa" for _, r in hdf.iterrows()):
+                errs.append("Ya existe otra regla Activa con esa fecha de inicio. Cambia la fecha o archiva la otra.")
+            if errs:
+                for er in errs:
+                    st.error(er)
+            else:
+                idr = crear_regla_horario_gsheets(nom, desde_iso, base_min, turnos_ok, est, user_real)
+                if idr:
+                    registrar_auditoria("Crear Regla de Horario", "Horarios",
+                                        f"{nom} · desde {desde_iso} · {len(turnos_ok)} turno(s) · base {_fmt_min(base_min)}")
+                    st.session_state.horarios = obtener_horarios_gsheets()
+                    st.toast("Regla de horarios guardada")
+                    time.sleep(0.3)
+                    st.rerun()
+
+
+def _cfg_probar():
+    hoy = obtener_ahora_peru().date()
+    with ui_tarjeta("cfg_probar"):
+        ui_titulo_seccion("🧪", "Probar un horario", "Simula una marcación y mira cómo se medirá")
+        t1, t2 = st.columns(2)
+        f = t1.date_input("Fecha de la marcación", value=hoy, key="hor_test_f", format="DD/MM/YYYY")
+        h = t2.time_input("Hora de la marcación", value=dt_time(7, 50), key="hor_test_h", step=60)
+        try:
+            mi, tard, tn = calcular_tardanza_ingreso(f"{f} {h.strftime('%H:%M')}:00")
+            rg = _regla_para_fecha(f)
+            ui_estado("warn" if tard else "ok")
+            ui_callout(f"Con la regla **{rg['nombre']}**, una marcación a las {h.strftime('%H:%M')} del {f.strftime('%d/%m/%Y')} corresponde al turno "
+                       f"**{tn}** y " + (f"tiene una **tardanza de {mi} min**." if tard else "está **a tiempo**."), "warn" if tard else "ok")
+        except Exception as e:
+            ui_callout(f"No se pudo simular esa marcación: {e}", "warn")
+
+
+def _ui_config_horarios():
+    hoy = obtener_ahora_peru().strftime("%Y-%m-%d")
+    vig = _regla_para_fecha(hoy)
+    hdf = _df_seguro("horarios", COLS_HOR)
+    _cfg_resumen(hdf, vig, hoy)
+    _cfg_reglas(hdf, vig, hoy)
+    _cfg_nueva_regla(hdf, hoy)
+    _cfg_probar()
+
+
+def _ui_sesion():
+    ts = st.session_state.get("login_timestamp")
+    try:
+        inicio = datetime.fromtimestamp(ts, zoneinfo.ZoneInfo("America/Lima")).strftime("%d/%m/%Y %H:%M:%S")
+    except Exception:
+        inicio = "no disponible"
+    with ui_tarjeta("cfg_sesion", "info"):
+        ui_titulo_seccion("🔐", "Sesión y seguridad", "Reglas de acceso al sistema")
+        ui_callout(f"Las sesiones se cierran automáticamente tras 30 minutos de inactividad o 10 horas desde el inicio de sesión. Sesión actual iniciada: {inicio}.")
+
+
+def render_auditoria_configuracion():
+    ui_cabecera("Auditoría y Configuración del Sistema", "Trazabilidad de cambios, horarios globales y ajustes de seguridad")
+    if not _es_admin():
+        ui_callout("Este módulo es solo para administración.", "warn")
+        return
+    tab_aud, tab_hor, tab_cfg = st.tabs(["📜 Registro de auditoría", "🕒 Horarios (global)", "🔐 Sesión y seguridad"])
+    with tab_aud:
+        _ui_auditoria()
+    with tab_hor:
+        _ui_config_horarios()
+    with tab_cfg:
+        _ui_sesion()
+
 
 # =========================================================
 # BOLETA DE PAGO — DISEÑO CORPORATIVO UNIFICADO
@@ -5687,90 +6533,7 @@ elif choice == "Boletas de Pago":
                 time.sleep(0.3)
                 st.rerun()
 elif choice == "Programación de Turnos":
-    st.markdown("""
-        <div class="market-header">
-            <h1>Programación de Turnos</h1>
-            <p>Arma la semana: quién trabaja qué turno, con las horas base y extra de cada casilla</p>
-        </div>
-    """, unsafe_allow_html=True)
-    if "prog_lunes" not in st.session_state:
-        st.session_state["prog_lunes"] = _lunes_de(obtener_ahora_peru().date())
-    _lunes = st.session_state["prog_lunes"]
-    _lunes_iso = _lunes.strftime("%Y-%m-%d")
-    _dias = [_lunes + timedelta(days=i) for i in range(7)]
-    _cols = [_dia_label(d) for d in _dias]
-    _ver = st.session_state.get("prog_ver", 0)
-
-    _nv1, _nv2, _nv3, _nv4 = st.columns([1, 1, 1.6, 1])
-    _nv1.button("Semana anterior", key="prog_ant", on_click=_prog_mover, args=(-7,), use_container_width=True)
-    _nv2.button("Esta semana", key="prog_hoy", on_click=_prog_ir_hoy, use_container_width=True)
-    _nv3.markdown(f'<div style="text-align:center;padding-top:6px">{ui_chip(_dias[0].strftime("%d/%m/%Y") + " – " + _dias[6].strftime("%d/%m/%Y"), "info")}</div>', unsafe_allow_html=True)
-    _nv4.button("Semana siguiente", key="prog_sig", on_click=_prog_mover, args=(7,), use_container_width=True)
-
-    _reglas_sem = {}
-    for _d in _dias:
-        _r = _regla_para_fecha(_d)
-        _reglas_sem[_r["nombre"]] = _r
-    _nombres_turno = []
-    for _r in _reglas_sem.values():
-        for _t in sorted(_r["turnos"], key=lambda t: _hhmm(t["entrada"])):
-            if _t["nombre"] not in _nombres_turno:
-                _nombres_turno.append(_t["nombre"])
-    if len(_reglas_sem) > 1:
-        ui_callout("En esta semana **cambia el horario** (" + " → ".join(_reglas_sem.keys()) + "). Cada casilla se calcula con el horario que rige ese día.", "warn")
-    else:
-        _r0 = list(_reglas_sem.values())[0]
-        ui_callout(f"Horario aplicado: **{_r0['nombre']}** · jornada base **{_fmt_min(_r0['jornada_base_min'])}** por turno. Lo que exceda la base cuenta como hora extra. Usa la fila **Administrador (cubre)** para marcar los turnos que cubres tú: cuentan en la cobertura, pero no suman horas ni costo.")
-
-    _base = st.session_state.get(f"prog_base_{_lunes_iso}")
-    if _base is None:
-        _base = _prog_base(_lunes)
-    if len(_base) <= 1:
-        ui_callout("No hay colaboradores activos para programar en esta semana.", "info")
-    else:
-        _opts = ["", "Descanso"] + _nombres_turno + list(_AUSENCIAS)
-        _ed = st.data_editor(_base, hide_index=True, use_container_width=True, disabled=["Colaborador"], key=f"prog_ed_{_lunes_iso}_{_ver}",
-                             column_config={"Colaborador": st.column_config.TextColumn("Colaborador", width="medium"),
-                                            **{c: st.column_config.SelectboxColumn(c, options=_opts, required=False) for c in _cols}})
-        _emp_p = st.session_state.empleados
-        _dni_de = {n: str(_emp_p[_emp_p["nombre"] == n].iloc[0]["dni"]) for n in _ed["Colaborador"] if not _emp_p[_emp_p["nombre"] == n].empty}
-        _dni_de[ADMIN_FILA] = "ADMIN"
-
-        _b1, _b2, _b3 = st.columns(3)
-        _b1.button("Copiar semana anterior", key="prog_copiar", on_click=_prog_copiar_anterior, use_container_width=True)
-        _b2.button("Limpiar semana", key="prog_limpiar", on_click=_prog_limpiar, use_container_width=True)
-        _guardar = _b3.button("Guardar semana", key="prog_guardar", use_container_width=True)
-
-        _tabla_html, _avisos, _tb, _te, _td = _analizar_programacion(_ed, _dias, _cols, _dni_de)
-        st.markdown("<div style='height:8px'></div>" + '<div class="tp-gridk">' +
-                    ui_kpi_acc("Horas base programadas", _fmt_min(_tb), "entre todos, esta semana", "info") +
-                    ui_kpi_acc("Horas extra programadas", _fmt_min(_te), "sobre la jornada base", "warn" if _te else "ok") +
-                    ui_kpi_acc("Días de descanso o ausencia", str(_td), "en la semana", "info") +
-                    ui_kpi_acc("Avisos", str(len(_avisos)), "revisa antes de guardar" if _avisos else "Todo en orden", "bad" if _avisos else "ok") + '</div>', unsafe_allow_html=True)
-        st.markdown("<div class='tp-note-t' style='margin:6px 0 10px'>Vista de la semana: horas base y extra por casilla</div>", unsafe_allow_html=True)
-        st.markdown(_tabla_html, unsafe_allow_html=True)
-        for _av in dict.fromkeys(_avisos):
-            ui_callout(_av, "warn")
-
-        if _guardar:
-            _nuevas = []
-            _ahora_p = obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S")
-            for _, _rp in _ed.iterrows():
-                for _d, _c in zip(_dias, _cols):
-                    _v = str(_rp.get(_c) or "").strip()
-                    if _v:
-                        _nuevas.append({"semana_inicio": _lunes_iso, "dni": _dni_de.get(_rp["Colaborador"], ""), "nombre": _rp["Colaborador"], "fecha": _d.strftime("%Y-%m-%d"),
-                                        "turno": _v, "actualizado_por": user_real, "fecha_actualizacion": _ahora_p})
-            _prog_df = st.session_state.programacion
-            _resto = _prog_df[_prog_df["semana_inicio"].apply(_norm_fecha_h) != _lunes_iso] if not _prog_df.empty else _prog_df
-            _nuevo_df = pd.concat([_resto, pd.DataFrame(_nuevas, columns=COLS_PROG)], ignore_index=True)[COLS_PROG]
-            actualizar_hoja_completa("Programacion", _nuevo_df)
-            registrar_auditoria("Guardar Programación de Turnos", "Programación", f"Semana del {_lunes_iso}: {len(_nuevas)} casilla(s)")
-            st.session_state.programacion = obtener_programacion_gsheets()
-            st.session_state.pop(f"prog_base_{_lunes_iso}", None)
-            st.toast("Programación de la semana guardada. Los colaboradores ya ven su turno.")
-            time.sleep(0.3)
-            st.rerun()
+    render_programacion_turnos()
 
 elif choice == "Solicitudes y Permisos":
     st.markdown("""
@@ -5863,6 +6626,7 @@ elif choice == "Solicitudes y Permisos":
             est_s = row_sol["estado"]
             
             with ui_card_container(f"sol_{id_s}"):
+                ui_estado("warn" if est_s == "Pendiente" else ("ok" if est_s == "Aprobado" else "bad"))
                 st.markdown(ui_solicitud_card(row_sol, admin=True), unsafe_allow_html=True)
                 if tipo_s == "Permiso Laboral":
                     _fr = pd.to_datetime(str(row_sol.get("fecha_recuperacion", "")).strip(), errors="coerce")
@@ -6154,6 +6918,7 @@ elif choice == "Incidencias y Daños":
             ui_callout("No hay incidencias pendientes de resolver.", "ok")
         for idx_inc_resolver, _rp in _pend_inc.iterrows():
             with ui_card_container(f"inc_{idx_inc_resolver}"):
+                ui_estado("warn")
                 st.markdown(ui_inc_card(_rp, admin=True, flat=True), unsafe_allow_html=True)
                 _bd, _br = st.columns(2)
                 _nuevo = None
@@ -6254,6 +7019,7 @@ elif choice == "Botellas Fiadas":
                 chip_d = ui_chip("Hoy" if dias_bf <= 0 else f"hace {dias_bf} día(s)", "warn" if dias_bf >= 3 else "neutral")
                 obs_txt = str(r_bf.get("observacion", "")).strip()
                 with ui_card_container(f"bf_{idx_bf}"):
+                    ui_estado("warn" if dias_bf >= 3 else "info")
                     st.markdown(
                         f'<div class="tp-card flat"><div class="tp-card-head"><div class="tp-op-head" style="margin:0">{ui_avatar(r_bf["cliente_nombre"], "", "", 44)}<div>'
                         f'<div class="tp-card-title">{_html.escape(str(r_bf["cliente_nombre"]))}</div><div class="tp-card-sub">DNI {_html.escape(str(r_bf["cliente_dni"]) or "No registrado")} · {_html.escape(str(r_bf["cliente_direccion"]) or "Sin dirección registrada")}</div></div></div>'
@@ -6495,6 +7261,7 @@ elif choice == "Centro de Alertas":
     orden = {"bad": 0, "warn": 1, "info": 2}
     for g in sorted([x for x in grupos if x["n"]], key=lambda x: orden[x["tono"]]):
         with ui_card_container(f"al_{g['k']}"):
+            ui_estado(g["tono"])
             st.markdown(f'<div class="tp-card flat"><div class="tp-card-head"><div class="tp-op-head" style="margin:0"><span class="tp-al-ico {g["tono"]}">{_IC[g["k"]]}</span><div><div class="tp-card-title">{g["t"]}</div><div class="tp-card-sub">{g["s"]}</div></div></div>{ui_chip(str(g["n"]), g["tono"])}</div></div><div style="height:10px"></div>' + "".join(g["f"]), unsafe_allow_html=True)
             if g["dest"]:
                 _b1, _b2 = st.columns([3, 1.3])
@@ -6636,6 +7403,7 @@ elif choice == "Gestión de Vacaciones":
     if not df_pend_recup.empty:
         for idx_pr, r_pr in df_pend_recup.iterrows():
             with ui_card_container(f"vac_{idx_pr}"):
+                ui_estado("warn")
                 st.markdown(ui_vac_card(r_pr, admin=True), unsafe_allow_html=True)
                 if st.button("Marcar Recuperado", key=f"recup_btn_{idx_pr}", use_container_width=True):
                     st.session_state.vacaciones.at[idx_pr, "estado_recuperacion"] = "Recuperado"
@@ -6985,6 +7753,7 @@ elif choice == "Onboarding / Offboarding":
 
             with ui_card_container(f"chk_{tipo_chk}"):
                 _tono_ck = "ok" if pct_chk == 100 else "warn"
+                ui_estado(_tono_ck)
                 st.markdown(f'<div class="tp-card flat"><div class="tp-card-head"><div><div class="tp-card-title">Checklist de {tipo_chk}</div>'
                             f'<div class="tp-card-sub">{"Incorporación del colaborador" if tipo_chk == "Onboarding" else "Proceso de salida del colaborador"}</div></div>'
                             f'{ui_chip(str(completados) + " de " + str(total_items) + " completadas", _tono_ck)}</div>'
@@ -7004,184 +7773,7 @@ elif choice == "Onboarding / Offboarding":
         st.download_button("Exportar Checklists a Excel", to_excel(st.session_state.checklist), "Checklists.xlsx", use_container_width=True)
 
 elif choice == "Auditoría y Configuración":
-    st.markdown("""
-        <div class="market-header">
-            <h1>Auditoría y Configuración del Sistema</h1>
-            <p>Trazabilidad de cambios y ajustes de seguridad</p>
-        </div>
-    """, unsafe_allow_html=True)
-
-    tab_aud, tab_hor, tab_cfg = st.tabs(["Registro de auditoría", "Horarios y turnos", "Configuración"])
-
-    with tab_aud:
-        if not st.session_state.auditoria.empty:
-            df_aud = st.session_state.auditoria.copy()
-            fa1, fa2 = st.columns(2)
-            with fa1:
-                usuarios_aud_disp = ["Todos"] + sorted(df_aud["usuario"].dropna().unique().tolist())
-                usuario_aud_filtro = st.selectbox("Filtrar por Usuario", usuarios_aud_disp)
-            with fa2:
-                acciones_aud_disp = ["Todas"] + sorted(df_aud["accion"].dropna().unique().tolist())
-                accion_aud_filtro = st.selectbox("Filtrar por Acción", acciones_aud_disp)
-
-            if usuario_aud_filtro != "Todos":
-                df_aud = df_aud[df_aud["usuario"] == usuario_aud_filtro]
-            if accion_aud_filtro != "Todas":
-                df_aud = df_aud[df_aud["accion"] == accion_aud_filtro]
-
-            _aud_ord = df_aud.sort_values("fecha_hora", ascending=False)
-            if _aud_ord.empty:
-                ui_callout("No hay eventos con los filtros seleccionados.")
-            else:
-                _top_acc = _aud_ord["accion"].value_counts().index[0]
-                st.markdown('<div class="tp-gridk">' + ui_kpi_acc("Eventos registrados", str(len(_aud_ord)), "según el filtro", "info") +
-                            ui_kpi_acc("Usuarios distintos", str(_aud_ord["usuario"].nunique()), "con actividad", "info") +
-                            ui_kpi_acc("Acción más frecuente", _html.escape(str(_top_acc)), f"{int((_aud_ord['accion'] == _top_acc).sum())} vez/veces", "warn") +
-                            ui_kpi_acc("Último evento", str(_aud_ord.iloc[0]["fecha_hora"])[:16], _html.escape(str(_aud_ord.iloc[0]["usuario"])), "ok") + '</div>', unsafe_allow_html=True)
-            try:
-                _c_tab, _c_tar = st.container(key="vista_tabla"), st.container(key="vista_tarjetas")
-            except TypeError:
-                _c_tab, _c_tar = st.container(), None
-            with _c_tab:
-                st.dataframe(_aud_ord, use_container_width=True, hide_index=True)
-            if _c_tar is not None:
-                with _c_tar:
-                    _filas_a = ""
-                    for _, _ra in _aud_ord.head(40).iterrows():
-                        _du, _fu = ui_dni_foto(str(_ra["usuario"]))
-                        _sub = " · ".join(x for x in [str(_ra["usuario"]), str(_ra.get("modulo", "")).strip(), str(_ra.get("detalle", "")).strip()] if x and x != "nan")
-                        _filas_a += (f'<div class="tp-row">{ui_avatar(str(_ra["usuario"]), _du, _fu, 40)}<div class="tp-row-main"><b>{_html.escape(str(_ra["accion"]))}</b>'
-                                     f'<span class="wrap">{_html.escape(_sub)}</span></div><div class="tp-chips">{ui_chip(str(_ra["fecha_hora"])[5:16], "neutral")}</div></div>')
-                    st.markdown(_filas_a, unsafe_allow_html=True)
-                    st.caption("Se muestran los 40 eventos más recientes. Exporta a Excel para ver todo.")
-            st.download_button("Exportar Auditoría a Excel", to_excel(df_aud), "Auditoria.xlsx", use_container_width=True)
-        else:
-            ui_callout("Aún no hay eventos registrados en la auditoría.")
-
-    with tab_hor:
-        st.markdown('<div class="tp-sec"><div><div class="tp-sec-title">Horarios y turnos</div><div class="tp-sec-sub">Define a qué hora empieza cada turno y cuántas horas cubre el sueldo. Las tardanzas y las horas extra se miden con el horario que regía en la fecha de cada marcación.</div></div></div>', unsafe_allow_html=True)
-        _hoy_h = obtener_ahora_peru().strftime("%Y-%m-%d")
-        _vig_h = _regla_para_fecha(_hoy_h)
-        _hdf = st.session_state.horarios.copy()
-        st.markdown('<div class="tp-gridk">' +
-                    ui_kpi_acc("Horario vigente hoy", _html.escape(_vig_h["nombre"]), f"rige desde {_vig_h['vigente_desde'] if _vig_h['vigente_desde'] > '1900-01-01' else 'el inicio'}", "ok") +
-                    ui_kpi_acc("Jornada base", jornada_base_txt(), "lo que cubre el sueldo; el resto es extra", "info") +
-                    ui_kpi_acc("Turnos", str(len(_vig_h["turnos"])), "en el horario vigente", "info") +
-                    ui_kpi_acc("Reglas registradas", str(len(_hdf)), "incluye borradores y anteriores", "info") + '</div>', unsafe_allow_html=True)
-        ui_callout("Al cambiar un horario, **solo cambia lo que se mida desde la fecha indicada**. Las marcaciones anteriores se siguen midiendo con el horario que regía entonces, así el historial no se altera.", "warn")
-
-        st.markdown("<div class='tp-note-t' style='margin:18px 0 10px'>Reglas de horario</div>", unsafe_allow_html=True)
-        _filas_h = []
-        for _, _rh in _hdf.iterrows():
-            _filas_h.append((_norm_fecha_h(_rh.get("vigente_desde", "")), _rh))
-        for _desde, _rh in sorted(_filas_h, key=lambda x: x[0], reverse=True):
-            try:
-                _tur = _json_h.loads(str(_rh.get("turnos_json", "")))
-            except Exception:
-                _tur = []
-            _est = str(_rh.get("estado", "")).strip()
-            _base = int(float(_rh.get("jornada_base_min") or JORNADA_MINUTOS_BASE))
-            if _est == "Activa":
-                _chip = ui_chip("Vigente hoy", "ok") if str(_rh.get("id_regla", "")) == _vig_h.get("id_regla") else (ui_chip("Programada", "info") if _desde > _hoy_h else ui_chip("Anterior", "neutral"))
-            else:
-                _chip = ui_chip(_html.escape(_est or "Borrador"), "neutral")
-            _lineas = ""
-            for _t in _tur:
-                try:
-                    _dur = _min_hhmm(_t["salida"]) - _min_hhmm(_t["entrada"])
-                    _lineas += (f'<div class="tp-row"><div class="tp-row-main"><b>{_html.escape(str(_t["nombre"]))}</b><span class="wrap">{_t["entrada"]} – {_t["salida"]} · tolerancia {int(_t.get("tolerancia_min", 10))} min · '
-                                f'{_fmt_min(_dur)} de turno</span></div><div class="tp-chips">{ui_chip(_fmt_min(max(0, _dur - _base)) + " extra", "warn" if _dur > _base else "neutral")}</div></div>')
-                except Exception:
-                    continue
-            st.markdown(f'<div class="tp-card"><div class="tp-card-head"><div><div class="tp-card-title">{_html.escape(str(_rh.get("nombre", "")))}</div>'
-                        f'<div class="tp-card-sub">Rige desde {_desde if _desde > "1900-01-01" else "el inicio"} · jornada base {_fmt_min(_base)}</div></div>{_chip}</div><div style="height:10px"></div>{_lineas}</div>', unsafe_allow_html=True)
-
-        if not _hdf.empty:
-            _opc_h = {f"{r.get('nombre', '')} · desde {_norm_fecha_h(r.get('vigente_desde', ''))} · {r.get('estado', '')}": str(r.get("id_regla", "")) for _, r in _hdf.iterrows()}
-            _ch1, _ch2, _ch3 = st.columns([2.2, 1, 1])
-            _sel_h = _ch1.selectbox("Cambiar el estado de una regla", list(_opc_h.keys()), key="hor_sel_estado")
-            _nuevo_h = _ch2.selectbox("Nuevo estado", ["Activa", "Borrador", "Archivada"], key="hor_nuevo_estado")
-            _ch3.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
-            if _ch3.button("Aplicar", key="hor_aplicar", use_container_width=True):
-                if actualizar_estado_horario_gsheets(_opc_h[_sel_h], _nuevo_h):
-                    registrar_auditoria("Cambiar Estado de Horario", "Horarios", f"{_sel_h} → {_nuevo_h}")
-                    st.session_state.horarios = obtener_horarios_gsheets()
-                    st.toast("Estado del horario actualizado")
-                    time.sleep(0.3)
-                    st.rerun()
-
-        st.markdown("<div class='tp-note-t' style='margin:26px 0 10px'>Nueva regla de horarios</div>", unsafe_allow_html=True)
-        _plantillas = {
-            "2 turnos (horario actual)": (345, [{"Turno": "Mañana", "Entrada": "07:45", "Salida": "13:30", "Tolerancia (min)": 10, "Ventana desde": "00:00"},
-                                                {"Turno": "Tarde", "Entrada": "15:15", "Salida": "21:00", "Tolerancia (min)": 10, "Ventana desde": "13:00"}]),
-            "3 turnos (7:00 · 13:00 · 18:45)": (285, [{"Turno": "Turno 1", "Entrada": "07:00", "Salida": "13:00", "Tolerancia (min)": 10, "Ventana desde": ""},
-                                                       {"Turno": "Turno 2", "Entrada": "13:00", "Salida": "18:45", "Tolerancia (min)": 10, "Ventana desde": ""},
-                                                       {"Turno": "Turno 3", "Entrada": "18:45", "Salida": "23:45", "Tolerancia (min)": 10, "Ventana desde": ""}]),
-            "En blanco": (345, [{"Turno": "", "Entrada": "", "Salida": "", "Tolerancia (min)": 10, "Ventana desde": ""}]),
-        }
-        for _, _rc in _hdf.iterrows():
-            try:
-                _tc = _json_h.loads(str(_rc.get("turnos_json", "")))
-                _plantillas[f"Copiar: {_rc.get('nombre', '')} (desde {_norm_fecha_h(_rc.get('vigente_desde', ''))})"] = (
-                    int(float(_rc.get("jornada_base_min") or JORNADA_MINUTOS_BASE)),
-                    [{"Turno": t["nombre"], "Entrada": t["entrada"], "Salida": t["salida"], "Tolerancia (min)": int(t.get("tolerancia_min", 10)), "Ventana desde": t.get("ventana_desde", "")} for t in _tc])
-            except Exception:
-                continue
-        _pl = st.selectbox("Partir de", list(_plantillas.keys()), key="hor_plantilla")
-        _base_pl, _tabla_pl = _plantillas[_pl]
-        _s1, _s2 = st.columns([1, 2])
-        _delta = _s1.number_input("Mover todas las entradas (minutos)", min_value=-240, max_value=240, value=0, step=5, key="hor_delta",
-                                  help="Negativo = más temprano. Ejemplo: -60 adelanta todos los turnos una hora.")
-        _mover_sal = _s2.checkbox("Mover también las salidas (cada turno dura lo mismo)", value=True, key="hor_mover_sal")
-        _s2.caption("Ajuste rápido sobre la plantilla o regla elegida. Después puedes afinar cada hora en la tabla.")
-        if _delta:
-            _tabla_pl = _aplicar_delta(_tabla_pl, _delta, _mover_sal)
-        _k = str(abs(hash(_pl)) % 10**6) + str(len(_tabla_pl))
-        _kd = f"{_k}_{_delta}_{int(_mover_sal)}"
-        _n1, _n2, _n3 = st.columns([2, 1, 1])
-        _nom_h = _n1.text_input("Nombre de la regla", key=f"hor_nom_{_k}", placeholder="Ej.: Horario desde octubre")
-        _desde_h = _n2.date_input("Rige desde", value=obtener_ahora_peru().date(), key=f"hor_desde_{_k}")
-        _est_h = _n3.selectbox("Estado", ["Activa", "Borrador"], key=f"hor_est_{_k}", help="Una regla en Borrador no se aplica hasta que la actives.")
-        _b1, _b2 = st.columns(2)
-        _bh = _b1.number_input("Jornada base: horas", min_value=0, max_value=12, value=_base_pl // 60, key=f"hor_bh_{_k}")
-        _bm = _b2.number_input("Jornada base: minutos", min_value=0, max_value=59, value=_base_pl % 60, key=f"hor_bm_{_k}")
-        _ed = st.data_editor(pd.DataFrame(_tabla_pl), num_rows="dynamic", use_container_width=True, hide_index=True, key=f"hor_ed_{_kd}",
-                             column_config={"Turno": st.column_config.TextColumn("Turno", required=True), "Entrada": st.column_config.TextColumn("Entrada (HH:MM)"),
-                                            "Salida": st.column_config.TextColumn("Salida (HH:MM)"), "Tolerancia (min)": st.column_config.NumberColumn("Tolerancia (min)", min_value=0, max_value=60, step=1),
-                                            "Ventana desde": st.column_config.TextColumn("Ventana desde (opcional)", help="Hora desde la que una marcación se asigna a este turno. Vacío = 60 minutos antes de la entrada.")})
-        st.caption("Todo lo que se trabaje sobre la jornada base cuenta como hora extra. Cada turno debe terminar antes de las 24:00.")
-        if st.button("Guardar regla de horarios", key=f"hor_guardar_{_k}", use_container_width=True):
-            _turnos_ok, _errs = _validar_turnos(_ed)
-            _desde_iso = _desde_h.strftime("%Y-%m-%d")
-            if not _nom_h.strip():
-                _errs.append("Escribe un nombre para la regla.")
-            if int(_bh) * 60 + int(_bm) <= 0:
-                _errs.append("La jornada base debe ser mayor que cero.")
-            if _est_h == "Activa" and any(_norm_fecha_h(r.get("vigente_desde", "")) == _desde_iso and str(r.get("estado", "")) == "Activa" for _, r in _hdf.iterrows()):
-                _errs.append("Ya existe otra regla Activa con esa fecha de inicio. Cambia la fecha o archiva la otra.")
-            if _errs:
-                for _e in _errs:
-                    st.error(_e)
-            else:
-                _idr = crear_regla_horario_gsheets(_nom_h.strip(), _desde_iso, int(_bh) * 60 + int(_bm), _turnos_ok, _est_h, user_real)
-                if _idr:
-                    registrar_auditoria("Crear Regla de Horario", "Horarios", f"{_nom_h.strip()} · desde {_desde_iso} · {len(_turnos_ok)} turno(s) · base {_fmt_min(int(_bh) * 60 + int(_bm))}")
-                    st.session_state.horarios = obtener_horarios_gsheets()
-                    st.toast("Regla de horarios guardada")
-                    time.sleep(0.3)
-                    st.rerun()
-
-        st.markdown("<div class='tp-note-t' style='margin:26px 0 10px'>Probar un horario</div>", unsafe_allow_html=True)
-        _t1, _t2 = st.columns(2)
-        _f_t = _t1.date_input("Fecha de la marcación", value=obtener_ahora_peru().date(), key="hor_test_f")
-        _h_t = _t2.time_input("Hora de la marcación", value=dt_time(7, 50), key="hor_test_h", step=60)
-        _mi, _tard, _tn = calcular_tardanza_ingreso(f"{_f_t} {_h_t.strftime('%H:%M')}:00")
-        _rg = _regla_para_fecha(_f_t)
-        ui_callout(f"Con la regla **{_rg['nombre']}**, una marcación a las {_h_t.strftime('%H:%M')} del {_f_t.strftime('%d/%m/%Y')} corresponde al turno **{_tn}** y " + (f"tiene una **tardanza de {_mi} min**." if _tard else "está **a tiempo**."), "warn" if _tard else "ok")
-
-    with tab_cfg:
-        st.markdown('<div class="tp-sec"><div><div class="tp-sec-title">Sesión y seguridad</div><div class="tp-sec-sub">Reglas de acceso al sistema</div></div></div>', unsafe_allow_html=True)
-        ui_callout(f"Las sesiones se cierran automáticamente tras 30 minutos de inactividad o 10 horas desde el inicio de sesión. Sesión actual iniciada: {datetime.fromtimestamp(st.session_state.login_timestamp).strftime('%d/%m/%Y %H:%M:%S')}.")
+    render_auditoria_configuracion()
 
 # --- PIE DE PÁGINA (FOOTER ESTILO WEB/APP) ---
 st.markdown("""
