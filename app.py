@@ -67,6 +67,7 @@ def obtener_ahora_peru():
 
 # --- REGLAS DE HORARIOS, JORNADA Y TOLERANCIA ---
 JORNADA_MINUTOS_BASE = 345  # 5 horas con 45 minutos (5 * 60 + 45 = 345 min)
+FACTOR_HORA_EXTRA = 1.0     # las horas extra se pagan al mismo valor de la hora normal (1.25 sería un 25% de recargo)
 
 HORA_INICIO_MANANA = dt_time(8, 45)
 HORA_LIMITE_MANANA = dt_time(8, 55)   # 10 min de tolerancia (hasta 8:55 am)
@@ -2518,6 +2519,7 @@ def _aplicar_delta(tabla, delta, mover_salidas=True):
 COLS_PROG = ["semana_inicio", "dni", "nombre", "fecha", "turno", "actualizado_por", "fecha_actualizacion"]
 DIAS_ES = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"]
 _AUSENCIAS = ("Vacaciones", "Permiso", "Licencia")
+ADMIN_FILA = "Administrador (cubre)"   # fila para marcar los turnos que cubre el admin: cuentan en la cobertura, no suman horas ni costo
 
 def obtener_programacion_gsheets():
     vacio = pd.DataFrame(columns=COLS_PROG)
@@ -2600,7 +2602,11 @@ def _prog_base(lunes, fuente=None, vacia=False):
                 v = _ausencia_en(dni, d.strftime("%Y-%m-%d")) or ""
             fila[_dia_label(d)] = v
         filas.append(fila)
-    return pd.DataFrame(filas) if filas else pd.DataFrame(columns=["Colaborador"] + [_dia_label(d) for d in dias])
+    fila_adm = {"Colaborador": ADMIN_FILA}
+    for i, d in enumerate(dias):
+        fila_adm[_dia_label(d)] = guardado.get(("ADMIN", i), "")
+    filas.append(fila_adm)
+    return pd.DataFrame(filas)
 
 def _prog_mover(dias):
     st.session_state["prog_lunes"] = st.session_state["prog_lunes"] + timedelta(days=dias)
@@ -2626,6 +2632,7 @@ def _analizar_programacion(df_ed, dias, cols, dni_de):
     tot_base = tot_extra = tot_desc = 0
     for _, r in df_ed.iterrows():
         nombre = r["Colaborador"]
+        es_adm = (nombre == ADMIN_FILA)
         base_t = extra_t = trab = desc = 0
         celdas = ""
         for d, c in zip(dias, cols):
@@ -2644,13 +2651,19 @@ def _analizar_programacion(df_ed, dias, cols, dni_de):
                     avisos.append(f"{nombre}: el turno '{v}' no existe el {_dia_label(d)} (cambió el horario ese día).")
                     continue
                 trab += 1
+                cob[d][inf["nombre"]] = cob[d].get(inf["nombre"], 0) + 1
+                if es_adm:
+                    celdas += f'<td class="trab"><b>{e(inf["nombre"])}</b><span>{inf["entrada"]}–{inf["salida"]}</span><em>cubre admin</em></td>'
+                    continue
                 base_t += inf["base"]
                 extra_t += inf["extra"]
-                cob[d][inf["nombre"]] = cob[d].get(inf["nombre"], 0) + 1
                 if _ausencia_en(dni_de.get(nombre, ""), d.strftime("%Y-%m-%d")):
                     avisos.append(f"{nombre} está programado el {_dia_label(d)} pero tiene una ausencia aprobada ese día.")
                 celdas += (f'<td class="trab"><b>{e(inf["nombre"])}</b><span>{inf["entrada"]}–{inf["salida"]}</span>'
                            f'<em>{_fmt_min(inf["base"])} base{(" + " + _fmt_min(inf["extra"]) + " extra") if inf["extra"] else ""}</em></td>')
+        if es_adm:
+            filas += f'<tr><th class="n">{e(nombre)}</th>{celdas}<td class="tot"><b>{trab} turno(s)</b><span>no suma horas ni costo</span></td></tr>'
+            continue
         if trab and desc == 0:
             avisos.append(f"{nombre} no tiene ningún día de descanso en la semana.")
         tot_base += base_t
@@ -5562,11 +5575,13 @@ elif choice == "Boletas de Pago":
             ui_callout(f"Se descuentan las incidencias del mes registradas por el colaborador ({incidencias_cnt} registrada(s)), excepto las marcadas como 'Resuelto / Condonado'.")
 
         # FÓRMULAS DE CÁLCULO
+        _ult_dia_b = pd.Period(f"{int(anio_b_sel)}-{int(mes_b_sel):02d}").days_in_month
+        _base_h = jornada_base_min(f"{int(anio_b_sel)}-{int(mes_b_sel):02d}-{_ult_dia_b:02d}") / 60.0   # jornada base vigente al cierre del mes (5.75 h con el horario actual)
         valor_dia = sueldo_basico_in / 30.0 if sueldo_basico_in > 0 else 0.0
-        valor_hora = valor_dia / 5.75 if valor_dia > 0 else 0.0
+        valor_hora = valor_dia / _base_h if valor_dia > 0 else 0.0
 
         monto_feriados_calc = feriados_trab_in * (valor_dia * 1.0)
-        monto_horas_extras_calc = hrs_extras_in * (valor_hora * 1.25)
+        monto_horas_extras_calc = hrs_extras_in * (valor_hora * FACTOR_HORA_EXTRA)
         monto_faltas_calc = dias_faltas_in * valor_dia
         monto_domingo_volunt_calc = domingo_volunt_in * (valor_dia * 1.0)
 
@@ -5606,6 +5621,10 @@ elif choice == "Boletas de Pago":
             "neto_pagar": neto_pagar_calc
         }
 
+        _base_ini_b = jornada_base_min(f"{int(anio_b_sel)}-{int(mes_b_sel):02d}-01")
+        ui_callout(f"**Valor de la hora:** sueldo ÷ 30 días ÷ {_base_h:g} h de jornada = **S/. {valor_hora:.4f}**. Las horas extra se pagan a ese mismo valor (sin recargo), prorrateado por minutos.", "info")
+        if int(_base_ini_b) != int(_base_h * 60):
+            ui_callout(f"En este mes **cambió la jornada base** ({_fmt_min(_base_ini_b)} → {_fmt_min(int(_base_h * 60))}). Para el valor de la hora se usó la jornada vigente al cierre del mes. Revisa que el monto de horas extra sea el que corresponde.", "warn")
         resumen_slot.markdown('<div class="tp-gridk">' +
                               ui_kpi_acc("Total ingresos", f"S/. {total_ingresos_calc:,.2f}", "sueldo, extras y bonos", "ok") +
                               ui_kpi_acc("Total descuentos", f"S/. {total_descuentos_calc:,.2f}", "faltas, adelantos y otros", "bad") +
@@ -5701,12 +5720,12 @@ elif choice == "Programación de Turnos":
         ui_callout("En esta semana **cambia el horario** (" + " → ".join(_reglas_sem.keys()) + "). Cada casilla se calcula con el horario que rige ese día.", "warn")
     else:
         _r0 = list(_reglas_sem.values())[0]
-        ui_callout(f"Horario aplicado: **{_r0['nombre']}** · jornada base **{_fmt_min(_r0['jornada_base_min'])}** por turno. Lo que exceda la base cuenta como hora extra.")
+        ui_callout(f"Horario aplicado: **{_r0['nombre']}** · jornada base **{_fmt_min(_r0['jornada_base_min'])}** por turno. Lo que exceda la base cuenta como hora extra. Usa la fila **Administrador (cubre)** para marcar los turnos que cubres tú: cuentan en la cobertura, pero no suman horas ni costo.")
 
     _base = st.session_state.get(f"prog_base_{_lunes_iso}")
     if _base is None:
         _base = _prog_base(_lunes)
-    if _base.empty:
+    if len(_base) <= 1:
         ui_callout("No hay colaboradores activos para programar en esta semana.", "info")
     else:
         _opts = ["", "Descanso"] + _nombres_turno + list(_AUSENCIAS)
@@ -5715,6 +5734,7 @@ elif choice == "Programación de Turnos":
                                             **{c: st.column_config.SelectboxColumn(c, options=_opts, required=False) for c in _cols}})
         _emp_p = st.session_state.empleados
         _dni_de = {n: str(_emp_p[_emp_p["nombre"] == n].iloc[0]["dni"]) for n in _ed["Colaborador"] if not _emp_p[_emp_p["nombre"] == n].empty}
+        _dni_de[ADMIN_FILA] = "ADMIN"
 
         _b1, _b2, _b3 = st.columns(3)
         _b1.button("Copiar semana anterior", key="prog_copiar", on_click=_prog_copiar_anterior, use_container_width=True)
