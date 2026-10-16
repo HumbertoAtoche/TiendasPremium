@@ -2832,33 +2832,115 @@ def _analizar_programacion(df_ed, dias, cols, dni_de):
     return tabla, avisos, tot_base, tot_extra, tot_desc
 
 def ui_mi_programacion(dni):
-    """Tarjeta del colaborador: sus turnos de los próximos 7 días."""
+    """Calendario de 7 días: refleja autorizaciones dominicales y la programación guardada."""
     try:
-        df = st.session_state.get("programacion")
-        if df is None or df.empty:
-            return
         hoy = obtener_ahora_peru().date()
-        filas = ""
-        mias = df[df["dni"].apply(lambda x: _mismo_dni(x, dni))].copy()
-        mias["_f"] = mias["fecha"].apply(_norm_fecha_h)
+        df = st.session_state.get("programacion", pd.DataFrame())
+        mias = pd.DataFrame()
+        if isinstance(df, pd.DataFrame) and not df.empty and "dni" in df.columns and "fecha" in df.columns:
+            mias = df[df["dni"].apply(lambda x: _mismo_dni(x, dni))].copy()
+            mias["_f"] = mias["fecha"].apply(_norm_fecha_h)
+        # Empezar por lunes para mostrar una semana completa, incluido el domingo.
+        lunes = hoy - timedelta(days=hoy.weekday())
+        dias_html = ""
         for i in range(7):
-            d = hoy + timedelta(days=i)
-            m = mias[mias["_f"] == d.strftime("%Y-%m-%d")]
-            if m.empty:
-                continue
-            v = str(m.iloc[-1]["turno"]).strip()
-            etq = "Hoy" if i == 0 else ("Mañana" if i == 1 else _dia_label(d))
-            inf = _info_turno(v, d)
-            if inf:
-                chips = ui_chip(f"{_fmt_min(inf['base'])} base", "info") + (ui_chip(f"+{_fmt_min(inf['extra'])} extra", "warn") if inf["extra"] else "")
-                filas += f'<div class="tp-row"><div class="tp-row-time">{etq}</div><div class="tp-row-main"><b>{_html.escape(inf["nombre"])}</b><span>{inf["entrada"]} – {inf["salida"]}</span></div><div class="tp-chips">{chips}</div></div>'
+            d = lunes + timedelta(days=i)
+            fecha_iso = d.strftime("%Y-%m-%d")
+            v = ""
+            if not mias.empty:
+                m = mias[mias["_f"] == fecha_iso]
+                if not m.empty:
+                    v = str(m.iloc[-1].get("turno", "")).strip()
+            ausencia = _ausencia_en(dni, fecha_iso)
+            autorizados = _solicitudes_domingo_aprobadas(d) if d.weekday() == 6 else []
+            aprobado = any(_mismo_dni(x.get("dni", ""), dni) for x in autorizados)
+            pendiente = False
+            if d.weekday() == 6 and not aprobado:
+                sol = st.session_state.get("solicitudes", pd.DataFrame())
+                if isinstance(sol, pd.DataFrame) and not sol.empty:
+                    pendiente = any(
+                        _mismo_dni(r.get("dni", ""), dni)
+                        and str(r.get("tipo_solicitud", "")).strip() == "Trabajar Domingo (Descanso)"
+                        and str(r.get("estado", "")).strip() == "Pendiente"
+                        and _norm_fecha_h(r.get("fecha_permiso", "")) == fecha_iso
+                        for _, r in sol.iterrows()
+                    )
+            if aprobado and not ausencia:
+                v = DOMINGO_VOLUNTARIO
+            inf = _info_turno(v, d) if v else None
+            if ausencia:
+                nombre, horario, detalle, clase = ausencia, "Ausencia aprobada", "", "ausencia"
+            elif inf:
+                nombre = inf["nombre"]
+                horario = f'{inf["entrada"]} – {inf["salida"]}'
+                detalle = f'{_fmt_min(inf["base"])} base' + (f' · {_fmt_min(inf["extra"])} extra' if inf["extra"] else "")
+                clase = "voluntario" if v == DOMINGO_VOLUNTARIO else "trabajo"
+            elif pendiente:
+                nombre, horario, detalle, clase = "Domingo solicitado", "Pendiente de aprobación", "No confirmado", "pendiente"
             else:
-                filas += f'<div class="tp-row"><div class="tp-row-time">{etq}</div><div class="tp-row-main"><b>{_html.escape(v)}</b></div><div class="tp-chips">{ui_chip("Sin turno", "neutral")}</div></div>'
-        if filas:
-            st.markdown(ui_panel("Tu programación", "Tus turnos de los próximos 7 días", filas), unsafe_allow_html=True)
-            st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
+                nombre, horario, detalle, clase = "Descanso" if not v or v == "None" else v, "Sin turno programado", "", "descanso"
+            hoy_clase = " hoy" if d == hoy else ""
+            dias_html += (
+                f'<div class="tp-cal-day {clase}{hoy_clase}">'
+                f'<div class="tp-cal-date"><span>{["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"][i]}</span><strong>{d:%d/%m}</strong></div>'
+                f'<div class="tp-cal-body"><b>{_html.escape(str(nombre))}</b>'
+                f'<span>{_html.escape(str(horario))}</span>'
+                f'<small>{_html.escape(str(detalle))}</small></div></div>'
+            )
+        contenido = (
+            '<div class="tp-cal-shell">'
+            '<div class="tp-cal-head"><div><h3>Mi calendario semanal</h3>'
+            '<p>Turnos y descansos de lunes a domingo</p></div>'
+            f'<span class="tp-cal-week">{lunes:%d/%m} – {(lunes + timedelta(days=6)):%d/%m}</span></div>'
+            f'<div class="tp-cal-grid">{dias_html}</div>'
+            '<div class="tp-cal-legend"><span>● Turno programado</span><span>● Domingo voluntario</span>'
+            '<span>● Solicitud pendiente</span><span>● Descanso</span></div></div>'
+        )
+        st.markdown(contenido, unsafe_allow_html=True)
     except Exception:
+        # No interrumpir el terminal de asistencia si falta alguna fuente de datos.
         pass
+
+st.markdown("""
+<style>
+.tp-cal-shell{background:#fff;border:1px solid #E1E6ED;border-radius:18px;padding:20px 20px 16px;box-shadow:0 3px 12px rgba(22,34,56,.04);margin:12px 0 18px}
+.tp-cal-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.tp-cal-head h3{font-size:1.15rem;color:#172238;font-weight:750;margin:0 0 4px}
+.tp-cal-head p{color:#728099;font-size:.82rem;margin:0}
+.tp-cal-week{background:#FFF0F0;color:#D92E33;padding:7px 12px;border-radius:20px;font-size:.78rem;font-weight:700}
+.tp-cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}
+.tp-cal-day{min-height:143px;border:1px solid #E5E9F0;border-radius:12px;background:#F8FAFC;overflow:hidden;min-width:0}
+.tp-cal-date{display:flex;justify-content:space-between;align-items:center;padding:10px 10px 8px;border-bottom:1px solid rgba(0,0,0,.05);color:#64748B;font-size:.75rem}
+.tp-cal-date strong{font-size:.76rem;color:#344256}
+.tp-cal-body{padding:12px 10px;display:flex;flex-direction:column;gap:7px;overflow-wrap:anywhere}
+.tp-cal-body b{font-size:.79rem;color:#263347;line-height:1.3}
+.tp-cal-body span{font-size:.76rem;color:#516179;line-height:1.35}
+.tp-cal-body small{font-size:.69rem;color:#64748B}
+.tp-cal-day.trabajo{background:#F0F7FF;border-color:#D8E7FF}
+.tp-cal-day.trabajo .tp-cal-body b{color:#1558A2}
+.tp-cal-day.voluntario{background:#ECFAF3;border-color:#C5EBD6}
+.tp-cal-day.voluntario .tp-cal-body b{color:#087B47}
+.tp-cal-day.pendiente{background:#FFF8E7;border-color:#F4DE9E}
+.tp-cal-day.pendiente .tp-cal-body b{color:#956300}
+.tp-cal-day.ausencia{background:#FFF1F1;border-color:#FFDADA}
+.tp-cal-day.hoy{outline:2px solid #EC3237;outline-offset:-2px}
+.tp-cal-legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:15px;color:#66768C;font-size:.7rem}
+.tp-cal-legend span:nth-child(1){color:#1558A2}.tp-cal-legend span:nth-child(2){color:#087B47}.tp-cal-legend span:nth-child(3){color:#956300}
+@media(max-width:1050px){.tp-cal-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(max-width:650px){.tp-cal-shell{padding:14px}.tp-cal-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.tp-cal-day{min-height:125px}}
+/* Login: legibilidad de botón habilitado y deshabilitado, sin afectar botones de otros módulos. */
+.st-key-tpc_login_form [data-testid="stButton"] button,
+.st-key-tpc_login_form .stButton>button,
+.st-key-login_btn button,
+.st-key-login_btn button[kind="secondary"]{background:#EC3237!important;border:1px solid #EC3237!important;color:#FFFFFF!important;opacity:1!important;box-shadow:none!important}
+.st-key-tpc_login_form [data-testid="stButton"] button *,
+.st-key-login_btn button *{color:#FFFFFF!important;opacity:1!important}
+.st-key-tpc_login_form [data-testid="stButton"] button:disabled,
+.st-key-login_btn button:disabled{background:#EEF0F4!important;border:1px solid #D8DEE7!important;color:#253044!important;opacity:1!important}
+.st-key-tpc_login_form [data-testid="stButton"] button:disabled *,
+.st-key-login_btn button:disabled *{color:#253044!important;opacity:1!important}
+</style>
+""", unsafe_allow_html=True)
 
 st.markdown("""
 <style>
