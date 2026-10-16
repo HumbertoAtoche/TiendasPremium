@@ -2559,6 +2559,8 @@ def _dia_label(d):
 
 def _info_turno(nombre, fecha):
     """Horas de un turno en una fecha, según el horario vigente ese día: duración, base y extra."""
+    if fecha.weekday() == 6 and str(nombre).strip() == DOMINGO_VOLUNTARIO:
+        return {"nombre": DOMINGO_VOLUNTARIO, "entrada": "15:15", "salida": "21:00", "dur": 345, "base": 345, "extra": 0}
     regla = _regla_para_fecha(fecha)
     for t in regla["turnos"]:
         if str(t["nombre"]).strip().lower() == str(nombre).strip().lower():
@@ -2566,6 +2568,25 @@ def _info_turno(nombre, fecha):
             base = int(regla["jornada_base_min"])
             return {"nombre": t["nombre"], "entrada": t["entrada"], "salida": t["salida"], "dur": dur, "base": min(dur, base), "extra": max(0, dur - base)}
     return None
+
+DOMINGO_VOLUNTARIO = "Domingo voluntario"
+
+def _solicitudes_domingo_aprobadas(fecha):
+    """Autorizaciones aprobadas para el domingo; no modifica las asistencias."""
+    sol = st.session_state.get("solicitudes", pd.DataFrame())
+    if not isinstance(sol, pd.DataFrame) or sol.empty:
+        return []
+    fecha_iso = fecha.strftime("%Y-%m-%d")
+    return [r for _, r in sol.iterrows()
+            if str(r.get("tipo_solicitud", "")).strip() == "Trabajar Domingo (Descanso)"
+            and str(r.get("estado", "")).strip() == "Aprobado"
+            and _norm_fecha_h(r.get("fecha_permiso", "")) == fecha_iso]
+
+def _cobertura_admin_domingo(fecha):
+    """Bloques operativos, no remuneraciones del administrador."""
+    return [("09:00", "14:00", "Mañana"),
+            ("21:00", "00:00", "Cierre")] if _solicitudes_domingo_aprobadas(fecha) else [
+            ("09:00", "14:00", "Mañana"), ("17:00", "00:00", "Tarde y cierre")]
 
 def _ausencia_en(dni, fecha_iso):
     """'Vacaciones', 'Licencia' o 'Permiso' si el colaborador tiene algo aprobado ese día."""
@@ -2610,6 +2631,10 @@ def _prog_base(lunes, fuente=None, vacia=False):
             v = guardado.get((dni.lstrip("0"), i), "")
             if not v or v in _AUSENCIAS:
                 v = _ausencia_en(dni, d.strftime("%Y-%m-%d")) or ""
+            if d.weekday() == 6 and any(_mismo_dni(x.get("dni", ""), dni) for x in _solicitudes_domingo_aprobadas(d)):
+                # La autorización aprobada prevalece sobre un descanso previo.
+                if not _ausencia_en(dni, d.strftime("%Y-%m-%d")):
+                    v = DOMINGO_VOLUNTARIO
             fila[_dia_label(d)] = v
         filas.append(fila)
     fila_adm = {"Colaborador": ADMIN_FILA}
@@ -4233,20 +4258,21 @@ else:
         "Registros operativos": ["Marcar Asistencia", "Registrar Descuadre", "Registrar Incidencia", "Botellas Fiadas"],
     }
 
-st.sidebar.markdown('<div class="tp-note-t" style="margin:8px 2px 6px">Navegación</div>', unsafe_allow_html=True)
-for _grupo_nombre, _grupo_opciones in _grupos_menu.items():
-    # Abrir por defecto el grupo que contiene la pantalla seleccionada.
-    _grupo_abierto = st.session_state.get("nav_radio") in _grupo_opciones
-    with st.sidebar.expander(_grupo_nombre, expanded=_grupo_abierto):
-        for _opcion_menu in _grupo_opciones:
-            st.button(
-                ("●  " if st.session_state.get("nav_radio") == _opcion_menu else "   ") + _opcion_menu,
-                key="nav_group_" + _opcion_menu,
-                use_container_width=True,
-                type="primary" if st.session_state.get("nav_radio") == _opcion_menu else "secondary",
-                on_click=_ir_a,
-                args=(_opcion_menu,),
-            )
+# Navegación compacta: una sola lista visible, organizada por sección.
+st.sidebar.markdown("<div class='tp-note-t'>MENÚ PRINCIPAL</div>", unsafe_allow_html=True)
+_iconos_grupo = {"Resumen y monitoreo":"📊", "Personal":"👥", "Operaciones y registros":"📋", "Finanzas y boletas":"💳", "Configuración y auditoría":"⚙️", "Mi espacio":"🏠", "Solicitudes":"📝", "Registros operativos":"📌"}
+_grupo_actual = next((g for g, opciones in _grupos_menu.items() if st.session_state["nav_radio"] in opciones), next(iter(_grupos_menu)))
+_grupo_elegido = st.sidebar.selectbox("Sección", list(_grupos_menu), index=list(_grupos_menu).index(_grupo_actual), format_func=lambda g: f"{_iconos_grupo.get(g, '▸')}  {g}", key="tp_nav_seccion")
+_opciones_visibles = _grupos_menu[_grupo_elegido]
+for _opcion_menu in _opciones_visibles:
+    st.sidebar.button(("●  " if st.session_state["nav_radio"] == _opcion_menu else "   ") + _opcion_menu,
+                      key="nav_group_" + _opcion_menu, use_container_width=True,
+                      type="primary" if st.session_state["nav_radio"] == _opcion_menu else "secondary",
+                      on_click=_ir_a, args=(_opcion_menu,))
+st.sidebar.markdown("""<style>
+[data-testid="stSidebar"] [class*="st-key-nav_group_"] button{min-height:39px!important;border-radius:9px!important;text-align:left!important;justify-content:flex-start!important;padding:7px 12px!important;box-shadow:none!important;font-size:.87rem!important}
+[data-testid="stSidebar"] [class*="st-key-nav_group_"]{margin-bottom:2px!important}
+</style>""",unsafe_allow_html=True)
 choice = st.session_state["nav_radio"]
 
 if rol_actual == "admin":
@@ -4300,14 +4326,14 @@ _bot_fondo = f'background-image:url("data:{BOT_MIME};base64,{_bot_b64}");' if _b
 _bot_texto = "" if _bot_b64 else "💬"
 st.markdown(f"""
 <style>
-.st-key-tp_chat_fab {{ position:fixed!important; right:24px!important; bottom:22px!important; z-index:100000!important; width:66px!important; height:66px!important; }}
+.st-key-tp_chat_fab {{ position:fixed!important; right:22px!important; top:72px!important; z-index:100000!important; width:66px!important; height:66px!important; }}
 .st-key-tp_chat_fab [data-testid="stButton"] {{ margin:0!important; }}
 .st-key-tp_chat_fab button {{ width:64px!important; height:64px!important; min-height:64px!important; border-radius:50%!important; border:3px solid #fff!important; background-color:#EC3237!important; {_bot_fondo} background-size:cover!important; background-position:center!important; background-repeat:no-repeat!important; box-shadow:0 5px 20px rgba(15,23,42,.28)!important; color:transparent!important; padding:0!important; transition:transform .15s ease, box-shadow .15s ease!important; }}
 .st-key-tp_chat_fab button:hover {{ transform:translateY(-2px) scale(1.04)!important; box-shadow:0 8px 24px rgba(15,23,42,.32)!important; border-color:#fff!important; }}
-.st-key-tp_chat_panel {{ position:fixed!important; right:24px!important; bottom:98px!important; width:min(410px, calc(100vw - 32px))!important; max-height:68vh!important; overflow-y:auto!important; z-index:99999!important; background:#fff!important; border:1px solid #E5E7EB!important; border-radius:20px!important; padding:16px!important; box-shadow:0 12px 38px rgba(15,23,42,.22)!important; }}
+.st-key-tp_chat_panel {{ position:fixed!important; right:22px!important; top:148px!important; width:min(410px, calc(100vw - 32px))!important; max-height:68vh!important; overflow-y:auto!important; z-index:99999!important; background:#fff!important; border:1px solid #E5E7EB!important; border-radius:20px!important; padding:16px!important; box-shadow:0 12px 38px rgba(15,23,42,.22)!important; }}
 .st-key-tp_chat_panel [data-testid="stChatMessage"] {{ padding:8px 10px!important; }}
 .st-key-tp_chat_panel [data-testid="stDataFrame"] {{ max-height:220px!important; }}
-@media(max-width:600px) {{ .st-key-tp_chat_fab {{ right:14px!important; bottom:14px!important; }} .st-key-tp_chat_panel {{ right:8px!important; bottom:88px!important; width:calc(100vw - 16px)!important; max-height:72vh!important; }} }}
+@media(max-width:600px) {{ .st-key-tp_chat_fab {{ right:12px!important; top:66px!important; }} .st-key-tp_chat_panel {{ right:8px!important; top:136px!important; width:calc(100vw - 16px)!important; max-height:72vh!important; }} }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -6013,7 +6039,23 @@ elif choice == "Programación de Turnos":
     if len(_base) <= 1:
         ui_callout("No hay colaboradores activos para programar en esta semana.", "info")
     else:
-        _opts = ["", "Descanso"] + _nombres_turno + list(_AUSENCIAS)
+        _opts = ["", "Descanso"] + _nombres_turno + [DOMINGO_VOLUNTARIO] + list(_AUSENCIAS)
+        # Las solicitudes aprobadas se reflejan incluso si ya se abrió la semana.
+        _base = _base.copy()
+        for _dom in _dias:
+            if _dom.weekday() != 6:
+                continue
+            _col_dom = _dia_label(_dom)
+            _aprobadas = _solicitudes_domingo_aprobadas(_dom)
+            for _sr in _aprobadas:
+                _dni_sr = str(_sr.get("dni", ""))
+                _emp_sr = st.session_state.empleados
+                _matches = _emp_sr[_emp_sr["dni"].apply(lambda x: _mismo_dni(x, _dni_sr))]
+                if not _matches.empty:
+                    _nom_sr = str(_matches.iloc[0]["nombre"])
+                    _mask_sr = _base["Colaborador"].eq(_nom_sr)
+                    if _mask_sr.any() and not _ausencia_en(_dni_sr, _dom.strftime("%Y-%m-%d")):
+                        _base.loc[_mask_sr, _col_dom] = DOMINGO_VOLUNTARIO
         _ed = st.data_editor(_base, hide_index=True, use_container_width=True, disabled=["Colaborador"], key=f"prog_ed_{_lunes_iso}_{_ver}",
                              column_config={"Colaborador": st.column_config.TextColumn("Colaborador", width="medium"),
                                             **{c: st.column_config.SelectboxColumn(c, options=_opts, required=False) for c in _cols}})
@@ -6033,67 +6075,85 @@ elif choice == "Programación de Turnos":
                     ui_kpi_acc("Días de descanso o ausencia", str(_td), "en la semana", "info") +
                     ui_kpi_acc("Avisos", str(len(_avisos)), "revisa antes de guardar" if _avisos else "Todo en orden", "bad" if _avisos else "ok") + '</div>', unsafe_allow_html=True)
         st.markdown("<div class='tp-note-t' style='margin:6px 0 10px'>Vista de la semana: horas base y extra por casilla</div>", unsafe_allow_html=True)
+        st.markdown("""<style>
+.tp-prog-wrap{width:100%!important;max-width:100%!important;overflow-x:auto!important;border-radius:10px!important;padding:4px!important}
+.tp-prog{border-collapse:separate!important;border-spacing:2px!important;min-width:1080px!important;width:max-content!important;table-layout:auto!important}
+.tp-prog th.n{position:sticky!important;left:0!important;z-index:2!important;min-width:205px!important;max-width:245px!important;white-space:normal!important;background:#f8fafc!important}
+.tp-prog td{border-radius:6px!important;min-width:116px!important;padding:8px 5px!important;font-size:12px!important}
+.tp-prog th{white-space:nowrap!important}
+</style>""", unsafe_allow_html=True)
         st.markdown(_tabla_html, unsafe_allow_html=True)
         for _av in dict.fromkeys(_avisos):
             ui_callout(_av, "warn")
 
-        # Vista Gantt interactiva: complemento visual, no reemplaza la grilla editable existente.
-        st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
-        st.markdown("<div class='tp-note-t' style='margin:6px 0 10px'>Cronograma visual de turnos · Gantt</div>", unsafe_allow_html=True)
-        if PLOTLY_AVAILABLE:
-            _gantt_rows = []
+        # Cronograma legible por día, sin escala temporal comprimida.
+        st.markdown("<div class='tp-note-t'>Cronograma semanal · turnos por día</div>", unsafe_allow_html=True)
+        _cronograma = []
+        for _dg, _cg in zip(_dias, _cols):
             for _, _rg in _ed.iterrows():
-                _nom_g = str(_rg.get("Colaborador", "")).strip()
-                if not _nom_g:
+                _nombre_cr = str(_rg.get("Colaborador", "")).strip()
+                _turno_cr = str(_rg.get(_cg, "") or "").strip()
+                if not _turno_cr or _turno_cr.lower() in {"nan", "none"}:
                     continue
-                for _dg, _cg in zip(_dias, _cols):
-                    _turno_g = str(_rg.get(_cg, "") or "").strip()
-                    if not _turno_g or _turno_g.lower() in {"descanso", "nan", "none"} or _turno_g in _AUSENCIAS:
-                        continue
-                    _info_g = _info_turno(_turno_g, _dg)
-                    if not _info_g:
-                        continue
-                    try:
-                        _ini_g = datetime.combine(_dg, _hhmm(_info_g["entrada"]))
-                        _fin_g = datetime.combine(_dg, _hhmm(_info_g["salida"]))
-                        if _fin_g <= _ini_g:
-                            _fin_g += timedelta(days=1)
-                    except Exception:
-                        continue
-                    _fila_g = {"Colaborador": _nom_g, "Día": _dg.strftime("%a %d/%m"), "Turno": _turno_g,
-                               "Inicio": _ini_g, "Fin": _fin_g,
-                               "Horario": f'{_info_g["entrada"]}–{_info_g["salida"]}'}
-                    try:
-                        _fila_emp_g = _emp_p[_emp_p["nombre"].astype(str) == _nom_g]
-                        if not _fila_emp_g.empty:
-                            for _col_sede_g in ["sede", "Sucursal", "sucursal", "local"]:
-                                if _col_sede_g in _fila_emp_g.columns:
-                                    _fila_g["Sucursal"] = str(_fila_emp_g.iloc[0][_col_sede_g] or "Sin sede")
-                                    break
-                    except Exception:
-                        pass
-                    _gantt_rows.append(_fila_g)
-            if _gantt_rows:
-                _df_gantt = pd.DataFrame(_gantt_rows)
-                _color_g = "Turno" if "Turno" in _df_gantt.columns else None
-                _fig_gantt = px.timeline(_df_gantt, x_start="Inicio", x_end="Fin", y="Colaborador", color=_color_g,
-                                         hover_data={"Día": True, "Horario": True, "Turno": True, "Inicio": False, "Fin": False},
-                                         title="Asignación semanal por colaborador")
-                _fig_gantt.update_yaxes(autorange="reversed", title="", categoryorder="array",
-                                        categoryarray=list(dict.fromkeys(_df_gantt["Colaborador"].tolist())))
-                _fig_gantt.update_xaxes(title="Día y hora", tickformat="%a %d/%m %H:%M")
-                _fig_gantt.update_layout(height=max(320, min(720, 32 * _df_gantt["Colaborador"].nunique() + 130)),
-                                         margin=dict(l=10, r=10, t=55, b=10), paper_bgcolor="rgba(0,0,0,0)",
-                                         plot_bgcolor="rgba(0,0,0,0)", legend_title_text="Turno",
-                                         font=dict(family="Arial", color="#334155"), hovermode="closest")
-                st.plotly_chart(_fig_gantt, use_container_width=True, config={"displaylogo": False, "responsive": True})
-                st.caption("El cronograma muestra los turnos reconocidos con horario configurado. Descansos y ausencias se mantienen en la grilla original.")
-            else:
-                st.info("Completa la programación con turnos que tengan horario configurado para visualizar el Gantt.")
+                _info_cr = _info_turno(_turno_cr, _dg)
+                _cronograma.append({"Día": _dia_label(_dg), "Colaborador": _nombre_cr,
+                                    "Asignación": _turno_cr,
+                                    "Horario": (f'{_info_cr["entrada"]} – {_info_cr["salida"]}' if _info_cr else "—")})
+        if _cronograma:
+            st.dataframe(pd.DataFrame(_cronograma), hide_index=True, use_container_width=True,
+                         height=min(520, 38 * (len(_cronograma) + 1)))
         else:
-            st.info("Para habilitar el Gantt interactivo instala Plotly: pip install plotly. La programación editable sigue funcionando sin este gráfico.")
+            st.info("Todavía no hay turnos asignados en esta semana.")
+
+        st.markdown("<div class='tp-note-t'>Cobertura operativa del domingo</div>", unsafe_allow_html=True)
+        _domingo = _dias[6]
+        _aprobadas = _solicitudes_domingo_aprobadas(_domingo)
+        _cobertura = [{"Responsable": "Administrador", "Inicio": ini, "Fin": fin, "Actividad": tipo}
+                      for ini, fin, tipo in _cobertura_admin_domingo(_domingo)]
+        for _sr in _aprobadas:
+            _cobertura.append({"Responsable": str(_sr.get("nombre", "Trabajador")),
+                               "Inicio": "15:15", "Fin": "21:00", "Actividad": "Domingo voluntario aprobado"})
+        st.dataframe(pd.DataFrame(_cobertura), hide_index=True, use_container_width=True)
+        if _aprobadas:
+            st.success("Domingo autorizado: el trabajador cubre de 15:15 a 21:00 y el administrador realiza apertura y cierre.")
+        else:
+            st.info("Sin solicitudes aprobadas: el administrador cubre 09:00–14:00 y 17:00–00:00. La tienda cierra de 14:00 a 17:00.")
+        _sol_dom = st.session_state.get("solicitudes", pd.DataFrame())
+        if isinstance(_sol_dom, pd.DataFrame) and not _sol_dom.empty:
+            _pend = _sol_dom[(_sol_dom["tipo_solicitud"].astype(str) == "Trabajar Domingo (Descanso)") &
+                             (_sol_dom["estado"].astype(str) == "Pendiente") &
+                             (_sol_dom["fecha_permiso"].apply(_norm_fecha_h) == _domingo.strftime("%Y-%m-%d"))]
+            if not _pend.empty:
+                st.warning(f"{len(_pend)} solicitud(es) de domingo pendientes: no se asignan hasta aprobarse.")
+        if len(_aprobadas) > 1:
+            st.warning("Hay varias solicitudes aprobadas para el mismo domingo. Verifica si se requiere más de un trabajador antes de guardar.")
 
         if _guardar:
+            _errores_dom = []
+            for _d_dom, _c_dom in zip(_dias, _cols):
+                if _d_dom.weekday() != 6:
+                    continue
+                _aut = _solicitudes_domingo_aprobadas(_d_dom)
+                _nombres_aut = set()
+                for _a in _aut:
+                    _match = st.session_state.empleados[st.session_state.empleados["dni"].apply(lambda x: _mismo_dni(x, _a.get("dni", "")))]
+                    if not _match.empty:
+                        _nombres_aut.add(str(_match.iloc[0]["nombre"]))
+                for _, _fila in _ed.iterrows():
+                    _nom = str(_fila["Colaborador"])
+                    _val = str(_fila.get(_c_dom, "") or "").strip()
+                    if _nom == ADMIN_FILA:
+                        continue
+                    if _nom in _nombres_aut and _val != DOMINGO_VOLUNTARIO:
+                        _errores_dom.append(f"{_nom} tiene domingo aprobado y debe figurar como '{DOMINGO_VOLUNTARIO}'.")
+                    if _val == DOMINGO_VOLUNTARIO and _nom not in _nombres_aut:
+                        _errores_dom.append(f"{_nom} no tiene autorización aprobada para trabajar el domingo.")
+                if len(_aut) > 1:
+                    _errores_dom.append("Hay más de una autorización aprobada el mismo domingo: revisar la cobertura antes de guardar.")
+            if _errores_dom:
+                for _err in _errores_dom:
+                    st.error(_err)
+                st.stop()
             _nuevas = []
             _ahora_p = obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S")
             for _, _rp in _ed.iterrows():
@@ -7284,50 +7344,6 @@ elif choice == "Analítica (BI)":
                     filas_u = "".join(f'<div class="tp-row"><div class="tp-row-time">{ui_dia_label(r["fecha"])}</div><div class="tp-row-main"><b>Ingreso a las {str(r["fecha_hora"])[11:16]}</b></div><div class="tp-chips">{ui_chip(str(int(r["mins"])) + " min tarde", "bad")}</div></div>' for _, r in ult_t.iterrows()) or '<div class="tp-card-sub">Sin tardanzas en el período.</div>'
                     e2.markdown(ui_panel("Últimas tardanzas", "Detalle del colaborador", filas_u), unsafe_allow_html=True)
 
-                # Gráficos interactivos avanzados añadidos como complemento a los gráficos corporativos existentes.
-                st.markdown(_SP, unsafe_allow_html=True)
-                st.markdown("<div class='tp-note-t' style='margin:6px 0 10px'>Analítica interactiva avanzada</div>", unsafe_allow_html=True)
-                if PLOTLY_AVAILABLE:
-                    # Heatmap: cantidad de ingresos tardíos por día de semana y hora de marcación.
-                    _heat_src = tard.copy() if not tard.empty else pd.DataFrame()
-                    if not _heat_src.empty:
-                        _heat_src["hora_ingreso"] = pd.to_datetime(_heat_src["fecha_hora"], errors="coerce").dt.hour
-                        _heat_src["dia_semana"] = _heat_src["fecha_dt"].dt.dayofweek.map({0:"Lunes", 1:"Martes", 2:"Miércoles", 3:"Jueves", 4:"Viernes", 5:"Sábado", 6:"Domingo"})
-                        _dias_heat = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
-                        _heat = _heat_src.dropna(subset=["hora_ingreso", "dia_semana"]).groupby(["dia_semana", "hora_ingreso"]).size().reset_index(name="Tardanzas")
-                        _heat = _heat.pivot(index="hora_ingreso", columns="dia_semana", values="Tardanzas").reindex(index=range(24), columns=_dias_heat, fill_value=0).fillna(0)
-                        _h1, _h2 = st.columns([1.15, 1])
-                        with _h1:
-                            _fig_heat = go.Figure(data=go.Heatmap(z=_heat.values, x=_heat.columns.tolist(), y=[f"{h:02d}:00" for h in _heat.index],
-                                                                colorscale=[[0, "#F8FAFC"], [0.45, "#F9A8A8"], [1, "#EC3237"]],
-                                                                hovertemplate="Día: %{x}<br>Hora: %{y}<br>Tardanzas: %{z}<extra></extra>", colorbar=dict(title="Tardanzas")))
-                            _fig_heat.update_layout(title="Mapa de calor de tardanzas", xaxis_title="Día de la semana", yaxis_title="Hora aproximada de ingreso",
-                                                    height=430, margin=dict(l=10, r=10, t=55, b=10), paper_bgcolor="rgba(0,0,0,0)",
-                                                    plot_bgcolor="rgba(0,0,0,0)", font=dict(family="Arial", color="#334155"))
-                            st.plotly_chart(_fig_heat, use_container_width=True, config={"displaylogo": False, "responsive": True})
-                    else:
-                        st.info("No hay tardanzas en el período seleccionado para construir el mapa de calor.")
-
-                    # Tendencia mensual con área sombreada: se conserva también el gráfico existente de horas extra.
-                    _trend_rows = []
-                    for _mes_tr in meses_p:
-                        _trend_rows.append({"Mes": ui_mes_label(_mes_tr), "Orden": _mes_tr,
-                                            "Horas extra": round(float(ext.get(_mes_tr, 0)) / 60, 2),
-                                            "Tardanzas": int(pm.loc[_mes_tr, "t"]) if _mes_tr in pm.index else 0})
-                    if _trend_rows:
-                        _df_trend = pd.DataFrame(_trend_rows).sort_values("Orden")
-                        _fig_trend = px.area(_df_trend, x="Mes", y="Horas extra", markers=True,
-                                             hover_data={"Tardanzas": True, "Orden": False},
-                                             title="Tendencia mensual de horas extra")
-                        _fig_trend.update_traces(line=dict(color="#EC701B", width=3), fillcolor="rgba(236,112,27,0.20)",
-                                                 hovertemplate="Mes: %{x}<br>Horas extra: %{y:.2f} h<extra></extra>")
-                        _fig_trend.update_layout(height=330, margin=dict(l=10, r=10, t=55, b=10),
-                                                 paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                                                 xaxis_title="Mes", yaxis_title="Horas extra", font=dict(family="Arial", color="#334155"),
-                                                 hovermode="x unified")
-                        st.plotly_chart(_fig_trend, use_container_width=True, config={"displaylogo": False, "responsive": True})
-                else:
-                    st.info("Los gráficos interactivos avanzados requieren Plotly. Los gráficos actuales siguen disponibles; instala la dependencia con: pip install plotly.")
 
 elif choice == "Onboarding / Offboarding":
     st.markdown("""
