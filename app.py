@@ -2965,6 +2965,82 @@ table.tp-shift-detail td.cob span.cero{color:#C62828;font-weight:700;}
 </style>
 """, unsafe_allow_html=True)
 
+# =============================================================
+# TIENDAS PREMIUM · CAPA RESPONSIVE (solo presentación)
+# No cambia datos, turnos, aprobaciones, sesiones ni Google Sheets.
+# =============================================================
+st.markdown(r"""<style>
+/* Tablets: controles y tarjetas se acomodan sin desbordar */
+@media screen and (max-width: 900px) {
+  .main .block-container {max-width:100%!important;padding-left:16px!important;padding-right:16px!important;}
+  [data-testid="stMainBlockContainer"] {max-width:100%!important;}
+  [data-testid="stHorizontalBlock"] {flex-wrap:wrap!important;}
+  [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {min-width:min(260px,100%)!important;flex:1 1 260px!important;}
+  .tp-up-calendar {max-width:100%!important;overflow-x:auto!important;-webkit-overflow-scrolling:touch;}
+  .tp-up-calendar table {min-width:850px!important;}
+  .tp-shift-detail-wrap {max-width:100%!important;overflow-x:auto!important;-webkit-overflow-scrolling:touch;}
+  .tp-cal-grid {grid-template-columns:repeat(3,minmax(0,1fr))!important;}
+  .tp-mgrid {grid-template-columns:repeat(2,minmax(0,1fr))!important;}
+}
+/* Teléfonos: una columna, tipografía legible y acciones táctiles */
+@media screen and (max-width: 640px) {
+  html,body {max-width:100%;overflow-x:hidden;}
+  .main .block-container,[data-testid="stMainBlockContainer"] {padding:64px 12px 36px!important;max-width:100%!important;overflow-x:clip;}
+  [data-testid="stHorizontalBlock"] {gap:10px!important;flex-wrap:wrap!important;}
+  [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {flex:1 1 100%!important;min-width:0!important;width:100%!important;}
+  [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] > div {min-width:0!important;}
+  [data-testid="stSidebar"] {max-width:min(86vw,320px)!important;}
+  [data-testid="stSidebar"] [role="radiogroup"] label {min-height:44px;}
+  .market-header {padding:16px!important;margin-bottom:12px!important;}
+  .market-header h1 {font-size:1.18rem!important;line-height:1.3!important;}
+  .tp-kpi,.cal-card,.boleta-container {max-width:100%;box-sizing:border-box;}
+  .tp-kpi-val {font-size:1.4rem!important;}
+  .stButton>button,.stDownloadButton>button,.stFormSubmitButton>button {min-height:46px!important;max-width:100%;white-space:normal!important;line-height:1.3!important;}
+  [data-baseweb="input"] input,[data-baseweb="textarea"] textarea {font-size:16px!important;}
+  [data-testid="stDataFrame"],[data-testid="stDataEditor"] {max-width:100%!important;overflow-x:auto!important;}
+  .stTabs [data-baseweb="tab-list"] {overflow-x:auto!important;flex-wrap:nowrap!important;}
+  .stTabs [data-baseweb="tab"] {flex-shrink:0!important;}
+  .tp-cal-shell {padding:12px!important;margin:8px 0 12px!important;}
+  .tp-cal-head {align-items:flex-start!important;gap:8px!important;}
+  .tp-cal-head h3 {font-size:1rem!important;}
+  .tp-cal-grid {grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px!important;}
+  .tp-cal-day {min-height:112px!important;border-radius:10px!important;}
+  .tp-cal-date {padding:8px!important;}
+  .tp-cal-body {padding:9px 8px!important;gap:5px!important;}
+  .tp-cal-body b {font-size:.78rem!important;}
+  .tp-cal-body span {font-size:.73rem!important;}
+  .tp-cal-legend {gap:8px!important;}
+  .tp-up-calendar {width:100%!important;overflow-x:auto!important;border-radius:10px!important;}
+  .tp-up-calendar table {min-width:820px!important;}
+  .tp-up-calendar th.tp-up-person {min-width:145px!important;width:145px!important;}
+  .tp-up-calendar thead th:first-child {width:145px!important;}
+  .tp-up-calendar th.tp-up-person,.tp-up-calendar thead th:first-child {position:sticky;left:0;z-index:2;background:#fff;box-shadow:2px 0 5px rgba(0,0,0,.05);}
+  .tp-up-calendar thead th:first-child {background:#f8fafc;z-index:3;}
+  .tp-shift-detail-wrap {width:100%!important;overflow-x:auto!important;border-radius:0!important;}
+  table.tp-shift-detail {min-width:950px!important;border-radius:0!important;}
+  .tp-mgrid,.tp-id-grid {grid-template-columns:1fr!important;}
+  .tp-hb {display:flex!important;flex-wrap:wrap!important;gap:8px!important;}
+  .tp-hb-t {flex-basis:100%!important;}
+  .tp-lg-hero {padding:16px!important;min-height:0!important;border-radius:16px!important;}
+  .tp-lg-h {font-size:1.32rem!important;line-height:1.25!important;}
+  .tp-lg-p {font-size:.88rem!important;line-height:1.5!important;}
+  .tp-lg-quote {margin-top:12px!important;padding:12px!important;}
+  .tp-lg-quote p {font-size:.86rem!important;}
+  .tp-lg-who .tp-avatar {width:64px!important;height:64px!important;}
+  .tp-lg-t {font-size:1.2rem!important;}
+  .tp-lg-note {font-size:.71rem!important;line-height:1.4!important;}
+  .st-key-tp_chat_fab {right:10px!important;top:60px!important;}
+  .st-key-tp_chat_panel {right:8px!important;top:125px!important;width:calc(100vw - 16px)!important;max-height:65dvh!important;}
+}
+@media screen and (max-width:380px) {
+  .main .block-container,[data-testid="stMainBlockContainer"] {padding-left:9px!important;padding-right:9px!important;}
+  .tp-cal-grid {grid-template-columns:1fr!important;}
+  .tp-cal-day {min-height:0!important;}
+  .tp-cal-body {gap:3px!important;}
+  .tp-cal-legend {font-size:.65rem!important;}
+}
+</style>""", unsafe_allow_html=True)
+
 # --- COMPONENTES UI REUTILIZABLES ---
 def ui_iniciales(nombre):
     p = [x for x in str(nombre).split() if x]
