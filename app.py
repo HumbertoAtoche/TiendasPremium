@@ -4618,6 +4618,9 @@ def _tp_ia_respuesta(pregunta, contexto=""):
     historial = st.session_state.get("chat_datos_historial", [])[-9:]
     partes = []
     for item in historial:
+        # No compartir mensajes acompañados de tablas administrativas con el proveedor externo.
+        if item.get("data") is not None:
+            continue
         texto = str(item.get("content", ""))[:900]
         if texto:
             partes.append({"role": "model" if item.get("role") == "assistant" else "user",
@@ -4625,7 +4628,11 @@ def _tp_ia_respuesta(pregunta, contexto=""):
     if not partes or partes[-1]["role"] != "user":
         partes.append({"role": "user", "parts": [{"text": pregunta[:900]}]})
     instruccion = (
-        "Eres Premium, el asistente de Tiendas Premium, Perú. Conversa en español peruano natural, "
+        "Eres Premium, un asistente conversacional versátil de Tiendas Premium, Perú. "
+        "Responde con libertad a temas generales: motivación, humor, cultura, creatividad, "
+        "ideas, consejos y conversación cotidiana. No limites las respuestas a los módulos de la app. "
+        "Si el usuario pide una frase, un chiste o una historia, respóndele directamente. "
+        "Conversa en español peruano natural, "
         "amable, ágil y humano; respuestas claras y breves, sin repetirte ni sonar robótico. "
         "Puedes usar uno o dos emojis con moderación. Da pasos prácticos cuando corresponda. "
         "No inventes datos de turnos, aprobaciones, asistencias, boletas, salarios o políticas. "
@@ -4654,46 +4661,60 @@ def _tp_ia_respuesta(pregunta, contexto=""):
         return None
 
 def _tp_chat_consulta(pregunta):
-    """No entrega datos administrativos a colaboradores ni envía registros privados a la IA."""
+    """Conversación libre por defecto; datos de la empresa solo con intención explícita y permisos."""
     q = _chat_normalizar(pregunta)
-    temas = ("tardanza", "puntualidad", "incidencia", "dano", "descuadre", "caja", "faltante",
-             "solicitud", "permiso", "adelanto", "colaborador", "empleado", "personal", "trabajador", "botella", "fiad")
-    pide_datos = any(x in q for x in temas)
-    if rol_actual == "admin" and pide_datos:
-        respuesta, tabla = _chat_responder(pregunta)
-        # Los registros se muestran solo localmente en Streamlit. No se envían al proveedor IA.
-        resumen = respuesta if tabla is not None or not respuesta.startswith("Puedo consultar por ahora") else ""
-        if resumen:
-            natural = _tp_ia_respuesta(pregunta, resumen)
-            return (natural or respuesta), tabla, bool(natural)
-        natural = _tp_ia_respuesta(pregunta)
-        return (natural or respuesta), None, bool(natural)
-    if rol_actual != "admin" and pide_datos:
-        # No reutilizar el motor global: no filtra datos de otros colaboradores.
-        contexto = ("Este usuario es colaborador. No hay datos personales verificados para esta consulta. "
-                    "Explícale cómo consultar sus propios registros en el menú, sin confirmar estados ni cifras.")
-        natural = _tp_ia_respuesta(pregunta, contexto)
-        return (natural or "Puedo orientarte para revisar tus datos. Consulta **Marcar Asistencia**, **Mis Vacaciones**, **Mis Boletas** o **Solicitar Permiso / Adelanto** según lo que necesites. 😊"), None, bool(natural)
+    # No clasificar por palabras aisladas como «trabajador», «caja» o «solicitud»:
+    # «Dame una frase para un trabajador» debe ir a Gemini, no al reporte.
+    consulta_datos = bool(re.search(
+        r"\b(cuantos?|cuantas?|quien|quienes|muestrame|mostrar|lista|listar|reporte|"
+        r"registros?|pendientes?|total|estadisticas?|ranking|top|consulta|consultar|"
+        r"cuanto|cuanta|que empleado|que colaborador|mis (?:turnos|solicitudes|asistencias|boletas)|"
+        r"mi (?:horario|turno|boleta|asistencia))\b", q))
+    temas_empresa = bool(re.search(
+        r"\b(tardanzas?|puntualidad|incidencias?|descuadres?|solicitudes?|permisos?|"
+        r"adelantos?|colaboradores?|empleados?|asistencias?|botellas? fiadas?|"
+        r"turnos?|horarios?|boletas?|vacaciones?)\b", q))
+    # Solo usar la herramienta de reportes cuando existe una consulta de datos concreta.
+    if consulta_datos and temas_empresa:
+        if rol_actual == "admin":
+            respuesta, tabla = _chat_responder(pregunta)
+            if not respuesta.startswith("Puedo consultar por ahora"):
+                # El resumen puede contener cifras agregadas, pero no se envían filas ni nombres.
+                # Para máxima privacidad, solo se envía el resumen cuando no hay tabla detallada.
+                if tabla is None:
+                    natural = _tp_ia_respuesta(pregunta, respuesta)
+                    return (natural or respuesta), None, bool(natural)
+                return respuesta, tabla, False
+        else:
+            contexto = ("El usuario es colaborador. No hay datos personales verificados para esta "
+                        "consulta. Indica cómo revisar su información desde los menús de la aplicación; "
+                        "no confirmes estados, fechas ni cifras.")
+            natural = _tp_ia_respuesta(pregunta, contexto)
+            return (natural or "Para consultar tus datos reales, revisa **Marcar Asistencia**, "
+                    "**Mis Vacaciones**, **Mis Boletas** o **Solicitar Permiso / Adelanto**. "
+                    "No puedo confirmar registros personales desde este chat."), None, bool(natural)
+    # Toda pregunta general se envía libremente a Gemini, incluso si menciona trabajo.
     natural = _tp_ia_respuesta(pregunta)
     if natural:
         return natural, None, True
-    # Modo gratuito local: respuestas naturales básicas sin IA externa.
+    # Respaldo local limitado: nunca fingir que una respuesta libre viene de la IA.
     if any(w in q for w in ("hola", "buenas", "buenos dias", "hey", "que tal")):
-        return "¡Hola! 👋 Soy Premium. ¿Te ayudo con tus turnos, asistencia, solicitudes o con alguna función de la app?", None, False
+        return "¡Hola! 👋 ¿Qué te gustaría conversar hoy?", None, False
     if "gracias" in q:
-        return "¡Con mucho gusto! 😊 Si necesitas algo más de Tiendas Premium, aquí estoy.", None, False
+        return "¡Con gusto! 😊 Aquí estoy cuando me necesites.", None, False
+    if "frase" in q and any(w in q for w in ("motiva", "animo", "inspir")):
+        return "🌟 *Cada pequeño esfuerzo de hoy construye los grandes resultados de mañana.* ¡Tú puedes!", None, False
     if "domingo" in q or "turno" in q or "horario" in q:
-        return "Para confirmar tu horario, entra a **Marcar Asistencia → Tu programación**. Si solicitaste trabajar el domingo, verifica que esté **aprobado**; una solicitud pendiente todavía no confirma el turno.", None, False
+        return "Para verificar tu programación, revisa **Marcar Asistencia → Tu programación**. Los domingos voluntarios se confirman cuando la solicitud está aprobada.", None, False
     if "vacacion" in q:
-        return "Puedes consultar tus vacaciones desde **Mis Vacaciones**. Si necesitas solicitar días, revisa las opciones de esa sección. 🌴", None, False
+        return "Puedes consultar tus días desde **Mis Vacaciones**. 🌴", None, False
     if "boleta" in q:
-        return "Encontrarás tus documentos en **Mis Boletas**. Si aún no aparece una boleta, consulta con administración.", None, False
+        return "Puedes revisar tus documentos desde **Mis Boletas**.", None, False
     if "asistencia" in q or "marcar" in q:
-        return "En **Marcar Asistencia** puedes registrar tu ingreso o salida y revisar tu jornada. ¿Qué parte necesitas resolver?", None, False
-    if rol_actual == "admin":
-        r, tabla = _chat_responder(pregunta)
-        return r, tabla, False
-    return "¡Cuéntame un poquito más! 😊 Puedo orientarte sobre turnos, asistencia, solicitudes, vacaciones y boletas.", None, False
+        return "En **Marcar Asistencia** puedes registrar tu ingreso y salida.", None, False
+    return ("Ahora mismo no puedo conectarme a Gemini para responder libremente. "
+            "La clave puede estar configurada, pero el servicio podría tener un límite de uso "
+            "o un error temporal. Intenta nuevamente en unos minutos. 😊"), None, False
 
 BOT_PATH = os.path.join(BASE_DIR, "assets", "bot.png")
 BOT_DISPONIBLE = os.path.isfile(BOT_PATH)
@@ -4742,8 +4763,8 @@ if st.session_state.chat_flotante_abierto:
         if not st.session_state.chat_datos_historial:
             _saludo = str(user_actual).split()[0].capitalize() if user_actual else "equipo"
             st.markdown(f"¡Hola, **{_tp_html.escape(_saludo)}**! 👋 Soy **Premium**, tu asistente. Pregúntame lo que necesites, como si habláramos en persona.")
-            _sugerencias = (["📊 Tardanzas del mes", "📋 Solicitudes pendientes", "💡 ¿Qué puedes hacer?"] if rol_actual == "admin" else
-                            ["📅 Mi horario", "☀️ Trabajar el domingo", "🏖️ Mis vacaciones"])
+            _sugerencias = (["🌟 Dame una frase motivacional", "😄 Cuéntame un chiste", "📊 Tardanzas del mes"] if rol_actual == "admin" else
+                            ["🌟 Dame una frase motivacional", "😄 Cuéntame un chiste", "📅 Mi horario"])
             for _i, _s in enumerate(_sugerencias):
                 if st.button(_s, key=f"tp_sug_{_i}", use_container_width=True):
                     st.session_state["tp_pregunta_sugerida"] = _s.split(" ", 1)[-1]
