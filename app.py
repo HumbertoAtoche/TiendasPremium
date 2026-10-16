@@ -4022,7 +4022,172 @@ if _sol_n is not None and not _sol_n.empty:
     if len(_pend):
         st.sidebar.markdown(f'<div class="tp-notif"><span>{"Solicitudes por revisar" if rol_actual == "admin" else "Tus solicitudes en revisión"}</span><span>{len(_pend)}</span></div>', unsafe_allow_html=True)
 
+# =========================================================
+# NUEVO MÓDULO: ASISTENTE INTELIGENTE DE DATOS (solo lectura)
+# Usa DataFrames existentes en session_state; no escribe en Google Sheets.
+# Comprensión inicial por reglas y consultas estructuradas, sin API externa.
+# =========================================================
+def _chat_normalizar(texto):
+    import unicodedata
+    texto = unicodedata.normalize("NFKD", str(texto).lower())
+    return "".join(c for c in texto if not unicodedata.combining(c))
+
+
+def _chat_periodo(texto, hoy=None):
+    """Devuelve (año, mes) para consultas del mes actual/anterior o un mes nombrado."""
+    hoy = hoy or obtener_ahora_peru().date()
+    q = _chat_normalizar(texto)
+    if "mes pasado" in q or "mes anterior" in q or "ultimo mes" in q:
+        primero = hoy.replace(day=1) - timedelta(days=1)
+        return primero.year, primero.month
+    if "este mes" in q or "mes actual" in q or "del mes" in q:
+        return hoy.year, hoy.month
+    meses = {"enero":1,"febrero":2,"marzo":3,"abril":4,"mayo":5,"junio":6,
+             "julio":7,"agosto":8,"setiembre":9,"septiembre":9,"octubre":10,
+             "noviembre":11,"diciembre":12}
+    for nombre, numero in meses.items():
+        if nombre in q:
+            m = re.search(r'\b(20\d{2})\b', q)
+            return (int(m.group(1)) if m else hoy.year), numero
+    return None, None
+
+
+def _chat_filtrar_periodo(df, columna_fecha, anio, mes):
+    if df is None or df.empty or columna_fecha not in df.columns or anio is None:
+        return df.copy() if isinstance(df, pd.DataFrame) else pd.DataFrame()
+    out = df.copy()
+    fechas = pd.to_datetime(out[columna_fecha], errors="coerce", dayfirst=True)
+    return out[(fechas.dt.year == anio) & (fechas.dt.month == mes)].copy()
+
+
+def _chat_buscar_nombre(texto):
+    empleados = st.session_state.get("empleados", pd.DataFrame())
+    if empleados is None or empleados.empty or "nombre" not in empleados.columns:
+        return None
+    q = _chat_normalizar(texto)
+    nombres = sorted([str(n).strip() for n in empleados["nombre"].dropna().unique() if str(n).strip()], key=len, reverse=True)
+    for nombre in nombres:
+        if _chat_normalizar(nombre) in q:
+            return nombre
+    return None
+
+
+def _chat_responder(pregunta):
+    """Responde consultas de solo lectura sobre las tablas cargadas en la sesión."""
+    q = _chat_normalizar(pregunta)
+    if not q.strip():
+        return "Escribe una pregunta para consultar los datos.", None
+
+    anio, mes = _chat_periodo(q)
+    meses_es = {1:"enero", 2:"febrero", 3:"marzo", 4:"abril", 5:"mayo", 6:"junio", 7:"julio", 8:"agosto", 9:"setiembre", 10:"octubre", 11:"noviembre", 12:"diciembre"}
+    periodo_txt = f" de {meses_es.get(mes, mes)} de {anio}" if anio else ""
+    nombre = _chat_buscar_nombre(q)
+    dfs = st.session_state
+
+    # Incidencias / daños
+    if any(k in q for k in ["incidencia", "incidencias", "danos", "botella rota", "billete falso"]):
+        df = dfs.get("incidencias", pd.DataFrame()).copy()
+        if anio:
+            df = _chat_filtrar_periodo(df, "fecha", anio, mes)
+        if nombre and "nombre" in df.columns:
+            df = df[df["nombre"].astype(str).str.contains(re.escape(nombre), case=False, na=False)]
+        if "pendiente" in q and "estado" in df.columns:
+            df = df[df["estado"].astype(str).str.contains("pendiente", case=False, na=False)]
+        if df.empty:
+            return f"No encontré incidencias que coincidan{periodo_txt}" + (f" para {nombre}." if nombre else "."), None
+        valor = pd.to_numeric(df.get("valor_reparacion", pd.Series(dtype=float)), errors="coerce").fillna(0).sum()
+        return f"Encontré **{len(df)} incidencia(s)**{periodo_txt}. Valor total registrado: **S/ {valor:,.2f}**.", df.head(100)
+
+    # Tardanzas y asistencia
+    if any(k in q for k in ["tardanza", "tardanzas", "llego tarde", "llegó tarde", "puntualidad", "tarde"]):
+        df = dfs.get("asistencia", pd.DataFrame()).copy()
+        if df.empty:
+            return "No hay registros de asistencia disponibles en la sesión.", None
+        if "tipo" in df.columns:
+            df = df[df["tipo"].astype(str).str.upper().eq("INGRESO")].copy()
+        if "es_extra" in df.columns:
+            df = df[df["es_extra"].astype(str).str.upper().ne("SI")].copy()
+        df["_fecha_dt"] = pd.to_datetime(df.get("fecha_hora", df.get("fecha", "")), errors="coerce", dayfirst=True)
+        if anio:
+            df = df[(df["_fecha_dt"].dt.year == anio) & (df["_fecha_dt"].dt.month == mes)]
+        if nombre and "nombre" in df.columns:
+            df = df[df["nombre"].astype(str).str.contains(re.escape(nombre), case=False, na=False)]
+        tardanzas = []
+        for _, fila in df.iterrows():
+            marca = fila.get("fecha_hora", "")
+            minutos, es_tarde, turno = calcular_tardanza_ingreso(marca)
+            if es_tarde:
+                tardanzas.append({"Nombre": fila.get("nombre", ""), "Fecha y hora": marca,
+                                  "Minutos de tardanza": minutos, "Turno": turno})
+        res = pd.DataFrame(tardanzas)
+        if res.empty:
+            return f"No encontré tardanzas registradas{periodo_txt}" + (f" para {nombre}." if nombre else "."), None
+        if any(k in q for k in ["quien tuvo mas", "quien tiene mas", "mayor numero", "mas tardanzas", "top"]):
+            top = res.groupby("Nombre", as_index=False).agg(Tardanzas=("Fecha y hora", "count"), Minutos_acumulados=("Minutos de tardanza", "sum"))
+            top = top.sort_values(["Tardanzas", "Minutos_acumulados"], ascending=False).head(10)
+            return f"Estos son los colaboradores con más tardanzas{periodo_txt}.", top
+        return f"Encontré **{len(res)} tardanza(s)**{periodo_txt}" + (f" para {nombre}." if nombre else "."), res.sort_values("Fecha y hora", ascending=False).head(100)
+
+    # Descuadres de caja
+    if any(k in q for k in ["descuadre", "descuadres", "caja", "faltante"]):
+        df = dfs.get("descuadres", pd.DataFrame()).copy()
+        if anio:
+            df = _chat_filtrar_periodo(df, "fecha", anio, mes)
+        if nombre and "nombre" in df.columns:
+            df = df[df["nombre"].astype(str).str.contains(re.escape(nombre), case=False, na=False)]
+        if df.empty:
+            return f"No encontré descuadres que coincidan{periodo_txt}.", None
+        if "monto" in df.columns:
+            df["monto"] = pd.to_numeric(df["monto"], errors="coerce").fillna(0)
+        return f"Encontré **{len(df)} registro(s) de descuadre**{periodo_txt}. Saldo neto de los montos: **S/ {df['monto'].sum():,.2f}**." if "monto" in df.columns else f"Encontré {len(df)} descuadres{periodo_txt}.", df.head(100)
+
+    # Solicitudes y permisos
+    if any(k in q for k in ["solicitud", "solicitudes", "permiso", "adelanto"]):
+        df = dfs.get("solicitudes", pd.DataFrame()).copy()
+        if anio:
+            df = _chat_filtrar_periodo(df, "fecha_registro", anio, mes)
+        if nombre and "nombre" in df.columns:
+            df = df[df["nombre"].astype(str).str.contains(re.escape(nombre), case=False, na=False)]
+        if "pendiente" in q and "estado" in df.columns:
+            df = df[df["estado"].astype(str).str.contains("pendiente", case=False, na=False)]
+        if df.empty:
+            return f"No encontré solicitudes que coincidan{periodo_txt}.", None
+        return f"Encontré **{len(df)} solicitud(es)**{periodo_txt}.", df.head(100)
+
+    # Colaboradores / personal
+    if any(k in q for k in ["colaborador", "colaboradores", "empleado", "empleados", "personal", "trabajador", "trabajadores"]):
+        df = dfs.get("empleados", pd.DataFrame()).copy()
+        if nombre:
+            df = df[df["nombre"].astype(str).str.contains(re.escape(nombre), case=False, na=False)]
+        elif "activo" in q and "estado" in df.columns:
+            df = df[df["estado"].astype(str).str.lower().eq("activo")]
+        if df.empty:
+            return "No encontré colaboradores con esos criterios.", None
+        cols = [c for c in ["nombre", "cargo", "estado", "telefono", "fecha_inicio", "fecha_cese", "en_planilla"] if c in df.columns]
+        return f"Encontré **{len(df)} colaborador(es)**.", df[cols].head(100)
+
+    # Botellas fiadas
+    if "botella" in q or "fiado" in q or "fiadas" in q:
+        df = dfs.get("botellas_fiadas", pd.DataFrame()).copy()
+        if nombre and "cliente_nombre" in df.columns:
+            df = df[df["cliente_nombre"].astype(str).str.contains(re.escape(nombre), case=False, na=False)]
+        if "pendiente" in q and "estado" in df.columns:
+            df = df[~df["estado"].astype(str).str.lower().eq("devuelta")]
+        if df.empty:
+            return "No encontré registros de botellas fiadas con esos criterios.", None
+        return f"Encontré **{len(df)} registro(s)** de botellas fiadas.", df.head(100)
+
+    ejemplos = ("Puedo consultar por ahora: **tardanzas y puntualidad**, **incidencias y daños**, "
+                "**descuadres de caja**, **solicitudes y permisos**, **colaboradores** y **botellas fiadas**.\n\n"
+                "Prueba, por ejemplo:\n- ¿Qué empleado tuvo más tardanzas el mes pasado?\n"
+                "- Muéstrame las incidencias pendientes de octubre\n- ¿Qué descuadres tuvo [nombre]?\n"
+                "- ¿Cuántas solicitudes están pendientes?\n- Muéstrame los colaboradores activos")
+    return ejemplos, None
+
+
+
 if rol_actual == "admin":
+    # El asistente ahora se abre desde un botón flotante; no ocupa espacio en el menú.
     menu = ["Dashboard General", "Centro de Alertas", "Analítica (BI)", "Gestión Colaboradores", "Onboarding / Offboarding", "Gestión de Vacaciones", "Programación de Turnos", "Boletas de Pago", "Solicitudes y Permisos", "Historial de Descuadres", "Incidencias y Daños", "Botellas Fiadas", "Historial de Asistencias", "Auditoría y Configuración"]
 else:
     menu = ["Marcar Asistencia", "Registrar Descuadre", "Registrar Incidencia", "Botellas Fiadas", "Mi Ficha Técnica", "Mis Vacaciones", "Mis Boletas", "Solicitar Permiso / Adelanto", "Mi Dashboard Mensual"]
@@ -4070,6 +4235,84 @@ if st.sidebar.button("Cerrar Sesión", use_container_width=True):
     st.session_state.login_auditado = False
     st.rerun()
 st.sidebar.markdown('</div>', unsafe_allow_html=True)
+
+# -------------------- ASISTENTE FLOTANTE --------------------
+# Imagen opcional: guardar la imagen del bot como assets/bot.png junto al proyecto.
+BOT_PATH = os.path.join(BASE_DIR, "assets", "bot.png")
+BOT_DISPONIBLE = os.path.isfile(BOT_PATH)
+BOT_MIME = mimetypes.guess_type(BOT_PATH)[0] or "image/png"
+_bot_b64 = ""
+if BOT_DISPONIBLE:
+    try:
+        with open(BOT_PATH, "rb") as _fb:
+            _bot_b64 = base64.b64encode(_fb.read()).decode("ascii")
+    except Exception:
+        _bot_b64 = ""
+
+if "chat_flotante_abierto" not in st.session_state:
+    st.session_state.chat_flotante_abierto = False
+if "chat_datos_historial" not in st.session_state:
+    st.session_state.chat_datos_historial = []
+
+_bot_fondo = f'background-image:url("data:{BOT_MIME};base64,{_bot_b64}");' if _bot_b64 else ""
+_bot_texto = "" if _bot_b64 else "💬"
+st.markdown(f"""
+<style>
+.st-key-tp_chat_fab {{ position:fixed!important; right:24px!important; bottom:22px!important; z-index:100000!important; width:66px!important; height:66px!important; }}
+.st-key-tp_chat_fab [data-testid="stButton"] {{ margin:0!important; }}
+.st-key-tp_chat_fab button {{ width:64px!important; height:64px!important; min-height:64px!important; border-radius:50%!important; border:3px solid #fff!important; background-color:#EC3237!important; {_bot_fondo} background-size:cover!important; background-position:center!important; background-repeat:no-repeat!important; box-shadow:0 5px 20px rgba(15,23,42,.28)!important; color:transparent!important; padding:0!important; transition:transform .15s ease, box-shadow .15s ease!important; }}
+.st-key-tp_chat_fab button:hover {{ transform:translateY(-2px) scale(1.04)!important; box-shadow:0 8px 24px rgba(15,23,42,.32)!important; border-color:#fff!important; }}
+.st-key-tp_chat_panel {{ position:fixed!important; right:24px!important; bottom:98px!important; width:min(410px, calc(100vw - 32px))!important; max-height:68vh!important; overflow-y:auto!important; z-index:99999!important; background:#fff!important; border:1px solid #E5E7EB!important; border-radius:20px!important; padding:16px!important; box-shadow:0 12px 38px rgba(15,23,42,.22)!important; }}
+.st-key-tp_chat_panel [data-testid="stChatMessage"] {{ padding:8px 10px!important; }}
+.st-key-tp_chat_panel [data-testid="stDataFrame"] {{ max-height:220px!important; }}
+@media(max-width:600px) {{ .st-key-tp_chat_fab {{ right:14px!important; bottom:14px!important; }} .st-key-tp_chat_panel {{ right:8px!important; bottom:88px!important; width:calc(100vw - 16px)!important; max-height:72vh!important; }} }}
+</style>
+""", unsafe_allow_html=True)
+
+with st.container(key="tp_chat_fab"):
+    if st.button(_bot_texto, key="abrir_chat_flotante", help="Abrir asistente inteligente"):
+        st.session_state.chat_flotante_abierto = not st.session_state.chat_flotante_abierto
+        st.rerun()
+
+if st.session_state.chat_flotante_abierto:
+    with st.container(key="tp_chat_panel"):
+        _cp1, _cp2 = st.columns([5, 1])
+        with _cp1:
+            st.markdown("**Asistente Inteligente**")
+            st.caption("Consulta los datos del sistema")
+        with _cp2:
+            if st.button("✕", key="cerrar_chat_flotante", help="Cerrar asistente"):
+                st.session_state.chat_flotante_abierto = False
+                st.rerun()
+
+        if not st.session_state.chat_datos_historial:
+            st.info("¡Hola! Puedo ayudarte con tardanzas, incidencias, descuadres, solicitudes, colaboradores y botellas fiadas.")
+        for _mensaje_f in st.session_state.chat_datos_historial[-8:]:
+            with st.chat_message(_mensaje_f["role"]):
+                st.markdown(_mensaje_f["content"])
+                if _mensaje_f.get("data") is not None:
+                    st.dataframe(_mensaje_f["data"], use_container_width=True, hide_index=True)
+
+        with st.form("form_chat_flotante", clear_on_submit=True):
+            _pregunta_f = st.text_input("Escribe tu consulta", key="chat_flotante_pregunta", placeholder="Ej. tardanzas del mes pasado")
+            _enviar_f = st.form_submit_button("Consultar", use_container_width=True, type="primary")
+        if _enviar_f and _pregunta_f.strip():
+            st.session_state.chat_datos_historial.append({"role": "user", "content": _pregunta_f.strip(), "data": None})
+            try:
+                with st.spinner("Revisando los datos disponibles..."):
+                    _respuesta_f, _tabla_f = _chat_responder(_pregunta_f.strip())
+                st.session_state.chat_datos_historial.append({
+                    "role": "assistant", "content": _respuesta_f,
+                    "data": _tabla_f.copy() if _tabla_f is not None else None
+                })
+            except Exception as _error_f:
+                _respuesta_f = "No pude procesar esa consulta. Prueba con una pregunta más concreta."
+                print(f"Error en asistente flotante: {_error_f}")
+                st.session_state.chat_datos_historial.append({"role": "assistant", "content": _respuesta_f, "data": None})
+            st.rerun()
+        if st.button("Limpiar conversación", key="limpiar_chat_flotante", use_container_width=True):
+            st.session_state.chat_datos_historial = []
+            st.rerun()
 
 # -------------------- MÓDULOS OPERATIVOS --------------------
 
