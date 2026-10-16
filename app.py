@@ -4653,11 +4653,32 @@ def _tp_ia_respuesta(pregunta, contexto=""):
     request = _tp_urlrequest.Request(url, data=_tp_json.dumps(payload).encode("utf-8"),
                                      headers={"Content-Type": "application/json", "x-goog-api-key": clave}, method="POST")
     try:
-        with _tp_urlrequest.urlopen(request, timeout=18) as response:
+        with _tp_urlrequest.urlopen(request, timeout=25) as response:
             resultado = _tp_json.loads(response.read().decode("utf-8"))
-        return "".join(p.get("text", "") for p in resultado.get("candidates", [{}])[0].get("content", {}).get("parts", [])) or None
+        texto = "".join(p.get("text", "") for p in resultado.get("candidates", [{}])[0].get("content", {}).get("parts", []))
+        if texto.strip():
+            st.session_state.pop("_tp_ia_error", None)
+            return texto
+        st.session_state["_tp_ia_error"] = "Gemini no devolvió texto. Revisa el modelo o los filtros de seguridad."
+        return None
+    except _tp_urlerror.HTTPError as exc:
+        codigo = exc.code
+        # Nunca mostrar la respuesta cruda: podría incluir detalles de la petición.
+        mensajes = {
+            400: "Solicitud no aceptada por Gemini (HTTP 400). Revisa el modelo y la configuración.",
+            401: "Clave API no autorizada (HTTP 401). Revisa GEMINI_API_KEY.",
+            403: "Acceso denegado (HTTP 403). Comprueba permisos y restricciones de la clave.",
+            404: "Modelo no disponible (HTTP 404). Configura GEMINI_MODEL con un modelo habilitado.",
+            429: "Cuota o límite de solicitudes alcanzado (HTTP 429). Consulta los límites del nivel gratuito.",
+            500: "Error temporal del servidor de Gemini (HTTP 500).",
+            503: "Gemini no está disponible temporalmente (HTTP 503).",
+        }
+        st.session_state["_tp_ia_error"] = mensajes.get(codigo, f"Gemini devolvió HTTP {codigo}.")
+        print("Premium IA HTTP:", codigo, "modelo:", modelo)
+        return None
     except Exception as exc:
-        print("Premium IA: servicio temporalmente no disponible (", type(exc).__name__, ")")
+        st.session_state["_tp_ia_error"] = f"Error de conexión ({type(exc).__name__}). Revisa la conectividad de Streamlit Cloud."
+        print("Premium IA fallo:", type(exc).__name__, "modelo:", modelo)
         return None
 
 def _tp_chat_consulta(pregunta):
@@ -4712,9 +4733,9 @@ def _tp_chat_consulta(pregunta):
         return "Puedes revisar tus documentos desde **Mis Boletas**.", None, False
     if "asistencia" in q or "marcar" in q:
         return "En **Marcar Asistencia** puedes registrar tu ingreso y salida.", None, False
-    return ("Ahora mismo no puedo conectarme a Gemini para responder libremente. "
-            "La clave puede estar configurada, pero el servicio podría tener un límite de uso "
-            "o un error temporal. Intenta nuevamente en unos minutos. 😊"), None, False
+    detalle = st.session_state.get("_tp_ia_error", "No se obtuvo respuesta de Gemini.")
+    return ("⚠️ **Premium IA no pudo responder:** " + detalle +
+            "\n\nEl asistente local sigue disponible mientras solucionamos la conexión."), None, False
 
 BOT_PATH = os.path.join(BASE_DIR, "assets", "bot.png")
 BOT_DISPONIBLE = os.path.isfile(BOT_PATH)
