@@ -7,6 +7,16 @@ import zoneinfo  # Manejo de zona horaria de Perú (UTC-5)
 import io
 import time
 import gspread
+
+# Gráficos interactivos corporativos (opcionales; la app mantiene sus gráficos actuales si Plotly no está instalado).
+try:
+    import plotly.express as px
+    import plotly.graph_objects as go
+    PLOTLY_AVAILABLE = True
+except ImportError:
+    px = None
+    go = None
+    PLOTLY_AVAILABLE = False
 # --- INTENTO DE IMPORTAR REPORTLAB PARA PDF (CON FALLBACK INTEGRADO) ---
 try:
     from reportlab.lib.pagesizes import letter, A4
@@ -4201,11 +4211,43 @@ if rol_real == "admin":
 st.sidebar.text_input("Buscar", key="gs_q", placeholder="Buscar personas, solicitudes, secciones…", label_visibility="collapsed")
 if st.session_state.get("nav_radio") not in menu:
     st.session_state["nav_radio"] = menu[0]
-choice = st.sidebar.radio("Navegación", menu, key="nav_radio", on_change=_limpiar_busqueda)
 
 def _ir_a(destino):
     st.session_state["nav_radio"] = destino
     st.session_state["gs_q"] = ""
+
+# Navegación reorganizada por tareas. Se conservan todos los módulos y sus nombres
+# para no modificar las condiciones que ejecutan cada pantalla.
+if rol_actual == "admin":
+    _grupos_menu = {
+        "Resumen y monitoreo": ["Dashboard General", "Centro de Alertas", "Analítica (BI)"],
+        "Personal": ["Gestión Colaboradores", "Onboarding / Offboarding", "Gestión de Vacaciones", "Programación de Turnos", "Solicitudes y Permisos"],
+        "Operaciones y registros": ["Historial de Asistencias", "Historial de Descuadres", "Incidencias y Daños"],
+        "Finanzas y boletas": ["Boletas de Pago", "Botellas Fiadas"],
+        "Configuración y auditoría": ["Auditoría y Configuración"],
+    }
+else:
+    _grupos_menu = {
+        "Mi espacio": ["Mi Dashboard Mensual", "Mi Ficha Técnica", "Mis Vacaciones", "Mis Boletas"],
+        "Solicitudes": ["Solicitar Permiso / Adelanto"],
+        "Registros operativos": ["Marcar Asistencia", "Registrar Descuadre", "Registrar Incidencia", "Botellas Fiadas"],
+    }
+
+st.sidebar.markdown('<div class="tp-note-t" style="margin:8px 2px 6px">Navegación</div>', unsafe_allow_html=True)
+for _grupo_nombre, _grupo_opciones in _grupos_menu.items():
+    # Abrir por defecto el grupo que contiene la pantalla seleccionada.
+    _grupo_abierto = st.session_state.get("nav_radio") in _grupo_opciones
+    with st.sidebar.expander(_grupo_nombre, expanded=_grupo_abierto):
+        for _opcion_menu in _grupo_opciones:
+            st.button(
+                ("●  " if st.session_state.get("nav_radio") == _opcion_menu else "   ") + _opcion_menu,
+                key="nav_group_" + _opcion_menu,
+                use_container_width=True,
+                type="primary" if st.session_state.get("nav_radio") == _opcion_menu else "secondary",
+                on_click=_ir_a,
+                args=(_opcion_menu,),
+            )
+choice = st.session_state["nav_radio"]
 
 if rol_actual == "admin":
     _nav_items = [("Dashboard General", "Resumen", ":material/dashboard:"), ("Centro de Alertas", "Alertas", ":material/notifications:"),
@@ -5995,6 +6037,62 @@ elif choice == "Programación de Turnos":
         for _av in dict.fromkeys(_avisos):
             ui_callout(_av, "warn")
 
+        # Vista Gantt interactiva: complemento visual, no reemplaza la grilla editable existente.
+        st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
+        st.markdown("<div class='tp-note-t' style='margin:6px 0 10px'>Cronograma visual de turnos · Gantt</div>", unsafe_allow_html=True)
+        if PLOTLY_AVAILABLE:
+            _gantt_rows = []
+            for _, _rg in _ed.iterrows():
+                _nom_g = str(_rg.get("Colaborador", "")).strip()
+                if not _nom_g:
+                    continue
+                for _dg, _cg in zip(_dias, _cols):
+                    _turno_g = str(_rg.get(_cg, "") or "").strip()
+                    if not _turno_g or _turno_g.lower() in {"descanso", "nan", "none"} or _turno_g in _AUSENCIAS:
+                        continue
+                    _info_g = _info_turno(_turno_g, _dg)
+                    if not _info_g:
+                        continue
+                    try:
+                        _ini_g = datetime.combine(_dg, _hhmm(_info_g["entrada"]))
+                        _fin_g = datetime.combine(_dg, _hhmm(_info_g["salida"]))
+                        if _fin_g <= _ini_g:
+                            _fin_g += timedelta(days=1)
+                    except Exception:
+                        continue
+                    _fila_g = {"Colaborador": _nom_g, "Día": _dg.strftime("%a %d/%m"), "Turno": _turno_g,
+                               "Inicio": _ini_g, "Fin": _fin_g,
+                               "Horario": f'{_info_g["entrada"]}–{_info_g["salida"]}'}
+                    try:
+                        _fila_emp_g = _emp_p[_emp_p["nombre"].astype(str) == _nom_g]
+                        if not _fila_emp_g.empty:
+                            for _col_sede_g in ["sede", "Sucursal", "sucursal", "local"]:
+                                if _col_sede_g in _fila_emp_g.columns:
+                                    _fila_g["Sucursal"] = str(_fila_emp_g.iloc[0][_col_sede_g] or "Sin sede")
+                                    break
+                    except Exception:
+                        pass
+                    _gantt_rows.append(_fila_g)
+            if _gantt_rows:
+                _df_gantt = pd.DataFrame(_gantt_rows)
+                _color_g = "Turno" if "Turno" in _df_gantt.columns else None
+                _fig_gantt = px.timeline(_df_gantt, x_start="Inicio", x_end="Fin", y="Colaborador", color=_color_g,
+                                         hover_data={"Día": True, "Horario": True, "Turno": True, "Inicio": False, "Fin": False},
+                                         title="Asignación semanal por colaborador")
+                _fig_gantt.update_yaxes(autorange="reversed", title="", categoryorder="array",
+                                        categoryarray=list(dict.fromkeys(_df_gantt["Colaborador"].tolist())))
+                _fig_gantt.update_xaxes(title="Día y hora", tickformat="%a %d/%m %H:%M")
+                _fig_gantt.update_layout(height=max(320, min(720, 32 * _df_gantt["Colaborador"].nunique() + 130)),
+                                         margin=dict(l=10, r=10, t=55, b=10), paper_bgcolor="rgba(0,0,0,0)",
+                                         plot_bgcolor="rgba(0,0,0,0)", legend_title_text="Turno",
+                                         font=dict(family="Arial", color="#334155"), hovermode="closest")
+                st.plotly_chart(_fig_gantt, use_container_width=True, config={"displaylogo": False, "responsive": True})
+                st.caption("El cronograma muestra los turnos reconocidos con horario configurado. Descansos y ausencias se mantienen en la grilla original.")
+            else:
+                st.info("Completa la programación con turnos que tengan horario configurado para visualizar el Gantt.")
+        else:
+            st.info("Para habilitar el Gantt interactivo instala Plotly: pip install plotly. La programación editable sigue funcionando sin este gráfico.")
+
         if _guardar:
             _nuevas = []
             _ahora_p = obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S")
@@ -7185,6 +7283,51 @@ elif choice == "Analítica (BI)":
                     ult_t = tard.sort_values("fecha_hora", ascending=False).head(8)
                     filas_u = "".join(f'<div class="tp-row"><div class="tp-row-time">{ui_dia_label(r["fecha"])}</div><div class="tp-row-main"><b>Ingreso a las {str(r["fecha_hora"])[11:16]}</b></div><div class="tp-chips">{ui_chip(str(int(r["mins"])) + " min tarde", "bad")}</div></div>' for _, r in ult_t.iterrows()) or '<div class="tp-card-sub">Sin tardanzas en el período.</div>'
                     e2.markdown(ui_panel("Últimas tardanzas", "Detalle del colaborador", filas_u), unsafe_allow_html=True)
+
+                # Gráficos interactivos avanzados añadidos como complemento a los gráficos corporativos existentes.
+                st.markdown(_SP, unsafe_allow_html=True)
+                st.markdown("<div class='tp-note-t' style='margin:6px 0 10px'>Analítica interactiva avanzada</div>", unsafe_allow_html=True)
+                if PLOTLY_AVAILABLE:
+                    # Heatmap: cantidad de ingresos tardíos por día de semana y hora de marcación.
+                    _heat_src = tard.copy() if not tard.empty else pd.DataFrame()
+                    if not _heat_src.empty:
+                        _heat_src["hora_ingreso"] = pd.to_datetime(_heat_src["fecha_hora"], errors="coerce").dt.hour
+                        _heat_src["dia_semana"] = _heat_src["fecha_dt"].dt.dayofweek.map({0:"Lunes", 1:"Martes", 2:"Miércoles", 3:"Jueves", 4:"Viernes", 5:"Sábado", 6:"Domingo"})
+                        _dias_heat = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
+                        _heat = _heat_src.dropna(subset=["hora_ingreso", "dia_semana"]).groupby(["dia_semana", "hora_ingreso"]).size().reset_index(name="Tardanzas")
+                        _heat = _heat.pivot(index="hora_ingreso", columns="dia_semana", values="Tardanzas").reindex(index=range(24), columns=_dias_heat, fill_value=0).fillna(0)
+                        _h1, _h2 = st.columns([1.15, 1])
+                        with _h1:
+                            _fig_heat = go.Figure(data=go.Heatmap(z=_heat.values, x=_heat.columns.tolist(), y=[f"{h:02d}:00" for h in _heat.index],
+                                                                colorscale=[[0, "#F8FAFC"], [0.45, "#F9A8A8"], [1, "#EC3237"]],
+                                                                hovertemplate="Día: %{x}<br>Hora: %{y}<br>Tardanzas: %{z}<extra></extra>", colorbar=dict(title="Tardanzas")))
+                            _fig_heat.update_layout(title="Mapa de calor de tardanzas", xaxis_title="Día de la semana", yaxis_title="Hora aproximada de ingreso",
+                                                    height=430, margin=dict(l=10, r=10, t=55, b=10), paper_bgcolor="rgba(0,0,0,0)",
+                                                    plot_bgcolor="rgba(0,0,0,0)", font=dict(family="Arial", color="#334155"))
+                            st.plotly_chart(_fig_heat, use_container_width=True, config={"displaylogo": False, "responsive": True})
+                    else:
+                        st.info("No hay tardanzas en el período seleccionado para construir el mapa de calor.")
+
+                    # Tendencia mensual con área sombreada: se conserva también el gráfico existente de horas extra.
+                    _trend_rows = []
+                    for _mes_tr in meses_p:
+                        _trend_rows.append({"Mes": ui_mes_label(_mes_tr), "Orden": _mes_tr,
+                                            "Horas extra": round(float(ext.get(_mes_tr, 0)) / 60, 2),
+                                            "Tardanzas": int(pm.loc[_mes_tr, "t"]) if _mes_tr in pm.index else 0})
+                    if _trend_rows:
+                        _df_trend = pd.DataFrame(_trend_rows).sort_values("Orden")
+                        _fig_trend = px.area(_df_trend, x="Mes", y="Horas extra", markers=True,
+                                             hover_data={"Tardanzas": True, "Orden": False},
+                                             title="Tendencia mensual de horas extra")
+                        _fig_trend.update_traces(line=dict(color="#EC701B", width=3), fillcolor="rgba(236,112,27,0.20)",
+                                                 hovertemplate="Mes: %{x}<br>Horas extra: %{y:.2f} h<extra></extra>")
+                        _fig_trend.update_layout(height=330, margin=dict(l=10, r=10, t=55, b=10),
+                                                 paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                                                 xaxis_title="Mes", yaxis_title="Horas extra", font=dict(family="Arial", color="#334155"),
+                                                 hovermode="x unified")
+                        st.plotly_chart(_fig_trend, use_container_width=True, config={"displaylogo": False, "responsive": True})
+                else:
+                    st.info("Los gráficos interactivos avanzados requieren Plotly. Los gráficos actuales siguen disponibles; instala la dependencia con: pip install plotly.")
 
 elif choice == "Onboarding / Offboarding":
     st.markdown("""
