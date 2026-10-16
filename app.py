@@ -4241,39 +4241,8 @@ def _ir_a(destino):
     st.session_state["nav_radio"] = destino
     st.session_state["gs_q"] = ""
 
-# Navegación reorganizada por tareas. Se conservan todos los módulos y sus nombres
-# para no modificar las condiciones que ejecutan cada pantalla.
-if rol_actual == "admin":
-    _grupos_menu = {
-        "Resumen y monitoreo": ["Dashboard General", "Centro de Alertas", "Analítica (BI)"],
-        "Personal": ["Gestión Colaboradores", "Onboarding / Offboarding", "Gestión de Vacaciones", "Programación de Turnos", "Solicitudes y Permisos"],
-        "Operaciones y registros": ["Historial de Asistencias", "Historial de Descuadres", "Incidencias y Daños"],
-        "Finanzas y boletas": ["Boletas de Pago", "Botellas Fiadas"],
-        "Configuración y auditoría": ["Auditoría y Configuración"],
-    }
-else:
-    _grupos_menu = {
-        "Mi espacio": ["Mi Dashboard Mensual", "Mi Ficha Técnica", "Mis Vacaciones", "Mis Boletas"],
-        "Solicitudes": ["Solicitar Permiso / Adelanto"],
-        "Registros operativos": ["Marcar Asistencia", "Registrar Descuadre", "Registrar Incidencia", "Botellas Fiadas"],
-    }
-
-# Navegación compacta: una sola lista visible, organizada por sección.
-st.sidebar.markdown("<div class='tp-note-t'>MENÚ PRINCIPAL</div>", unsafe_allow_html=True)
-_iconos_grupo = {"Resumen y monitoreo":"📊", "Personal":"👥", "Operaciones y registros":"📋", "Finanzas y boletas":"💳", "Configuración y auditoría":"⚙️", "Mi espacio":"🏠", "Solicitudes":"📝", "Registros operativos":"📌"}
-_grupo_actual = next((g for g, opciones in _grupos_menu.items() if st.session_state["nav_radio"] in opciones), next(iter(_grupos_menu)))
-_grupo_elegido = st.sidebar.selectbox("Sección", list(_grupos_menu), index=list(_grupos_menu).index(_grupo_actual), format_func=lambda g: f"{_iconos_grupo.get(g, '▸')}  {g}", key="tp_nav_seccion")
-_opciones_visibles = _grupos_menu[_grupo_elegido]
-for _opcion_menu in _opciones_visibles:
-    st.sidebar.button(("●  " if st.session_state["nav_radio"] == _opcion_menu else "   ") + _opcion_menu,
-                      key="nav_group_" + _opcion_menu, use_container_width=True,
-                      type="primary" if st.session_state["nav_radio"] == _opcion_menu else "secondary",
-                      on_click=_ir_a, args=(_opcion_menu,))
-st.sidebar.markdown("""<style>
-[data-testid="stSidebar"] [class*="st-key-nav_group_"] button{min-height:39px!important;border-radius:9px!important;text-align:left!important;justify-content:flex-start!important;padding:7px 12px!important;box-shadow:none!important;font-size:.87rem!important}
-[data-testid="stSidebar"] [class*="st-key-nav_group_"]{margin-bottom:2px!important}
-</style>""",unsafe_allow_html=True)
-choice = st.session_state["nav_radio"]
+# Menú original: lista completa sin agrupaciones ni resúmenes.
+choice = st.sidebar.radio("Navegación", menu, key="nav_radio", on_change=_limpiar_busqueda)
 
 if rol_actual == "admin":
     _nav_items = [("Dashboard General", "Resumen", ":material/dashboard:"), ("Centro de Alertas", "Alertas", ":material/notifications:"),
@@ -6075,12 +6044,42 @@ elif choice == "Programación de Turnos":
                     ui_kpi_acc("Días de descanso o ausencia", str(_td), "en la semana", "info") +
                     ui_kpi_acc("Avisos", str(len(_avisos)), "revisa antes de guardar" if _avisos else "Todo en orden", "bad" if _avisos else "ok") + '</div>', unsafe_allow_html=True)
         st.markdown("<div class='tp-note-t' style='margin:6px 0 10px'>Vista de la semana: horas base y extra por casilla</div>", unsafe_allow_html=True)
+        # Tabla rectangular: sin recortes ni bordes redondeados.
+        # Se limita el CSS a la tabla de programación para no alterar otros KPI.
         st.markdown("""<style>
-.tp-prog-wrap{width:100%!important;max-width:100%!important;overflow-x:auto!important;border-radius:10px!important;padding:4px!important}
-.tp-prog{border-collapse:separate!important;border-spacing:2px!important;min-width:1080px!important;width:max-content!important;table-layout:auto!important}
-.tp-prog th.n{position:sticky!important;left:0!important;z-index:2!important;min-width:205px!important;max-width:245px!important;white-space:normal!important;background:#f8fafc!important}
-.tp-prog td{border-radius:6px!important;min-width:116px!important;padding:8px 5px!important;font-size:12px!important}
-.tp-prog th{white-space:nowrap!important}
+.tp-prog-wrap {
+    display:block!important; width:100%!important; max-width:100%!important;
+    overflow-x:auto!important; overflow-y:visible!important;
+    border:1px solid #D9E0E9!important; border-radius:0!important;
+    padding:0!important; margin:0!important; box-shadow:none!important;
+    background:#fff!important; clip-path:none!important;
+}
+table.tp-prog {
+    display:table!important; height:auto!important; max-height:none!important;
+    overflow:visible!important; border-collapse:collapse!important;
+    border-spacing:0!important; border-radius:0!important;
+    min-width:1160px!important; width:100%!important;
+    table-layout:auto!important; background:#fff!important;
+}
+table.tp-prog th, table.tp-prog td {
+    box-sizing:border-box!important; border:1px solid #DFE4EB!important;
+    border-radius:0!important; padding:10px 9px!important;
+    min-width:118px!important; white-space:normal!important;
+    text-align:center!important; vertical-align:middle!important;
+    line-height:1.4!important; font-size:12px!important;
+}
+table.tp-prog th.n {
+    position:sticky!important; left:0!important; z-index:3!important;
+    min-width:230px!important; width:230px!important;
+    max-width:none!important; text-align:left!important;
+    background:#F4F6F9!important; white-space:normal!important;
+    overflow-wrap:break-word!important;
+}
+table.tp-prog thead th {background:#F4F6F9!important; font-weight:700!important;}
+table.tp-prog td.tot {min-width:145px!important;}
+table.tp-prog td.trab {background:#EDF3FF!important;}
+table.tp-prog td.desc {background:#F4F6F9!important;}
+table.tp-prog td.cob {background:#FAFBFD!important;}
 </style>""", unsafe_allow_html=True)
         st.markdown(_tabla_html, unsafe_allow_html=True)
         for _av in dict.fromkeys(_avisos):
