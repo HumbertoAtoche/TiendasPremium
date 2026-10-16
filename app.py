@@ -4600,6 +4600,7 @@ import urllib.request as _tp_urlrequest
 import urllib.error as _tp_urlerror
 import json as _tp_json
 import html as _tp_html
+import re as _tp_re
 
 def _tp_ia_config():
     try:
@@ -4615,18 +4616,31 @@ def _tp_ia_respuesta(pregunta, contexto=""):
     if not clave:
         return None
     # La conversación es de la sesión actual, no compartida entre empleados.
-    historial = st.session_state.get("chat_datos_historial", [])[-9:]
-    partes = []
+    historial = st.session_state.get("chat_datos_historial", [])[-12:]
+    # Gemini exige comenzar por user y alternar roles. Los mensajes locales
+    # o administrativos no forman parte de la conversación enviada al modelo.
+    turnos = []
     for item in historial:
-        # No compartir mensajes acompañados de tablas administrativas con el proveedor externo.
-        if item.get("data") is not None:
+        if item.get("data") is not None or item.get("local_only"):
             continue
-        texto = str(item.get("content", ""))[:900]
-        if texto:
-            partes.append({"role": "model" if item.get("role") == "assistant" else "user",
-                           "parts": [{"text": texto}]})
-    if not partes or partes[-1]["role"] != "user":
-        partes.append({"role": "user", "parts": [{"text": pregunta[:900]}]})
+        texto = str(item.get("content", "")).strip()[:900]
+        if not texto:
+            continue
+        rol = "model" if item.get("role") == "assistant" else "user"
+        if not turnos and rol != "user":
+            continue
+        if turnos and turnos[-1]["role"] == rol:
+            turnos[-1]["parts"][0]["text"] += "\n" + texto
+        else:
+            turnos.append({"role": rol, "parts": [{"text": texto}]})
+    # El mensaje actual siempre debe ser el último turno de usuario.
+    if not turnos or turnos[-1]["role"] != "user":
+        turnos.append({"role": "user", "parts": [{"text": pregunta[:900]}]})
+    elif pregunta.strip() not in turnos[-1]["parts"][0]["text"]:
+        turnos[-1]["parts"][0]["text"] += "\n" + pregunta[:900]
+    partes = turnos[-10:]
+    while partes and partes[0]["role"] != "user":
+        partes.pop(0)
     instruccion = (
         "Eres Premium, un asistente conversacional versátil de Tiendas Premium, Perú. "
         "Responde con libertad a temas generales: motivación, humor, cultura, creatividad, "
@@ -4647,8 +4661,8 @@ def _tp_ia_respuesta(pregunta, contexto=""):
         "El turno voluntario dominical solo se confirma si la solicitud está aprobada. "
         "CONTEXTO VERIFICADO (resumen limitado): " + (contexto[:1000] or "No disponible.")
     )
-    payload = {"system_instruction": {"parts": [{"text": instruccion}]},
-               "contents": partes, "generationConfig": {"temperature": 0.75, "maxOutputTokens": 450}}
+    payload = {"systemInstruction": {"parts": [{"text": instruccion}]},
+               "contents": partes, "generationConfig": {"temperature": 0.75, "maxOutputTokens": 900}}
     # Resolver los modelos realmente habilitados para esta clave, sin asumir nombres.
     # Cache por sesión para no consultar listModels en cada mensaje.
     modelos_cache = st.session_state.get("_tp_modelos_disponibles")
@@ -4697,7 +4711,14 @@ def _tp_ia_respuesta(pregunta, contexto=""):
             break
         except _tp_urlerror.HTTPError as exc:
             codigo = exc.code
-            print("Premium IA HTTP:", codigo, "modelo:", candidato)
+            # Leer el detalle de Google, pero no imprimir la clave ni datos del chat.
+            try:
+                error_json = _tp_json.loads(exc.read().decode("utf-8", errors="replace"))
+                detalle_google = str(error_json.get("error", {}).get("message", ""))
+            except Exception:
+                detalle_google = ""
+            detalle_seguro = _tp_re.sub(r"AIza[\w-]+|AQ\.[\w-]+", "[CLAVE OCULTA]", detalle_google)[:300]
+            print("Premium IA HTTP:", codigo, "modelo:", candidato, "detalle:", detalle_seguro)
             if codigo == 404:
                 ultimo_error = "Modelo no disponible (HTTP 404)."
                 continue
@@ -4710,7 +4731,9 @@ def _tp_ia_respuesta(pregunta, contexto=""):
                 503: "Gemini no está disponible temporalmente (HTTP 503).",
             }
             ultimo_error = mensajes.get(codigo, f"Gemini devolvió HTTP {codigo}.")
-            # No probar múltiples modelos ante límites de cuota o errores de autenticación.
+            if codigo == 400 and detalle_seguro:
+                ultimo_error += " Detalle: " + detalle_seguro
+            # Un 400 indica solicitud malformada; no probar otros modelos con el mismo payload.
             break
         except Exception as exc:
             print("Premium IA fallo:", type(exc).__name__, "modelo:", candidato)
