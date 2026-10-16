@@ -6,3 +6,4 @@ xlsxwriter
 pytz
 tzdata
 reportlab
+plotly
