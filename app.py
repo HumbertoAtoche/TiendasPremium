@@ -4363,6 +4363,21 @@ def _chat_responder(pregunta):
 
 if rol_actual == "admin":
     # El asistente ahora se abre desde un botón flotante; no ocupa espacio en el menú.
+    # Estilo uniforme para paneles de operación: conserva lógica y menú original.
+    st.markdown("""<style>
+    .market-header {border-radius:16px!important; padding:22px 26px!important; margin-bottom:18px!important; box-shadow:0 2px 8px rgba(20,35,60,.035)!important;}
+    .market-header h1 {font-size:26px!important; letter-spacing:-.5px!important;}
+    .tp-up-section-compact {margin:18px 0 10px!important;}
+    .tp-up-section-compact h3 {font-size:19px!important; margin:3px 0 4px!important;}
+    .tp-up-calendar {border:1px solid #E5E9EF!important; border-radius:12px!important; box-shadow:0 3px 12px rgba(20,35,60,.035)!important; overflow-x:auto!important;}
+    .tp-up-calendar table {min-width:900px!important;}
+    .tp-up-calendar td {padding:7px!important;}
+    .tp-up-shift {border-radius:7px!important; padding:8px!important; min-height:68px!important;}
+    div[data-testid="stExpander"] {border:1px solid #E5E9EF!important; border-radius:11px!important; background:#FFF!important;}
+    div[data-testid="stExpander"] details summary {font-weight:600!important; color:#26334B!important;}
+    div[data-testid="stTabs"] button[role="tab"] {font-weight:600!important;}
+    div[data-testid="stDataFrame"], div[data-testid="stDataEditor"] {border-radius:10px!important; overflow:hidden!important;}
+    </style>""", unsafe_allow_html=True)
     menu = ["Dashboard General", "Centro de Alertas", "Analítica (BI)", "Gestión Colaboradores", "Onboarding / Offboarding", "Gestión de Vacaciones", "Programación de Turnos", "Boletas de Pago", "Solicitudes y Permisos", "Historial de Descuadres", "Incidencias y Daños", "Botellas Fiadas", "Historial de Asistencias", "Auditoría y Configuración"]
 else:
     menu = ["Marcar Asistencia", "Registrar Descuadre", "Registrar Incidencia", "Botellas Fiadas", "Mi Ficha Técnica", "Mis Vacaciones", "Mis Boletas", "Solicitar Permiso / Adelanto", "Mi Dashboard Mensual"]
@@ -5181,8 +5196,8 @@ elif choice == "Mi Dashboard Mensual":
 elif choice == "Dashboard General":
     st.markdown("""
         <div class="market-header">
-            <h1>Panel de Control General</h1>
-            <p>Vista ejecutiva de la operación, tardanzas y horas extras en tiempo real</p>
+            <h1>Dashboard General</h1>
+            <p>Resumen operativo · asistencia, puntualidad y horas extras</p>
         </div>
     """, unsafe_allow_html=True)
 
@@ -5429,7 +5444,7 @@ elif choice == "Gestión Colaboradores":
     st.markdown("""
         <div class="market-header">
             <h1>Gestión de Colaboradores</h1>
-            <p>Mantenimiento de personal, registros y Fichas Técnicas</p>
+            <p>Directorio del equipo · fichas, altas y actualización de datos</p>
         </div>
     """, unsafe_allow_html=True)
 
@@ -6140,7 +6155,7 @@ elif choice == "Programación de Turnos":
         ui_callout("En esta semana **cambia el horario** (" + " → ".join(_reglas_sem.keys()) + "). Cada casilla se calcula con el horario que rige ese día.", "warn")
     else:
         _r0 = list(_reglas_sem.values())[0]
-        ui_callout(f"Horario aplicado: **{_r0['nombre']}** · jornada base **{_fmt_min(_r0['jornada_base_min'])}** por turno. Lo que exceda la base cuenta como hora extra. Usa la fila **Administrador (cubre)** para marcar los turnos que cubres tú: cuentan en la cobertura, pero no suman horas ni costo.")
+        st.caption(f"Horario: {_r0['nombre']} · Base por turno: {_fmt_min(_r0['jornada_base_min'])}. La cobertura del administrador no suma horas remuneradas.")
 
     _base = st.session_state.get(f"prog_base_{_lunes_iso}")
     if _base is None:
@@ -6175,9 +6190,9 @@ elif choice == "Programación de Turnos":
                 (_sol_panel["estado"].astype(str) == "Pendiente") &
                 (_sol_panel["fecha_permiso"].apply(_norm_fecha_h) == _domingo_panel.strftime("%Y-%m-%d"))
             ]
-        st.markdown('<div class="tp-up-section"><div class="tp-up-eyebrow">GESTIÓN INTEGRADA</div><h3>Programación y aprobaciones</h3><p>Revisa las solicitudes dominicales antes de publicar el cronograma.</p></div>', unsafe_allow_html=True)
+        st.markdown('<div class="tp-up-eyebrow">SOLICITUDES DEL DOMINGO</div>', unsafe_allow_html=True)
         if not _pend_panel.empty:
-            with st.expander(f"Solicitudes de domingo pendientes · {len(_pend_panel)}", expanded=True):
+            with st.expander(f"Revisar solicitudes pendientes ({len(_pend_panel)})", expanded=False):
                 for _, _pend_r in _pend_panel.iterrows():
                     _id_p = str(_pend_r.get("id_solicitud", ""))
                     _ca, _cb, _cc = st.columns([3, 1, 1])
@@ -6193,11 +6208,12 @@ elif choice == "Programación de Turnos":
                         if _ok:
                             st.rerun()
         else:
-            st.caption("No hay solicitudes dominicales pendientes para esta semana.")
-        st.markdown('<div class="tp-up-eyebrow" style="margin:12px 0 6px">EDITAR TURNOS · SELECCIONA UNA CASILLA</div>', unsafe_allow_html=True)
-        _ed = st.data_editor(_base, hide_index=True, use_container_width=True, disabled=["Colaborador"], key=f"prog_ed_{_lunes_iso}_{_ver}",
-                             column_config={"Colaborador": st.column_config.TextColumn("Colaborador", width="medium"),
-                                            **{c: st.column_config.SelectboxColumn(c, options=_opts, required=False) for c in _cols}})
+            st.caption("Sin solicitudes dominicales pendientes esta semana.")
+        with st.expander("Editar programación semanal", expanded=False):
+            st.caption("Selecciona una casilla para cambiar el turno. Los cambios se reflejan en el calendario y se guardan con «Guardar semana».")
+            _ed = st.data_editor(_base, hide_index=True, use_container_width=True, disabled=["Colaborador"], key=f"prog_ed_{_lunes_iso}_{_ver}",
+                                 column_config={"Colaborador": st.column_config.TextColumn("Colaborador", width="medium"),
+                                                **{c: st.column_config.SelectboxColumn(c, options=_opts, required=False) for c in _cols}})
         _emp_p = st.session_state.empleados
         _dni_de = {n: str(_emp_p[_emp_p["nombre"] == n].iloc[0]["dni"]) for n in _ed["Colaborador"] if not _emp_p[_emp_p["nombre"] == n].empty}
         _dni_de[ADMIN_FILA] = "ADMIN"
@@ -6231,7 +6247,7 @@ elif choice == "Programación de Turnos":
                 _contenido = '<div class="tp-up-shift adm"><b>Cierre</b><span>21:00 – 00:00</span></div>'
             _adm_cells.append(f'<td>{_contenido}</td>')
         _cal_rows.append(f'<tr><th class="tp-up-person">Administrador<small>Cobertura operativa</small></th>{"".join(_adm_cells)}</tr>')
-        st.markdown('<div class="tp-up-section"><div class="tp-up-eyebrow">VISTA SEMANAL</div><h3>Calendario de turnos</h3><p>Horarios, descansos y cobertura del administrador. Los cambios se realizan en el editor superior.</p></div>', unsafe_allow_html=True)
+        st.markdown('<div class="tp-up-section tp-up-section-compact"><div class="tp-up-eyebrow">CALENDARIO SEMANAL</div><h3>Turnos y cobertura</h3></div>', unsafe_allow_html=True)
         st.markdown(f'<div class="tp-up-calendar"><table><thead><tr><th>Colaborador</th>{_dias_cab}</tr></thead><tbody>{"".join(_cal_rows)}</tbody></table></div>', unsafe_allow_html=True)
         st.caption("Azul: mañana · Celeste: tarde · Verde: domingo voluntario · Gris: cobertura administrativa. El calendario muestra cambios aún no guardados.")
         _b1, _b2, _b3 = st.columns(3)
@@ -6245,90 +6261,22 @@ elif choice == "Programación de Turnos":
                     ui_kpi_acc("Horas extra programadas", _fmt_min(_te), "sobre la jornada base", "warn" if _te else "ok") +
                     ui_kpi_acc("Días de descanso o ausencia", str(_td), "en la semana", "info") +
                     ui_kpi_acc("Avisos", str(len(_avisos)), "revisa antes de guardar" if _avisos else "Todo en orden", "bad" if _avisos else "ok") + '</div>', unsafe_allow_html=True)
-        st.markdown("<div class='tp-note-t' style='margin:6px 0 10px'>Vista de la semana: horas base y extra por casilla</div>", unsafe_allow_html=True)
-        # Tabla rectangular: sin recortes ni bordes redondeados.
-        # Se limita el CSS a la tabla de programación para no alterar otros KPI.
-        st.markdown("""<style>
-.tp-prog-wrap {
-    display:block!important; width:100%!important; max-width:100%!important;
-    overflow-x:auto!important; overflow-y:visible!important;
-    border:1px solid #D9E0E9!important; border-radius:0!important;
-    padding:0!important; margin:0!important; box-shadow:none!important;
-    background:#fff!important; clip-path:none!important;
-}
-table.tp-prog {
-    display:table!important; height:auto!important; max-height:none!important;
-    overflow:visible!important; border-collapse:collapse!important;
-    border-spacing:0!important; border-radius:0!important;
-    min-width:1160px!important; width:100%!important;
-    table-layout:auto!important; background:#fff!important;
-}
-table.tp-prog th, table.tp-prog td {
-    box-sizing:border-box!important; border:1px solid #DFE4EB!important;
-    border-radius:0!important; padding:10px 9px!important;
-    min-width:118px!important; white-space:normal!important;
-    text-align:center!important; vertical-align:middle!important;
-    line-height:1.4!important; font-size:12px!important;
-}
-table.tp-prog th.n {
-    position:sticky!important; left:0!important; z-index:3!important;
-    min-width:230px!important; width:230px!important;
-    max-width:none!important; text-align:left!important;
-    background:#F4F6F9!important; white-space:normal!important;
-    overflow-wrap:break-word!important;
-}
-table.tp-prog thead th {background:#F4F6F9!important; font-weight:700!important;}
-table.tp-prog td.tot {min-width:145px!important;}
-table.tp-prog td.trab {background:#EDF3FF!important;}
-table.tp-prog td.desc {background:#F4F6F9!important;}
-table.tp-prog td.cob {background:#FAFBFD!important;}
-</style>""", unsafe_allow_html=True)
-        st.markdown(_tabla_html, unsafe_allow_html=True)
-        for _av in dict.fromkeys(_avisos):
-            ui_callout(_av, "warn")
-
-        # Cronograma legible por día, sin escala temporal comprimida.
-        st.markdown("<div class='tp-note-t'>Cronograma semanal · turnos por día</div>", unsafe_allow_html=True)
-        _cronograma = []
-        for _dg, _cg in zip(_dias, _cols):
-            for _, _rg in _ed.iterrows():
-                _nombre_cr = str(_rg.get("Colaborador", "")).strip()
-                _turno_cr = str(_rg.get(_cg, "") or "").strip()
-                if not _turno_cr or _turno_cr.lower() in {"nan", "none"}:
-                    continue
-                _info_cr = _info_turno(_turno_cr, _dg)
-                _cronograma.append({"Día": _dia_label(_dg), "Colaborador": _nombre_cr,
-                                    "Asignación": _turno_cr,
-                                    "Horario": (f'{_info_cr["entrada"]} – {_info_cr["salida"]}' if _info_cr else "—")})
-        if _cronograma:
-            st.dataframe(pd.DataFrame(_cronograma), hide_index=True, use_container_width=True,
-                         height=min(520, 38 * (len(_cronograma) + 1)))
-        else:
-            st.info("Todavía no hay turnos asignados en esta semana.")
-
-        st.markdown("<div class='tp-note-t'>Cobertura operativa del domingo</div>", unsafe_allow_html=True)
-        _domingo = _dias[6]
-        _aprobadas = _solicitudes_domingo_aprobadas(_domingo)
-        _cobertura = [{"Responsable": "Administrador", "Inicio": ini, "Fin": fin, "Actividad": tipo}
-                      for ini, fin, tipo in _cobertura_admin_domingo(_domingo)]
-        for _sr in _aprobadas:
-            _cobertura.append({"Responsable": str(_sr.get("nombre", "Trabajador")),
-                               "Inicio": "15:15", "Fin": "21:00", "Actividad": "Domingo voluntario aprobado"})
-        st.dataframe(pd.DataFrame(_cobertura), hide_index=True, use_container_width=True)
-        if _aprobadas:
-            st.success("Domingo autorizado: el trabajador cubre de 15:15 a 21:00 y el administrador realiza apertura y cierre.")
-        else:
-            st.info("Sin solicitudes aprobadas: el administrador cubre 09:00–14:00 y 17:00–00:00. La tienda cierra de 14:00 a 17:00.")
-        _sol_dom = st.session_state.get("solicitudes", pd.DataFrame())
-        if isinstance(_sol_dom, pd.DataFrame) and not _sol_dom.empty:
-            _pend = _sol_dom[(_sol_dom["tipo_solicitud"].astype(str) == "Trabajar Domingo (Descanso)") &
-                             (_sol_dom["estado"].astype(str) == "Pendiente") &
-                             (_sol_dom["fecha_permiso"].apply(_norm_fecha_h) == _domingo.strftime("%Y-%m-%d"))]
-            if not _pend.empty:
-                st.warning(f"{len(_pend)} solicitud(es) de domingo pendientes: no se asignan hasta aprobarse.")
-        if len(_aprobadas) > 1:
-            st.warning("Hay varias solicitudes aprobadas para el mismo domingo. Verifica si se requiere más de un trabajador antes de guardar.")
-
+        # Detalle de horas y avisos bajo demanda: no duplicar calendario en pantalla.
+        with st.expander("Ver desglose de horas y avisos", expanded=False):
+            st.markdown(_tabla_html, unsafe_allow_html=True)
+            for _av in dict.fromkeys(_avisos):
+                ui_callout(_av, "warn")
+            _domingo = _dias[6]
+            _aprobadas = _solicitudes_domingo_aprobadas(_domingo)
+            st.markdown("**Cobertura operativa del domingo**")
+            _cobertura = [{"Responsable": "Administrador", "Inicio": ini, "Fin": fin, "Actividad": tipo}
+                          for ini, fin, tipo in _cobertura_admin_domingo(_domingo)]
+            for _sr in _aprobadas:
+                _cobertura.append({"Responsable": str(_sr.get("nombre", "Trabajador")),
+                                   "Inicio": "15:15", "Fin": "21:00", "Actividad": "Domingo voluntario aprobado"})
+            st.dataframe(pd.DataFrame(_cobertura), hide_index=True, use_container_width=True)
+            if len(_aprobadas) > 1:
+                st.warning("Hay varias solicitudes aprobadas para el mismo domingo. Revisa la cobertura antes de guardar.")
         if _guardar:
             _errores_dom = []
             for _d_dom, _c_dom in zip(_dias, _cols):
@@ -6557,7 +6505,7 @@ elif choice == "Historial de Descuadres":
 
         st.markdown("---")
 
-        st.markdown("##### Filtros de Búsqueda")
+        st.markdown("**Filtrar registros de asistencia**")
         f_col1, f_col2 = st.columns([1.5, 1])
         
         with f_col1:
@@ -6883,8 +6831,8 @@ elif choice == "Botellas Fiadas":
 elif choice == "Historial de Asistencias":
     st.markdown("""
         <div class="market-header">
-            <h1>Reporte de Asistencias</h1>
-            <p>Histórico de marcas de ingreso y salida</p>
+            <h1>Historial de Asistencias</h1>
+            <p>Consulta y seguimiento de ingresos, salidas y puntualidad</p>
         </div>
     """, unsafe_allow_html=True)
 
