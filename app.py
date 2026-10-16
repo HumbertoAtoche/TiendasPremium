@@ -2637,6 +2637,57 @@ def _solicitudes_domingo_aprobadas(fecha):
             and str(r.get("estado", "")).strip() == "Aprobado"
             and _norm_fecha_h(r.get("fecha_permiso", "")) == fecha_iso]
 
+def _resolver_solicitud_administrativa(id_s, nuevo_estado, observacion=""):
+    """Guarda aprobación/rechazo y devuelve (ok, mensaje); evita duplicar domingos."""
+    if st.session_state.get("ver_como"):
+        return False, "En vista previa no se pueden modificar solicitudes."
+    df = st.session_state.get("solicitudes", pd.DataFrame())
+    if df.empty or "id_solicitud" not in df.columns:
+        return False, "No se encontró la solicitud."
+    mask = df["id_solicitud"].astype(str).eq(str(id_s))
+    if not mask.any():
+        return False, "No se encontró la solicitud."
+    fila = df.loc[mask].iloc[0]
+    if str(fila.get("estado", "")).strip() != "Pendiente":
+        return False, "La solicitud ya fue atendida; actualiza la página."
+    tipo = str(fila.get("tipo_solicitud", ""))
+    if nuevo_estado == "Aprobado" and tipo == "Trabajar Domingo (Descanso)":
+        f = _norm_fecha_h(fila.get("fecha_permiso", ""))
+        if not f:
+            return False, "La solicitud no tiene una fecha válida."
+        try:
+            if datetime.strptime(f, "%Y-%m-%d").date().weekday() != 6:
+                return False, "La fecha solicitada no corresponde a un domingo."
+        except ValueError:
+            return False, "La fecha solicitada no es válida."
+        otras = df[(df["id_solicitud"].astype(str) != str(id_s)) &
+                   (df["tipo_solicitud"].astype(str) == "Trabajar Domingo (Descanso)") &
+                   (df["estado"].astype(str) == "Aprobado")]
+        if any(_norm_fecha_h(v) == f for v in otras["fecha_permiso"]):
+            return False, "Ya existe un domingo voluntario aprobado para esa fecha. Revisa la cobertura antes de aprobar otro."
+    nuevo = df.copy()
+    nuevo.loc[mask, "estado"] = nuevo_estado
+    nuevo.loc[mask, "respuesta_admin"] = observacion
+    try:
+        if "Solicitudes" in st.session_state.get("_hojas_fallidas", set()) or not doc_sheets:
+            return False, "No hay conexión segura con la hoja Solicitudes. No se guardó el cambio."
+        hoja = doc_sheets.worksheet("Solicitudes")
+        hoja.clear()
+        hoja.update([nuevo.columns.tolist()] + nuevo.astype(str).values.tolist())
+    except Exception as exc:
+        return False, f"Error al guardar en Google Sheets: {exc}"
+    st.session_state.solicitudes = nuevo
+    registrar_auditoria(f"{nuevo_estado} Solicitud", "Solicitudes", f"{tipo} de {fila.get('nombre', '')} ({id_s})")
+    # Invalidar el editor semanal para reflejar la autorización sin esperar otra sesión.
+    try:
+        fecha = datetime.strptime(_norm_fecha_h(fila.get("fecha_permiso", "")), "%Y-%m-%d").date()
+        lunes = _lunes_de(fecha)
+        st.session_state.pop(f"prog_base_{lunes:%Y-%m-%d}", None)
+        st.session_state["prog_ver"] = st.session_state.get("prog_ver", 0) + 1
+    except (ValueError, TypeError):
+        pass
+    return True, f"Solicitud {nuevo_estado.lower()} correctamente."
+
 def _cobertura_admin_domingo(fecha):
     """Bloques operativos, no remuneraciones del administrador."""
     return [("09:00", "14:00", "Mañana"),
@@ -2765,6 +2816,9 @@ def _analizar_programacion(df_ed, dias, cols, dni_de):
         regla = _regla_para_fecha(d)
         partes = ""
         for t in regla["turnos"]:
+            # El domingo tiene cobertura especial; no exigir turnos ordinarios.
+            if d.weekday() == 6:
+                continue
             n = cob[d].get(t["nombre"], 0)
             if hay_algo and n == 0:
                 partes += f'<span class="cero">{e(t["nombre"])}: sin cubrir</span>'
@@ -2842,6 +2896,37 @@ def ui_chip(texto, tipo="neutral"):
 def ui_kpi(etiqueta, valor, detalle=""):
     sub = f'<div class="tp-kpi-sub">{detalle}</div>' if detalle else ""
     return f'<div class="tp-kpi"><div class="tp-kpi-lbl">{etiqueta}</div><div class="tp-kpi-val">{valor}</div>{sub}</div>'
+
+st.markdown("""<style>
+/* Tiendas Premium · diseño limpio, sin cambiar el menú original */
+:root { --tp-up-red:#ec3237; --tp-up-green:#00a959; --tp-up-ink:#182338; }
+.tp-up-section { margin:22px 0 12px; }
+.tp-up-section h3 { margin:4px 0 4px; font-size:1.22rem; font-weight:750; color:#182338; }
+.tp-up-section p { margin:0; color:#738096; font-size:.86rem; }
+.tp-up-eyebrow { font-size:.68rem; letter-spacing:.09em; font-weight:750; color:#8b96a8; }
+.tp-up-calendar { width:100%; overflow-x:auto; border:1px solid #e2e8f0; border-radius:14px; background:#fff; }
+.tp-up-calendar table { border-collapse:collapse; width:100%; min-width:1120px; table-layout:fixed; }
+.tp-up-calendar th,.tp-up-calendar td { border-right:1px solid #edf0f5; border-bottom:1px solid #edf0f5; padding:10px 7px; vertical-align:top; }
+.tp-up-calendar thead th { background:#f8fafc; color:#64748b; font-size:.75rem; text-align:center; padding:14px 8px; }
+.tp-up-calendar thead th:first-child { width:205px; text-align:left; padding-left:16px; }
+.tp-up-calendar th.tp-up-person { width:205px; background:#fff; font-size:.77rem; text-align:left; color:#1e293b; padding:17px 12px; font-weight:700; }
+.tp-up-person small { display:block; color:#94a3b8; font-size:.68rem; margin-top:5px; font-weight:400; }
+.tp-up-calendar td { height:88px; background:#fff; }
+.tp-up-shift { border-left:3px solid; padding:9px 7px; min-height:65px; border-radius:5px; line-height:1.45; }
+.tp-up-shift b { display:block; font-size:.72rem; }
+.tp-up-shift span,.tp-up-shift small { display:block; font-size:.68rem; margin-top:3px; }
+.tp-up-shift.mor { background:#eef4ff; border-color:#2563eb; color:#1d4ed8; }
+.tp-up-shift.tar { background:#edfbff; border-color:#0891b2; color:#0e7490; }
+.tp-up-shift.vol { background:#ecfdf3; border-color:#00a959; color:#047857; }
+.tp-up-shift.adm { background:#f4f6f9; border-color:#94a3b8; color:#475569; min-height:0; margin-bottom:5px; }
+.tp-up-off { color:#9aa5b5; font-size:.73rem; padding:18px 3px; text-align:center; }
+.tp-up-empty { color:#cbd5e1; text-align:center; padding-top:20px; }
+/* Bordes suaves y colores corporativos para los controles, sin bloques negros */
+div.stButton > button { border-radius:10px!important; font-weight:600!important; }
+div.stButton > button[kind=secondary] { background:#fff!important; color:#334155!important; border:1px solid #e0e5ec!important; }
+div.stButton > button[kind=secondary]:hover { border-color:#ec3237!important; color:#ec3237!important; background:#fff7f7!important; }
+div.stButton > button[kind=primary] { background:#ec3237!important; color:#fff!important; border-color:#ec3237!important; }
+</style>""", unsafe_allow_html=True)
 
 # --- INICIALIZACIÓN DE SESSION STATE ---
 if "usuario_login" not in st.session_state:
@@ -6080,6 +6165,36 @@ elif choice == "Programación de Turnos":
                     _mask_sr = _base["Colaborador"].eq(_nom_sr)
                     if _mask_sr.any() and not _ausencia_en(_dni_sr, _dom.strftime("%Y-%m-%d")):
                         _base.loc[_mask_sr, _col_dom] = DOMINGO_VOLUNTARIO
+        # Panel integrado de aprobaciones de domingo: usa la misma hoja y reglas de la bandeja.
+        _domingo_panel = _dias[6]
+        _sol_panel = st.session_state.get("solicitudes", pd.DataFrame())
+        _pend_panel = pd.DataFrame()
+        if isinstance(_sol_panel, pd.DataFrame) and not _sol_panel.empty:
+            _pend_panel = _sol_panel[
+                (_sol_panel["tipo_solicitud"].astype(str) == "Trabajar Domingo (Descanso)") &
+                (_sol_panel["estado"].astype(str) == "Pendiente") &
+                (_sol_panel["fecha_permiso"].apply(_norm_fecha_h) == _domingo_panel.strftime("%Y-%m-%d"))
+            ]
+        st.markdown('<div class="tp-up-section"><div class="tp-up-eyebrow">GESTIÓN INTEGRADA</div><h3>Programación y aprobaciones</h3><p>Revisa las solicitudes dominicales antes de publicar el cronograma.</p></div>', unsafe_allow_html=True)
+        if not _pend_panel.empty:
+            with st.expander(f"Solicitudes de domingo pendientes · {len(_pend_panel)}", expanded=True):
+                for _, _pend_r in _pend_panel.iterrows():
+                    _id_p = str(_pend_r.get("id_solicitud", ""))
+                    _ca, _cb, _cc = st.columns([3, 1, 1])
+                    _ca.markdown(f"**{_html.escape(str(_pend_r.get('nombre', 'Colaborador')))}**  \nDomingo {_domingo_panel:%d/%m/%Y} · 15:15–21:00")
+                    if _cb.button("Aprobar", key=f"turn_ap_{_id_p}", use_container_width=True):
+                        _ok, _msg = _resolver_solicitud_administrativa(_id_p, "Aprobado")
+                        (st.success if _ok else st.error)(_msg)
+                        if _ok:
+                            st.rerun()
+                    if _cc.button("Rechazar", key=f"turn_rec_{_id_p}", use_container_width=True):
+                        _ok, _msg = _resolver_solicitud_administrativa(_id_p, "Rechazado")
+                        (st.success if _ok else st.error)(_msg)
+                        if _ok:
+                            st.rerun()
+        else:
+            st.caption("No hay solicitudes dominicales pendientes para esta semana.")
+        st.markdown('<div class="tp-up-eyebrow" style="margin:12px 0 6px">EDITAR TURNOS · SELECCIONA UNA CASILLA</div>', unsafe_allow_html=True)
         _ed = st.data_editor(_base, hide_index=True, use_container_width=True, disabled=["Colaborador"], key=f"prog_ed_{_lunes_iso}_{_ver}",
                              column_config={"Colaborador": st.column_config.TextColumn("Colaborador", width="medium"),
                                             **{c: st.column_config.SelectboxColumn(c, options=_opts, required=False) for c in _cols}})
@@ -6087,6 +6202,38 @@ elif choice == "Programación de Turnos":
         _dni_de = {n: str(_emp_p[_emp_p["nombre"] == n].iloc[0]["dni"]) for n in _ed["Colaborador"] if not _emp_p[_emp_p["nombre"] == n].empty}
         _dni_de[ADMIN_FILA] = "ADMIN"
 
+        # Vista calendario visual inspirada en software de turnos, sin sustituir editor.
+        _dias_cab = "".join(f'<th>{_html.escape(_dia_label(d))}</th>' for d in _dias)
+        _cal_rows = []
+        for _, _r_cal in _ed.iterrows():
+            _nom_cal = str(_r_cal["Colaborador"])
+            if _nom_cal == ADMIN_FILA:
+                continue
+            _celdas_cal = []
+            for _dia_cal, _col_cal in zip(_dias, _cols):
+                _val_cal = str(_r_cal.get(_col_cal, "") or "").strip()
+                _info_cal = _info_turno(_val_cal, _dia_cal)
+                if _info_cal:
+                    _tipo_cal = "vol" if _val_cal == DOMINGO_VOLUNTARIO else ("mor" if "mañ" in _val_cal.lower() else "tar")
+                    _celdas_cal.append(f'<td><div class="tp-up-shift {_tipo_cal}"><b>{_html.escape(_val_cal)}</b><span>{_info_cal["entrada"]} – {_info_cal["salida"]}</span><small>{_fmt_min(_info_cal["dur"])}</small></div></td>')
+                elif _val_cal and _val_cal.lower() not in ("none", "nan"):
+                    _celdas_cal.append(f'<td><div class="tp-up-off">{_html.escape(_val_cal)}</div></td>')
+                else:
+                    _celdas_cal.append('<td><div class="tp-up-empty">—</div></td>')
+            _cal_rows.append(f'<tr><th class="tp-up-person">{_html.escape(_nom_cal)}</th>{"".join(_celdas_cal)}</tr>')
+        # Administrador: cobertura real, no editable ni computable como remuneración.
+        _adm_cells = []
+        for _dia_cal in _dias:
+            if _dia_cal.weekday() == 6:
+                _bloques = _cobertura_admin_domingo(_dia_cal)
+                _contenido = "".join(f'<div class="tp-up-shift adm"><b>{_html.escape(et)}</b><span>{ini} – {fin}</span></div>' for ini, fin, et in _bloques)
+            else:
+                _contenido = '<div class="tp-up-shift adm"><b>Cierre</b><span>21:00 – 00:00</span></div>'
+            _adm_cells.append(f'<td>{_contenido}</td>')
+        _cal_rows.append(f'<tr><th class="tp-up-person">Administrador<small>Cobertura operativa</small></th>{"".join(_adm_cells)}</tr>')
+        st.markdown('<div class="tp-up-section"><div class="tp-up-eyebrow">VISTA SEMANAL</div><h3>Calendario de turnos</h3><p>Horarios, descansos y cobertura del administrador. Los cambios se realizan en el editor superior.</p></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="tp-up-calendar"><table><thead><tr><th>Colaborador</th>{_dias_cab}</tr></thead><tbody>{"".join(_cal_rows)}</tbody></table></div>', unsafe_allow_html=True)
+        st.caption("Azul: mañana · Celeste: tarde · Verde: domingo voluntario · Gris: cobertura administrativa. El calendario muestra cambios aún no guardados.")
         _b1, _b2, _b3 = st.columns(3)
         _b1.button("Copiar semana anterior", key="prog_copiar", on_click=_prog_copiar_anterior, use_container_width=True)
         _b2.button("Limpiar semana", key="prog_limpiar", on_click=_prog_limpiar, use_container_width=True)
@@ -6329,23 +6476,15 @@ elif choice == "Solicitudes y Permisos":
                     c_obs, c_ap, c_rc = st.columns([2.4, 1, 1])
                     resp_admin_input = c_obs.text_input("Observación", key=f"resp_{id_s}", placeholder="Observación para el colaborador (opcional)", label_visibility="collapsed")
                     if c_ap.button("Aprobar", key=f"ap_{id_s}", use_container_width=True):
-                        idx_real = st.session_state.solicitudes[st.session_state.solicitudes["id_solicitud"] == id_s].index
-                        st.session_state.solicitudes.loc[idx_real, "estado"] = "Aprobado"
-                        st.session_state.solicitudes.loc[idx_real, "respuesta_admin"] = resp_admin_input
-                        actualizar_hoja_completa("Solicitudes", st.session_state.solicitudes)
-                        registrar_auditoria("Aprobar Solicitud", "Solicitudes", f"{tipo_s} de {nom_s} ({id_s})")
-                        st.toast("Solicitud Aprobada")
-                        time.sleep(0.3)
-                        st.rerun()
+                        _ok, _msg = _resolver_solicitud_administrativa(id_s, "Aprobado", resp_admin_input)
+                        (st.success if _ok else st.error)(_msg)
+                        if _ok:
+                            st.rerun()
                     if c_rc.button("Rechazar", key=f"rec_{id_s}", use_container_width=True):
-                        idx_real = st.session_state.solicitudes[st.session_state.solicitudes["id_solicitud"] == id_s].index
-                        st.session_state.solicitudes.loc[idx_real, "estado"] = "Rechazado"
-                        st.session_state.solicitudes.loc[idx_real, "respuesta_admin"] = resp_admin_input
-                        actualizar_hoja_completa("Solicitudes", st.session_state.solicitudes)
-                        registrar_auditoria("Rechazar Solicitud", "Solicitudes", f"{tipo_s} de {nom_s} ({id_s})")
-                        st.toast("Solicitud Rechazada")
-                        time.sleep(0.3)
-                        st.rerun()
+                        _ok, _msg = _resolver_solicitud_administrativa(id_s, "Rechazado", resp_admin_input)
+                        (st.success if _ok else st.error)(_msg)
+                        if _ok:
+                            st.rerun()
 
         st.markdown("<br>", unsafe_allow_html=True)
         st.download_button("Exportar Solicitudes Filtradas a Excel", to_excel(df_sol), "Solicitudes.xlsx", use_container_width=True)
