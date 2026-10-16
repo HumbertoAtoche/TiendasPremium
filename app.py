@@ -2827,7 +2827,7 @@ def _analizar_programacion(df_ed, dias, cols, dni_de):
                 partes += f'<span>{e(t["nombre"])}: {n}</span>'
         celdas_cob += f'<td class="cob">{partes}</td>'
     cab = "".join(f"<th>{_dia_label(d)}</th>" for d in dias)
-    tabla = (f'<div class="tp-prog-wrap"><table class="tp-prog"><thead><tr><th class="n">Colaborador</th>{cab}<th>Semana</th></tr></thead><tbody>{filas}'
+    tabla = (f'<div class="tp-shift-detail-wrap"><table class="tp-shift-detail"><thead><tr><th class="n">Colaborador</th>{cab}<th>Semana</th></tr></thead><tbody>{filas}'
              f'<tr><th class="n">Cobertura</th>{celdas_cob}<td></td></tr></tbody></table></div>')
     return tabla, avisos, tot_base, tot_extra, tot_desc
 
@@ -2862,18 +2862,23 @@ def ui_mi_programacion(dni):
 
 st.markdown("""
 <style>
-.tp-prog-wrap{overflow-x:auto;background:var(--tp-surface);border:1px solid var(--tp-line);border-radius:16px;padding:8px;box-shadow:var(--tp-sh-1);}
-table.tp-prog{border-collapse:separate;border-spacing:5px;width:100%;min-width:820px;font-size:.74rem;}
-.tp-prog th{font-weight:700;color:var(--tp-mute);font-size:.7rem;text-align:center;padding:4px;}
-.tp-prog th.n{text-align:left;color:var(--tp-ink);font-size:.8rem;white-space:nowrap;padding-right:10px;}
-.tp-prog td{border-radius:12px;padding:8px 6px;text-align:center;vertical-align:middle;line-height:1.35;}
-.tp-prog td span,.tp-prog td em{display:block;font-style:normal;color:var(--tp-ink-2);}
-.tp-prog td.trab{background:#EEF2FF;border:1px solid #D9E1FB;} .tp-prog td.trab b{display:block;color:var(--tp-ink);}
-.tp-prog td.trab em{color:var(--tp-info);font-weight:600;}
-.tp-prog td.desc{background:#F1F3F7;color:var(--tp-mute);font-weight:600;}
-.tp-prog td.aus{background:var(--tp-warn-soft);color:var(--tp-warn);font-weight:600;}
-.tp-prog td.vacio{color:#C3CAD6;} .tp-prog td.tot{background:#F6F7FA;font-weight:600;}
-.tp-prog td.cob{background:#FAFBFC;border:1px dashed var(--tp-line);} .tp-prog td.cob span.cero{color:var(--tp-bad);font-weight:700;}
+.tp-shift-detail-wrap{display:block;width:100%;max-width:100%;overflow-x:auto;overflow-y:visible;background:#fff;border:1px solid #D9E0E9;border-radius:0!important;padding:0;box-shadow:none;box-sizing:border-box;}
+table.tp-shift-detail{display:table!important;width:100%!important;min-width:1000px!important;height:auto!important;max-height:none!important;overflow:visible!important;border-collapse:collapse!important;border-spacing:0!important;border-radius:0!important;table-layout:fixed;font-size:.76rem;line-height:1.4;background:#fff;}
+table.tp-shift-detail th,table.tp-shift-detail td{border:1px solid #DDE3EB!important;border-radius:0!important;box-shadow:none!important;vertical-align:middle;text-align:center;padding:11px 7px;white-space:normal;overflow-wrap:break-word;}
+table.tp-shift-detail thead th{background:#F3F6FA;color:#52647E;font-size:.72rem;font-weight:700;}
+table.tp-shift-detail th.n{width:235px;min-width:235px;text-align:left!important;padding:11px 12px!important;color:#172238;font-size:.78rem;font-weight:700;background:#F7F9FC;}
+table.tp-shift-detail td{width:108px;min-width:108px;}
+table.tp-shift-detail td:last-child{width:128px;min-width:128px;}
+table.tp-shift-detail td span,table.tp-shift-detail td em{display:block;font-style:normal;color:#52647E;}
+table.tp-shift-detail td.trab{background:#EFF4FF;color:#172238;}
+table.tp-shift-detail td.trab b{display:block;color:#172238;}
+table.tp-shift-detail td.trab em{color:#2156D8;font-weight:650;}
+table.tp-shift-detail td.desc{background:#F5F7FA;color:#65748B;font-weight:600;}
+table.tp-shift-detail td.aus{background:#FFF5DF;color:#9B6700;font-weight:600;}
+table.tp-shift-detail td.vacio{background:#fff;color:#B7C1CE;}
+table.tp-shift-detail td.tot{background:#F7F9FC;font-weight:650;}
+table.tp-shift-detail td.cob{background:#FBFCFD;}
+table.tp-shift-detail td.cob span.cero{color:#C62828;font-weight:700;}
 </style>
 """, unsafe_allow_html=True)
 
