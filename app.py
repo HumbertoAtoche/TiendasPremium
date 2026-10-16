@@ -2403,6 +2403,61 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# Armonización visual: estilos exclusivamente CSS; no cambia lógica ni navegación.
+st.markdown("""
+<style>
+/* Acciones generales: superficie clara, acento corporativo y contraste accesible. */
+.stButton > button:not([kind="primary"]):not([data-testid="stBaseButton-primary"]),
+.stDownloadButton > button:not([kind="primary"]) {
+  background:#FFFFFF !important; color:#334155 !important;
+  border:1px solid #D9E0E9 !important; border-radius:11px !important;
+  box-shadow:0 2px 5px rgba(24,39,75,.05) !important;
+}
+.stButton > button:not([kind="primary"]):hover,
+.stDownloadButton > button:not([kind="primary"]):hover {
+  background:#FFF4F4 !important; border-color:#EC3237 !important;
+  color:#C8252B !important; box-shadow:0 4px 10px rgba(236,50,55,.09) !important;
+}
+.stButton > button:not([kind="primary"]) *,
+.stDownloadButton > button:not([kind="primary"]) * {color:inherit !important;}
+/* Botón de acción principal: rojo de Tiendas Premium, no negro. */
+.stButton > button[kind="primary"],
+.stButton > button[data-testid="stBaseButton-primary"] {
+  background:#EC3237 !important; border:1px solid #EC3237 !important;
+  color:#FFFFFF !important; border-radius:11px !important;
+  box-shadow:0 3px 9px rgba(236,50,55,.17) !important;
+}
+.stButton > button[kind="primary"]:hover,
+.stButton > button[data-testid="stBaseButton-primary"]:hover {
+  background:#D6282D !important; border-color:#D6282D !important;
+}
+.stButton > button[kind="primary"] *,
+.stButton > button[data-testid="stBaseButton-primary"] * {color:#FFFFFF !important;}
+/* En formularios, guardar/confirmar conserva el acento rojo existente. */
+.stFormSubmitButton > button {border-radius:11px !important;}
+/* Se respetan los botones de ingreso/salida, chatbot, menú lateral y navegación móvil. */
+.btn-ingreso > button, .btn-ingreso button {background:#00A959 !important;color:#fff !important;border-color:#00A959 !important;}
+.btn-salida > button, .btn-salida button {background:#EC3237 !important;color:#fff !important;border-color:#EC3237 !important;}
+.st-key-tp_chat_fab button {border-radius:50% !important;background-color:#EC3237 !important;}
+.st-key-tp_bottomnav button:not([kind="primary"]) {background:transparent !important;border:none !important;box-shadow:none !important;}
+/* Acceso a Negosy: visible sin desentonar con la marca. */
+[data-testid="stSidebar"] a.tp-negosy {
+  background:linear-gradient(120deg,#EC3237 0%,#D52C32 100%) !important;
+  border:1px solid #C9272D !important;border-radius:12px !important;
+  box-shadow:0 4px 12px rgba(236,50,55,.18) !important;
+  transition:transform .15s ease,box-shadow .15s ease !important;
+}
+[data-testid="stSidebar"] a.tp-negosy:hover {
+  transform:translateY(-2px) !important;
+  box-shadow:0 7px 17px rgba(236,50,55,.26) !important;
+}
+[data-testid="stSidebar"] a.tp-negosy .tp-negosy-t {color:#FFFFFF !important;}
+[data-testid="stSidebar"] a.tp-negosy .tp-negosy-s {color:#FFE5E6 !important;}
+[data-testid="stSidebar"] a.tp-negosy svg {color:#FFFFFF !important;stroke:#FFFFFF !important;}
+/* Navegación lateral original: no modificar selección, disposición ni etiquetas. */
+</style>
+""", unsafe_allow_html=True)
+
 COLS_HOR = ["id_regla", "nombre", "vigente_desde", "estado", "jornada_base_min", "turnos_json", "creado_por", "fecha_creacion"]
 
 def obtener_horarios_gsheets():
