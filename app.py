@@ -1438,9 +1438,10 @@ st.markdown("""
 /* Ajustes finales: botón de menú, cerrar sesión y opciones */
 [data-testid="stSidebar"] [role="radiogroup"] label>*:not(input):not([data-testid="stMarkdownContainer"]):not(:has([data-testid="stMarkdownContainer"])){display:none!important;}
 [data-testid="stSidebar"] .stButton>button{background:#fff!important;border:1.5px solid var(--tp-red)!important;box-shadow:none!important;}
-[data-testid="stSidebar"] .stButton>button *{color:var(--tp-red)!important;font-weight:650;}
+[data-testid="stSidebar"] .stButton>button *{color:#111827!important;font-weight:650;}
 [data-testid="stSidebar"] .stButton>button:hover{background:var(--tp-red)!important;}
-[data-testid="stSidebar"] .stButton>button:hover *{color:#fff!important;}
+[data-testid="stSidebar"] .stButton>button:hover *{color:#111827!important;}
+[data-testid="stSidebar"] .stButton>button{color:#111827!important;}
 [data-testid="stExpandSidebarButton"],[data-testid="stSidebarCollapsedControl"],[data-testid="collapsedControl"]{background:#fff!important;border:1.5px solid var(--tp-red)!important;}
 [data-testid="stExpandSidebarButton"] *,[data-testid="stSidebarCollapsedControl"] *,[data-testid="collapsedControl"] *{color:var(--tp-red)!important;fill:var(--tp-red)!important;}
 [data-testid="stExpandSidebarButton"] button,[data-testid="stSidebarCollapsedControl"] button{background:transparent!important;}
@@ -2932,9 +2933,9 @@ st.markdown("""
 .st-key-tpc_login_form [data-testid="stButton"] button,
 .st-key-tpc_login_form .stButton>button,
 .st-key-login_btn button,
-.st-key-login_btn button[kind="secondary"]{background:#EC3237!important;border:1px solid #EC3237!important;color:#FFFFFF!important;opacity:1!important;box-shadow:none!important}
+.st-key-login_btn button[kind="secondary"]{background:#EC3237!important;border:1px solid #EC3237!important;color:#111827!important;opacity:1!important;box-shadow:none!important}
 .st-key-tpc_login_form [data-testid="stButton"] button *,
-.st-key-login_btn button *{color:#FFFFFF!important;opacity:1!important}
+.st-key-login_btn button *{color:#111827!important;opacity:1!important}
 .st-key-tpc_login_form [data-testid="stButton"] button:disabled,
 .st-key-login_btn button:disabled{background:#EEF0F4!important;border:1px solid #D8DEE7!important;color:#253044!important;opacity:1!important}
 .st-key-tpc_login_form [data-testid="stButton"] button:disabled *,
@@ -3237,7 +3238,8 @@ if not st.session_state.usuario_login:
 .st-key-tpc_login_form{padding:32px 30px 26px!important;border-radius:26px!important;box-shadow:var(--tp-sh-2)!important;}
 .st-key-tpc_login_form [data-baseweb="input"]{min-height:50px;background:#F6F7FA!important;}
 .st-key-tpc_login_form .stButton>button{min-height:52px;border:none!important;background:linear-gradient(135deg,#EC3237,#C9262B)!important;box-shadow:0 14px 26px -12px rgba(236,50,55,.7);}
-.st-key-tpc_login_form .stButton>button *{color:#fff!important;font-weight:700;}
+.st-key-tpc_login_form .stButton>button *{color:#111827!important;font-weight:700;}
+.st-key-tpc_login_form .stButton>button{color:#111827!important;}
 .tp-lg-note{display:flex;gap:8px;align-items:center;justify-content:center;font-size:.76rem;color:var(--tp-mute);margin-top:14px;}
 @media (max-width:900px){.tp-lg-hero{min-height:0;padding:22px;border-radius:22px;}.tp-lg-k{margin-top:20px;}.tp-lg-h{font-size:1.5rem;}.tp-lg-feat,.tp-lg-spacer{display:none;}.tp-lg-quote{margin-top:16px;padding:14px 16px 14px 20px;}.tp-lg-quote p{font-size:.95rem;}}
 </style>
