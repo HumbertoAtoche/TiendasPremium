@@ -4610,6 +4610,12 @@ def _tp_ia_config():
     except Exception:
         return "", "gemini-2.5-flash-lite"
 
+def _tp_modelo_solo_texto(nombre):
+    """Excluir modelos de voz, audio, imagen, video y embeddings del chat textual."""
+    n = str(nombre).lower().removeprefix("models/")
+    excluidos = ("tts", "audio", "image", "imagen", "veo", "embedding", "aqa", "live", "robotics", "computer-use")
+    return n.startswith("gemini-") and not any(x in n for x in excluidos)
+
 def _tp_ia_respuesta(pregunta, contexto=""):
     """Solo manda texto del chat y un resumen agregado sin identificadores a la API externa."""
     clave, modelo = _tp_ia_config()
@@ -4675,22 +4681,25 @@ def _tp_ia_respuesta(pregunta, contexto=""):
                 datos_lista = _tp_json.loads(resp_lista.read().decode("utf-8"))
             modelos_cache = [str(m.get("name", "")).replace("models/", "", 1)
                              for m in datos_lista.get("models", [])
-                             if "generateContent" in m.get("supportedGenerationMethods", [])]
+                             if "generateContent" in m.get("supportedGenerationMethods", [])
+                             and _tp_modelo_solo_texto(m.get("name", ""))]
             st.session_state["_tp_modelos_disponibles"] = modelos_cache
         except Exception as exc:
             # Si falla listModels, se intenta el modelo configurado para conservar compatibilidad.
             print("Premium IA: listModels no disponible:", type(exc).__name__)
             modelos_cache = []
     modelo = modelo.removeprefix("models/")
-    candidatos = [modelo]
+    candidatos = [modelo] if _tp_modelo_solo_texto(modelo) else []
     if modelos_cache:
         if modelo not in modelos_cache:
             candidatos = []
         # Preferir modelos Flash para menor latencia y uso económico.
         preferidos = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.0-flash"]
         candidatos += [m for m in preferidos if m in modelos_cache and m not in candidatos]
-        candidatos += [m for m in modelos_cache if "flash" in m.lower() and m not in candidatos]
-        candidatos += [m for m in modelos_cache if m not in candidatos]
+        candidatos += [m for m in modelos_cache if "flash" in m.lower() and _tp_modelo_solo_texto(m) and m not in candidatos]
+        candidatos += [m for m in modelos_cache if _tp_modelo_solo_texto(m) and m not in candidatos]
+    if not candidatos and not modelos_cache:
+        candidatos = ["gemini-2.5-flash", "gemini-2.5-flash-lite"]
     if not candidatos:
         st.session_state["_tp_ia_error"] = "No se encontraron modelos compatibles con generateContent para esta clave. Revisa el proyecto y los permisos de Gemini."
         return None
@@ -4733,7 +4742,10 @@ def _tp_ia_respuesta(pregunta, contexto=""):
             ultimo_error = mensajes.get(codigo, f"Gemini devolvió HTTP {codigo}.")
             if codigo == 400 and detalle_seguro:
                 ultimo_error += " Detalle: " + detalle_seguro
-            # Un 400 indica solicitud malformada; no probar otros modelos con el mismo payload.
+            # Algunos modelos listados con generateContent son solo AUDIO/TTS.
+            # Ante esa incompatibilidad, intentar el siguiente modelo textual.
+            if codigo == 400 and ("response modalities" in detalle_google.lower() or "response modality" in detalle_google.lower()):
+                continue
             break
         except Exception as exc:
             print("Premium IA fallo:", type(exc).__name__, "modelo:", candidato)
