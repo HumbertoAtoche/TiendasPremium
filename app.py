@@ -4234,13 +4234,20 @@ def renderizar_calendario_colaborador(nombre_colab, anio, mes):
             if f_rec_ps and f_rec_ps.month == mes and f_rec_ps.year == anio:
                 recuperaciones_salud[f_rec_ps] = estado_rec_ps
 
-    # --- NUEVO: Domingos trabajados voluntariamente (marcados en Terminal de Asistencia) ---
+    # --- Domingos voluntarios: asistencia registrada + autorización aprobada ---
+    # También conserva el reconocimiento histórico por observación de marcación.
     domingos_voluntarios = set()
     if not df_asist.empty:
-        df_dom_vol = df_asist[df_asist["observacion"].astype(str).str.contains("TRABAJO VOLUNTARIO EN DOMINGO", case=False, na=False)]
-        for _, r_dv in df_dom_vol.iterrows():
+        for _, r_dv in df_asist.iterrows():
             f_dv = parsear_fecha_segura(r_dv.get("fecha", ""))
-            if f_dv and f_dv.month == mes and f_dv.year == anio:
+            if not f_dv or f_dv.weekday() != 6 or f_dv.month != mes or f_dv.year != anio:
+                continue
+            obs_dv = str(r_dv.get("observacion", "")).upper()
+            if "TRABAJO VOLUNTARIO EN DOMINGO" in obs_dv:
+                domingos_voluntarios.add(f_dv)
+            elif any(str(sol.get("nombre", "")).strip() == str(nombre_colab).strip()
+                     for sol in _solicitudes_domingo_aprobadas(f_dv)):
+                # No basta la aprobación: debe existir al menos una marcación real.
                 domingos_voluntarios.add(f_dv)
 
     row_emp = st.session_state.empleados[st.session_state.empleados["nombre"] == nombre_colab]
@@ -6187,6 +6194,19 @@ elif choice == "Boletas de Pago":
         hrs_extras_totales = 0.0
         feriados_trabajados_cnt = 0
         domingos_voluntarios_cnt = 0
+        # Misma validación que el calendario: domingo con autorización aprobada
+        # y marcación real del colaborador (sin duplicar registros del mismo día).
+        _domingos_aprobados_boleta = set()
+        _sol_b = st.session_state.get("solicitudes", pd.DataFrame())
+        if isinstance(_sol_b, pd.DataFrame) and not _sol_b.empty:
+            for _, _sol_dom in _sol_b.iterrows():
+                if (str(_sol_dom.get("nombre", "")).strip() == str(colab_b_sel).strip()
+                        and str(_sol_dom.get("tipo_solicitud", "")).strip() == "Trabajar Domingo (Descanso)"
+                        and str(_sol_dom.get("estado", "")).strip() == "Aprobado"):
+                    _fecha_dom = parsear_fecha_segura(_sol_dom.get("fecha_permiso", ""))
+                    if (_fecha_dom and _fecha_dom.weekday() == 6
+                            and _fecha_dom.month == mes_b_sel and _fecha_dom.year == anio_b_sel):
+                        _domingos_aprobados_boleta.add(_fecha_dom)
 
         # --- PERMISOS RECUPERADOS (Permiso Laboral aprobado / Permiso de Salud a recuperar) ---
         # Si el colaborador pidió permiso o se enfermó pero ya recuperó el día, NO cuenta como falta.
@@ -6271,7 +6291,11 @@ elif choice == "Boletas de Pago":
                             feriados_trabajados_cnt += 1
 
                     dt_dia_check = pd.to_datetime(f_dia)
-                    if dt_dia_check.weekday() == 6 and dt_dia_check.date() not in fechas_recuperacion_colab and grupo_dia["observacion"].astype(str).str.contains("TRABAJO VOLUNTARIO EN DOMINGO", case=False, na=False).any():
+                    if (dt_dia_check.weekday() == 6
+                            and dt_dia_check.date() not in fechas_recuperacion_colab
+                            and (dt_dia_check.date() in _domingos_aprobados_boleta
+                                 or grupo_dia["observacion"].astype(str).str.contains(
+                                     "TRABAJO VOLUNTARIO EN DOMINGO", case=False, na=False).any())):
                         domingos_voluntarios_cnt += 1
 
         # Domingos de descanso semanal: son pagados, se suman a los días laborados (tope 30 días)
@@ -6367,7 +6391,7 @@ elif choice == "Boletas de Pago":
         hrs_extras_in = c_i4.number_input("Horas Extras (Hrs)", min_value=0.0, value=float(hrs_extras_totales), step=0.5, format="%.2f")
         domingo_volunt_in = c_i10.number_input(
             "Días de Descanso Trabajados Voluntariamente (Domingo)", min_value=0, max_value=5, value=int(domingos_voluntarios_cnt),
-            help="Domingos marcados en Terminal de Asistencia como 'Trabajo Voluntario en Domingo (Día de Descanso)', o registrados manualmente aquí."
+            help="Se calcula automáticamente con la solicitud aprobada y la asistencia registrada; también reconoce marcaciones históricas de domingo voluntario. Puedes ajustarlo manualmente."
         )
         ui_callout("Los domingos trabajados voluntariamente se pagan como día adicional (100% del valor día), separado del sueldo básico, dejando constancia de que originalmente era su descanso.")
 
