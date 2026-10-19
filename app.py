@@ -4629,27 +4629,26 @@ if st.sidebar.button("Cerrar Sesión", use_container_width=True):
     st.rerun()
 st.sidebar.markdown('</div>', unsafe_allow_html=True)
 
-# Notificación central una sola vez por inicio de sesión.
-# No se cierra automáticamente un pendiente; el aviso desaparece cuando se devuelve.
+# Aviso de botellas pendientes: renderizado seguro en el flujo principal.
+# Evita StreamlitInvalidLayoutContextError al invocar st.dialog en un contexto
+# que Streamlit no admite. Se conserva el contador y acceso directo del menú.
 if _bf_total_pendientes and not st.session_state.get("_tp_botellas_aviso_login", False):
     st.session_state["_tp_botellas_aviso_login"] = True
-    if hasattr(st, "dialog"):
-        @st.dialog("🍾 Botellas pendientes de devolución")
-        def _tp_dialogo_botellas():
-            st.warning(
-                f"Hay **{_bf_total_pendientes} registro(s) de botellas fiadas pendientes**. "
-                "Revisa las devoluciones para mantener el control actualizado."
-            )
-            if st.button("Ver botellas pendientes", use_container_width=True, type="primary", key="tp_bf_dialog_ver"):
-                _ir_a("Botellas Fiadas")
-                st.rerun()
-            if st.button("Entendido", use_container_width=True, key="tp_bf_dialog_cerrar"):
-                st.rerun()
-        _tp_dialogo_botellas()
-    else:
-        st.warning(f"🍾 Hay {_bf_total_pendientes} registro(s) de botellas fiadas pendientes de devolución.")
-        if st.button("Ver botellas pendientes", key="tp_bf_banner_ver"):
+    st.toast(
+        f"🍾 Hay {_bf_total_pendientes} registro(s) de botellas fiadas pendientes de devolución.",
+        icon="🍾",
+    )
+    st.warning(
+        f"🍾 **Botellas pendientes de devolución:** {_bf_total_pendientes} registro(s). "
+        "Revisa las devoluciones para mantener el control actualizado."
+    )
+    _tp_bf_c1, _tp_bf_c2 = st.columns([1, 1])
+    with _tp_bf_c1:
+        if st.button("Ver botellas pendientes", key="tp_bf_banner_ver", use_container_width=True):
             _ir_a("Botellas Fiadas")
+            st.rerun()
+    with _tp_bf_c2:
+        if st.button("Entendido", key="tp_bf_banner_cerrar", use_container_width=True):
             st.rerun()
 
 # -------------------- ASISTENTE PREMIUM IA · V2 --------------------
