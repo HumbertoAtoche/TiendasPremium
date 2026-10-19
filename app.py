@@ -3387,6 +3387,7 @@ if not st.session_state.usuario_login:
                         with _g["lock"]:
                             _g["fails"].pop(_dni_k, None)
                         st.session_state.usuario_login = usuario_sel
+                        st.session_state.pop("_tp_botellas_aviso_login", None)
                         st.session_state["ver_como"] = None
                         st.session_state["ver_como_sel"] = "Mi vista (admin)"
                         st.session_state.login_timestamp = time.time()
@@ -4355,12 +4356,32 @@ _dni_real = USUARIOS[user_real]["dni"]
 _foto_real = ui_dni_foto(user_real)[1]
 _fila_me = st.session_state.empleados[st.session_state.empleados["dni"].astype(str) == str(dni_actual)]
 _foto_actual = str(_fila_me.iloc[0].get("foto", "")) if not _fila_me.empty else ""
+# Avisos de botellas: un registro pendiente se cuenta una sola vez,
+# independientemente de la cantidad de botellas que contenga.
+_bf_aviso_df = st.session_state.get("botellas_fiadas", pd.DataFrame())
+if isinstance(_bf_aviso_df, pd.DataFrame) and not _bf_aviso_df.empty and "estado" in _bf_aviso_df.columns:
+    _bf_pendientes_aviso = _bf_aviso_df[
+        ~_bf_aviso_df["estado"].fillna("").astype(str).str.strip().str.casefold().eq("devuelta")
+    ]
+else:
+    _bf_pendientes_aviso = pd.DataFrame()
+_bf_total_pendientes = len(_bf_pendientes_aviso)
+
 st.sidebar.markdown(f"""
     <div class="tp-user">
         {ui_avatar(user_real, _dni_real, _foto_real)}
         <div><b>{user_real}</b><span>{str(rol_real).capitalize()} · DNI {_dni_real}</span></div>
     </div>
 """, unsafe_allow_html=True)
+if _bf_total_pendientes:
+    # Contador visible junto al perfil, para todos los roles.
+    st.sidebar.markdown(
+        f'<div class="tp-notif" style="background:#FEE2E2;border:1px solid #FECACA;'
+        f'color:#991B1B;margin-bottom:10px">'
+        f'<span style="color:#991B1B;font-weight:700">🍾 Botellas por devolver</span>'
+        f'<span style="color:#991B1B;font-weight:800">{_bf_total_pendientes}</span></div>',
+        unsafe_allow_html=True,
+    )
 _sol_n = st.session_state.get("solicitudes")
 if _sol_n is not None and not _sol_n.empty:
     _pend = _sol_n[_sol_n["estado"].astype(str) == "Pendiente"]
@@ -4568,6 +4589,14 @@ def _ir_a(destino):
     st.session_state["nav_radio"] = destino
     st.session_state["gs_q"] = ""
 
+# Acceso directo a los registros pendientes sin cambiar el menú original.
+if _bf_total_pendientes:
+    st.sidebar.button(
+        f"🍾 Botellas Fiadas · {_bf_total_pendientes} pendiente{'s' if _bf_total_pendientes != 1 else ''}",
+        key="tp_bf_acceso_rapido", use_container_width=True,
+        on_click=_ir_a, args=("Botellas Fiadas",),
+    )
+
 # Menú original: lista completa sin agrupaciones ni resúmenes.
 choice = st.sidebar.radio("Navegación", menu, key="nav_radio", on_change=_limpiar_busqueda)
 
@@ -4599,6 +4628,29 @@ if st.sidebar.button("Cerrar Sesión", use_container_width=True):
     st.session_state.login_auditado = False
     st.rerun()
 st.sidebar.markdown('</div>', unsafe_allow_html=True)
+
+# Notificación central una sola vez por inicio de sesión.
+# No se cierra automáticamente un pendiente; el aviso desaparece cuando se devuelve.
+if _bf_total_pendientes and not st.session_state.get("_tp_botellas_aviso_login", False):
+    st.session_state["_tp_botellas_aviso_login"] = True
+    if hasattr(st, "dialog"):
+        @st.dialog("🍾 Botellas pendientes de devolución")
+        def _tp_dialogo_botellas():
+            st.warning(
+                f"Hay **{_bf_total_pendientes} registro(s) de botellas fiadas pendientes**. "
+                "Revisa las devoluciones para mantener el control actualizado."
+            )
+            if st.button("Ver botellas pendientes", use_container_width=True, type="primary", key="tp_bf_dialog_ver"):
+                _ir_a("Botellas Fiadas")
+                st.rerun()
+            if st.button("Entendido", use_container_width=True, key="tp_bf_dialog_cerrar"):
+                st.rerun()
+        _tp_dialogo_botellas()
+    else:
+        st.warning(f"🍾 Hay {_bf_total_pendientes} registro(s) de botellas fiadas pendientes de devolución.")
+        if st.button("Ver botellas pendientes", key="tp_bf_banner_ver"):
+            _ir_a("Botellas Fiadas")
+            st.rerun()
 
 # -------------------- ASISTENTE PREMIUM IA · V2 --------------------
 # IA opcional con Gemini (REST, sin librerías adicionales). No se envían tablas ni datos privados.
