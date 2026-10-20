@@ -3390,6 +3390,7 @@ if not st.session_state.usuario_login:
                             _g["fails"].pop(_dni_k, None)
                         st.session_state.usuario_login = usuario_sel
                         st.session_state.pop("_tp_botellas_aviso_login", None)
+                        st.session_state.pop("_tp_cumple_dialogo_abierto", None)
                         st.session_state["ver_como"] = None
                         st.session_state["ver_como_sel"] = "Mi vista (admin)"
                         st.session_state.login_timestamp = time.time()
@@ -3500,6 +3501,9 @@ def _mostrar_modal_cumpleanos(nombre_usuario):
 
     # Se marca como "ya mostrado" de inmediato para que aparezca una sola vez tras el login.
     st.session_state[clave_flag] = True
+    # Evita abrir simultáneamente el diálogo de cumpleaños y el de botellas.
+    # Al confirmar el saludo se libera el siguiente aviso en el próximo rerun.
+    st.session_state["_tp_cumple_dialogo_abierto"] = True
     st.balloons()
 
     f_nac = _parsear_fecha_nac_cumple(fecha_nac_usuario)
@@ -3521,6 +3525,7 @@ def _mostrar_modal_cumpleanos(nombre_usuario):
         st.markdown(html_bd, unsafe_allow_html=True)
         st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
         if st.button("¡Gracias! Continuar", use_container_width=True):
+            st.session_state["_tp_cumple_dialogo_abierto"] = False
             st.rerun()
 
     _dialogo_cumpleanos()
@@ -4686,7 +4691,9 @@ def _tp_aviso_botellas_inicio(total):
 
 # El contador del perfil sigue disponible en todas las vistas, pero el diálogo
 # solo aparece al entrar y no vuelve a abrirse al navegar por el dashboard.
-if not st.session_state.get("_tp_botellas_aviso_login", False):
+if (not st.session_state.get("_tp_cumple_dialogo_abierto", False)
+        and not st.session_state.get("_tp_botellas_aviso_login", False)):
+    # Solo se consume el aviso de esta sesión cuando realmente puede mostrarse.
     st.session_state["_tp_botellas_aviso_login"] = True
     if _bf_total_pendientes > 0:
         _tp_aviso_botellas_inicio(_bf_total_pendientes)
