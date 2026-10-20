@@ -2118,6 +2118,8 @@ def _tp_toast(body, *args, **kwargs):
         color, titulo, icono = "red", "No se pudo completar", ""
     elif any(k in low for k in ("rechaz", "elimin")):
         color, titulo, icono = "orange", "Actualizado", ""
+    elif any(k in low for k in ("pendiente", "devolución", "botellas fiadas", "recordatorio", "aviso")):
+        color, titulo, icono = "orange", "Aviso de pendientes", ""
     else:
         color, titulo, icono = "green", "Guardado con éxito", ""
     try:
@@ -3393,7 +3395,6 @@ if not st.session_state.usuario_login:
                         st.session_state.login_timestamp = time.time()
                         st.session_state.ultima_actividad = time.time()
                         st.success("Acceso concedido")
-                        time.sleep(0.3)
                         st.rerun()
                     else:
                         _bloqueado = False
@@ -4092,40 +4093,76 @@ def generar_pdf_boleta(datos_b, extra=None):
     return buffer.getvalue()
 
 
+@st.cache_resource
+# Un candado compartido por las sesiones de esta instancia de Streamlit.
+def _tp_candado_asistencia():
+    return threading.RLock()
+
+
 def registrar_marca(dni, nombre, tipo, observacion="", es_extra=False):
-    ahora_peru = obtener_ahora_peru()
-    hoy_str = ahora_peru.strftime("%Y-%m-%d")
-    str_extra = "SI" if es_extra else "NO"
+    """Confirma una marca solo después de escribirla en Sheets.
 
-    if not st.session_state.asistencia.empty and not es_extra:
-        df_hoy_user = st.session_state.asistencia[
-            (st.session_state.asistencia["fecha"].astype(str) == hoy_str) & 
-            (st.session_state.asistencia["dni"].astype(str) == str(dni)) &
-            (st.session_state.asistencia["es_extra"].astype(str) != "SI")
-        ]
-        if not df_hoy_user.empty:
-            ultima_marca = df_hoy_user.iloc[0]["tipo"]
-            if ultima_marca == tipo:
-                st.warning(f"Ya registraste un **{tipo}** continuo en tu jornada.")
-                return False
+    Lee directamente la hoja (sin el caché de 90 segundos) para comprobar
+    las marcas recientes de otras sesiones antes de guardar.
+    """
+    if st.session_state.get("ver_como"):
+        st.warning("En vista previa no se registran marcaciones.")
+        return False
+    if doc_sheets is None:
+        st.error("Sin conexión a Google Sheets. No se registró la marcación.")
+        return False
+    if tipo not in ("INGRESO", "SALIDA"):
+        st.error("Tipo de marcación no válido.")
+        return False
+    with _tp_candado_asistencia():
+        try:
+            # Evitar datos obsoletos del proxy y verificar registros de otros dispositivos.
+            hoja = doc_sheets.worksheet("Asistencia")
+            registros = hoja._ws.get_all_records()
+            df = pd.DataFrame(registros)
+            ahora = obtener_ahora_peru()
+            hoy = ahora.strftime("%Y-%m-%d")
+            if not df.empty:
+                for campo in ("dni", "tipo", "fecha", "fecha_hora", "es_extra"):
+                    if campo not in df.columns:
+                        raise ValueError(f"Falta columna '{campo}' en la hoja Asistencia")
+                previas = df.loc[
+                    (df["dni"].astype(str).str.strip() == str(dni).strip())
+                    & (df["fecha"].astype(str).str.strip() == hoy)
+                ].copy()
+                if not previas.empty:
+                    previas["_dt"] = pd.to_datetime(previas["fecha_hora"], errors="coerce")
+                    previas = previas.sort_values("_dt", kind="stable")
+                    ultima = previas.iloc[-1]
+                    ultima_tipo = str(ultima["tipo"]).strip().upper()
+                    ultimo_dt = ultima["_dt"]
+                    # Nunca permitir dos INGRESOS o dos SALIDAS seguidos,
+                    # incluso si la persona marcó desde otro dispositivo.
+                    if ultima_tipo == tipo:
+                        st.warning(f"Tu última marcación de hoy ya es **{tipo}**. No se duplicó el registro.")
+                        st.session_state.asistencia = df.drop(columns=["_dt"], errors="ignore")
+                        return False
+                    if pd.notna(ultimo_dt) and (ahora.replace(tzinfo=None) - ultimo_dt).total_seconds() < 20:
+                        st.warning("Espera unos segundos antes de realizar otra marcación.")
+                        st.session_state.asistencia = df.drop(columns=["_dt"], errors="ignore")
+                        return False
+            fecha_h = ahora.strftime("%Y-%m-%d %H:%M:%S")
+            obs_final = f"[TURNO EXTRA] {observacion}".strip() if es_extra else observacion
+            str_extra = "SI" if es_extra else "NO"
+            nueva = {"dni": str(dni), "nombre": nombre, "tipo": tipo,
+                     "fecha_hora": fecha_h, "fecha": hoy,
+                     "observacion": obs_final, "es_extra": str_extra}
+            # El método real lanza una excepción si Sheets no confirma la operación.
+            hoja._ws.append_row([str(dni), nombre, tipo, fecha_h, hoy, obs_final, str_extra])
+            hoja._invalidar()
+            st.session_state.asistencia = pd.concat([df, pd.DataFrame([nueva])], ignore_index=True)
+            return True
+        except Exception as exc:
+            # No afirmar que se guardó; una falla de red puede dejar resultado incierto.
+            print(f"Error marcación {tipo}, DNI {dni}: {type(exc).__name__}: {exc}")
+            st.error("No se pudo confirmar la marcación con Google Sheets. Verifica tu historial antes de reintentar, para evitar duplicados.")
+            return False
 
-    fecha_h = ahora_peru.strftime("%Y-%m-%d %H:%M:%S")
-    fecha_s = ahora_peru.strftime("%Y-%m-%d")
-    
-    obs_final = f"[TURNO EXTRA] {observacion}".strip() if es_extra else observacion
-
-    nueva_marca = {
-        "dni": str(dni),
-        "nombre": nombre,
-        "tipo": tipo,
-        "fecha_hora": fecha_h,
-        "fecha": fecha_s,
-        "observacion": obs_final,
-        "es_extra": str_extra
-    }
-    st.session_state.asistencia = pd.concat([pd.DataFrame([nueva_marca]), st.session_state.asistencia], ignore_index=True)
-    guardar_asistencia_gsheets(dni, nombre, tipo, fecha_h, fecha_s, obs_final, str_extra)
-    return True
 
 def obtener_solo_colaboradores(fecha_eval=None):
     if "rol" in st.session_state.empleados.columns:
@@ -4629,27 +4666,13 @@ if st.sidebar.button("Cerrar Sesión", use_container_width=True):
     st.rerun()
 st.sidebar.markdown('</div>', unsafe_allow_html=True)
 
-# Aviso de botellas pendientes: renderizado seguro en el flujo principal.
-# Evita StreamlitInvalidLayoutContextError al invocar st.dialog en un contexto
-# que Streamlit no admite. Se conserva el contador y acceso directo del menú.
-if _bf_total_pendientes and not st.session_state.get("_tp_botellas_aviso_login", False):
-    st.session_state["_tp_botellas_aviso_login"] = True
-    st.toast(
-        f"🍾 Hay {_bf_total_pendientes} registro(s) de botellas fiadas pendientes de devolución.",
-        icon="🍾",
-    )
-    st.warning(
+# Aviso compacto en la parte superior; no se confunde con un guardado.
+# El acceso a Botellas Fiadas permanece en el menú lateral.
+if _bf_total_pendientes:
+    st.info(
         f"🍾 **Botellas pendientes de devolución:** {_bf_total_pendientes} registro(s). "
-        "Revisa las devoluciones para mantener el control actualizado."
+        "Consulta el módulo Botellas Fiadas para gestionar las entregas."
     )
-    _tp_bf_c1, _tp_bf_c2 = st.columns([1, 1])
-    with _tp_bf_c1:
-        if st.button("Ver botellas pendientes", key="tp_bf_banner_ver", use_container_width=True):
-            _ir_a("Botellas Fiadas")
-            st.rerun()
-    with _tp_bf_c2:
-        if st.button("Entendido", key="tp_bf_banner_cerrar", use_container_width=True):
-            st.rerun()
 
 # -------------------- ASISTENTE PREMIUM IA · V2 --------------------
 # IA opcional con Gemini (REST, sin librerías adicionales). No se envían tablas ni datos privados.
@@ -5026,7 +5049,6 @@ if choice == "Marcar Asistencia":
                 if st.button("Marcar Ingreso", use_container_width=True):
                     if registrar_marca(dni_actual, user_actual, "INGRESO", obs_marca, es_turno_extra):
                         st.toast("Ingreso registrado correctamente")
-                        time.sleep(0.3)
                         st.rerun()
                 st.markdown('</div>', unsafe_allow_html=True)
 
@@ -5035,7 +5057,6 @@ if choice == "Marcar Asistencia":
                 if st.button("Marcar Salida", use_container_width=True):
                     if registrar_marca(dni_actual, user_actual, "SALIDA", obs_marca, es_turno_extra):
                         st.toast("Salida registrada correctamente")
-                        time.sleep(0.3)
                         st.rerun()
                 st.markdown('</div>', unsafe_allow_html=True)
 
@@ -5482,7 +5503,6 @@ elif choice == "Mis Boletas":
                         registrar_auditoria("Observación de Boleta", "Boletas", f"{user_actual} — {_dm['periodo']}: {_obs.strip()[:120]}")
                         st.session_state.boletas_historial = obtener_boletas_historial_gsheets()
                         st.toast("Observación enviada a administración")
-                        time.sleep(0.3)
                         st.rerun()
                 st.caption("La observación debe tener al menos 10 caracteres.")
             elif _est_m == "Observado":
@@ -6041,7 +6061,6 @@ elif choice == "Gestión Colaboradores":
                         actualizar_hoja_completa("Colaboradores", st.session_state.empleados)
                         registrar_auditoria("Actualizar Estado de Planilla", "Colaboradores", f"{colab_ep_sel} → en_planilla={nuevo_ep}")
                         st.toast(f"Estado de planilla de {colab_ep_sel} actualizado a '{nuevo_ep}'")
-                        time.sleep(0.3)
                         st.rerun()
 
         if rol_actual == "admin" and not st.session_state.empleados.empty:
@@ -7234,7 +7253,6 @@ elif choice == "Botellas Fiadas":
                         st.session_state.botellas_fiadas = pd.concat([pd.DataFrame([nueva_fila_bf]), st.session_state.botellas_fiadas], ignore_index=True)
                         registrar_auditoria("Registrar Botellas Fiadas", "BotellasFiadas", f"{cliente_nombre_bf.strip()} — {cantidad_bf} botella(s) de {tipo_botella_bf}")
                         st.toast("Botellas fiadas registradas correctamente")
-                        time.sleep(0.3)
                         st.rerun()
 
     st.markdown("<br>", unsafe_allow_html=True)
@@ -7264,7 +7282,6 @@ elif choice == "Botellas Fiadas":
                         actualizar_hoja_completa("BotellasFiadas", st.session_state.botellas_fiadas)
                         registrar_auditoria("Marcar Botellas Devueltas", "BotellasFiadas", f"{r_bf['cliente_nombre']} — {r_bf['cantidad_botellas']} botella(s)")
                         st.toast("Botellas marcadas como devueltas")
-                        time.sleep(0.3)
                         st.rerun()
         else:
             ui_callout("No hay botellas pendientes de devolución en este momento.", "ok")
@@ -8191,3 +8208,4 @@ st.markdown("""
     Todos los derechos reservados
 </div>
 """, unsafe_allow_html=True)
+                     
