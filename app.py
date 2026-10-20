@@ -3666,7 +3666,7 @@ def _estructura_boleta(d):
     ]
     descuentos = [
         ("ADELANTO DE SUELDO", "-", float(d["adelanto_sueldo"])),
-        ("DESCUENTO POR FALTAS", _n_dias(d['dias_faltas']), float(d["monto_faltas"])),
+        ("FALTAS (YA REFLEJADAS EN SUELDO PROPORCIONAL)", _n_dias(d['dias_faltas']), float(d["monto_faltas"])),
         ("DESCUADRE / FALTANTE DE CAJA", "-", float(d["descuadre_caja"])),
         ("DESCUADRES DE INVENTARIO", "-", float(d.get("descuadre_inventario", 0.0))),
         ("CONSUMOS POR PAGAR", "-", float(d.get("consumos_pagar", 0.0))),
@@ -6466,17 +6466,19 @@ elif choice == "Boletas de Pago":
                     if _f_cese_emp and _dd > _f_cese_emp:
                         continue
                     domingos_descanso_pagados += 1
-            dias_trabajados_cnt = min(30, dias_trabajados_cnt + domingos_descanso_pagados + permisos_recuperados_cnt)
+            dias_trabajados_cnt = min(_dias_mes_b, dias_trabajados_cnt + domingos_descanso_pagados + permisos_recuperados_cnt)
 
-        # Días transcurridos del mes: si el mes está en curso solo se evalúan los días que ya pasaron
+        # Días transcurridos del mes: si el mes está en curso solo se evalúan los días que ya pasaron.
+        # Para el prorrateo solicitado se usa la cantidad REAL de días calendario del mes.
+        _dias_calendario_boleta = calendar.monthrange(int(anio_b_sel), int(mes_b_sel))[1]
         _hoy_falt = ahora_p_b.date()
         _inicio_mes_b = pd.Timestamp(year=int(anio_b_sel), month=int(mes_b_sel), day=1).date()
         if _inicio_mes_b > _hoy_falt:
             _dias_evaluables = 0  # Mes futuro
         elif (_inicio_mes_b.year, _inicio_mes_b.month) == (_hoy_falt.year, _hoy_falt.month):
-            _dias_evaluables = min(30, _hoy_falt.day)  # Mes en curso
+            _dias_evaluables = min(_dias_calendario_boleta, _hoy_falt.day)  # Mes en curso
         else:
-            _dias_evaluables = 30  # Mes cerrado
+            _dias_evaluables = _dias_calendario_boleta  # Mes cerrado
         dias_faltas_cnt = max(0, _dias_evaluables - dias_trabajados_cnt)
 
         # Buscar adelantos aprobados
@@ -6569,15 +6571,19 @@ elif choice == "Boletas de Pago":
         # FÓRMULAS DE CÁLCULO
         _ult_dia_b = pd.Period(f"{int(anio_b_sel)}-{int(mes_b_sel):02d}").days_in_month
         _base_h = jornada_base_min(f"{int(anio_b_sel)}-{int(mes_b_sel):02d}-{_ult_dia_b:02d}") / 60.0   # jornada base vigente al cierre del mes (5.75 h con el horario actual)
-        valor_dia = sueldo_basico_in / 30.0 if sueldo_basico_in > 0 else 0.0
+        # Sueldo mensual pactado, prorrateado por días reconocidos sobre los días reales del mes.
+        # Ejemplo: S/ 530 * 20 / 31 = S/ 341.94 en octubre.
+        valor_dia = sueldo_basico_in / _ult_dia_b if sueldo_basico_in > 0 else 0.0
+        sueldo_proporcional_calc = round(valor_dia * min(int(dias_trab_in), _ult_dia_b), 2)
         valor_hora = valor_dia / _base_h if valor_dia > 0 else 0.0
 
         monto_feriados_calc = feriados_trab_in * (valor_dia * 1.0)
         monto_horas_extras_calc = hrs_extras_in * (valor_hora * FACTOR_HORA_EXTRA)
-        monto_faltas_calc = dias_faltas_in * valor_dia
+        # Las faltas ya están reflejadas en los días reconocidos: no descontar dos veces.
+        monto_faltas_calc = 0.0
         monto_domingo_volunt_calc = domingo_volunt_in * (valor_dia * 1.0)
 
-        total_ingresos_calc = sueldo_basico_in + monto_feriados_calc + monto_horas_extras_calc + monto_domingo_volunt_calc + bono_puntualidad_in + bono_presencia_in + bono_orden_in
+        total_ingresos_calc = sueldo_proporcional_calc + monto_feriados_calc + monto_horas_extras_calc + monto_domingo_volunt_calc + bono_puntualidad_in + bono_presencia_in + bono_orden_in
         total_descuentos_calc = adelanto_in + monto_faltas_calc + descuadre_caja_in + desc_inventario_in + consumos_in + incidencias_in
         neto_pagar_calc = max(0.0, total_ingresos_calc - total_descuentos_calc)
 
@@ -6594,7 +6600,8 @@ elif choice == "Boletas de Pago":
             "permisos_recuperados": permisos_recuperados_cnt,
             "feriados_trabajados": feriados_trab_in,
             "horas_extras_hrs": hrs_extras_in,
-            "sueldo_basico": sueldo_basico_in,
+            "sueldo_basico": sueldo_proporcional_calc,
+            "sueldo_mensual_pactado": sueldo_basico_in,
             "monto_feriados": monto_feriados_calc,
             "monto_horas_extras": monto_horas_extras_calc,
             "domingos_voluntarios": domingo_volunt_in,
@@ -6614,12 +6621,12 @@ elif choice == "Boletas de Pago":
         }
 
         _base_ini_b = jornada_base_min(f"{int(anio_b_sel)}-{int(mes_b_sel):02d}-01")
-        ui_callout(f"**Valor de la hora:** sueldo ÷ 30 días ÷ {_base_h:g} h de jornada = **S/. {valor_hora:.4f}**. Las horas extra se pagan a ese mismo valor (sin recargo), prorrateado por minutos.", "info")
+        ui_callout(f"**Sueldo proporcional:** S/ {sueldo_basico_in:,.2f} ÷ {_ult_dia_b} días × {min(int(dias_trab_in), _ult_dia_b)} días reconocidos = **S/ {sueldo_proporcional_calc:,.2f}**. **Valor hora:** S/ {valor_hora:.4f} (sin recargo para horas extra). Las faltas no se descuentan nuevamente porque ya están reflejadas en el prorrateo.", "info")
         if int(_base_ini_b) != int(_base_h * 60):
             ui_callout(f"En este mes **cambió la jornada base** ({_fmt_min(_base_ini_b)} → {_fmt_min(int(_base_h * 60))}). Para el valor de la hora se usó la jornada vigente al cierre del mes. Revisa que el monto de horas extra sea el que corresponde.", "warn")
         resumen_slot.markdown('<div class="tp-gridk">' +
                               ui_kpi_acc("Total ingresos", f"S/. {total_ingresos_calc:,.2f}", "sueldo, extras y bonos", "ok") +
-                              ui_kpi_acc("Total descuentos", f"S/. {total_descuentos_calc:,.2f}", "faltas, adelantos y otros", "bad") +
+                              ui_kpi_acc("Total descuentos", f"S/. {total_descuentos_calc:,.2f}", "adelantos y otros (sin duplicar faltas)", "bad") +
                               ui_kpi_acc("Neto a pagar", f"S/. {neto_pagar_calc:,.2f}", "monto final de la boleta", "info") + '</div>', unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
