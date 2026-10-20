@@ -4666,13 +4666,30 @@ if st.sidebar.button("Cerrar Sesión", use_container_width=True):
     st.rerun()
 st.sidebar.markdown('</div>', unsafe_allow_html=True)
 
-# Aviso compacto en la parte superior; no se confunde con un guardado.
-# El acceso a Botellas Fiadas permanece en el menú lateral.
-if _bf_total_pendientes:
-    st.info(
-        f"🍾 **Botellas pendientes de devolución:** {_bf_total_pendientes} registro(s). "
-        "Consulta el módulo Botellas Fiadas para gestionar las entregas."
+# Notificación de botellas: se abre una sola vez por inicio de sesión.
+# Debe invocarse en el cuerpo principal, nunca dentro de st.sidebar ni st.columns.
+@st.dialog("🍾 Botellas pendientes de devolución", width="large")
+def _tp_aviso_botellas_inicio(total):
+    st.warning(
+        f"Hay **{total} registro{'s' if total != 1 else ''} pendiente{'s' if total != 1 else ''} "
+        "de devolución**. Puedes revisar los detalles o cerrar este aviso."
     )
+    col_detalle, col_cerrar = st.columns(2)
+    with col_detalle:
+        if st.button("Ver botellas pendientes", key="tp_bf_modal_ver", use_container_width=True, type="primary"):
+            st.session_state["nav_radio"] = "Botellas Fiadas"
+            st.session_state["gs_q"] = ""
+            st.rerun()
+    with col_cerrar:
+        if st.button("Entendido, cerrar", key="tp_bf_modal_cerrar", use_container_width=True):
+            st.rerun()
+
+# El contador del perfil sigue disponible en todas las vistas, pero el diálogo
+# solo aparece al entrar y no vuelve a abrirse al navegar por el dashboard.
+if not st.session_state.get("_tp_botellas_aviso_login", False):
+    st.session_state["_tp_botellas_aviso_login"] = True
+    if _bf_total_pendientes > 0:
+        _tp_aviso_botellas_inicio(_bf_total_pendientes)
 
 # -------------------- ASISTENTE PREMIUM IA · V2 --------------------
 # IA opcional con Gemini (REST, sin librerías adicionales). No se envían tablas ni datos privados.
@@ -8208,4 +8225,3 @@ st.markdown("""
     Todos los derechos reservados
 </div>
 """, unsafe_allow_html=True)
-                     
