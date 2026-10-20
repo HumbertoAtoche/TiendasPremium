@@ -4098,75 +4098,51 @@ def generar_pdf_boleta(datos_b, extra=None):
     return buffer.getvalue()
 
 
-@st.cache_resource
-# Un candado compartido por las sesiones de esta instancia de Streamlit.
-def _tp_candado_asistencia():
-    return threading.RLock()
-
-
 def registrar_marca(dni, nombre, tipo, observacion="", es_extra=False):
-    """Confirma una marca solo después de escribirla en Sheets.
-
-    Lee directamente la hoja (sin el caché de 90 segundos) para comprobar
-    las marcas recientes de otras sesiones antes de guardar.
-    """
+    """Marcación clásica: usa asistencia cargada en sesión, sin releer toda la hoja."""
     if st.session_state.get("ver_como"):
         st.warning("En vista previa no se registran marcaciones.")
         return False
     if doc_sheets is None:
         st.error("Sin conexión a Google Sheets. No se registró la marcación.")
         return False
-    if tipo not in ("INGRESO", "SALIDA"):
-        st.error("Tipo de marcación no válido.")
+
+    ahora = obtener_ahora_peru()
+    hoy = ahora.strftime("%Y-%m-%d")
+    fecha_h = ahora.strftime("%Y-%m-%d %H:%M:%S")
+    df = st.session_state.asistencia
+
+    # Se recupera el funcionamiento anterior: el turno extra no queda
+    # bloqueado por la validación ordinaria de marcaciones consecutivas.
+    if not es_extra and not df.empty:
+        previas = df.loc[
+            (df["dni"].astype(str).str.strip() == str(dni).strip())
+            & (df["fecha"].astype(str).str.strip() == hoy)
+        ]
+        if not previas.empty:
+            ultima = previas.iloc[-1]
+            if str(ultima["tipo"]).strip().upper() == tipo:
+                st.warning(f"Tu última marcación de hoy ya es **{tipo}**. No se duplicó el registro.")
+                return False
+
+    obs_final = f"[TURNO EXTRA] {observacion}".strip() if es_extra else observacion
+    str_extra = "SI" if es_extra else "NO"
+    nueva = {"dni": str(dni), "nombre": nombre, "tipo": tipo,
+             "fecha_hora": fecha_h, "fecha": hoy,
+             "observacion": obs_final, "es_extra": str_extra}
+    try:
+        # Escritura clásica, usando el proxy que ya utilizan los demás módulos.
+        hoja = doc_sheets.worksheet("Asistencia")
+        hoja.append_row([str(dni), nombre, tipo, fecha_h, hoy, obs_final, str_extra])
+    except Exception as exc:
+        print(f"Error al guardar asistencia ({tipo}): {type(exc).__name__}: {exc}")
+        st.error("No se pudo confirmar la marcación en Google Sheets. Revisa el historial antes de reintentar.")
         return False
-    with _tp_candado_asistencia():
-        try:
-            # Evitar datos obsoletos del proxy y verificar registros de otros dispositivos.
-            hoja = doc_sheets.worksheet("Asistencia")
-            registros = hoja._ws.get_all_records()
-            df = pd.DataFrame(registros)
-            ahora = obtener_ahora_peru()
-            hoy = ahora.strftime("%Y-%m-%d")
-            if not df.empty:
-                for campo in ("dni", "tipo", "fecha", "fecha_hora", "es_extra"):
-                    if campo not in df.columns:
-                        raise ValueError(f"Falta columna '{campo}' en la hoja Asistencia")
-                previas = df.loc[
-                    (df["dni"].astype(str).str.strip() == str(dni).strip())
-                    & (df["fecha"].astype(str).str.strip() == hoy)
-                ].copy()
-                if not previas.empty:
-                    previas["_dt"] = pd.to_datetime(previas["fecha_hora"], errors="coerce")
-                    previas = previas.sort_values("_dt", kind="stable")
-                    ultima = previas.iloc[-1]
-                    ultima_tipo = str(ultima["tipo"]).strip().upper()
-                    ultimo_dt = ultima["_dt"]
-                    # Nunca permitir dos INGRESOS o dos SALIDAS seguidos,
-                    # incluso si la persona marcó desde otro dispositivo.
-                    if ultima_tipo == tipo:
-                        st.warning(f"Tu última marcación de hoy ya es **{tipo}**. No se duplicó el registro.")
-                        st.session_state.asistencia = df.drop(columns=["_dt"], errors="ignore")
-                        return False
-                    if pd.notna(ultimo_dt) and (ahora.replace(tzinfo=None) - ultimo_dt).total_seconds() < 20:
-                        st.warning("Espera unos segundos antes de realizar otra marcación.")
-                        st.session_state.asistencia = df.drop(columns=["_dt"], errors="ignore")
-                        return False
-            fecha_h = ahora.strftime("%Y-%m-%d %H:%M:%S")
-            obs_final = f"[TURNO EXTRA] {observacion}".strip() if es_extra else observacion
-            str_extra = "SI" if es_extra else "NO"
-            nueva = {"dni": str(dni), "nombre": nombre, "tipo": tipo,
-                     "fecha_hora": fecha_h, "fecha": hoy,
-                     "observacion": obs_final, "es_extra": str_extra}
-            # El método real lanza una excepción si Sheets no confirma la operación.
-            hoja._ws.append_row([str(dni), nombre, tipo, fecha_h, hoy, obs_final, str_extra])
-            hoja._invalidar()
-            st.session_state.asistencia = pd.concat([df, pd.DataFrame([nueva])], ignore_index=True)
-            return True
-        except Exception as exc:
-            # No afirmar que se guardó; una falla de red puede dejar resultado incierto.
-            print(f"Error marcación {tipo}, DNI {dni}: {type(exc).__name__}: {exc}")
-            st.error("No se pudo confirmar la marcación con Google Sheets. Verifica tu historial antes de reintentar, para evitar duplicados.")
-            return False
+
+    st.session_state.asistencia = pd.concat(
+        [df, pd.DataFrame([nueva])], ignore_index=True
+    )
+    return True
 
 
 def obtener_solo_colaboradores(fecha_eval=None):
