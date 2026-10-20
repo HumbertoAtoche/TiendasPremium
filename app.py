@@ -3043,6 +3043,87 @@ st.markdown(r"""<style>
 }
 </style>""", unsafe_allow_html=True)
 
+# =============================================================
+# TIENDAS PREMIUM · MOBILE FIRST 2026
+# Solo CSS: no modifica asistencia, horarios, boletas ni Sheets.
+# Compatible con navegadores Android / iOS.
+# =============================================================
+st.markdown(r"""<style>
+@media (max-width: 767px) {
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  body, .stApp, [data-testid="stAppViewContainer"] { width:100%; max-width:100%; }
+  [data-testid="stMainBlockContainer"], .main .block-container {
+    width:100%!important; max-width:100%!important;
+    padding: max(70px, env(safe-area-inset-top)) 12px calc(28px + env(safe-area-inset-bottom))!important;
+    box-sizing:border-box!important;
+  }
+  /* No recortar elementos desplegables ni ventanas de Streamlit */
+  [data-testid="stMain"], [data-testid="stVerticalBlock"], [data-testid="stVerticalBlockBorderWrapper"] {
+    min-width:0!important; max-width:100%;
+  }
+  [data-testid="stHorizontalBlock"] { flex-wrap:wrap!important; gap:12px!important; align-items:stretch!important; }
+  [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {
+    flex:1 1 100%!important; width:100%!important; min-width:0!important; max-width:100%!important;
+  }
+  [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] > div { min-width:0!important; }
+  [data-testid="stForm"], [data-testid="stExpander"], [data-testid="stVerticalBlockBorderWrapper"] {
+    max-width:100%; box-sizing:border-box;
+  }
+  [data-testid="stForm"] { padding:12px!important; }
+  [data-testid="stWidgetLabel"] p { line-height:1.35!important; }
+  [data-testid="stTextInput"] input, [data-testid="stNumberInput"] input,
+  [data-testid="stTextArea"] textarea, [data-baseweb="select"] input {
+    font-size:16px!important; min-height:44px;
+  }
+  [data-testid="stButton"] button, [data-testid="stFormSubmitButton"] button,
+  [data-testid="stDownloadButton"] button, [data-testid="stPopover"] button {
+    min-height:48px!important; width:100%; touch-action:manipulation;
+    white-space:normal!important; overflow-wrap:anywhere; line-height:1.3!important;
+  }
+  /* Ingreso y salida: botones cómodos y diferenciados en móvil */
+  .btn-ingreso button, .btn-salida button { min-height:60px!important; font-size:1rem!important; }
+  .tp-hero, .tp-card, .tp-kpi, .market-header, .cal-card, .boleta-container {
+    max-width:100%!important; min-width:0!important; box-sizing:border-box!important;
+    overflow-wrap:anywhere;
+  }
+  .tp-hero-top { flex-wrap:wrap; }
+  .tp-hero-hi { overflow-wrap:anywhere; }
+  .tp-kpi-val { overflow-wrap:anywhere; font-size:clamp(1.25rem,6vw,1.7rem)!important; }
+  .tp-mgrid, .tp-gridk, .tp-id-grid { grid-template-columns:minmax(0,1fr)!important; }
+  .tp-cal-grid { grid-template-columns:repeat(2,minmax(0,1fr))!important; }
+  .tp-up-calendar, .tp-shift-detail-wrap, .cal-card, .boleta-container,
+  [data-testid="stDataFrame"], [data-testid="stDataEditor"] {
+    max-width:100%!important; overflow-x:auto!important; -webkit-overflow-scrolling:touch;
+  }
+  .stTabs [data-baseweb="tab-list"] { max-width:100%; overflow-x:auto!important; scrollbar-width:thin; }
+  .stTabs [data-baseweb="tab"] { white-space:nowrap!important; min-height:44px; }
+  /* Dialogos de cumpleaños, botellas y formularios: visibles sin salir de pantalla */
+  [role="dialog"] { max-width:calc(100vw - 20px)!important; max-height:calc(100dvh - 32px)!important;
+    overflow-y:auto!important; box-sizing:border-box!important; }
+  [data-testid="stDialog"] { max-width:100vw!important; }
+  [data-testid="stDialog"] [data-testid="stVerticalBlock"] { min-width:0!important; }
+  [data-testid="stDialog"] button { min-height:48px!important; white-space:normal!important; }
+  [data-testid="stSidebar"] { width:min(88vw,330px)!important; max-width:min(88vw,330px)!important; }
+  [data-testid="stSidebar"] button { min-height:44px; }
+  /* Chatbot: sin tapar la navegación ni el contenido inferior */
+  .st-key-tp_chat_fab { right:12px!important; top:70px!important; }
+  .st-key-tp_chat_panel { right:8px!important; top:135px!important;
+    width:calc(100vw - 16px)!important; max-width:calc(100vw - 16px)!important;
+    max-height:calc(100dvh - 150px)!important; overflow-y:auto!important; }
+  [data-testid="stToastContainer"] { max-width:calc(100vw - 20px)!important; }
+  [data-testid="stToast"] { max-width:calc(100vw - 24px)!important; }
+}
+@media (max-width: 390px) {
+  [data-testid="stMainBlockContainer"], .main .block-container { padding-left:9px!important; padding-right:9px!important; }
+  .tp-cal-grid { grid-template-columns:minmax(0,1fr)!important; }
+  .tp-cal-day { min-height:0!important; }
+}
+@media (orientation: landscape) and (max-height: 480px) {
+  [role="dialog"] { max-height:calc(100dvh - 12px)!important; }
+  .st-key-tp_chat_panel { top:65px!important; max-height:calc(100dvh - 75px)!important; }
+}
+</style>""", unsafe_allow_html=True)
+
 # --- COMPONENTES UI REUTILIZABLES ---
 def ui_iniciales(nombre):
     p = [x for x in str(nombre).split() if x]
