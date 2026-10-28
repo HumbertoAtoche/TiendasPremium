@@ -4707,8 +4707,27 @@ if rol_actual == "admin":
     _nav_items = [("Dashboard General", "Resumen", ":material/dashboard:"), ("Centro de Alertas", "Alertas", ":material/notifications:"),
                   ("Historial de Asistencias", "Asistencia", ":material/schedule:"), ("Solicitudes y Permisos", "Solicitudes", ":material/inbox:")]
 else:
-    _nav_items = [("Marcar Asistencia", "Marcar", ":material/fingerprint:"), ("Mi Dashboard Mensual", "Mi mes", ":material/calendar_month:"),
-                  ("Solicitar Permiso / Adelanto", "Permisos", ":material/edit_note:"), ("Mi Ficha Técnica", "Ficha", ":material/badge:")]
+    _nav_items = [("Mi día", "Inicio", ":material/home:"), ("Marcar Asistencia", "Asistencia", ":material/fingerprint:"),
+                  ("Mis Rutinas", "Rutinas", ":material/checklist:"), ("Comunicados", "Avisos", ":material/campaign:")]
+# La barra de navegación se fija únicamente en pantallas pequeñas.
+# El widget mantiene su navegación mediante callbacks, evitando mutar el radio ya instanciado.
+if rol_actual != "admin":
+    st.markdown("""<style>
+    @media (max-width: 768px) {
+      div.st-key-tp_bottomnav {position:fixed!important;bottom:0!important;left:0!important;
+        right:0!important;z-index:999!important;background:#fff!important;
+        border-top:1px solid #e7e9ef!important;padding:9px 8px calc(9px + env(safe-area-inset-bottom))!important;
+        box-shadow:0 -5px 22px rgba(15,23,42,.09)!important}
+      div.st-key-tp_bottomnav [data-testid="stHorizontalBlock"] {gap:5px!important;flex-wrap:nowrap!important}
+      div.st-key-tp_bottomnav [data-testid="column"] {min-width:0!important;flex:1 1 0!important}
+      div.st-key-tp_bottomnav button {font-size:11px!important;min-height:46px!important;
+        padding:7px 2px!important;border-radius:10px!important;display:flex!important;
+        flex-direction:column!important;gap:2px!important;line-height:1.1!important}
+      div.st-key-tp_bottomnav button[kind="primary"] {background:#EC3237!important;border-color:#EC3237!important}
+      [data-testid="stMainBlockContainer"] {padding-bottom:110px!important}
+    }
+    @media (min-width:769px) {div.st-key-tp_bottomnav {display:none!important}}
+    </style>""", unsafe_allow_html=True)
 try:
     with st.container(key="tp_bottomnav"):
         for _col, (_dest, _lbl, _ico) in zip(st.columns(len(_nav_items)), _nav_items):
@@ -5325,10 +5344,33 @@ def _vayro_guardar_ejecucion(r, fecha, respuestas):
     return fila
 
 def _vayro_mis_rutinas():
+    """Vista móvil de verificación; conserva el registro y validaciones originales."""
+    import html as _html
     _tp_mostrar_confirmacion("_tp_aviso_ejecucion")
-    st.markdown('<div class="market-header"><h1>Mis rutinas</h1><p>Tiendas Premium · Actividades y verificaciones de tu jornada</p></div>', unsafe_allow_html=True)
+    st.markdown("""
+    <style>
+    .tp-rut-head{background:linear-gradient(115deg,#fff,#fff7f7);border:1px solid #f0d7d8;
+      border-radius:18px;padding:22px 24px;margin-bottom:16px}
+    .tp-rut-head h1{font-size:1.65rem!important;font-weight:800!important;color:#17202e!important;margin:0!important}
+    .tp-rut-head p{color:#64748b;margin:7px 0 0;font-size:.92rem}
+    .tp-rut-card{background:white;border:1px solid #e6e8ed;border-left:4px solid #EC3237;
+      border-radius:13px;padding:13px 17px;margin:15px 0 9px}
+    .tp-rut-card strong{font-size:1.04rem;color:#192334}
+    .tp-rut-card small{display:block;color:#64748b;margin-top:5px}
+    .tp-rut-task{padding:13px 15px;border:1px solid #e8eaf0;background:#fafbfc;
+      border-radius:12px;margin:13px 0 7px;font-weight:650;color:#202938}
+    .tp-rut-ok{color:#08784a;font-weight:700}
+    .tp-rut-warning{color:#b45309;font-weight:700}
+    div[data-testid="stProgress"]>div>div{background-color:#EC3237}
+    @media(max-width:640px){.tp-rut-head{padding:16px}.tp-rut-head h1{font-size:1.35rem!important}
+      .tp-rut-task{padding:11px}}
+    </style>
+    <div class="tp-rut-head"><h1>Mis rutinas</h1>
+    <p>Verifica las actividades de tu jornada, una por una.</p></div>
+    """, unsafe_allow_html=True)
     hoy = obtener_ahora_peru().date()
-    fecha = st.date_input("Fecha de consulta", value=hoy, max_value=hoy, key="vayro_fecha_ejecucion").isoformat()
+    fecha = st.date_input("Fecha de consulta", value=hoy, max_value=hoy,
+                          key="vayro_fecha_ejecucion").isoformat()
     try:
         rutinas = _vayro_leer_rutinas()
         ejecuciones = _vayro_leer_ejecuciones()
@@ -5338,27 +5380,39 @@ def _vayro_mis_rutinas():
     if rutinas.empty:
         st.info("Todavía no se han publicado rutinas.")
         return
-    asignadas = [r for _, r in rutinas.iterrows() if _vayro_corresponde(r, user_actual, dni_actual, fecha)]
-    completadas = ejecuciones[(ejecuciones["fecha"] == fecha) & (ejecuciones["dni"].astype(str) == str(dni_actual))] if not ejecuciones.empty else ejecuciones
+    asignadas = [r for _, r in rutinas.iterrows()
+                 if _vayro_corresponde(r, user_actual, dni_actual, fecha)]
+    completadas = (ejecuciones[(ejecuciones["fecha"] == fecha) &
+                               (ejecuciones["dni"].astype(str) == str(dni_actual))]
+                   if not ejecuciones.empty else ejecuciones)
+    hechas_ids = set(completadas["id_rutina"].astype(str))
+    realizadas = sum(str(r["id_rutina"]) in hechas_ids for r in asignadas)
     a, b, c = st.columns(3)
     a.metric("Asignadas", len(asignadas))
-    b.metric("Completadas", sum(str(r["id_rutina"]) in set(completadas["id_rutina"]) for r in asignadas))
-    c.metric("Pendientes", sum(str(r["id_rutina"]) not in set(completadas["id_rutina"]) for r in asignadas))
+    b.metric("Completadas", realizadas)
+    c.metric("Pendientes", len(asignadas) - realizadas)
     if not asignadas:
         st.info("No tienes rutinas asignadas para esta fecha. Las rutinas por turno requieren una programación guardada.")
         return
+
     for r in asignadas:
         rid = str(r["id_rutina"])
-        hecha = completadas[completadas["id_rutina"] == rid]
-        etiqueta = "Completada" if not hecha.empty else "Pendiente"
-        with st.expander(f"{r['nombre']} · {r['hora']} · {etiqueta}", expanded=len(asignadas)==1):
+        hecha = completadas[completadas["id_rutina"].astype(str) == rid]
+        estado = "Completada" if not hecha.empty else "Pendiente"
+        nombre = _html.escape(str(r["nombre"]))
+        hora = _html.escape(str(r.get("hora", "")))
+        st.markdown(f'<div class="tp-rut-card"><strong>{nombre}</strong>'
+                    f'<small>Horario: {hora} &nbsp;·&nbsp; Estado: {estado}</small></div>',
+                    unsafe_allow_html=True)
+        with st.expander("Ver actividades" if not hecha.empty else "Completar lista de verificación",
+                         expanded=len(asignadas) == 1 and hecha.empty):
             if str(r.get("descripcion", "")).strip():
-                st.write(str(r["descripcion"]))
+                st.caption(str(r["descripcion"]))
             try:
                 tareas = _vayro_json.loads(str(r["tareas_json"]))
             except Exception:
                 tareas = []
-            if not tareas:
+            if not isinstance(tareas, list) or not tareas:
                 st.warning("La rutina no contiene actividades.")
                 continue
             if not hecha.empty:
@@ -5366,27 +5420,54 @@ def _vayro_mis_rutinas():
                 st.success(f"Registrada el {registro['fecha_registro']} · {registro['estado']} · {registro['porcentaje']}% conforme")
                 try:
                     respuestas = _vayro_json.loads(registro["respuestas_json"])
-                    st.dataframe(pd.DataFrame(respuestas).rename(columns={"tarea":"Actividad", "respuesta":"Respuesta", "observacion":"Observación"}), hide_index=True, use_container_width=True)
+                    st.dataframe(pd.DataFrame(respuestas).rename(
+                        columns={"tarea":"Actividad", "respuesta":"Respuesta", "observacion":"Observación"}),
+                        hide_index=True, use_container_width=True)
                 except Exception:
                     pass
                 continue
             if fecha != hoy.isoformat():
-                st.caption("Las rutinas de fechas anteriores son de consulta; solo se registra la jornada actual.")
+                st.caption("Las fechas anteriores son solo de consulta.")
                 continue
-            with st.form(f"vayro_ejecucion_{rid}_{fecha}"):
-                respuestas = []
-                for i, tarea in enumerate(tareas):
-                    st.markdown(f"**{i+1}. {tarea}**")
-                    resp = st.radio("Resultado", ["Seleccionar", "Sí", "No"], horizontal=True, key=f"vayro_resp_{rid}_{i}", label_visibility="collapsed")
-                    obs = st.text_input("Observación (obligatoria si responde No)", key=f"vayro_obs_{rid}_{i}")
-                    respuestas.append({"tarea": str(tarea), "respuesta": resp, "observacion": obs.strip()})
-                confirmar = st.checkbox("Confirmo que he realizado estas verificaciones", key=f"vayro_conf_{rid}")
-                guardar = st.form_submit_button("Finalizar y enviar rutina", type="primary", use_container_width=True)
+
+            # Los controles fuera del formulario actualizan el progreso al instante.
+            # El guardado definitivo ocurre únicamente al pulsar Finalizar.
+            respuestas = []
+            contestadas = 0
+            for i, tarea in enumerate(tareas):
+                clave = f"tp_check_{rid}_{fecha}_{i}"
+                clave_obs = f"tp_check_obs_{rid}_{fecha}_{i}"
+                st.markdown(f'<div class="tp-rut-task">{i+1:02d}. '
+                            f'{_html.escape(str(tarea))}</div>', unsafe_allow_html=True)
+                respuesta_ui = st.radio(
+                    f"Resultado de actividad {i+1}",
+                    ["Pendiente", "Realizada", "No realizada"],
+                    horizontal=True, key=clave, label_visibility="collapsed")
+                respuesta = {"Realizada": "Sí", "No realizada": "No"}.get(respuesta_ui, "Seleccionar")
+                if respuesta != "Seleccionar":
+                    contestadas += 1
+                observacion = ""
+                if respuesta == "No":
+                    observacion = st.text_area(
+                        "¿Qué ocurrió? (obligatorio)", key=clave_obs,
+                        placeholder="Describe brevemente el motivo o la incidencia.",
+                        height=75).strip()
+                respuestas.append({"tarea": str(tarea), "respuesta": respuesta,
+                                   "observacion": observacion})
+            total = len(tareas)
+            st.progress(contestadas / total if total else 0)
+            st.caption(f"{contestadas} de {total} actividades verificadas")
+            confirmar = st.checkbox(
+                "Confirmo que he realizado estas verificaciones",
+                key=f"vayro_conf_{rid}_{fecha}")
+            guardar = st.button("Finalizar y enviar rutina", type="primary",
+                                use_container_width=True, key=f"tp_check_save_{rid}_{fecha}",
+                                disabled=contestadas != total or not confirmar)
             if guardar:
                 if any(x["respuesta"] == "Seleccionar" for x in respuestas):
                     st.error("Responde todas las actividades antes de enviar.")
                 elif any(x["respuesta"] == "No" and not x["observacion"] for x in respuestas):
-                    st.error("Agrega una observación para cada respuesta No.")
+                    st.error("Agrega una observación para cada actividad no realizada.")
                 elif not confirmar:
                     st.error("Confirma la verificación antes de enviarla.")
                 else:
@@ -5869,7 +5950,25 @@ def _vayro_mi_dia():
         st.markdown(f'<div class="vmd-card"><div class="vmd-label">RUTINAS DE HOY</div><div class="vmd-value">{n_hechas} / {n_rutinas}</div><div class="vmd-sub">{max(0,n_rutinas-n_hechas)} pendiente(s)</div></div>',unsafe_allow_html=True)
     with c3:
         st.markdown(f'<div class="vmd-card"><div class="vmd-label">COMUNICADOS</div><div class="vmd-value">{len(pendientes_avisos)}</div><div class="vmd-sub">Por confirmar lectura</div></div>',unsafe_allow_html=True)
-    st.caption(f"Turno de hoy: {detalle_turno}")
+    st.markdown(f'<div class="vmd-section-card"><div class="vmd-eyebrow">MI TURNO DE HOY</div>'
+                f'<div style="font-size:17px;font-weight:750;margin-top:7px;color:#111827">{_html_md.escape(detalle_turno)}</div>'
+                f'<div style="color:#64748b;font-size:12px;margin-top:5px">{_html_md.escape(detalle_asist)}</div></div>',
+                unsafe_allow_html=True)
+
+    # Acción recomendada según el estado actual: siempre requiere un clic explícito.
+    if estado_asist == "Sin marcación":
+        accion_texto, accion_destino, accion_desc = "Registrar mi ingreso", "Marcar Asistencia", "Tu primera acción es registrar la asistencia."
+    elif n_rutinas > n_hechas:
+        accion_texto, accion_destino, accion_desc = "Continuar mis rutinas", "Mis Rutinas", f"Tienes {n_rutinas-n_hechas} rutina(s) pendiente(s)."
+    elif not pendientes_avisos.empty:
+        accion_texto, accion_destino, accion_desc = "Leer comunicados", "Comunicados", "Tienes comunicados pendientes de confirmar."
+    else:
+        accion_texto, accion_destino, accion_desc = "Consultar mi asistencia", "Marcar Asistencia", "Estás al día con tus tareas registradas."
+    st.markdown('<div class="vmd-section">Tu siguiente acción</div>', unsafe_allow_html=True)
+    with st.container(border=True):
+        st.markdown(f"**{accion_desc}**")
+        st.button(accion_texto, key="vmd_accion_sugerida", type="primary", use_container_width=True,
+                  on_click=_ir_a, args=(accion_destino,))
 
     st.markdown('<div class="vmd-section">Tus rutinas de hoy</div>',unsafe_allow_html=True)
     if error_rutinas:
