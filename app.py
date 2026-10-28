@@ -4670,9 +4670,9 @@ if rol_actual == "admin":
     div[data-testid="stTabs"] button[role="tab"] {font-weight:600!important;}
     div[data-testid="stDataFrame"], div[data-testid="stDataEditor"] {border-radius:10px!important; overflow:hidden!important;}
     </style>""", unsafe_allow_html=True)
-    menu = ["Dashboard General", "Centro de Alertas", "Analítica (BI)", "Gestión Colaboradores", "Onboarding / Offboarding", "Gestión de Vacaciones", "Programación de Turnos", "Gestión de Rutinas", "Boletas de Pago", "Solicitudes y Permisos", "Historial de Descuadres", "Incidencias y Daños", "Botellas Fiadas", "Historial de Asistencias", "Auditoría y Configuración"]
+    menu = ["Dashboard General", "Centro de Alertas", "Analítica (BI)", "Gestión Colaboradores", "Onboarding / Offboarding", "Gestión de Vacaciones", "Programación de Turnos", "Gestión de Rutinas", "Centro de Comunicados", "Boletas de Pago", "Solicitudes y Permisos", "Historial de Descuadres", "Incidencias y Daños", "Botellas Fiadas", "Historial de Asistencias", "Auditoría y Configuración"]
 else:
-    menu = ["Marcar Asistencia", "Registrar Descuadre", "Registrar Incidencia", "Botellas Fiadas", "Mi Ficha Técnica", "Mis Vacaciones", "Mis Boletas", "Solicitar Permiso / Adelanto", "Mi Dashboard Mensual"]
+    menu = ["Mi día", "Mis Rutinas", "Comunicados", "Marcar Asistencia", "Registrar Descuadre", "Registrar Incidencia", "Botellas Fiadas", "Mi Ficha Técnica", "Mis Vacaciones", "Mis Boletas", "Solicitar Permiso / Adelanto", "Mi Dashboard Mensual"]
 
 if rol_real == "admin":
     _opc_vc = ["Mi vista (admin)"] + sorted(n for n, d in USUARIOS.items() if d["rol"] != "admin")
@@ -5127,7 +5127,7 @@ def _vayro_guardar_rutina(datos, id_existente=None):
 
 def _vayro_rutinas_admin():
     st.markdown('<div class="market-header"><h1>Gestión de rutinas</h1><p>VAYRO · Planifica, asigna y organiza las actividades de tu equipo</p></div>', unsafe_allow_html=True)
-    st.caption("FASE 1 · Administración de plantillas. El registro de ejecución por colaborador se incorporará en la siguiente fase.")
+    st.caption("FASES 1 y 2 · Plantillas y ejecución de rutinas por colaboradores.")
     try:
         df = _vayro_leer_rutinas()
     except Exception as e:
@@ -5185,12 +5185,12 @@ def _vayro_rutinas_admin():
             elif tipo=="Todos los de un turno":
                 turnos=["Mañana","Tarde","Todos los turnos"]
                 turno=st.selectbox("Turno",turnos,index=turnos.index(_valor('turno','Mañana')) if _valor('turno','Mañana') in turnos else 0,key=f"vr_turno_{k}")
-                st.caption("La asignación se aplicará según el turno programado cuando implementemos las ejecuciones.")
+                st.caption("La asignación se valida con la programación de turnos guardada para cada fecha.")
             st.markdown("**Actividades / preguntas**")
             try: prev_tareas=_vayro_json.loads(_valor('tareas_json','[]'))
             except Exception: prev_tareas=[]
             tareas_texto=st.text_area("Una actividad por línea *",value="\n".join(str(t) for t in prev_tareas),height=190,placeholder="Verificar limpieza general\nRevisar góndolas\nComprobar refrigeración",key=f"vr_tareas_{k}")
-            st.caption("Cada línea será una tarea independiente. En la fase 2 añadiremos respuestas y evidencias.")
+            st.caption("Cada línea es una pregunta Sí/No; el colaborador podrá agregar observaciones.")
             enviar=st.form_submit_button("Guardar cambios" if rid else "Crear rutina",type="primary",use_container_width=True)
         if enviar:
             tareas=[t.strip() for t in tareas_texto.splitlines() if t.strip()]
@@ -5209,11 +5209,516 @@ def _vayro_rutinas_admin():
                 except Exception as e:
                     st.error(f"No se pudo guardar: {e}")
 
-if choice == "Gestión de Rutinas":
+# =============================================================
+# VAYRO · FASE 2 — MIS RUTINAS (COLABORADOR)
+# Ejecuciones independientes y persistentes en Google Sheets.
+# =============================================================
+_VAYRO_EJ_COLS = ["id_ejecucion", "id_rutina", "nombre_rutina", "fecha", "dni", "colaborador", "respuestas_json", "total", "conformes", "porcentaje", "estado", "fecha_registro"]
+
+def _vayro_hoja_ejecuciones(crear=False):
+    if not doc_sheets:
+        raise RuntimeError("No hay conexión con Google Sheets")
+    try:
+        return doc_sheets.worksheet("VAYRO_Rutinas_Ejecuciones")
+    except gspread.exceptions.WorksheetNotFound:
+        if not crear:
+            return None
+        hoja = doc_sheets.add_worksheet(title="VAYRO_Rutinas_Ejecuciones", rows=1000, cols=len(_VAYRO_EJ_COLS))
+        hoja.append_row(_VAYRO_EJ_COLS)
+        return hoja
+
+def _vayro_leer_ejecuciones():
+    hoja = _vayro_hoja_ejecuciones()
+    if hoja is None:
+        return pd.DataFrame(columns=_VAYRO_EJ_COLS)
+    valores = hoja.get_all_values()
+    if not valores:
+        return pd.DataFrame(columns=_VAYRO_EJ_COLS)
+    cab = valores[0]
+    filas = [dict(zip(cab, fila + [""] * max(0, len(cab)-len(fila)))) for fila in valores[1:] if any(str(v).strip() for v in fila)]
+    return pd.DataFrame(filas).reindex(columns=_VAYRO_EJ_COLS, fill_value="")
+
+def _vayro_turno_asignado(dni, fecha):
+    prog = st.session_state.get("programacion", pd.DataFrame())
+    if not isinstance(prog, pd.DataFrame) or prog.empty or not {"dni", "fecha", "turno"}.issubset(prog.columns):
+        return ""
+    filas = prog[prog["dni"].apply(lambda x: _mismo_dni(x, dni)) & prog["fecha"].apply(lambda x: _norm_fecha_h(x) == fecha)]
+    return str(filas.iloc[-1]["turno"]).strip() if not filas.empty else ""
+
+def _vayro_corresponde(r, nombre, dni, fecha):
+    if str(r.get("estado", "")) != "Activa":
+        return False
+    f = datetime.strptime(fecha, "%Y-%m-%d").date()
+    frecuencia = str(r.get("frecuencia", ""))
+    dias = [x.strip() for x in str(r.get("dias", "")).split(",")]
+    dia = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"][f.weekday()]
+    if frecuencia == "Una vez":
+        # La plantilla actual no guarda una fecha única; no asignar arbitrariamente.
+        return False
+    if dia not in dias:
+        return False
+    tipo = str(r.get("tipo_asignacion", ""))
+    if tipo == "Todos los colaboradores":
+        return True
+    if tipo == "Colaboradores específicos":
+        return nombre in str(r.get("destinatarios", "")).split("|")
+    if tipo == "Todos los de un turno":
+        turno = str(r.get("turno", ""))
+        if turno == "Todos los turnos":
+            return bool(_vayro_turno_asignado(dni, fecha))
+        programado = _vayro_turno_asignado(dni, fecha)
+        if not programado:
+            return False
+        try:
+            info = _info_turno(programado, f)
+            nombre_turno = str(info.get("nombre", "")) if info else programado
+        except Exception:
+            nombre_turno = programado
+        return turno.casefold() in nombre_turno.casefold()
+    return False
+
+def _vayro_guardar_ejecucion(r, fecha, respuestas):
+    if st.session_state.get("ver_como") or rol_actual == "admin":
+        raise PermissionError("Las rutinas solo pueden completarse desde una sesión real de colaborador")
+    hoja = _vayro_hoja_ejecuciones(crear=True)
+    # Verificar de nuevo en servidor para impedir doble envío accidental.
+    existentes = _vayro_leer_ejecuciones()
+    if not existentes.empty and ((existentes["id_rutina"] == str(r["id_rutina"])) & (existentes["fecha"] == fecha) & (existentes["dni"].astype(str) == str(dni_actual))).any():
+        raise ValueError("Esta rutina ya fue registrada hoy. Actualiza la pantalla.")
+    total = len(respuestas)
+    conformes = sum(1 for x in respuestas if x["respuesta"] == "Sí")
+    porcentaje = round(100 * conformes / total, 1) if total else 0
+    estado = "Conforme" if conformes == total else "Con observaciones"
+    fila = dict(id_ejecucion="EJE-" + _vayro_uuid.uuid4().hex[:12].upper(), id_rutina=str(r["id_rutina"]), nombre_rutina=str(r["nombre"]), fecha=fecha, dni=str(dni_actual), colaborador=user_actual, respuestas_json=_vayro_json.dumps(respuestas, ensure_ascii=False), total=total, conformes=conformes, porcentaje=porcentaje, estado=estado, fecha_registro=obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S"))
+    hoja.append_row([str(fila[c]) for c in _VAYRO_EJ_COLS])
+    registrar_auditoria("Completar rutina", "VAYRO_Rutinas_Ejecuciones", f"{fila['id_rutina']} · {user_actual} · {fecha}")
+    return fila
+
+def _vayro_mis_rutinas():
+    st.markdown('<div class="market-header"><h1>Mis rutinas</h1><p>VAYRO · Actividades y verificaciones de tu jornada</p></div>', unsafe_allow_html=True)
+    hoy = obtener_ahora_peru().date()
+    fecha = st.date_input("Fecha de consulta", value=hoy, max_value=hoy, key="vayro_fecha_ejecucion").isoformat()
+    try:
+        rutinas = _vayro_leer_rutinas()
+        ejecuciones = _vayro_leer_ejecuciones()
+    except Exception as e:
+        st.error(f"No se pudieron cargar las rutinas: {e}")
+        return
+    if rutinas.empty:
+        st.info("Todavía no se han publicado rutinas.")
+        return
+    asignadas = [r for _, r in rutinas.iterrows() if _vayro_corresponde(r, user_actual, dni_actual, fecha)]
+    completadas = ejecuciones[(ejecuciones["fecha"] == fecha) & (ejecuciones["dni"].astype(str) == str(dni_actual))] if not ejecuciones.empty else ejecuciones
+    a, b, c = st.columns(3)
+    a.metric("Asignadas", len(asignadas))
+    b.metric("Completadas", sum(str(r["id_rutina"]) in set(completadas["id_rutina"]) for r in asignadas))
+    c.metric("Pendientes", sum(str(r["id_rutina"]) not in set(completadas["id_rutina"]) for r in asignadas))
+    if not asignadas:
+        st.info("No tienes rutinas asignadas para esta fecha. Las rutinas por turno requieren una programación guardada.")
+        return
+    for r in asignadas:
+        rid = str(r["id_rutina"])
+        hecha = completadas[completadas["id_rutina"] == rid]
+        etiqueta = "Completada" if not hecha.empty else "Pendiente"
+        with st.expander(f"{r['nombre']} · {r['hora']} · {etiqueta}", expanded=len(asignadas)==1):
+            if str(r.get("descripcion", "")).strip():
+                st.write(str(r["descripcion"]))
+            try:
+                tareas = _vayro_json.loads(str(r["tareas_json"]))
+            except Exception:
+                tareas = []
+            if not tareas:
+                st.warning("La rutina no contiene actividades.")
+                continue
+            if not hecha.empty:
+                registro = hecha.iloc[-1]
+                st.success(f"Registrada el {registro['fecha_registro']} · {registro['estado']} · {registro['porcentaje']}% conforme")
+                try:
+                    respuestas = _vayro_json.loads(registro["respuestas_json"])
+                    st.dataframe(pd.DataFrame(respuestas).rename(columns={"tarea":"Actividad", "respuesta":"Respuesta", "observacion":"Observación"}), hide_index=True, use_container_width=True)
+                except Exception:
+                    pass
+                continue
+            if fecha != hoy.isoformat():
+                st.caption("Las rutinas de fechas anteriores son de consulta; solo se registra la jornada actual.")
+                continue
+            with st.form(f"vayro_ejecucion_{rid}_{fecha}"):
+                respuestas = []
+                for i, tarea in enumerate(tareas):
+                    st.markdown(f"**{i+1}. {tarea}**")
+                    resp = st.radio("Resultado", ["Seleccionar", "Sí", "No"], horizontal=True, key=f"vayro_resp_{rid}_{i}", label_visibility="collapsed")
+                    obs = st.text_input("Observación (obligatoria si responde No)", key=f"vayro_obs_{rid}_{i}")
+                    respuestas.append({"tarea": str(tarea), "respuesta": resp, "observacion": obs.strip()})
+                confirmar = st.checkbox("Confirmo que he realizado estas verificaciones", key=f"vayro_conf_{rid}")
+                guardar = st.form_submit_button("Finalizar y enviar rutina", type="primary", use_container_width=True)
+            if guardar:
+                if any(x["respuesta"] == "Seleccionar" for x in respuestas):
+                    st.error("Responde todas las actividades antes de enviar.")
+                elif any(x["respuesta"] == "No" and not x["observacion"] for x in respuestas):
+                    st.error("Agrega una observación para cada respuesta No.")
+                elif not confirmar:
+                    st.error("Confirma la verificación antes de enviarla.")
+                else:
+                    try:
+                        _vayro_guardar_ejecucion(r, fecha, respuestas)
+                        st.success("Rutina registrada correctamente.")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"No se pudo registrar: {e}")
+
+# =============================================================
+# VAYRO · FASE 3 — CENTRO DE COMUNICADOS
+# Publicaciones dirigidas + confirmación de lectura por DNI.
+# =============================================================
+_VAYRO_COM_COLS = ["id_comunicado", "titulo", "contenido", "categoria", "prioridad", "tipo_destino", "destinatarios_dni", "fecha_inicio", "fecha_fin", "requiere_confirmacion", "estado", "creado_por", "fecha_creacion"]
+_VAYRO_LECT_COLS = ["id_lectura", "id_comunicado", "dni", "colaborador", "fecha_lectura"]
+
+def _vayro_com_hoja(nombre, columnas, crear=False):
+    if not doc_sheets:
+        raise RuntimeError("No hay conexión con Google Sheets")
+    try:
+        return doc_sheets.worksheet(nombre)
+    except gspread.exceptions.WorksheetNotFound:
+        if not crear:
+            return None
+        hoja = doc_sheets.add_worksheet(title=nombre, rows=1000, cols=len(columnas))
+        hoja.append_row(columnas)
+        return hoja
+
+def _vayro_com_leer(nombre, columnas):
+    hoja = _vayro_com_hoja(nombre, columnas)
+    if hoja is None:
+        return pd.DataFrame(columns=columnas)
+    valores = hoja.get_all_values()
+    if not valores:
+        return pd.DataFrame(columns=columnas)
+    cab = valores[0]
+    registros = [dict(zip(cab, fila + [""] * max(0, len(cab) - len(fila)))) for fila in valores[1:] if any(str(v).strip() for v in fila)]
+    return pd.DataFrame(registros).reindex(columns=columnas, fill_value="")
+
+def _vayro_com_dnis():
+    opciones = {}
+    for nombre, datos in USUARIOS.items():
+        if datos.get("rol") == "admin":
+            continue
+        dni = str(datos.get("dni", "")).strip()
+        if dni:
+            opciones[f"{nombre} · {dni}"] = dni
+    return opciones
+
+def _vayro_com_dirigido(r, dni):
+    if str(r.get("tipo_destino", "")) == "Todos los colaboradores":
+        return True
+    return str(dni).strip() in str(r.get("destinatarios_dni", "")).split("|")
+
+def _vayro_com_vigente(r, fecha):
+    return (str(r.get("estado", "")) == "Publicado" and
+            str(r.get("fecha_inicio", "")) <= fecha <= str(r.get("fecha_fin", "")))
+
+def _vayro_com_guardar(datos):
+    if rol_real != "admin" or st.session_state.get("ver_como"):
+        raise PermissionError("Solo un administrador real puede publicar comunicados")
+    hoja = _vayro_com_hoja("VAYRO_Comunicados", _VAYRO_COM_COLS, crear=True)
+    datos["id_comunicado"] = "COM-" + _vayro_uuid.uuid4().hex[:12].upper()
+    datos["creado_por"] = user_real
+    datos["fecha_creacion"] = obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S")
+    hoja.append_row([str(datos.get(c, "")) for c in _VAYRO_COM_COLS])
+    registrar_auditoria("Publicar comunicado", "VAYRO_Comunicados", datos["id_comunicado"])
+
+def _vayro_com_confirmar(r):
+    if st.session_state.get("ver_como") or rol_actual == "admin":
+        raise PermissionError("Para confirmar lectura, ingresa con tu cuenta de colaborador")
+    fecha = obtener_ahora_peru().date().isoformat()
+    if not _vayro_com_vigente(r, fecha) or not _vayro_com_dirigido(r, dni_actual):
+        raise PermissionError("Este comunicado no está disponible para tu cuenta")
+    anteriores = _vayro_com_leer("VAYRO_Comunicados_Lecturas", _VAYRO_LECT_COLS)
+    if not anteriores.empty and ((anteriores["id_comunicado"] == str(r["id_comunicado"])) & (anteriores["dni"].astype(str) == str(dni_actual))).any():
+        return False
+    hoja = _vayro_com_hoja("VAYRO_Comunicados_Lecturas", _VAYRO_LECT_COLS, crear=True)
+    registro = {"id_lectura": "LEC-" + _vayro_uuid.uuid4().hex[:12].upper(), "id_comunicado": str(r["id_comunicado"]), "dni": str(dni_actual), "colaborador": user_actual, "fecha_lectura": obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S")}
+    hoja.append_row([registro[c] for c in _VAYRO_LECT_COLS])
+    registrar_auditoria("Confirmar lectura", "VAYRO_Comunicados_Lecturas", registro["id_comunicado"])
+    return True
+
+def _vayro_com_admin():
+    st.markdown('<div class="market-header"><h1>Centro de comunicados</h1><p>VAYRO · Informa a tu equipo y supervisa las confirmaciones</p></div>', unsafe_allow_html=True)
+    try:
+        comunicados = _vayro_com_leer("VAYRO_Comunicados", _VAYRO_COM_COLS)
+        lecturas = _vayro_com_leer("VAYRO_Comunicados_Lecturas", _VAYRO_LECT_COLS)
+    except Exception as exc:
+        st.error(f"No fue posible consultar los comunicados: {exc}")
+        return
+    hoy = obtener_ahora_peru().date().isoformat()
+    vigentes = comunicados[comunicados.apply(lambda r: _vayro_com_vigente(r, hoy), axis=1)] if not comunicados.empty else comunicados
+    a, b, c = st.columns(3)
+    a.metric("Comunicados", len(comunicados))
+    b.metric("Vigentes", len(vigentes))
+    c.metric("Confirmaciones", len(lecturas))
+    tab1, tab2 = st.tabs(["Publicar comunicado", "Historial y seguimiento"])
+    with tab1:
+        with st.form("vayro_form_comunicado", clear_on_submit=True):
+            titulo = st.text_input("Título", max_chars=110)
+            contenido = st.text_area("Mensaje", height=180, max_chars=4000)
+            col1, col2 = st.columns(2)
+            with col1:
+                categoria = st.selectbox("Categoría", ["Información general", "Operaciones", "Horarios", "Seguridad", "Procedimientos", "Otros"])
+                prioridad = st.selectbox("Prioridad", ["Normal", "Importante", "Urgente"])
+                destino = st.radio("Destinatarios", ["Todos los colaboradores", "Colaboradores específicos"], horizontal=True)
+            with col2:
+                inicio = st.date_input("Mostrar desde", value=obtener_ahora_peru().date())
+                fin = st.date_input("Mostrar hasta", value=obtener_ahora_peru().date() + timedelta(days=14))
+                confirmacion = st.checkbox("Solicitar confirmación de lectura", value=True)
+            opciones = _vayro_com_dnis()
+            seleccion = st.multiselect("Selecciona los colaboradores", list(opciones), disabled=destino != "Colaboradores específicos")
+            confirmar = st.checkbox("Confirmo que deseo publicar este comunicado")
+            publicar = st.form_submit_button("Publicar comunicado", type="primary", use_container_width=True)
+        if publicar:
+            if not titulo.strip() or not contenido.strip():
+                st.error("Completa el título y el mensaje.")
+            elif fin < inicio:
+                st.error("La fecha final no puede ser anterior a la fecha inicial.")
+            elif destino == "Colaboradores específicos" and not seleccion:
+                st.error("Selecciona al menos un destinatario.")
+            elif not confirmar:
+                st.error("Confirma la publicación antes de continuar.")
+            else:
+                datos = dict(titulo=titulo.strip(), contenido=contenido.strip(), categoria=categoria, prioridad=prioridad, tipo_destino=destino, destinatarios_dni="|".join(opciones[n] for n in seleccion), fecha_inicio=inicio.isoformat(), fecha_fin=fin.isoformat(), requiere_confirmacion="Sí" if confirmacion else "No", estado="Publicado")
+                try:
+                    _vayro_com_guardar(datos)
+                    st.success("Comunicado publicado correctamente.")
+                    st.rerun()
+                except Exception as exc:
+                    st.error(f"No se pudo publicar: {exc}")
+    with tab2:
+        if comunicados.empty:
+            st.info("Todavía no hay comunicados registrados.")
+        else:
+            filtro = st.selectbox("Estado", ["Todos", "Vigentes", "Finalizados", "Programados"])
+            for _, r in comunicados.iloc[::-1].iterrows():
+                estado_fecha = "Vigente" if _vayro_com_vigente(r, hoy) else ("Programado" if str(r["fecha_inicio"]) > hoy else "Finalizado")
+                if filtro != "Todos" and filtro.rstrip("s") != estado_fecha.rstrip("s"):
+                    continue
+                with st.expander(f"{r['titulo']} · {r['prioridad']} · {estado_fecha}"):
+                    st.write(str(r["contenido"]))
+                    st.caption(f"{r['categoria']} · {r['fecha_inicio']} al {r['fecha_fin']} · {r['tipo_destino']}")
+                    if str(r["tipo_destino"]) == "Todos los colaboradores":
+                        esperados = set(_vayro_com_dnis().values())
+                    else:
+                        esperados = set(filter(None, str(r["destinatarios_dni"]).split("|")))
+                    conf = lecturas[lecturas["id_comunicado"] == str(r["id_comunicado"])] if not lecturas.empty else lecturas
+                    leidos = set(conf["dni"].astype(str)) if not conf.empty else set()
+                    if str(r["requiere_confirmacion"]) == "Sí":
+                        st.progress(len(esperados & leidos) / len(esperados) if esperados else 0)
+                        st.caption(f"Confirmaron: {len(esperados & leidos)} de {len(esperados)} · Pendientes: {len(esperados - leidos)}")
+                        if esperados - leidos:
+                            etiquetas = {v:k for k,v in _vayro_com_dnis().items()}
+                            st.write("**Pendientes:** " + ", ".join(etiquetas.get(d, d) for d in sorted(esperados - leidos)))
+                    else:
+                        st.caption("Este comunicado no requiere confirmación.")
+
+def _vayro_com_colaborador():
+    st.markdown('<div class="market-header"><h1>Comunicados</h1><p>VAYRO · Información y novedades de tu equipo</p></div>', unsafe_allow_html=True)
+    try:
+        comunicados = _vayro_com_leer("VAYRO_Comunicados", _VAYRO_COM_COLS)
+        lecturas = _vayro_com_leer("VAYRO_Comunicados_Lecturas", _VAYRO_LECT_COLS)
+    except Exception as exc:
+        st.error(f"No se pudieron cargar los comunicados: {exc}")
+        return
+    hoy = obtener_ahora_peru().date().isoformat()
+    visibles = comunicados[comunicados.apply(lambda r: _vayro_com_vigente(r, hoy) and _vayro_com_dirigido(r, dni_actual), axis=1)] if not comunicados.empty else comunicados
+    if visibles.empty:
+        st.info("No tienes comunicados vigentes por el momento.")
+        return
+    leidos = set(lecturas[lecturas["dni"].astype(str) == str(dni_actual)]["id_comunicado"]) if not lecturas.empty else set()
+    pendientes = sum(str(r["requiere_confirmacion"]) == "Sí" and str(r["id_comunicado"]) not in leidos for _, r in visibles.iterrows())
+    a, b = st.columns(2)
+    a.metric("Comunicados vigentes", len(visibles))
+    b.metric("Pendientes de confirmar", pendientes)
+    for _, r in visibles.iloc[::-1].iterrows():
+        confirmado = str(r["id_comunicado"]) in leidos
+        etiqueta = "Confirmado" if confirmado else ("Pendiente de lectura" if r["requiere_confirmacion"] == "Sí" else "Informativo")
+        with st.container(border=True):
+            st.markdown(f"### {r['titulo']}")
+            st.caption(f"{r['categoria']} · {r['prioridad']} · {r['fecha_inicio']} · {etiqueta}")
+            st.write(str(r["contenido"]))
+            if str(r["requiere_confirmacion"]) == "Sí":
+                if confirmado:
+                    st.success("Lectura confirmada")
+                elif st.session_state.get("ver_como"):
+                    st.info("Vista previa: ingresa con la cuenta del colaborador para confirmar la lectura.")
+                elif st.button("Confirmar que he leído", key=f"vayro_leer_{r['id_comunicado']}", type="primary", use_container_width=True):
+                    try:
+                        _vayro_com_confirmar(r)
+                        st.rerun()
+                    except Exception as exc:
+                        st.error(f"No se pudo confirmar la lectura: {exc}")
+
+# =========================================================
+# VAYRO · FASE 4 — MI DÍA (PANEL DEL COLABORADOR)
+# Panel de solo lectura: reutiliza datos de fases 1, 2 y 3.
+# =========================================================
+def _vayro_mi_dia():
+    import html as _html_md
+    ahora = obtener_ahora_peru()
+    fecha = ahora.strftime("%Y-%m-%d")
+    nombre = str(user_actual)
+    nombre_corto = nombre.split()[0] if nombre.strip() else "Colaborador"
+    saludo = "Buenos días" if ahora.hour < 12 else ("Buenas tardes" if ahora.hour < 19 else "Buenas noches")
+    st.markdown("""
+    <style>
+    .vmd-hero{background:linear-gradient(115deg,#12356d,#2563eb);color:white;
+      padding:26px 28px;border-radius:20px;margin:0 0 20px;box-shadow:0 12px 30px rgba(29,78,216,.14)}
+    .vmd-hero h1{font-size:30px;color:white!important;margin:5px 0;font-weight:750}
+    .vmd-hero p{color:#dbeafe;margin:0;font-size:14px}
+    .vmd-eyebrow{letter-spacing:1.5px;text-transform:uppercase;font-size:11px;font-weight:750;color:#bfdbfe}
+    .vmd-card{background:white;border:1px solid #e5eaf2;border-radius:16px;
+      padding:18px 20px;margin:9px 0;min-height:115px}
+    .vmd-label{font-size:12px;color:#64748b;font-weight:650;margin-bottom:8px}
+    .vmd-value{font-size:25px;color:#12284c;font-weight:800;line-height:1.3}
+    .vmd-sub{font-size:12px;color:#64748b;margin-top:6px}
+    .vmd-section{font-size:19px;font-weight:750;color:#142b50;margin:20px 0 7px}
+    @media(max-width:640px){.vmd-hero{padding:21px 19px;border-radius:16px}
+    .vmd-hero h1{font-size:25px}.vmd-card{padding:14px;min-height:105px}
+    .vmd-value{font-size:20px}}
+    </style>
+    """, unsafe_allow_html=True)
+    st.markdown(
+        f'<div class="vmd-hero"><div class="vmd-eyebrow">VAYRO · Mi día</div>'
+        f'<h1>{_html_md.escape(saludo)}, {_html_md.escape(nombre_corto)}</h1>'
+        f'<p>{ahora.strftime("%d/%m/%Y")} · Tu jornada, en un solo lugar</p></div>',
+        unsafe_allow_html=True,
+    )
+
+    # Asistencia: únicamente las marcaciones del usuario conectado.
+    estado_asist = "Sin marcación"
+    detalle_asist = "Aún no registras tu ingreso"
+    asistencia = st.session_state.get("asistencia", pd.DataFrame())
+    if isinstance(asistencia, pd.DataFrame) and not asistencia.empty and {"dni","fecha","tipo","fecha_hora"}.issubset(asistencia.columns):
+        marcas = asistencia[
+            asistencia["dni"].apply(lambda x: _mismo_dni(x, dni_actual))
+            & (asistencia["fecha"].astype(str).str[:10] == fecha)
+        ].copy()
+        if not marcas.empty:
+            marcas["_fecha_hora"] = pd.to_datetime(marcas["fecha_hora"], errors="coerce")
+            marcas = marcas.sort_values("_fecha_hora")
+            ultima = marcas.iloc[-1]
+            hora = ultima["_fecha_hora"].strftime("%H:%M") if pd.notna(ultima["_fecha_hora"]) else ""
+            if str(ultima["tipo"]).upper() == "INGRESO":
+                estado_asist, detalle_asist = "En jornada", f"Ingreso registrado {hora}"
+            else:
+                estado_asist, detalle_asist = "Salida registrada", f"Última salida {hora}"
+
+    # Horario del día, si existe programación.
+    turno = _vayro_turno_asignado(dni_actual, fecha)
+    detalle_turno = str(turno) if turno else "Sin turno programado"
+    try:
+        rutinas = _vayro_leer_rutinas()
+        ejecuciones = _vayro_leer_ejecuciones()
+        rutinas_hoy = rutinas[
+            rutinas.apply(lambda r: _vayro_corresponde(r, nombre, dni_actual, fecha), axis=1)
+        ] if not rutinas.empty else rutinas
+        completadas = set(
+            ejecuciones.loc[
+                (ejecuciones["fecha"].astype(str) == fecha)
+                & ejecuciones["dni"].apply(lambda x: _mismo_dni(x, dni_actual)),
+                "id_rutina"
+            ].astype(str)
+        ) if not ejecuciones.empty else set()
+        n_rutinas = len(rutinas_hoy)
+        n_hechas = sum(str(r["id_rutina"]) in completadas for _,r in rutinas_hoy.iterrows())
+        error_rutinas = None
+    except Exception as exc:
+        rutinas_hoy, completadas, n_rutinas, n_hechas = pd.DataFrame(), set(), 0, 0
+        error_rutinas = str(exc)
+
+    try:
+        comunicados = _vayro_com_leer("VAYRO_Comunicados", _VAYRO_COM_COLS)
+        lecturas = _vayro_com_leer("VAYRO_Comunicados_Lecturas", _VAYRO_LECT_COLS)
+        avisos = comunicados[
+            comunicados.apply(lambda r: _vayro_com_vigente(r, fecha) and _vayro_com_dirigido(r, dni_actual), axis=1)
+        ] if not comunicados.empty else comunicados
+        ids_leidos = set(lecturas.loc[
+            lecturas["dni"].apply(lambda x: _mismo_dni(x, dni_actual)), "id_comunicado"
+        ].astype(str)) if not lecturas.empty else set()
+        pendientes_avisos = avisos[
+            (avisos["requiere_confirmacion"].astype(str) == "Sí")
+            & ~avisos["id_comunicado"].astype(str).isin(ids_leidos)
+        ] if not avisos.empty else avisos
+        error_avisos = None
+    except Exception as exc:
+        avisos, pendientes_avisos = pd.DataFrame(), pd.DataFrame()
+        error_avisos = str(exc)
+
+    c1,c2,c3 = st.columns(3)
+    with c1:
+        st.markdown(f'<div class="vmd-card"><div class="vmd-label">ASISTENCIA</div><div class="vmd-value">{_html_md.escape(estado_asist)}</div><div class="vmd-sub">{_html_md.escape(detalle_asist)}</div></div>',unsafe_allow_html=True)
+    with c2:
+        st.markdown(f'<div class="vmd-card"><div class="vmd-label">RUTINAS DE HOY</div><div class="vmd-value">{n_hechas} / {n_rutinas}</div><div class="vmd-sub">{max(0,n_rutinas-n_hechas)} pendiente(s)</div></div>',unsafe_allow_html=True)
+    with c3:
+        st.markdown(f'<div class="vmd-card"><div class="vmd-label">COMUNICADOS</div><div class="vmd-value">{len(pendientes_avisos)}</div><div class="vmd-sub">Por confirmar lectura</div></div>',unsafe_allow_html=True)
+    st.caption(f"Turno de hoy: {detalle_turno}")
+
+    st.markdown('<div class="vmd-section">Tus rutinas de hoy</div>',unsafe_allow_html=True)
+    if error_rutinas:
+        st.warning("No se pudieron consultar las rutinas en este momento.")
+    elif rutinas_hoy.empty:
+        st.info("No tienes rutinas asignadas para hoy.")
+    else:
+        for _,r in rutinas_hoy.iterrows():
+            hecha = str(r["id_rutina"]) in completadas
+            with st.container(border=True):
+                a,b = st.columns([4,1])
+                a.markdown(f"**{r.get('nombre','Rutina')}**")
+                a.caption(f"{r.get('hora','')} · {'Completada' if hecha else 'Pendiente'}")
+                b.markdown("**Realizada**" if hecha else "**Por hacer**")
+        st.progress(n_hechas/n_rutinas if n_rutinas else 0)
+    if st.button("Abrir Mis Rutinas",key="vmd_ir_rutinas",use_container_width=True,type="primary"):
+        _ir_a("Mis Rutinas")
+        st.rerun()
+
+    st.markdown('<div class="vmd-section">Comunicados pendientes</div>',unsafe_allow_html=True)
+    if error_avisos:
+        st.warning("No se pudieron consultar los comunicados en este momento.")
+    elif pendientes_avisos.empty:
+        st.success("No tienes comunicados pendientes de confirmar.")
+    else:
+        for _,r in pendientes_avisos.iterrows():
+            with st.container(border=True):
+                st.markdown(f"**{r.get('titulo','Comunicado')}**")
+                st.caption(f"{r.get('prioridad','Normal')} · {r.get('categoria','General')}")
+    if st.button("Abrir Comunicados",key="vmd_ir_comunicados",use_container_width=True):
+        _ir_a("Comunicados")
+        st.rerun()
+
+    st.markdown('<div class="vmd-section">Accesos rápidos</div>',unsafe_allow_html=True)
+    a,b = st.columns(2)
+    with a:
+        if st.button("Marcar asistencia",key="vmd_ir_asistencia",use_container_width=True):
+            _ir_a("Marcar Asistencia")
+            st.rerun()
+    with b:
+        if st.button("Mis vacaciones",key="vmd_ir_vacaciones",use_container_width=True):
+            _ir_a("Mis Vacaciones")
+            st.rerun()
+    if st.session_state.get("ver_como"):
+        st.info("Estás en vista previa. Las acciones de registro se realizan desde la sesión real del colaborador.")
+
+if choice == "Mi día":
+    _vayro_mi_dia()
+elif choice == "Centro de Comunicados":
+    if rol_actual == "admin" and rol_real == "admin" and not st.session_state.get("ver_como"):
+        _vayro_com_admin()
+    else:
+        st.error("Esta sección está reservada para administradores.")
+elif choice == "Comunicados":
+    _vayro_com_colaborador()
+elif choice == "Gestión de Rutinas":
     if rol_actual == "admin" and rol_real == "admin" and not st.session_state.get("ver_como"):
         _vayro_rutinas_admin()
     else:
         st.error("Esta sección está reservada para administradores.")
+elif choice == "Mis Rutinas":
+    _vayro_mis_rutinas()
 elif choice == "Marcar Asistencia":
     st.markdown(f"""
         <div class="market-header">
