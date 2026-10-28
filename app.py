@@ -5343,6 +5343,29 @@ def _vayro_guardar_ejecucion(r, fecha, respuestas):
     registrar_auditoria("Completar rutina", "VAYRO_Rutinas_Ejecuciones", f"{fila['id_rutina']} · {user_actual} · {fecha}")
     return fila
 
+def _tp_estado_horario(r, fecha, completada=False, ahora=None):
+    """Estado informativo; no bloquea la ejecución ni altera los registros."""
+    import re as _re
+    if completada:
+        return "Completada", "done"
+    ahora = ahora or obtener_ahora_peru()
+    hora_texto = str(r.get("hora", "")).strip()
+    match = _re.search(r"(?<!\\d)([01]?\\d|2[0-3]):([0-5]\\d)(?!\\d)", hora_texto)
+    if not match:
+        return "Pendiente · sin horario", "pending"
+    hora_objetivo = int(match.group(1))*60 + int(match.group(2))
+    if fecha < ahora.strftime("%Y-%m-%d"):
+        return "Atrasada", "late"
+    if fecha > ahora.strftime("%Y-%m-%d"):
+        return "Programada", "scheduled"
+    minuto_actual = ahora.hour*60 + ahora.minute
+    if minuto_actual > hora_objetivo:
+        return "Atrasada", "late"
+    if minuto_actual >= hora_objetivo - 30:
+        return "Próxima", "upcoming"
+    return "Programada", "scheduled"
+
+
 def _vayro_mis_rutinas():
     """Vista móvil de verificación; conserva el registro y validaciones originales."""
     import html as _html
@@ -5377,6 +5400,11 @@ def _vayro_mis_rutinas():
       gap:.25rem!important}
     @media(max-width:640px){.tp-task-line{font-size:.84rem;gap:8px}
       .tp-task-num{width:25px;height:25px}}
+    div[data-testid="stVerticalBlockBorderWrapper"]:has(.tp-task-line.is-complete){background:#f0fbf4!important;border-color:#a9dfbc!important;transition:background-color .2s ease,border-color .2s ease}
+    .tp-task-line.is-complete{color:#176a3b!important}
+    .tp-task-line.is-complete .tp-task-num{background:#dcf5e5!important;color:#14733f!important}
+    .tp-task-check{display:none;width:22px;height:22px;border-radius:50%;background:#198754;color:white;font-size:13px;font-weight:900;align-items:center;justify-content:center;margin-left:auto;flex-shrink:0}
+    .tp-task-line.is-complete .tp-task-check{display:inline-flex}
     .tp-rut-ok{color:#08784a;font-weight:700}
     .tp-rut-warning{color:#b45309;font-weight:700}
     div[data-testid="stProgress"]>div>div{background-color:#EC3237}
@@ -5421,7 +5449,7 @@ def _vayro_mis_rutinas():
     for r in asignadas:
         rid = str(r["id_rutina"])
         hecha = completadas[completadas["id_rutina"].astype(str) == rid]
-        estado = "Completada" if not hecha.empty else "Pendiente"
+        estado, estado_clase = _tp_estado_horario(r, fecha, not hecha.empty)
         nombre = _html.escape(str(r["nombre"]))
         hora = _html.escape(str(r.get("hora", "")))
         st.markdown(f'<div class="tp-rut-card"><strong>{nombre}</strong>'
@@ -5462,14 +5490,15 @@ def _vayro_mis_rutinas():
             for i, tarea in enumerate(tareas):
                 clave = f"tp_check_{rid}_{fecha}_{i}"
                 clave_obs = f"tp_check_obs_{rid}_{fecha}_{i}"
+                _tp_estado_css = "is-complete" if st.session_state.get(clave, False) else ""
                 # Una fila compacta: actividad a la izquierda, interruptor a la derecha.
                 # Se conserva la clave del widget para no perder el avance al actualizar.
                 with st.container(border=True):
                     col_actividad, col_switch = st.columns([5, 1.3], gap="small", vertical_alignment="center")
                     with col_actividad:
                         st.markdown(
-                            f'<div class="tp-task-line"><span class="tp-task-num">{i+1:02d}</span>'
-                            f'<span>{_html.escape(str(tarea))}</span></div>',
+                            f'<div class="tp-task-line {_tp_estado_css}"><span class="tp-task-num">{i+1:02d}</span>'
+                            f'<span>{_html.escape(str(tarea))}</span><span class="tp-task-check" aria-label="Completada">&#10003;</span></div>',
                             unsafe_allow_html=True)
                     with col_switch:
                         realizado = st.toggle(
@@ -5890,6 +5919,41 @@ def _vayro_mi_dia():
     saludo = "Buenos días" if ahora.hour < 12 else ("Buenas tardes" if ahora.hour < 19 else "Buenas noches")
     st.markdown("""
     <style>
+    /* Piloto visual estilo ClickUp: solo afecta Mi día. */
+    .tp-cu-welcome{display:flex;justify-content:space-between;align-items:center;gap:15px;
+      background:#fff;border:1px solid #e8eaf0;border-radius:15px;padding:22px 24px;
+      margin:0 0 16px;box-shadow:0 3px 14px rgba(17,24,39,.035)}
+    .tp-cu-overline{font-size:10px;letter-spacing:1.6px;font-weight:800;color:#EC3237;margin-bottom:7px}
+    .tp-cu-welcome h2{font-size:24px!important;letter-spacing:-.6px;color:#161c2d!important;margin:0 0 6px!important;font-weight:800!important}
+    .tp-cu-welcome p{font-size:13px;color:#788398;margin:0}
+    .tp-cu-date{white-space:nowrap;background:#f7f8fb;border:1px solid #eceef3;border-radius:9px;
+      padding:9px 12px;font-size:12px;font-weight:700;color:#64748b}
+    .tp-cu-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:13px}
+    .tp-cu-stat{background:#fff;border:1px solid #e8eaf0;border-radius:13px;padding:17px 18px;
+      display:flex;flex-direction:column;gap:7px;min-width:0;box-shadow:0 2px 8px rgba(17,24,39,.025)}
+    .tp-cu-stat:before{content:"";display:block;height:3px;width:30px;border-radius:3px;background:#EC3237;margin-bottom:5px}
+    .tp-cu-stat-label{font-size:10px;font-weight:800;letter-spacing:1.1px;color:#8791a3}
+    .tp-cu-stat strong{font-size:23px;color:#1b2333;line-height:1.18;overflow-wrap:anywhere}
+    .tp-cu-stat small{font-size:12px;color:#7c8798}
+    .tp-cu-muted{font-size:15px;color:#a4aebb}
+    .tp-cu-shift{background:#fff;border:1px solid #e8eaf0;border-radius:13px;
+      padding:15px 19px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .tp-cu-shift span{font-size:10px;letter-spacing:1.2px;color:#7c8798;font-weight:800}
+    .tp-cu-shift strong{font-size:14px;color:#1d2637;text-align:right}
+    .vmd-section{font-size:15px!important;letter-spacing:-.2px;border-bottom:1px solid #e9ebf0;
+      padding-bottom:10px;margin-top:26px!important}
+    .vmd-routine{border-radius:10px!important;box-shadow:none!important}
+    @media(max-width:640px){
+      .tp-cu-welcome{padding:17px 16px;align-items:flex-start}
+      .tp-cu-welcome h2{font-size:19px!important}
+      .tp-cu-date{font-size:10px;padding:7px}
+      .tp-cu-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+      .tp-cu-stat{padding:12px 13px;min-height:104px}
+      .tp-cu-stat strong{font-size:19px}
+      .tp-cu-grid .tp-cu-stat:first-child{grid-column:span 2;min-height:88px}
+      .tp-cu-shift{align-items:flex-start;flex-direction:column;gap:5px}
+      .tp-cu-shift strong{text-align:left}
+    }
     .vmd-hero{background:linear-gradient(105deg,#fff 0%,#fff 60%,#fff0f0 100%);
       border:1px solid #E3E6EC;border-left:5px solid #EC3237;color:#0F172A;
       padding:25px 28px;border-radius:16px;margin:0 0 20px;box-shadow:0 4px 15px rgba(15,23,42,.035)}
@@ -5909,6 +5973,14 @@ def _vayro_mi_dia():
     .vmd-chip{border-radius:30px;padding:6px 11px;font-size:11px;font-weight:700;white-space:nowrap;
       color:#B45309;background:#FEF3C7}
     .vmd-chip.done{color:#0B8F57;background:#E3F6EC}
+    .vmd-chip.late{color:#b4232c;background:#ffeded}
+    .vmd-chip.scheduled{color:#64748b;background:#f1f5f9}
+    .vmd-chip.upcoming{color:#99520a;background:#fff0d9}
+    .vmd-timeline{border-left:2px solid #e5e7eb;margin-left:11px;padding:3px 0 3px 20px}
+    .vmd-timeline .vmd-routine{position:relative;margin:10px 0}
+    .vmd-timeline .vmd-routine:before{content:"";position:absolute;left:-28px;top:22px;width:12px;height:12px;border-radius:50%;background:#EC3237;border:3px solid white;box-shadow:0 0 0 1px #e5e7eb}
+    .vmd-timeline .vmd-routine:has(.done):before{background:#16a36b}
+    .vmd-timeline .vmd-routine:has(.scheduled):before{background:#94a3b8}
     .vmd-progress{height:8px;background:#F1F2F5;border-radius:10px;overflow:hidden;margin-top:10px}
     .vmd-progress>div{height:100%;background:#EC3237;border-radius:10px}
     .vmd-empty{background:#E3F6EC;border:1px solid #C8EAD8;border-radius:12px;
@@ -5921,8 +5993,15 @@ def _vayro_mi_dia():
     </style>
     """, unsafe_allow_html=True)
     st.markdown(
-        f'<div class="market-header"><h1>Mi día</h1>'
-        f'<p>Tiendas Premium · {ahora.strftime("%d/%m/%Y")} · {_html_md.escape(saludo)}, {_html_md.escape(nombre_corto)}</p></div>',
+        f'<div class="market-header tp-clickup-heading"><h1>Mi día</h1>'
+        f'<p>Tiendas Premium · {ahora.strftime("%d/%m/%Y")}</p></div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        f'<div class="tp-cu-welcome"><div><div class="tp-cu-overline">ESPACIO DE TRABAJO</div>'
+        f'<h2>{_html_md.escape(saludo)}, {_html_md.escape(nombre_corto)}</h2>'
+        f'<p>Organiza tu jornada y mantén tus actividades al día.</p></div>'
+        f'<span class="tp-cu-date">{ahora.strftime("%d/%m/%Y")}</span></div>',
         unsafe_allow_html=True,
     )
 
@@ -5986,17 +6065,21 @@ def _vayro_mi_dia():
         avisos, pendientes_avisos = pd.DataFrame(), pd.DataFrame()
         error_avisos = str(exc)
 
-    c1,c2,c3 = st.columns(3)
-    with c1:
-        st.markdown(f'<div class="vmd-card"><div class="vmd-label">ASISTENCIA</div><div class="vmd-value">{_html_md.escape(estado_asist)}</div><div class="vmd-sub">{_html_md.escape(detalle_asist)}</div></div>',unsafe_allow_html=True)
-    with c2:
-        st.markdown(f'<div class="vmd-card"><div class="vmd-label">RUTINAS DE HOY</div><div class="vmd-value">{n_hechas} / {n_rutinas}</div><div class="vmd-sub">{max(0,n_rutinas-n_hechas)} pendiente(s)</div></div>',unsafe_allow_html=True)
-    with c3:
-        st.markdown(f'<div class="vmd-card"><div class="vmd-label">COMUNICADOS</div><div class="vmd-value">{len(pendientes_avisos)}</div><div class="vmd-sub">Por confirmar lectura</div></div>',unsafe_allow_html=True)
-    st.markdown(f'<div class="vmd-section-card"><div class="vmd-eyebrow">MI TURNO DE HOY</div>'
-                f'<div style="font-size:17px;font-weight:750;margin-top:7px;color:#111827">{_html_md.escape(detalle_turno)}</div>'
-                f'<div style="color:#64748b;font-size:12px;margin-top:5px">{_html_md.escape(detalle_asist)}</div></div>',
-                unsafe_allow_html=True)
+    st.markdown(
+        '<div class="tp-cu-grid">'
+        f'<div class="tp-cu-stat"><span class="tp-cu-stat-label">ASISTENCIA</span>'
+        f'<strong>{_html_md.escape(estado_asist)}</strong>'
+        f'<small>{_html_md.escape(detalle_asist)}</small></div>'
+        f'<div class="tp-cu-stat"><span class="tp-cu-stat-label">RUTINAS</span>'
+        f'<strong>{n_hechas} <span class="tp-cu-muted">/ {n_rutinas}</span></strong>'
+        f'<small>{max(0,n_rutinas-n_hechas)} pendientes</small></div>'
+        f'<div class="tp-cu-stat"><span class="tp-cu-stat-label">COMUNICADOS</span>'
+        f'<strong>{len(pendientes_avisos)}</strong><small>Por confirmar lectura</small></div>'
+        '</div>'
+        f'<div class="tp-cu-shift"><span>MI TURNO DE HOY</span>'
+        f'<strong>{_html_md.escape(detalle_turno)}</strong></div>',
+        unsafe_allow_html=True,
+    )
 
     # Acción recomendada según el estado actual: siempre requiere un clic explícito.
     if estado_asist == "Sin marcación":
@@ -6013,25 +6096,28 @@ def _vayro_mi_dia():
         st.button(accion_texto, key="vmd_accion_sugerida", type="primary", use_container_width=True,
                   on_click=_ir_a, args=(accion_destino,))
 
-    st.markdown('<div class="vmd-section">Tus rutinas de hoy</div>',unsafe_allow_html=True)
+    st.markdown('<div class="vmd-section">Mi jornada · Línea de tiempo</div>',unsafe_allow_html=True)
     if error_rutinas:
         st.warning("No se pudieron consultar las rutinas en este momento.")
     elif rutinas_hoy.empty:
         st.info("No tienes rutinas asignadas para hoy.")
     else:
-        for _,r in rutinas_hoy.iterrows():
+        st.markdown('<div class="vmd-timeline">',unsafe_allow_html=True)
+        rutinas_ordenadas = rutinas_hoy.sort_values("hora", kind="stable") if "hora" in rutinas_hoy.columns else rutinas_hoy
+        for _,r in rutinas_ordenadas.iterrows():
             hecha = str(r["id_rutina"]) in completadas
             try:
                 num_tareas = len(_vayro_json.loads(str(r.get("tareas_json", "[]"))))
             except Exception:
                 num_tareas = 0
-            estado_txt = "Completada" if hecha else "Pendiente"
+            estado_txt, estado_clase = _tp_estado_horario(r, fecha, hecha, ahora)
             st.markdown(
                 f'<div class="vmd-routine"><div><div class="vmd-routine-name">{_html_md.escape(str(r.get("nombre", "Rutina")))}</div>'
                 f'<div class="vmd-routine-sub">{_html_md.escape(str(r.get("hora", "")))} · {num_tareas} verificaciones</div></div>'
                 f'<span class="vmd-chip {"done" if hecha else ""}">{estado_txt}</span></div>',
                 unsafe_allow_html=True,
             )
+        st.markdown('</div>',unsafe_allow_html=True)
         st.markdown(f'<div class="vmd-progress"><div style="width:{(n_hechas/n_rutinas*100) if n_rutinas else 0:.1f}%"></div></div>', unsafe_allow_html=True)
     st.button("Abrir Mis Rutinas", key="vmd_ir_rutinas", use_container_width=True,
               type="primary", on_click=_ir_a, args=("Mis Rutinas",))
@@ -6061,83 +6147,91 @@ def _vayro_mi_dia():
         st.info("Estás en vista previa. Las acciones de registro se realizan desde la sesión real del colaborador.")
 
 def _tp_centro_notificaciones():
-    """Bandeja unificada sin modificar el estado de lectura ni escribir en Sheets."""
+    """Bandeja 2.0: pendiente/atendida calculado a partir de los registros existentes."""
     import html as _ht
-    fecha = obtener_ahora_peru().strftime("%Y-%m-%d")
-    st.markdown("""
-    <style>
-    .tp-not-hero{padding:23px 25px;border-radius:17px;background:linear-gradient(110deg,#fff,#fff3f3);
-      border:1px solid #eddde0;margin-bottom:18px}
-    .tp-not-hero h1{font-size:25px!important;margin:3px 0 7px!important;color:#172033!important}
-    .tp-not-hero p{margin:0;color:#64748b;font-size:13px}
-    .tp-not-card{background:#fff;border:1px solid #e5e7eb;border-radius:13px;
-      padding:17px 19px;margin:11px 0;box-shadow:0 2px 9px rgba(15,23,42,.035)}
-    .tp-not-card strong{color:#192337;font-size:15px}
-    .tp-not-card small{display:block;color:#718096;margin-top:5px}
-    .tp-not-pill{font-size:11px;color:#b4232c;background:#fff0f0;padding:4px 9px;
-      border-radius:20px;font-weight:750;display:inline-block;margin-bottom:8px}
-    .tp-not-pill.rut{background:#fff6e7;color:#a65e08}
-    @media(max-width:640px){.tp-not-hero{padding:18px}.tp-not-card{padding:13px 14px}}
-    </style>
-    """,unsafe_allow_html=True)
+    ahora = obtener_ahora_peru()
+    fecha = ahora.strftime("%Y-%m-%d")
     st.markdown("""<style>
-.tp-page-head{position:relative!important;background:#fff!important;border:1px solid #e3e6ec!important;border-radius:18px!important;padding:23px 28px 21px!important;margin:0 0 24px!important;box-shadow:0 2px 8px rgba(15,23,42,.045)!important}
-.tp-page-head:before{content:"";position:absolute;left:28px;top:0;width:38px;height:4px;background:#EC3237;border-radius:0 0 4px 4px}
-.tp-page-head h1{font-size:1.45rem!important;font-weight:750!important;margin:5px 0 8px!important;color:#111827!important}
-.tp-page-head p{font-size:.9rem!important;color:#7a899f!important;margin:0!important}
-</style><div class="tp-page-head"><h1>Centro de Notificaciones</h1><p>Tiendas Premium · Consulta tus comunicados y actividades pendientes.</p></div>""", unsafe_allow_html=True)
+    .tp-page-head{position:relative;background:white;border:1px solid #e3e6ec;
+      border-radius:18px;padding:23px 28px 21px;margin:0 0 24px;
+      box-shadow:0 2px 8px rgba(15,23,42,.045)}
+    .tp-page-head:before{content:"";position:absolute;left:28px;top:0;width:38px;height:4px;background:#EC3237}
+    .tp-page-head h1{font-size:1.45rem!important;color:#111827!important;margin:5px 0 8px!important}
+    .tp-page-head p{font-size:.9rem;color:#7a899f;margin:0}
+    .tp-n2-row{background:#fff;border:1px solid #e5e7eb;border-radius:12px;
+      padding:14px 18px;margin:10px 0;display:flex;align-items:center;gap:14px}
+    .tp-n2-dot{width:9px;height:9px;border-radius:50%;background:#EC3237;flex-shrink:0}
+    .tp-n2-dot.done{background:#16a36b}
+    .tp-n2-title{font-size:14px;font-weight:750;color:#1e293b}
+    .tp-n2-meta{font-size:12px;color:#718096;margin-top:4px}
+    .tp-n2-state{margin-left:auto;font-size:11px;font-weight:750;color:#b4232c;white-space:nowrap}
+    .tp-n2-state.done{color:#148052}
+    @media(max-width:640px){.tp-page-head{padding:17px 19px}.tp-n2-row{padding:12px;gap:9px}
+    .tp-n2-state{font-size:10px}}
+    </style><div class="tp-page-head"><h1>Centro de Notificaciones</h1>
+    <p>Tiendas Premium · Todos tus avisos, pendientes y atendidos.</p></div>""",unsafe_allow_html=True)
+    items=[]
     try:
-        _, _, avisos_pend = _tp_com_pendientes()
-        error_com = None
-    except Exception as exc:
-        avisos_pend = pd.DataFrame()
-        error_com = str(exc)
+        visibles, leidos, _ = _tp_com_pendientes()
+        for _,r in visibles.iterrows():
+            requiere = str(r.get("requiere_confirmacion",""))=="Sí"
+            confirmado = str(r.get("id_comunicado","")) in leidos
+            if requiere:
+                items.append(dict(tipo="Comunicado", titulo=str(r.get("titulo","Comunicado")),
+                    meta=str(r.get("categoria","General")), done=confirmado,
+                    destino="Comunicados"))
+        error_com=False
+    except Exception:
+        error_com=True
     try:
-        rutinas = _vayro_leer_rutinas()
-        ejec = _vayro_leer_ejecuciones()
-        asignadas = [r for _, r in rutinas.iterrows()
-                     if _vayro_corresponde(r, user_actual, dni_actual, fecha)]
-        hechas = set(ejec.loc[
+        rutinas=_vayro_leer_rutinas()
+        ejec=_vayro_leer_ejecuciones()
+        hechos=set(ejec.loc[
             (ejec["fecha"].astype(str)==fecha)
             & ejec["dni"].apply(lambda x:_mismo_dni(x,dni_actual)),
             "id_rutina"].astype(str)) if not ejec.empty else set()
-        pendientes = [r for r in asignadas if str(r["id_rutina"]) not in hechas]
-        error_rut = None
-    except Exception as exc:
-        pendientes=[]
-        error_rut=str(exc)
-    a,b=st.columns(2)
-    a.metric("Comunicados",len(avisos_pend))
-    b.metric("Rutinas pendientes",len(pendientes))
+        for _,r in rutinas.iterrows():
+            if _vayro_corresponde(r,user_actual,dni_actual,fecha):
+                done=str(r.get("id_rutina","")) in hechos
+                estado,_=_tp_estado_horario(r,fecha,done,ahora)
+                items.append(dict(tipo="Rutina",titulo=str(r.get("nombre","Rutina")),
+                    meta=f'{r.get("hora","Sin horario")} · {estado}',done=done,
+                    destino="Mis Rutinas"))
+        error_rut=False
+    except Exception:
+        error_rut=True
+    n_pend=sum(not x["done"] for x in items)
+    n_done=len(items)-n_pend
+    c1,c2,c3=st.columns(3)
+    c1.metric("Pendientes",n_pend)
+    c2.metric("Atendidas",n_done)
+    c3.metric("Total",len(items))
     if error_com:
-        st.warning("No se pudieron consultar los comunicados.")
+        st.warning("No fue posible consultar los comunicados.")
     if error_rut:
-        st.warning("No se pudieron consultar las rutinas.")
-    if avisos_pend.empty and not pendientes and not error_com and not error_rut:
-        st.success("Estás al día. No tienes notificaciones pendientes.")
-        return
-    if not avisos_pend.empty:
-        st.markdown("#### Comunicados por confirmar")
-        for _,r in avisos_pend.iterrows():
+        st.warning("No fue posible consultar las rutinas.")
+    filtro=st.segmented_control("Mostrar",["Todas","Pendientes","Atendidas"],
+        default="Pendientes",key="tp_n2_filtro")
+    mostrar=[x for x in items if filtro=="Todas" or
+             (filtro=="Pendientes" and not x["done"]) or
+             (filtro=="Atendidas" and x["done"])]
+    if not mostrar:
+        st.success("No hay notificaciones en esta categoría.")
+    else:
+        for i,item in enumerate(mostrar):
+            done=item["done"]
             st.markdown(
-                f'<div class="tp-not-card"><span class="tp-not-pill">LECTURA PENDIENTE</span><br>'
-                f'<strong>{_ht.escape(str(r.get("titulo","Comunicado")))}</strong>'
-                f'<small>{_ht.escape(str(r.get("categoria","General")))} · '
-                f'{_ht.escape(str(r.get("prioridad","Normal")))}</small></div>',
+                f'<div class="tp-n2-row"><span class="tp-n2-dot {"done" if done else ""}"></span>'
+                f'<div><div class="tp-n2-title">{_ht.escape(item["titulo"])}</div>'
+                f'<div class="tp-n2-meta">{_ht.escape(item["tipo"])} · {_ht.escape(item["meta"])}</div></div>'
+                f'<span class="tp-n2-state {"done" if done else ""}">'
+                f'{"Atendida" if done else "Pendiente"}</span></div>',
                 unsafe_allow_html=True)
-        st.button("Abrir comunicados",key="tp_not_ir_com",type="primary",
-                  use_container_width=True,on_click=_ir_a,args=("Comunicados",))
-    if pendientes:
-        st.markdown("#### Actividades por completar")
-        for r in pendientes:
-            st.markdown(
-                f'<div class="tp-not-card"><span class="tp-not-pill rut">RUTINA PENDIENTE</span><br>'
-                f'<strong>{_ht.escape(str(r.get("nombre","Rutina")))}</strong>'
-                f'<small>Horario: {_ht.escape(str(r.get("hora","Sin horario")))}</small></div>',
-                unsafe_allow_html=True)
-        st.button("Abrir mis rutinas",key="tp_not_ir_rut",
-                  use_container_width=True,on_click=_ir_a,args=("Mis Rutinas",))
-    st.caption("Los comunicados se confirman únicamente desde su sección. Las rutinas se completan desde Mis Rutinas.")
+            if not done:
+                st.button("Ver comunicado" if item["tipo"]=="Comunicado" else "Completar rutina",
+                    key=f"tp_n2_go_{i}_{item['tipo']}",use_container_width=True,
+                    on_click=_ir_a,args=(item["destino"],))
+    st.caption("Los avisos cambian a Atendidos cuando se confirma la lectura o se registra la rutina. Consultarlos no los marca como atendidos.")
 
 # Notificación inicial de comunicados, después de resolver cumpleaños y botellas.
 _tp_com_modal_inicio()
