@@ -5128,9 +5128,17 @@ def _vayro_guardar_rutina(datos, id_existente=None):
     registrar_auditoria(accion, "VAYRO_Rutinas", f"{datos['id_rutina']} - {datos['nombre']}")
     return datos["id_rutina"]
 
+
+# Confirmaciones persistentes tras st.rerun()
+def _tp_mostrar_confirmacion(clave):
+    aviso = st.session_state.pop(clave, None)
+    if aviso:
+        st.success(aviso, icon="✅")
+
 def _vayro_rutinas_admin():
     st.markdown('<div class="market-header"><h1>Gestión de rutinas</h1><p>Tiendas Premium · Planifica, asigna y organiza las actividades de tu equipo</p></div>', unsafe_allow_html=True)
     st.caption("Crea rutinas reutilizables y asigna su ejecución a los colaboradores.")
+    _tp_mostrar_confirmacion("_tp_aviso_rutinas")
     try:
         df = _vayro_leer_rutinas()
     except Exception as e:
@@ -5221,7 +5229,7 @@ def _vayro_rutinas_admin():
                 datos=dict(nombre=nombre.strip(),descripcion=descripcion.strip(),frecuencia=frecuencia,dias=",".join(dias),hora=hora.strftime('%H:%M'),tipo_asignacion=tipo,destinatarios="|".join(seleccion) if seleccion else ("TODOS" if tipo=="Todos los colaboradores" else "POR_TURNO"),turno=turno,tareas_json=_vayro_json.dumps(tareas,ensure_ascii=False),estado=est)
                 try:
                     _vayro_guardar_rutina(datos,rid)
-                    st.success("Copia creada correctamente. La rutina original no se modificó." if modo == "Duplicar existente" else "Rutina guardada correctamente en Google Sheets.")
+                    st.session_state["_tp_aviso_rutinas"] = ("Copia creada correctamente. La rutina original no se modificó." if modo == "Duplicar existente" else "Rutina actualizada correctamente." if rid else "Rutina creada y guardada correctamente.")
                     st.rerun()
                 except Exception as e:
                     st.error(f"No se pudo guardar: {e}")
@@ -5312,6 +5320,7 @@ def _vayro_guardar_ejecucion(r, fecha, respuestas):
     return fila
 
 def _vayro_mis_rutinas():
+    _tp_mostrar_confirmacion("_tp_aviso_ejecucion")
     st.markdown('<div class="market-header"><h1>Mis rutinas</h1><p>Tiendas Premium · Actividades y verificaciones de tu jornada</p></div>', unsafe_allow_html=True)
     hoy = obtener_ahora_peru().date()
     fecha = st.date_input("Fecha de consulta", value=hoy, max_value=hoy, key="vayro_fecha_ejecucion").isoformat()
@@ -5378,7 +5387,7 @@ def _vayro_mis_rutinas():
                 else:
                     try:
                         _vayro_guardar_ejecucion(r, fecha, respuestas)
-                        st.success("Rutina registrada correctamente.")
+                        st.session_state["_tp_aviso_ejecucion"] = "Rutina completada y registrada correctamente."
                         st.rerun()
                     except Exception as e:
                         st.error(f"No se pudo registrar: {e}")
@@ -5458,6 +5467,7 @@ def _vayro_com_confirmar(r):
     return True
 
 def _vayro_com_admin():
+    _tp_mostrar_confirmacion("_tp_aviso_comunicados")
     st.markdown('<div class="market-header"><h1>Centro de comunicados</h1><p>Tiendas Premium · Informa a tu equipo y supervisa las confirmaciones</p></div>', unsafe_allow_html=True)
     try:
         comunicados = _vayro_com_leer("VAYRO_Comunicados", _VAYRO_COM_COLS)
@@ -5502,7 +5512,7 @@ def _vayro_com_admin():
                 datos = dict(titulo=titulo.strip(), contenido=contenido.strip(), categoria=categoria, prioridad=prioridad, tipo_destino=destino, destinatarios_dni="|".join(opciones[n] for n in seleccion), fecha_inicio=inicio.isoformat(), fecha_fin=fin.isoformat(), requiere_confirmacion="Sí" if confirmacion else "No", estado="Publicado")
                 try:
                     _vayro_com_guardar(datos)
-                    st.success("Comunicado publicado correctamente.")
+                    st.session_state["_tp_aviso_comunicados"] = "Comunicado publicado correctamente. Ya está registrado en el historial."
                     st.rerun()
                 except Exception as exc:
                     st.error(f"No se pudo publicar: {exc}")
@@ -5709,9 +5719,8 @@ def _vayro_mi_dia():
                 unsafe_allow_html=True,
             )
         st.markdown(f'<div class="vmd-progress"><div style="width:{(n_hechas/n_rutinas*100) if n_rutinas else 0:.1f}%"></div></div>', unsafe_allow_html=True)
-    if st.button("Abrir Mis Rutinas",key="vmd_ir_rutinas",use_container_width=True,type="primary"):
-        _ir_a("Mis Rutinas")
-        st.rerun()
+    st.button("Abrir Mis Rutinas", key="vmd_ir_rutinas", use_container_width=True,
+              type="primary", on_click=_ir_a, args=("Mis Rutinas",))
 
     st.markdown('<div class="vmd-section">Comunicados pendientes</div>',unsafe_allow_html=True)
     if error_avisos:
@@ -5723,20 +5732,17 @@ def _vayro_mi_dia():
             with st.container(border=True):
                 st.markdown(f"**{r.get('titulo','Comunicado')}**")
                 st.caption(f"{r.get('prioridad','Normal')} · {r.get('categoria','General')}")
-    if st.button("Abrir Comunicados",key="vmd_ir_comunicados",use_container_width=True):
-        _ir_a("Comunicados")
-        st.rerun()
+    st.button("Abrir Comunicados", key="vmd_ir_comunicados", use_container_width=True,
+              on_click=_ir_a, args=("Comunicados",))
 
     st.markdown('<div class="vmd-section">Accesos rápidos</div>',unsafe_allow_html=True)
     a,b = st.columns(2)
     with a:
-        if st.button("Marcar asistencia",key="vmd_ir_asistencia",use_container_width=True):
-            _ir_a("Marcar Asistencia")
-            st.rerun()
+        st.button("Marcar asistencia", key="vmd_ir_asistencia", use_container_width=True,
+                  on_click=_ir_a, args=("Marcar Asistencia",))
     with b:
-        if st.button("Mis vacaciones",key="vmd_ir_vacaciones",use_container_width=True):
-            _ir_a("Mis Vacaciones")
-            st.rerun()
+        st.button("Mis vacaciones", key="vmd_ir_vacaciones", use_container_width=True,
+                  on_click=_ir_a, args=("Mis Vacaciones",))
     if st.session_state.get("ver_como"):
         st.info("Estás en vista previa. Las acciones de registro se realizan desde la sesión real del colaborador.")
 
