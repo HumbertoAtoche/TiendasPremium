@@ -4676,7 +4676,7 @@ if rol_actual == "admin":
     </style>""", unsafe_allow_html=True)
     menu = ["Dashboard General", "Centro de Alertas", "Analítica (BI)", "Gestión Colaboradores", "Onboarding / Offboarding", "Gestión de Vacaciones", "Programación de Turnos", "Gestión de Rutinas", "Centro de Comunicados", "Boletas de Pago", "Solicitudes y Permisos", "Historial de Descuadres", "Incidencias y Daños", "Botellas Fiadas", "Historial de Asistencias", "Auditoría y Configuración"]
 else:
-    menu = ["Mi día", "Mis Rutinas", "Comunicados", "Marcar Asistencia", "Registrar Descuadre", "Registrar Incidencia", "Botellas Fiadas", "Mi Ficha Técnica", "Mis Vacaciones", "Mis Boletas", "Solicitar Permiso / Adelanto", "Mi Dashboard Mensual"]
+    menu = ["Mi día", "Centro de Notificaciones", "Mis Rutinas", "Comunicados", "Marcar Asistencia", "Registrar Descuadre", "Registrar Incidencia", "Botellas Fiadas", "Mi Ficha Técnica", "Mis Vacaciones", "Mis Boletas", "Solicitar Permiso / Adelanto", "Mi Dashboard Mensual"]
 
 if rol_real == "admin":
     _opc_vc = ["Mi vista (admin)"] + sorted(n for n, d in USUARIOS.items() if d["rol"] != "admin")
@@ -4708,7 +4708,7 @@ if rol_actual == "admin":
                   ("Historial de Asistencias", "Asistencia", ":material/schedule:"), ("Solicitudes y Permisos", "Solicitudes", ":material/inbox:")]
 else:
     _nav_items = [("Mi día", "Inicio", ":material/home:"), ("Marcar Asistencia", "Asistencia", ":material/fingerprint:"),
-                  ("Mis Rutinas", "Rutinas", ":material/checklist:"), ("Comunicados", "Avisos", ":material/campaign:")]
+                  ("Mis Rutinas", "Rutinas", ":material/checklist:"), ("Centro de Notificaciones", "Avisos", ":material/notifications:")]
 # La barra de navegación se fija únicamente en pantallas pequeñas.
 # El widget mantiene su navegación mediante callbacks, evitando mutar el radio ya instanciado.
 if rol_actual != "admin":
@@ -5353,8 +5353,16 @@ def _vayro_mis_rutinas():
       border-radius:18px;padding:22px 24px;margin-bottom:16px}
     .tp-rut-head h1{font-size:1.65rem!important;font-weight:800!important;color:#17202e!important;margin:0!important}
     .tp-rut-head p{color:#64748b;margin:7px 0 0;font-size:.92rem}
-    .tp-rut-card{background:white;border:1px solid #e6e8ed;border-left:4px solid #EC3237;
-      border-radius:13px;padding:13px 17px;margin:15px 0 9px}
+    .tp-rut-card{background:#fff;border:1px solid #e6e8ed;border-left:4px solid #EC3237;
+      border-radius:13px 13px 0 0;padding:13px 17px;margin:13px 0 0;box-shadow:0 2px 7px rgba(15,23,42,.035)}
+    .tp-rut-card + div[data-testid="stExpander"]{margin-top:0!important}
+    div[data-testid="stExpander"]{border-radius:0 0 13px 13px!important;
+      border:1px solid #e6e8ed!important;border-top:0!important;background:#fff!important}
+    div[data-testid="stExpander"] summary{min-height:42px!important;font-weight:650!important}
+    .tp-rut-card.is-done{border-left-color:#16a36b;background:#f7fdf9}
+    .tp-rut-stats{background:#fff;border:1px solid #e6e8ed;border-radius:14px;padding:13px 16px;
+      margin-bottom:13px;font-size:13px;color:#475569}
+    .tp-rut-stats b{color:#0f172a;font-size:18px}
     .tp-rut-card strong{font-size:1.04rem;color:#192334}
     .tp-rut-card small{display:block;color:#64748b;margin-top:5px}
     .tp-rut-task{padding:13px 15px;border:1px solid #e8eaf0;background:#fafbfc;
@@ -5365,8 +5373,8 @@ def _vayro_mis_rutinas():
     @media(max-width:640px){.tp-rut-head{padding:16px}.tp-rut-head h1{font-size:1.35rem!important}
       .tp-rut-task{padding:11px}}
     </style>
-    <div class="tp-rut-head"><h1>Mis rutinas</h1>
-    <p>Verifica las actividades de tu jornada, una por una.</p></div>
+    <div class="tp-rut-head"><div style="font-size:11px;letter-spacing:1.4px;font-weight:800;color:#EC3237">OPERACIÓN DIARIA</div>
+    <h1>Mis rutinas</h1><p>Tu lista de verificación, clara y en un solo lugar.</p></div>
     """, unsafe_allow_html=True)
     hoy = obtener_ahora_peru().date()
     fecha = st.date_input("Fecha de consulta", value=hoy, max_value=hoy,
@@ -5387,10 +5395,11 @@ def _vayro_mis_rutinas():
                    if not ejecuciones.empty else ejecuciones)
     hechas_ids = set(completadas["id_rutina"].astype(str))
     realizadas = sum(str(r["id_rutina"]) in hechas_ids for r in asignadas)
-    a, b, c = st.columns(3)
-    a.metric("Asignadas", len(asignadas))
-    b.metric("Completadas", realizadas)
-    c.metric("Pendientes", len(asignadas) - realizadas)
+    st.markdown(
+        f'<div class="tp-rut-stats"><b>{realizadas}/{len(asignadas)}</b> rutinas completadas'
+        f' &nbsp;·&nbsp; <strong>{len(asignadas)-realizadas}</strong> pendientes</div>',
+        unsafe_allow_html=True)
+    st.progress(realizadas / len(asignadas) if asignadas else 0)
     if not asignadas:
         st.info("No tienes rutinas asignadas para esta fecha. Las rutinas por turno requieren una programación guardada.")
         return
@@ -5404,7 +5413,7 @@ def _vayro_mis_rutinas():
         st.markdown(f'<div class="tp-rut-card"><strong>{nombre}</strong>'
                     f'<small>Horario: {hora} &nbsp;·&nbsp; Estado: {estado}</small></div>',
                     unsafe_allow_html=True)
-        with st.expander("Ver actividades" if not hecha.empty else "Completar lista de verificación",
+        with st.expander("Ver registro" if not hecha.empty else "Ver y completar actividades",
                          expanded=len(asignadas) == 1 and hecha.empty):
             if str(r.get("descripcion", "")).strip():
                 st.caption(str(r["descripcion"]))
@@ -6017,11 +6026,88 @@ def _vayro_mi_dia():
     if st.session_state.get("ver_como"):
         st.info("Estás en vista previa. Las acciones de registro se realizan desde la sesión real del colaborador.")
 
+def _tp_centro_notificaciones():
+    """Bandeja unificada sin modificar el estado de lectura ni escribir en Sheets."""
+    import html as _ht
+    fecha = obtener_ahora_peru().strftime("%Y-%m-%d")
+    st.markdown("""
+    <style>
+    .tp-not-hero{padding:23px 25px;border-radius:17px;background:linear-gradient(110deg,#fff,#fff3f3);
+      border:1px solid #eddde0;margin-bottom:18px}
+    .tp-not-hero h1{font-size:25px!important;margin:3px 0 7px!important;color:#172033!important}
+    .tp-not-hero p{margin:0;color:#64748b;font-size:13px}
+    .tp-not-card{background:#fff;border:1px solid #e5e7eb;border-radius:13px;
+      padding:17px 19px;margin:11px 0;box-shadow:0 2px 9px rgba(15,23,42,.035)}
+    .tp-not-card strong{color:#192337;font-size:15px}
+    .tp-not-card small{display:block;color:#718096;margin-top:5px}
+    .tp-not-pill{font-size:11px;color:#b4232c;background:#fff0f0;padding:4px 9px;
+      border-radius:20px;font-weight:750;display:inline-block;margin-bottom:8px}
+    .tp-not-pill.rut{background:#fff6e7;color:#a65e08}
+    @media(max-width:640px){.tp-not-hero{padding:18px}.tp-not-card{padding:13px 14px}}
+    </style>
+    <div class="tp-not-hero"><div style="color:#EC3237;font-size:11px;letter-spacing:1.3px;font-weight:800">TIENDAS PREMIUM</div>
+    <h1>Centro de notificaciones</h1><p>Tus avisos y actividades importantes, en un solo lugar.</p></div>
+    """,unsafe_allow_html=True)
+    try:
+        _, _, avisos_pend = _tp_com_pendientes()
+        error_com = None
+    except Exception as exc:
+        avisos_pend = pd.DataFrame()
+        error_com = str(exc)
+    try:
+        rutinas = _vayro_leer_rutinas()
+        ejec = _vayro_leer_ejecuciones()
+        asignadas = [r for _, r in rutinas.iterrows()
+                     if _vayro_corresponde(r, user_actual, dni_actual, fecha)]
+        hechas = set(ejec.loc[
+            (ejec["fecha"].astype(str)==fecha)
+            & ejec["dni"].apply(lambda x:_mismo_dni(x,dni_actual)),
+            "id_rutina"].astype(str)) if not ejec.empty else set()
+        pendientes = [r for r in asignadas if str(r["id_rutina"]) not in hechas]
+        error_rut = None
+    except Exception as exc:
+        pendientes=[]
+        error_rut=str(exc)
+    a,b=st.columns(2)
+    a.metric("Comunicados",len(avisos_pend))
+    b.metric("Rutinas pendientes",len(pendientes))
+    if error_com:
+        st.warning("No se pudieron consultar los comunicados.")
+    if error_rut:
+        st.warning("No se pudieron consultar las rutinas.")
+    if avisos_pend.empty and not pendientes and not error_com and not error_rut:
+        st.success("Estás al día. No tienes notificaciones pendientes.")
+        return
+    if not avisos_pend.empty:
+        st.markdown("#### Comunicados por confirmar")
+        for _,r in avisos_pend.iterrows():
+            st.markdown(
+                f'<div class="tp-not-card"><span class="tp-not-pill">LECTURA PENDIENTE</span><br>'
+                f'<strong>{_ht.escape(str(r.get("titulo","Comunicado")))}</strong>'
+                f'<small>{_ht.escape(str(r.get("categoria","General")))} · '
+                f'{_ht.escape(str(r.get("prioridad","Normal")))}</small></div>',
+                unsafe_allow_html=True)
+        st.button("Abrir comunicados",key="tp_not_ir_com",type="primary",
+                  use_container_width=True,on_click=_ir_a,args=("Comunicados",))
+    if pendientes:
+        st.markdown("#### Actividades por completar")
+        for r in pendientes:
+            st.markdown(
+                f'<div class="tp-not-card"><span class="tp-not-pill rut">RUTINA PENDIENTE</span><br>'
+                f'<strong>{_ht.escape(str(r.get("nombre","Rutina")))}</strong>'
+                f'<small>Horario: {_ht.escape(str(r.get("hora","Sin horario")))}</small></div>',
+                unsafe_allow_html=True)
+        st.button("Abrir mis rutinas",key="tp_not_ir_rut",
+                  use_container_width=True,on_click=_ir_a,args=("Mis Rutinas",))
+    st.caption("Los comunicados se confirman únicamente desde su sección. Las rutinas se completan desde Mis Rutinas.")
+
 # Notificación inicial de comunicados, después de resolver cumpleaños y botellas.
 _tp_com_modal_inicio()
 
 if choice == "Mi día":
     _vayro_mi_dia()
+elif choice == "Centro de Notificaciones":
+    _tp_centro_notificaciones()
 elif choice == "Centro de Comunicados":
     if rol_actual == "admin" and rol_real == "admin" and not st.session_state.get("ver_como"):
         _vayro_com_admin()
