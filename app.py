@@ -5373,9 +5373,13 @@ def _vayro_mis_rutinas():
     @media(max-width:640px){.tp-rut-head{padding:16px}.tp-rut-head h1{font-size:1.35rem!important}
       .tp-rut-task{padding:11px}}
     </style>
-    <div class="market-header"><h1>Mis Rutinas</h1>
-    <p>Tiendas Premium · Consulta y verifica las actividades asignadas a tu turno.</p></div>
     """, unsafe_allow_html=True)
+    st.markdown("""<style>
+.tp-page-head{position:relative!important;background:#fff!important;border:1px solid #e3e6ec!important;border-radius:18px!important;padding:23px 28px 21px!important;margin:0 0 24px!important;box-shadow:0 2px 8px rgba(15,23,42,.045)!important}
+.tp-page-head:before{content:"";position:absolute;left:28px;top:0;width:38px;height:4px;background:#EC3237;border-radius:0 0 4px 4px}
+.tp-page-head h1{font-size:1.45rem!important;font-weight:750!important;margin:5px 0 8px!important;color:#111827!important}
+.tp-page-head p{font-size:.9rem!important;color:#7a899f!important;margin:0!important}
+</style><div class="tp-page-head"><h1>Mis Rutinas</h1><p>Tiendas Premium · Consulta y verifica las actividades asignadas a tu turno.</p></div>""", unsafe_allow_html=True)
     hoy = obtener_ahora_peru().date()
     fecha = st.date_input("Fecha de consulta", value=hoy, max_value=hoy,
                           key="vayro_fecha_ejecucion").isoformat()
@@ -5439,6 +5443,8 @@ def _vayro_mis_rutinas():
                 st.caption("Las fechas anteriores son solo de consulta.")
                 continue
 
+            # Los interruptores permiten marcar una actividad como realizada.
+            # Para una actividad no realizada se registra la incidencia y su motivo.
             # Los controles fuera del formulario actualizan el progreso al instante.
             # El guardado definitivo ocurre únicamente al pulsar Finalizar.
             respuestas = []
@@ -5448,18 +5454,25 @@ def _vayro_mis_rutinas():
                 clave_obs = f"tp_check_obs_{rid}_{fecha}_{i}"
                 st.markdown(f'<div class="tp-rut-task">{i+1:02d}. '
                             f'{_html.escape(str(tarea))}</div>', unsafe_allow_html=True)
-                respuesta_ui = st.radio(
-                    f"Resultado de actividad {i+1}",
-                    ["Pendiente", "Realizada", "No realizada"],
-                    horizontal=True, key=clave, label_visibility="collapsed")
-                respuesta = {"Realizada": "Sí", "No realizada": "No"}.get(respuesta_ui, "Seleccionar")
+                col_switch, col_inc = st.columns([1.1, 1.4], gap="small")
+                with col_switch:
+                    realizado = st.toggle("Realizada", key=clave)
+                with col_inc:
+                    incidencia = st.checkbox("No se pudo realizar", key=f"{clave}_inc",
+                                            disabled=realizado)
+                if realizado:
+                    respuesta = "Sí"
+                elif incidencia:
+                    respuesta = "No"
+                else:
+                    respuesta = "Seleccionar"
                 if respuesta != "Seleccionar":
                     contestadas += 1
                 observacion = ""
                 if respuesta == "No":
                     observacion = st.text_area(
-                        "¿Qué ocurrió? (obligatorio)", key=clave_obs,
-                        placeholder="Describe brevemente el motivo o la incidencia.",
+                        "Motivo de la actividad no realizada", key=clave_obs,
+                        placeholder="Explica qué impidió completar esta actividad.",
                         height=75).strip()
                 respuestas.append({"tarea": str(tarea), "respuesta": respuesta,
                                    "observacion": observacion})
@@ -6044,9 +6057,13 @@ def _tp_centro_notificaciones():
     .tp-not-pill.rut{background:#fff6e7;color:#a65e08}
     @media(max-width:640px){.tp-not-hero{padding:18px}.tp-not-card{padding:13px 14px}}
     </style>
-    <div class="market-header"><h1>Centro de Notificaciones</h1>
-    <p>Tiendas Premium · Consulta tus comunicados y actividades pendientes.</p></div>
     """,unsafe_allow_html=True)
+    st.markdown("""<style>
+.tp-page-head{position:relative!important;background:#fff!important;border:1px solid #e3e6ec!important;border-radius:18px!important;padding:23px 28px 21px!important;margin:0 0 24px!important;box-shadow:0 2px 8px rgba(15,23,42,.045)!important}
+.tp-page-head:before{content:"";position:absolute;left:28px;top:0;width:38px;height:4px;background:#EC3237;border-radius:0 0 4px 4px}
+.tp-page-head h1{font-size:1.45rem!important;font-weight:750!important;margin:5px 0 8px!important;color:#111827!important}
+.tp-page-head p{font-size:.9rem!important;color:#7a899f!important;margin:0!important}
+</style><div class="tp-page-head"><h1>Centro de Notificaciones</h1><p>Tiendas Premium · Consulta tus comunicados y actividades pendientes.</p></div>""", unsafe_allow_html=True)
     try:
         _, _, avisos_pend = _tp_com_pendientes()
         error_com = None
