@@ -5990,20 +5990,57 @@ def _vayro_mi_dia():
     @media(max-width:640px){.vmd-hero{padding:21px 19px;border-radius:13px}
     .vmd-hero h1{font-size:23px}.vmd-card{padding:14px;min-height:112px}
     .vmd-value{font-size:20px}.vmd-routine{padding:13px 12px}}
+
+    .tp-v4-hero{background:linear-gradient(115deg,#ffffff 0%,#ffffff 66%,#fff4f4 100%);color:#172033;border:1px solid #e6e9f0;border-top:4px solid #EC3237;border-radius:18px;padding:23px 27px 29px;
+      margin:0 0 16px;box-shadow:0 3px 12px rgba(17,24,39,.045);overflow:hidden;position:relative}
+    .tp-v4-hero:after{content:"";position:absolute;right:-70px;bottom:-140px;width:290px;height:290px;
+      border:45px solid rgba(236,50,55,.045);border-radius:50%;pointer-events:none}
+    .tp-v4-hero-top,.tp-v4-hero-main{display:flex;align-items:center;justify-content:space-between;gap:20px;position:relative;z-index:1}
+    .tp-v4-hero-top{margin-bottom:31px}
+    .tp-v4-badge{font-size:10px;font-weight:850;letter-spacing:1.3px;background:#EC3237;color:white;padding:7px 11px;border-radius:7px}
+    .tp-v4-date{font-size:12px;color:#69778b}
+    .tp-v4-kicker{font-size:10px;letter-spacing:2px;color:#EC3237;font-weight:800;margin-bottom:9px}
+    .tp-v4-hero h1{font-size:31px!important;line-height:1.15!important;color:#172033!important;letter-spacing:-.8px!important;margin:0 0 10px!important;font-weight:850!important}
+    .tp-v4-hero p{color:#66758a!important;margin:0!important;font-size:13px}
+    .tp-v4-monogram{height:74px;width:74px;border-radius:18px;background:#fff1f1;color:#EC3237;border:1px solid #f8d7d8;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:25px;transform:rotate(-8deg);flex-shrink:0}
+    .tp-v4-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px;margin:0 0 12px}
+    .tp-v4-stat{background:#fff;border:1px solid #e6e9f0;border-radius:14px;padding:17px 14px;display:flex;gap:12px;align-items:flex-start;min-width:0;box-shadow:0 3px 9px rgba(16,24,40,.025)}
+    .tp-v4-stat-icon{height:32px;width:32px;border-radius:9px;background:#fff0f0;color:#EC3237;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;font-weight:850}
+    .tp-v4-stat>div{display:flex;flex-direction:column;gap:5px;min-width:0}
+    .tp-v4-stat small{font-size:10px;letter-spacing:.6px;font-weight:850;color:#8690a2}
+    .tp-v4-stat strong{font-size:19px;font-weight:850;color:#171d2a;overflow-wrap:anywhere;line-height:1.2}
+    .tp-v4-stat em{font-size:11px;color:#738095;font-style:normal}
+    .tp-v4-shift{display:flex;align-items:center;justify-content:space-between;background:#fff;border:1px solid #e6e9f0;border-radius:12px;padding:13px 18px;margin-bottom:24px}
+    .tp-v4-shift>div{display:flex;align-items:center;gap:12px}
+    .tp-v4-shift small{color:#8a94a6;font-size:10px;letter-spacing:1px;font-weight:850}
+    .tp-v4-shift strong{font-size:13px;color:#283347}
+    .tp-v4-shift-label{background:#f1f3f7;color:#7b8798;padding:6px 10px;border-radius:6px;font-size:10px;font-weight:800;letter-spacing:1px}
+    .tp-v4-section{display:flex;align-items:center;gap:11px;margin:25px 0 12px;border-bottom:1px solid #e8ebf1;padding-bottom:12px}
+    .tp-v4-section>span{background:#EC3237;color:#fff;border-radius:7px;padding:6px 9px;font-size:11px;font-weight:800}
+    .tp-v4-section h3{font-size:16px!important;color:#192334!important;font-weight:800!important;margin:0!important}
+    .tp-v4-section small{margin-left:auto;color:#8490a3;font-size:11px}
+    @media(max-width:680px){
+      .tp-v4-hero{padding:17px 18px 23px;border-radius:16px}
+      .tp-v4-hero-top{margin-bottom:25px}
+      .tp-v4-hero h1{font-size:23px!important}
+      .tp-v4-monogram{height:52px;width:52px;font-size:18px;border-radius:13px}
+      .tp-v4-stats{grid-template-columns:1fr;gap:8px}
+      .tp-v4-stat{padding:12px 14px;align-items:center}
+      .tp-v4-stat>div{gap:3px}
+      .tp-v4-stat strong{font-size:17px}
+      .tp-v4-shift>div{flex-direction:column;align-items:flex-start;gap:4px}
+      .tp-v4-shift-label{font-size:9px}
+    }
     </style>
     """, unsafe_allow_html=True)
     st.markdown(
-        f'<div class="market-header tp-clickup-heading"><h1>Mi día</h1>'
-        f'<p>Tiendas Premium · {ahora.strftime("%d/%m/%Y")}</p></div>',
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        f'<div class="tp-cu-welcome"><div><div class="tp-cu-overline">ESPACIO DE TRABAJO</div>'
-        f'<h2>{_html_md.escape(saludo)}, {_html_md.escape(nombre_corto)}</h2>'
-        f'<p>Organiza tu jornada y mantén tus actividades al día.</p></div>'
-        f'<span class="tp-cu-date">{ahora.strftime("%d/%m/%Y")}</span></div>',
-        unsafe_allow_html=True,
-    )
+        f'<div class="tp-v4-hero"><div class="tp-v4-hero-top">'
+        f'<span class="tp-v4-badge">MI ESPACIO</span>'
+        f'<span class="tp-v4-date">{ahora.strftime("%d/%m/%Y")}</span></div>'
+        f'<div class="tp-v4-hero-main"><div><div class="tp-v4-kicker">TIENDAS PREMIUM / INICIO</div>'
+        f'<h1>{_html_md.escape(saludo)}, {_html_md.escape(nombre_corto)}.</h1>'
+        f'<p>Todo lo que necesitas para organizar tu jornada.</p></div>'
+        f'<div class="tp-v4-monogram">TP</div></div></div>', unsafe_allow_html=True)
 
     # Asistencia: únicamente las marcaciones del usuario conectado.
     estado_asist = "Sin marcación"
@@ -6065,21 +6102,21 @@ def _vayro_mi_dia():
         avisos, pendientes_avisos = pd.DataFrame(), pd.DataFrame()
         error_avisos = str(exc)
 
+    avance = round(100*n_hechas/n_rutinas) if n_rutinas else 0
     st.markdown(
-        '<div class="tp-cu-grid">'
-        f'<div class="tp-cu-stat"><span class="tp-cu-stat-label">ASISTENCIA</span>'
-        f'<strong>{_html_md.escape(estado_asist)}</strong>'
-        f'<small>{_html_md.escape(detalle_asist)}</small></div>'
-        f'<div class="tp-cu-stat"><span class="tp-cu-stat-label">RUTINAS</span>'
-        f'<strong>{n_hechas} <span class="tp-cu-muted">/ {n_rutinas}</span></strong>'
-        f'<small>{max(0,n_rutinas-n_hechas)} pendientes</small></div>'
-        f'<div class="tp-cu-stat"><span class="tp-cu-stat-label">COMUNICADOS</span>'
-        f'<strong>{len(pendientes_avisos)}</strong><small>Por confirmar lectura</small></div>'
-        '</div>'
-        f'<div class="tp-cu-shift"><span>MI TURNO DE HOY</span>'
-        f'<strong>{_html_md.escape(detalle_turno)}</strong></div>',
-        unsafe_allow_html=True,
-    )
+        '<div class="tp-v4-stats">'
+        f'<div class="tp-v4-stat"><span class="tp-v4-stat-icon">01</span><div>'
+        f'<small>MI ASISTENCIA</small><strong>{_html_md.escape(estado_asist)}</strong>'
+        f'<em>{_html_md.escape(detalle_asist)}</em></div></div>'
+        f'<div class="tp-v4-stat"><span class="tp-v4-stat-icon">02</span><div>'
+        f'<small>RUTINAS DE HOY</small><strong>{n_hechas} de {n_rutinas}</strong>'
+        f'<em>{avance}% completado</em></div></div>'
+        f'<div class="tp-v4-stat"><span class="tp-v4-stat-icon">03</span><div>'
+        f'<small>AVISOS SIN LEER</small><strong>{len(pendientes_avisos)}</strong>'
+        f'<em>Comunicados pendientes</em></div></div></div>'
+        f'<div class="tp-v4-shift"><div><small>HORARIO DE HOY</small>'
+        f'<strong>{_html_md.escape(detalle_turno)}</strong></div>'
+        f'<span class="tp-v4-shift-label">MI TURNO</span></div>', unsafe_allow_html=True)
 
     # Acción recomendada según el estado actual: siempre requiere un clic explícito.
     if estado_asist == "Sin marcación":
@@ -6090,13 +6127,13 @@ def _vayro_mi_dia():
         accion_texto, accion_destino, accion_desc = "Leer comunicados", "Comunicados", "Tienes comunicados pendientes de confirmar."
     else:
         accion_texto, accion_destino, accion_desc = "Consultar mi asistencia", "Marcar Asistencia", "Estás al día con tus tareas registradas."
-    st.markdown('<div class="vmd-section">Tu siguiente acción</div>', unsafe_allow_html=True)
+    st.markdown('<div class="tp-v4-section"><span>01</span><h3>Tu siguiente acción</h3></div>', unsafe_allow_html=True)
     with st.container(border=True):
         st.markdown(f"**{accion_desc}**")
         st.button(accion_texto, key="vmd_accion_sugerida", type="primary", use_container_width=True,
                   on_click=_ir_a, args=(accion_destino,))
 
-    st.markdown('<div class="vmd-section">Mi jornada · Línea de tiempo</div>',unsafe_allow_html=True)
+    st.markdown('<div class="tp-v4-section"><span>02</span><h3>Mi jornada</h3><small>Línea de tiempo</small></div>',unsafe_allow_html=True)
     if error_rutinas:
         st.warning("No se pudieron consultar las rutinas en este momento.")
     elif rutinas_hoy.empty:
@@ -6114,7 +6151,7 @@ def _vayro_mi_dia():
             st.markdown(
                 f'<div class="vmd-routine"><div><div class="vmd-routine-name">{_html_md.escape(str(r.get("nombre", "Rutina")))}</div>'
                 f'<div class="vmd-routine-sub">{_html_md.escape(str(r.get("hora", "")))} · {num_tareas} verificaciones</div></div>'
-                f'<span class="vmd-chip {"done" if hecha else ""}">{estado_txt}</span></div>',
+                f'<span class="vmd-chip {estado_clase}">{estado_txt}</span></div>',
                 unsafe_allow_html=True,
             )
         st.markdown('</div>',unsafe_allow_html=True)
@@ -6122,7 +6159,7 @@ def _vayro_mi_dia():
     st.button("Abrir Mis Rutinas", key="vmd_ir_rutinas", use_container_width=True,
               type="primary", on_click=_ir_a, args=("Mis Rutinas",))
 
-    st.markdown('<div class="vmd-section">Comunicados pendientes</div>',unsafe_allow_html=True)
+    st.markdown('<div class="tp-v4-section"><span>03</span><h3>Comunicados</h3></div>',unsafe_allow_html=True)
     if error_avisos:
         st.warning("No se pudieron consultar los comunicados en este momento.")
     elif pendientes_avisos.empty:
