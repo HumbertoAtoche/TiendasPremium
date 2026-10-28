@@ -5910,6 +5910,8 @@ def _tp_com_modal_inicio():
 # VAYRO · FASE 4 — MI DÍA (PANEL DEL COLABORADOR)
 # Panel de solo lectura: reutiliza datos de fases 1, 2 y 3.
 # =========================================================
+_TP_WORKSPACE_CSS = '\n<style>\n/* Workspace Premium: estilos aislados en tp-ws */\n.tp-ws-title{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin:2px 0 22px}\n.tp-ws-eyebrow{color:#EC3237;font-size:10px;font-weight:800;letter-spacing:1.7px;margin-bottom:8px}\n.tp-ws-title h1{color:#1c2637!important;font-size:29px!important;letter-spacing:-.9px!important;margin:0 0 6px!important;font-weight:800!important}\n.tp-ws-title p{font-size:13px;color:#8490a2;margin:0}\n.tp-ws-date{font-size:12px;color:#59677b;background:#fff;border:1px solid #e9ecf1;padding:10px 14px;border-radius:9px;white-space:nowrap}\n.tp-ws-overview,.tp-ws-panel{background:#fff;border:1px solid #e9ecf1;border-radius:13px;overflow:hidden;box-shadow:0 2px 10px rgba(20,30,50,.025)}\n.tp-ws-overview{margin-bottom:22px}\n.tp-ws-overview-head{padding:17px 20px;border-bottom:1px solid #eef0f4;display:flex;justify-content:space-between;gap:12px;align-items:center}\n.tp-ws-overview-head strong,.tp-ws-panel-head strong{font-size:13px;color:#243045;font-weight:800}\n.tp-ws-pill{color:#25805d;background:#eaf7f0;padding:6px 10px;border-radius:30px;font-size:11px;font-weight:750}\n.tp-ws-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));padding:20px 0}\n.tp-ws-metric{padding:0 22px;min-width:0;border-right:1px solid #edf0f4}\n.tp-ws-metric:last-child{border-right:0}\n.tp-ws-metric-label{font-size:10px;color:#8b96a7;font-weight:800;letter-spacing:1px;margin-bottom:10px}\n.tp-ws-metric-value{font-size:23px;font-weight:800;color:#202c3f;letter-spacing:-.5px;overflow-wrap:anywhere}\n.tp-ws-metric-value small{font-size:14px;color:#a0a9b7}\n.tp-ws-metric-value.good{color:#25805d}\n.tp-ws-metric-sub{font-size:11px;color:#8490a2;margin-top:6px}\n.tp-ws-shift{border-top:1px solid #edf0f4;background:#fbfcfd;padding:13px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px}\n.tp-ws-shift span{font-size:10px;font-weight:800;letter-spacing:1px;color:#8490a2}\n.tp-ws-shift strong{font-size:12px;color:#354256}\n.tp-ws-section-title{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 11px}\n.tp-ws-section-title h2{font-size:16px!important;color:#1c2637!important;margin:0!important;font-weight:800!important;letter-spacing:-.25px}\n.tp-ws-section-title small{font-size:11px;color:#8a96a6}\n.tp-ws-panel-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:15px 18px;border-bottom:1px solid #edf0f4}\n.tp-ws-panel-head span{font-size:11px;color:#8a96a6}\n.tp-ws-task{display:grid;grid-template-columns:23px 52px minmax(0,1fr) auto;align-items:center;gap:12px;padding:15px 17px;border-bottom:1px solid #f0f1f5}\n.tp-ws-task:last-child{border-bottom:0}\n.tp-ws-check{width:19px;height:19px;border:1.6px solid #cbd2dd;border-radius:6px;display:flex;align-items:center;justify-content:center;color:white;font-size:12px;font-weight:800}\n.tp-ws-task.done .tp-ws-check{background:#25805d;border-color:#25805d}\n.tp-ws-hour{font-size:12px;color:#8b96a7;font-weight:700}\n.tp-ws-task-title{font-size:12px;color:#273347;font-weight:750;overflow-wrap:anywhere}\n.tp-ws-task-sub{font-size:11px;color:#919bac;margin-top:4px}\n.tp-ws-tag{font-size:10px;padding:5px 9px;border-radius:5px;background:#f2f4f7;color:#768294;font-weight:750;white-space:nowrap}\n.tp-ws-tag.done{background:#e9f7f0;color:#25805d}\n.tp-ws-tag.late{background:#fff0f0;color:#c03942}\n.tp-ws-tag.upcoming,.tp-ws-tag.next{background:#fff6e9;color:#a96d20}\n.tp-ws-progress{padding:15px 18px;background:#fbfcfd}\n.tp-ws-progress-top{display:flex;justify-content:space-between;color:#8390a2;font-size:11px;margin-bottom:9px}\n.tp-ws-progress-top strong{color:#263449}\n.tp-ws-track{height:6px;background:#eceff3;border-radius:10px;overflow:hidden}\n.tp-ws-track div{height:100%;background:#EC3237;border-radius:10px}\n.tp-ws-focus{padding:18px}\n.tp-ws-focus-kicker{font-size:10px;color:#EC3237;letter-spacing:1px;font-weight:800}\n.tp-ws-focus h3{font-size:15px!important;font-weight:800!important;color:#263449!important;margin:10px 0 7px!important}\n.tp-ws-focus p{font-size:12px;color:#8490a2;line-height:1.6;margin:0 0 6px}\n.tp-ws-notice{padding:16px 18px;border-bottom:1px solid #eef0f4;display:flex;gap:12px}\n.tp-ws-notice:last-child{border-bottom:0}\n.tp-ws-notice-icon{width:31px;height:31px;border-radius:9px;background:#fff1f1;color:#EC3237;display:flex;align-items:center;justify-content:center;flex-shrink:0}\n.tp-ws-notice strong{font-size:12px;color:#263449;display:block;overflow-wrap:anywhere}\n.tp-ws-notice p{font-size:11px;color:#8a96a6;margin:5px 0 0}\n.tp-ws-empty{padding:18px;color:#8793a3;font-size:12px}\n.tp-ws-col-gap{height:20px}\n.tp-ws-action div[data-testid="stButton"] button{border-radius:8px!important;font-size:12px!important;min-height:36px!important}\n@media(max-width:640px){\n .tp-ws-title{align-items:flex-start;gap:9px;flex-direction:column}\n .tp-ws-title h1{font-size:25px!important}\n .tp-ws-date{padding:6px 10px;font-size:11px}\n .tp-ws-metrics{grid-template-columns:repeat(3,minmax(0,1fr));padding:15px 0}\n .tp-ws-metric{padding:0 10px}\n .tp-ws-metric-label{font-size:8px;letter-spacing:.2px}\n .tp-ws-metric-value{font-size:16px}\n .tp-ws-metric-value small{font-size:11px}\n .tp-ws-metric-sub{font-size:9px}\n .tp-ws-shift{flex-direction:column;align-items:flex-start;gap:5px}\n .tp-ws-task{grid-template-columns:20px 42px minmax(0,1fr);gap:8px;padding:13px 11px}\n .tp-ws-tag{grid-column:3;justify-self:start}\n .tp-ws-panel-head{padding:13px 12px}\n}\n</style>\n'
+
 def _vayro_mi_dia():
     import html as _html_md
     ahora = obtener_ahora_peru()
@@ -5917,131 +5919,6 @@ def _vayro_mi_dia():
     nombre = str(user_actual)
     nombre_corto = nombre.split()[0] if nombre.strip() else "Colaborador"
     saludo = "Buenos días" if ahora.hour < 12 else ("Buenas tardes" if ahora.hour < 19 else "Buenas noches")
-    st.markdown("""
-    <style>
-    /* Piloto visual estilo ClickUp: solo afecta Mi día. */
-    .tp-cu-welcome{display:flex;justify-content:space-between;align-items:center;gap:15px;
-      background:#fff;border:1px solid #e8eaf0;border-radius:15px;padding:22px 24px;
-      margin:0 0 16px;box-shadow:0 3px 14px rgba(17,24,39,.035)}
-    .tp-cu-overline{font-size:10px;letter-spacing:1.6px;font-weight:800;color:#EC3237;margin-bottom:7px}
-    .tp-cu-welcome h2{font-size:24px!important;letter-spacing:-.6px;color:#161c2d!important;margin:0 0 6px!important;font-weight:800!important}
-    .tp-cu-welcome p{font-size:13px;color:#788398;margin:0}
-    .tp-cu-date{white-space:nowrap;background:#f7f8fb;border:1px solid #eceef3;border-radius:9px;
-      padding:9px 12px;font-size:12px;font-weight:700;color:#64748b}
-    .tp-cu-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:13px}
-    .tp-cu-stat{background:#fff;border:1px solid #e8eaf0;border-radius:13px;padding:17px 18px;
-      display:flex;flex-direction:column;gap:7px;min-width:0;box-shadow:0 2px 8px rgba(17,24,39,.025)}
-    .tp-cu-stat:before{content:"";display:block;height:3px;width:30px;border-radius:3px;background:#EC3237;margin-bottom:5px}
-    .tp-cu-stat-label{font-size:10px;font-weight:800;letter-spacing:1.1px;color:#8791a3}
-    .tp-cu-stat strong{font-size:23px;color:#1b2333;line-height:1.18;overflow-wrap:anywhere}
-    .tp-cu-stat small{font-size:12px;color:#7c8798}
-    .tp-cu-muted{font-size:15px;color:#a4aebb}
-    .tp-cu-shift{background:#fff;border:1px solid #e8eaf0;border-radius:13px;
-      padding:15px 19px;display:flex;align-items:center;justify-content:space-between;gap:12px}
-    .tp-cu-shift span{font-size:10px;letter-spacing:1.2px;color:#7c8798;font-weight:800}
-    .tp-cu-shift strong{font-size:14px;color:#1d2637;text-align:right}
-    .vmd-section{font-size:15px!important;letter-spacing:-.2px;border-bottom:1px solid #e9ebf0;
-      padding-bottom:10px;margin-top:26px!important}
-    .vmd-routine{border-radius:10px!important;box-shadow:none!important}
-    @media(max-width:640px){
-      .tp-cu-welcome{padding:17px 16px;align-items:flex-start}
-      .tp-cu-welcome h2{font-size:19px!important}
-      .tp-cu-date{font-size:10px;padding:7px}
-      .tp-cu-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
-      .tp-cu-stat{padding:12px 13px;min-height:104px}
-      .tp-cu-stat strong{font-size:19px}
-      .tp-cu-grid .tp-cu-stat:first-child{grid-column:span 2;min-height:88px}
-      .tp-cu-shift{align-items:flex-start;flex-direction:column;gap:5px}
-      .tp-cu-shift strong{text-align:left}
-    }
-    .vmd-hero{background:linear-gradient(105deg,#fff 0%,#fff 60%,#fff0f0 100%);
-      border:1px solid #E3E6EC;border-left:5px solid #EC3237;color:#0F172A;
-      padding:25px 28px;border-radius:16px;margin:0 0 20px;box-shadow:0 4px 15px rgba(15,23,42,.035)}
-    .vmd-hero h1{font-size:29px;color:#0F172A!important;margin:7px 0;font-weight:750}
-    .vmd-hero p{color:#64748B;margin:0;font-size:13px}
-    .vmd-eyebrow{letter-spacing:1.3px;text-transform:uppercase;font-size:11px;font-weight:750;color:#EC3237}
-    .vmd-card{background:#FFFFFF;border:1px solid #E3E6EC;border-radius:14px;
-      padding:20px 20px;margin:9px 0;min-height:132px;box-shadow:0 2px 8px rgba(15,23,42,.035)}
-    .vmd-label{font-size:11px;color:#64748B;font-weight:750;margin-bottom:9px;letter-spacing:.65px}
-    .vmd-value{font-size:25px;color:#111827;font-weight:800;line-height:1.3}
-    .vmd-sub{font-size:12px;color:#64748B;margin-top:7px}
-    .vmd-section{font-size:18px;font-weight:750;color:#111827;margin:22px 0 10px}
-    .vmd-routine{background:#fff;border:1px solid #E3E6EC;border-radius:12px;padding:17px 18px;margin:9px 0;
-      display:flex;justify-content:space-between;align-items:center;gap:12px;box-shadow:0 1px 3px rgba(15,23,42,.025)}
-    .vmd-routine-name{color:#111827;font-weight:700;font-size:13px}
-    .vmd-routine-sub{color:#64748B;font-size:11px;margin-top:6px}
-    .vmd-chip{border-radius:30px;padding:6px 11px;font-size:11px;font-weight:700;white-space:nowrap;
-      color:#B45309;background:#FEF3C7}
-    .vmd-chip.done{color:#0B8F57;background:#E3F6EC}
-    .vmd-chip.late{color:#b4232c;background:#ffeded}
-    .vmd-chip.scheduled{color:#64748b;background:#f1f5f9}
-    .vmd-chip.upcoming{color:#99520a;background:#fff0d9}
-    .vmd-timeline{border-left:2px solid #e5e7eb;margin-left:11px;padding:3px 0 3px 20px}
-    .vmd-timeline .vmd-routine{position:relative;margin:10px 0}
-    .vmd-timeline .vmd-routine:before{content:"";position:absolute;left:-28px;top:22px;width:12px;height:12px;border-radius:50%;background:#EC3237;border:3px solid white;box-shadow:0 0 0 1px #e5e7eb}
-    .vmd-timeline .vmd-routine:has(.done):before{background:#16a36b}
-    .vmd-timeline .vmd-routine:has(.scheduled):before{background:#94a3b8}
-    .vmd-progress{height:8px;background:#F1F2F5;border-radius:10px;overflow:hidden;margin-top:10px}
-    .vmd-progress>div{height:100%;background:#EC3237;border-radius:10px}
-    .vmd-empty{background:#E3F6EC;border:1px solid #C8EAD8;border-radius:12px;
-      color:#0B8F57;padding:17px 20px;font-size:13px;font-weight:600;margin:8px 0}
-    .vmd-section-card{background:#fff;border:1px solid #E3E6EC;border-radius:16px;
-      padding:18px 20px;margin:12px 0 20px;box-shadow:0 2px 8px rgba(15,23,42,.025)}
-    @media(max-width:640px){.vmd-hero{padding:21px 19px;border-radius:13px}
-    .vmd-hero h1{font-size:23px}.vmd-card{padding:14px;min-height:112px}
-    .vmd-value{font-size:20px}.vmd-routine{padding:13px 12px}}
-
-    .tp-v4-hero{background:linear-gradient(115deg,#ffffff 0%,#ffffff 66%,#fff4f4 100%);color:#172033;border:1px solid #e6e9f0;border-top:4px solid #EC3237;border-radius:18px;padding:23px 27px 29px;
-      margin:0 0 16px;box-shadow:0 3px 12px rgba(17,24,39,.045);overflow:hidden;position:relative}
-    .tp-v4-hero:after{content:"";position:absolute;right:-70px;bottom:-140px;width:290px;height:290px;
-      border:45px solid rgba(236,50,55,.045);border-radius:50%;pointer-events:none}
-    .tp-v4-hero-top,.tp-v4-hero-main{display:flex;align-items:center;justify-content:space-between;gap:20px;position:relative;z-index:1}
-    .tp-v4-hero-top{margin-bottom:31px}
-    .tp-v4-badge{font-size:10px;font-weight:850;letter-spacing:1.3px;background:#EC3237;color:white;padding:7px 11px;border-radius:7px}
-    .tp-v4-date{font-size:12px;color:#69778b}
-    .tp-v4-kicker{font-size:10px;letter-spacing:2px;color:#EC3237;font-weight:800;margin-bottom:9px}
-    .tp-v4-hero h1{font-size:31px!important;line-height:1.15!important;color:#172033!important;letter-spacing:-.8px!important;margin:0 0 10px!important;font-weight:850!important}
-    .tp-v4-hero p{color:#66758a!important;margin:0!important;font-size:13px}
-    .tp-v4-monogram{height:74px;width:74px;border-radius:18px;background:#fff1f1;color:#EC3237;border:1px solid #f8d7d8;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:25px;transform:rotate(-8deg);flex-shrink:0}
-    .tp-v4-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px;margin:0 0 12px}
-    .tp-v4-stat{background:#fff;border:1px solid #e6e9f0;border-radius:14px;padding:17px 14px;display:flex;gap:12px;align-items:flex-start;min-width:0;box-shadow:0 3px 9px rgba(16,24,40,.025)}
-    .tp-v4-stat-icon{height:32px;width:32px;border-radius:9px;background:#fff0f0;color:#EC3237;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:11px;font-weight:850}
-    .tp-v4-stat>div{display:flex;flex-direction:column;gap:5px;min-width:0}
-    .tp-v4-stat small{font-size:10px;letter-spacing:.6px;font-weight:850;color:#8690a2}
-    .tp-v4-stat strong{font-size:19px;font-weight:850;color:#171d2a;overflow-wrap:anywhere;line-height:1.2}
-    .tp-v4-stat em{font-size:11px;color:#738095;font-style:normal}
-    .tp-v4-shift{display:flex;align-items:center;justify-content:space-between;background:#fff;border:1px solid #e6e9f0;border-radius:12px;padding:13px 18px;margin-bottom:24px}
-    .tp-v4-shift>div{display:flex;align-items:center;gap:12px}
-    .tp-v4-shift small{color:#8a94a6;font-size:10px;letter-spacing:1px;font-weight:850}
-    .tp-v4-shift strong{font-size:13px;color:#283347}
-    .tp-v4-shift-label{background:#f1f3f7;color:#7b8798;padding:6px 10px;border-radius:6px;font-size:10px;font-weight:800;letter-spacing:1px}
-    .tp-v4-section{display:flex;align-items:center;gap:11px;margin:25px 0 12px;border-bottom:1px solid #e8ebf1;padding-bottom:12px}
-    .tp-v4-section>span{background:#EC3237;color:#fff;border-radius:7px;padding:6px 9px;font-size:11px;font-weight:800}
-    .tp-v4-section h3{font-size:16px!important;color:#192334!important;font-weight:800!important;margin:0!important}
-    .tp-v4-section small{margin-left:auto;color:#8490a3;font-size:11px}
-    @media(max-width:680px){
-      .tp-v4-hero{padding:17px 18px 23px;border-radius:16px}
-      .tp-v4-hero-top{margin-bottom:25px}
-      .tp-v4-hero h1{font-size:23px!important}
-      .tp-v4-monogram{height:52px;width:52px;font-size:18px;border-radius:13px}
-      .tp-v4-stats{grid-template-columns:1fr;gap:8px}
-      .tp-v4-stat{padding:12px 14px;align-items:center}
-      .tp-v4-stat>div{gap:3px}
-      .tp-v4-stat strong{font-size:17px}
-      .tp-v4-shift>div{flex-direction:column;align-items:flex-start;gap:4px}
-      .tp-v4-shift-label{font-size:9px}
-    }
-    </style>
-    """, unsafe_allow_html=True)
-    st.markdown(
-        f'<div class="tp-v4-hero"><div class="tp-v4-hero-top">'
-        f'<span class="tp-v4-badge">MI ESPACIO</span>'
-        f'<span class="tp-v4-date">{ahora.strftime("%d/%m/%Y")}</span></div>'
-        f'<div class="tp-v4-hero-main"><div><div class="tp-v4-kicker">TIENDAS PREMIUM / INICIO</div>'
-        f'<h1>{_html_md.escape(saludo)}, {_html_md.escape(nombre_corto)}.</h1>'
-        f'<p>Todo lo que necesitas para organizar tu jornada.</p></div>'
-        f'<div class="tp-v4-monogram">TP</div></div></div>', unsafe_allow_html=True)
-
     # Asistencia: únicamente las marcaciones del usuario conectado.
     estado_asist = "Sin marcación"
     detalle_asist = "Aún no registras tu ingreso"
@@ -6102,86 +5979,125 @@ def _vayro_mi_dia():
         avisos, pendientes_avisos = pd.DataFrame(), pd.DataFrame()
         error_avisos = str(exc)
 
-    avance = round(100*n_hechas/n_rutinas) if n_rutinas else 0
+    # Los datos anteriores son reales; esta sección cambia únicamente su presentación.
+    from datetime import datetime as _tp_ws_datetime
+    st.markdown(_TP_WORKSPACE_CSS, unsafe_allow_html=True)
+    avance = round(100 * n_hechas / n_rutinas) if n_rutinas else 0
+    fecha_legible = ahora.strftime("%d/%m/%Y")
+    asist_class = "good" if estado_asist != "Sin marcación" else ""
     st.markdown(
-        '<div class="tp-v4-stats">'
-        f'<div class="tp-v4-stat"><span class="tp-v4-stat-icon">01</span><div>'
-        f'<small>MI ASISTENCIA</small><strong>{_html_md.escape(estado_asist)}</strong>'
-        f'<em>{_html_md.escape(detalle_asist)}</em></div></div>'
-        f'<div class="tp-v4-stat"><span class="tp-v4-stat-icon">02</span><div>'
-        f'<small>RUTINAS DE HOY</small><strong>{n_hechas} de {n_rutinas}</strong>'
-        f'<em>{avance}% completado</em></div></div>'
-        f'<div class="tp-v4-stat"><span class="tp-v4-stat-icon">03</span><div>'
-        f'<small>AVISOS SIN LEER</small><strong>{len(pendientes_avisos)}</strong>'
-        f'<em>Comunicados pendientes</em></div></div></div>'
-        f'<div class="tp-v4-shift"><div><small>HORARIO DE HOY</small>'
-        f'<strong>{_html_md.escape(detalle_turno)}</strong></div>'
-        f'<span class="tp-v4-shift-label">MI TURNO</span></div>', unsafe_allow_html=True)
+        f'<div class="tp-ws-title"><div><div class="tp-ws-eyebrow">MI ESPACIO DE TRABAJO</div>'
+        f'<h1>Mi día <span style="color:#d4d9e2;font-weight:400">/</span> Mi jornada</h1>'
+        f'<p>{_html_md.escape(saludo)}, {_html_md.escape(nombre_corto)}. Organiza tus actividades y mantén el control de tu turno.</p>'
+        f'</div><span class="tp-ws-date">{fecha_legible}</span></div>'
+        '<section class="tp-ws-overview"><div class="tp-ws-overview-head">'
+        '<strong>Resumen de jornada</strong><span class="tp-ws-pill">● Jornada de hoy</span></div>'
+        '<div class="tp-ws-metrics">'
+        f'<div class="tp-ws-metric"><div class="tp-ws-metric-label">ASISTENCIA</div>'
+        f'<div class="tp-ws-metric-value {asist_class}">{_html_md.escape(estado_asist)}</div>'
+        f'<div class="tp-ws-metric-sub">{_html_md.escape(detalle_asist)}</div></div>'
+        f'<div class="tp-ws-metric"><div class="tp-ws-metric-label">RUTINAS DE HOY</div>'
+        f'<div class="tp-ws-metric-value">{n_hechas} <small>/ {n_rutinas}</small></div>'
+        f'<div class="tp-ws-metric-sub">{max(0,n_rutinas-n_hechas)} pendientes</div></div>'
+        f'<div class="tp-ws-metric"><div class="tp-ws-metric-label">COMUNICADOS</div>'
+        f'<div class="tp-ws-metric-value">{len(pendientes_avisos)}</div>'
+        '<div class="tp-ws-metric-sub">Pendientes de lectura</div></div></div>'
+        f'<div class="tp-ws-shift"><span>HORARIO ASIGNADO</span>'
+        f'<strong>{_html_md.escape(detalle_turno)}</strong></div></section>',
+        unsafe_allow_html=True,
+    )
 
-    # Acción recomendada según el estado actual: siempre requiere un clic explícito.
+    # Los botones navegan a los módulos originales; no simulan guardar rutinas.
     if estado_asist == "Sin marcación":
-        accion_texto, accion_destino, accion_desc = "Registrar mi ingreso", "Marcar Asistencia", "Tu primera acción es registrar la asistencia."
+        accion_texto, accion_destino, accion_desc = "Registrar mi ingreso", "Marcar Asistencia", "Registra tu asistencia para comenzar la jornada."
     elif n_rutinas > n_hechas:
-        accion_texto, accion_destino, accion_desc = "Continuar mis rutinas", "Mis Rutinas", f"Tienes {n_rutinas-n_hechas} rutina(s) pendiente(s)."
+        accion_texto, accion_destino, accion_desc = "Ver mis rutinas", "Mis Rutinas", f"Tienes {n_rutinas-n_hechas} rutina(s) pendiente(s). Completa las verificaciones desde Mis Rutinas."
     elif not pendientes_avisos.empty:
-        accion_texto, accion_destino, accion_desc = "Leer comunicados", "Comunicados", "Tienes comunicados pendientes de confirmar."
+        accion_texto, accion_destino, accion_desc = "Revisar comunicados", "Comunicados", "Hay comunicados que requieren tu confirmación de lectura."
     else:
-        accion_texto, accion_destino, accion_desc = "Consultar mi asistencia", "Marcar Asistencia", "Estás al día con tus tareas registradas."
-    st.markdown('<div class="tp-v4-section"><span>01</span><h3>Tu siguiente acción</h3></div>', unsafe_allow_html=True)
-    with st.container(border=True):
-        st.markdown(f"**{accion_desc}**")
-        st.button(accion_texto, key="vmd_accion_sugerida", type="primary", use_container_width=True,
-                  on_click=_ir_a, args=(accion_destino,))
+        accion_texto, accion_destino, accion_desc = "Ver mi asistencia", "Marcar Asistencia", "No tienes acciones pendientes registradas."
 
-    st.markdown('<div class="tp-v4-section"><span>02</span><h3>Mi jornada</h3><small>Línea de tiempo</small></div>',unsafe_allow_html=True)
-    if error_rutinas:
-        st.warning("No se pudieron consultar las rutinas en este momento.")
-    elif rutinas_hoy.empty:
-        st.info("No tienes rutinas asignadas para hoy.")
-    else:
-        st.markdown('<div class="vmd-timeline">',unsafe_allow_html=True)
-        rutinas_ordenadas = rutinas_hoy.sort_values("hora", kind="stable") if "hora" in rutinas_hoy.columns else rutinas_hoy
-        for _,r in rutinas_ordenadas.iterrows():
-            hecha = str(r["id_rutina"]) in completadas
-            try:
-                num_tareas = len(_vayro_json.loads(str(r.get("tareas_json", "[]"))))
-            except Exception:
-                num_tareas = 0
-            estado_txt, estado_clase = _tp_estado_horario(r, fecha, hecha, ahora)
+    col_main, col_side = st.columns([1.75, 1], gap="large")
+    with col_main:
+        st.markdown(
+            f'<div class="tp-ws-section-title"><h2>Actividades de hoy</h2>'
+            f'<small>{n_rutinas} rutinas asignadas</small></div>',
+            unsafe_allow_html=True,
+        )
+        if error_rutinas:
+            st.warning("No se pudieron consultar las rutinas en este momento.")
+        elif rutinas_hoy.empty:
+            st.markdown('<section class="tp-ws-panel"><div class="tp-ws-empty">No tienes rutinas asignadas para hoy.</div></section>', unsafe_allow_html=True)
+        else:
+            items = []
+            ordenadas = rutinas_hoy.sort_values("hora", kind="stable") if "hora" in rutinas_hoy.columns else rutinas_hoy
+            for _, r in ordenadas.iterrows():
+                hecha = str(r["id_rutina"]) in completadas
+                estado_txt, estado_clase = _tp_estado_horario(r, fecha, hecha, ahora)
+                hora = _html_md.escape(str(r.get("hora", "")).strip()[:5])
+                titulo = _html_md.escape(str(r.get("nombre", "Rutina")))
+                try:
+                    tareas = _vayro_json.loads(str(r.get("tareas_json", "[]")))
+                    total_tareas = len(tareas) if isinstance(tareas, list) else 0
+                except Exception:
+                    total_tareas = 0
+                clase = "done" if hecha else ""
+                marca = "✓" if hecha else ""
+                items.append(
+                    f'<div class="tp-ws-task {clase}"><span class="tp-ws-check">{marca}</span>'
+                    f'<span class="tp-ws-hour">{hora}</span>'
+                    f'<div><div class="tp-ws-task-title">{titulo}</div>'
+                    f'<div class="tp-ws-task-sub">{total_tareas} verificaciones · Abrir en Mis Rutinas</div></div>'
+                    f'<span class="tp-ws-tag {estado_clase}">{_html_md.escape(estado_txt)}</span></div>'
+                )
             st.markdown(
-                f'<div class="vmd-routine"><div><div class="vmd-routine-name">{_html_md.escape(str(r.get("nombre", "Rutina")))}</div>'
-                f'<div class="vmd-routine-sub">{_html_md.escape(str(r.get("hora", "")))} · {num_tareas} verificaciones</div></div>'
-                f'<span class="vmd-chip {estado_clase}">{estado_txt}</span></div>',
+                '<section class="tp-ws-panel">'
+                f'<div class="tp-ws-panel-head"><strong>Mi lista de trabajo</strong>'
+                f'<span>{n_hechas} de {n_rutinas} completadas</span></div>'
+                + "".join(items)
+                + f'<div class="tp-ws-progress"><div class="tp-ws-progress-top">'
+                f'<span>Progreso de jornada</span><strong>{avance}%</strong></div>'
+                f'<div class="tp-ws-track"><div style="width:{avance}%"></div></div></div></section>',
                 unsafe_allow_html=True,
             )
-        st.markdown('</div>',unsafe_allow_html=True)
-        st.markdown(f'<div class="vmd-progress"><div style="width:{(n_hechas/n_rutinas*100) if n_rutinas else 0:.1f}%"></div></div>', unsafe_allow_html=True)
-    st.button("Abrir Mis Rutinas", key="vmd_ir_rutinas", use_container_width=True,
-              type="primary", on_click=_ir_a, args=("Mis Rutinas",))
+        st.button("Abrir mis rutinas  ↗", key="tp_ws_rutinas", on_click=_ir_a,
+                  args=("Mis Rutinas",), use_container_width=True, type="primary")
 
-    st.markdown('<div class="tp-v4-section"><span>03</span><h3>Comunicados</h3></div>',unsafe_allow_html=True)
-    if error_avisos:
-        st.warning("No se pudieron consultar los comunicados en este momento.")
-    elif pendientes_avisos.empty:
-        st.markdown('<div class="vmd-empty">No tienes comunicados pendientes de confirmar.</div>', unsafe_allow_html=True)
-    else:
-        for _,r in pendientes_avisos.iterrows():
-            with st.container(border=True):
-                st.markdown(f"**{r.get('titulo','Comunicado')}**")
-                st.caption(f"{r.get('prioridad','Normal')} · {r.get('categoria','General')}")
-    st.button("Abrir Comunicados", key="vmd_ir_comunicados", use_container_width=True,
-              on_click=_ir_a, args=("Comunicados",))
+    with col_side:
+        st.markdown(
+            '<div class="tp-ws-section-title"><h2>Siguiente paso</h2><small>Prioridad</small></div>'
+            '<section class="tp-ws-panel"><div class="tp-ws-focus">'
+            '<div class="tp-ws-focus-kicker">● ACCIÓN RECOMENDADA</div>'
+            f'<h3>{_html_md.escape(accion_texto)}</h3>'
+            f'<p>{_html_md.escape(accion_desc)}</p></div></section>',
+            unsafe_allow_html=True,
+        )
+        st.button("Ir a la actividad  ↗", key="tp_ws_siguiente", on_click=_ir_a,
+                  args=(accion_destino,), use_container_width=True)
+        st.markdown('<div class="tp-ws-col-gap"></div><div class="tp-ws-section-title">'
+                    f'<h2>Comunicados</h2><small>{len(pendientes_avisos)} sin leer</small></div>',
+                    unsafe_allow_html=True)
+        if error_avisos:
+            st.warning("No se pudieron consultar los comunicados.")
+        elif pendientes_avisos.empty:
+            st.markdown('<section class="tp-ws-panel"><div class="tp-ws-empty">No tienes comunicados pendientes.</div></section>',
+                        unsafe_allow_html=True)
+        else:
+            avisos_html = []
+            for _, r in pendientes_avisos.head(4).iterrows():
+                titulo = _html_md.escape(str(r.get("titulo", "Comunicado")))
+                categoria = _html_md.escape(str(r.get("categoria", "General")))
+                avisos_html.append(
+                    '<div class="tp-ws-notice"><div class="tp-ws-notice-icon">✉</div>'
+                    f'<div><strong>{titulo}</strong><p>{categoria} · Requiere confirmación de lectura</p></div></div>'
+                )
+            st.markdown('<section class="tp-ws-panel">' + "".join(avisos_html) + '</section>',
+                        unsafe_allow_html=True)
+        st.button("Ver comunicados  ↗", key="tp_ws_comunicados", on_click=_ir_a,
+                  args=("Comunicados",), use_container_width=True)
 
-    st.markdown('<div class="vmd-section">Accesos rápidos</div>',unsafe_allow_html=True)
-    a,b = st.columns(2)
-    with a:
-        st.button("Marcar asistencia", key="vmd_ir_asistencia", use_container_width=True,
-                  on_click=_ir_a, args=("Marcar Asistencia",))
-    with b:
-        st.button("Mis vacaciones", key="vmd_ir_vacaciones", use_container_width=True,
-                  on_click=_ir_a, args=("Mis Vacaciones",))
     if st.session_state.get("ver_como"):
-        st.info("Estás en vista previa. Las acciones de registro se realizan desde la sesión real del colaborador.")
+        st.info("Vista previa de colaborador: los registros solo pueden realizarse desde su sesión real.")
 
 def _tp_centro_notificaciones():
     """Bandeja 2.0: pendiente/atendida calculado a partir de los registros existentes."""
