@@ -5373,8 +5373,8 @@ def _vayro_mis_rutinas():
     @media(max-width:640px){.tp-rut-head{padding:16px}.tp-rut-head h1{font-size:1.35rem!important}
       .tp-rut-task{padding:11px}}
     </style>
-    <div class="tp-rut-head"><div style="font-size:11px;letter-spacing:1.4px;font-weight:800;color:#EC3237">OPERACIÓN DIARIA</div>
-    <h1>Mis rutinas</h1><p>Tu lista de verificación, clara y en un solo lugar.</p></div>
+    <div class="market-header"><h1>Mis Rutinas</h1>
+    <p>Tiendas Premium · Consulta y verifica las actividades asignadas a tu turno.</p></div>
     """, unsafe_allow_html=True)
     hoy = obtener_ahora_peru().date()
     fecha = st.date_input("Fecha de consulta", value=hoy, max_value=hoy,
@@ -5886,9 +5886,8 @@ def _vayro_mi_dia():
     </style>
     """, unsafe_allow_html=True)
     st.markdown(
-        f'<div class="vmd-hero"><div class="vmd-eyebrow">Tiendas Premium · Mi día</div>'
-        f'<h1>{_html_md.escape(saludo)}, {_html_md.escape(nombre_corto)}</h1>'
-        f'<p>{ahora.strftime("%d/%m/%Y")} · Tu jornada, en un solo lugar</p></div>',
+        f'<div class="market-header"><h1>Mi día</h1>'
+        f'<p>Tiendas Premium · {ahora.strftime("%d/%m/%Y")} · {_html_md.escape(saludo)}, {_html_md.escape(nombre_corto)}</p></div>',
         unsafe_allow_html=True,
     )
 
@@ -6045,8 +6044,8 @@ def _tp_centro_notificaciones():
     .tp-not-pill.rut{background:#fff6e7;color:#a65e08}
     @media(max-width:640px){.tp-not-hero{padding:18px}.tp-not-card{padding:13px 14px}}
     </style>
-    <div class="tp-not-hero"><div style="color:#EC3237;font-size:11px;letter-spacing:1.3px;font-weight:800">TIENDAS PREMIUM</div>
-    <h1>Centro de notificaciones</h1><p>Tus avisos y actividades importantes, en un solo lugar.</p></div>
+    <div class="market-header"><h1>Centro de Notificaciones</h1>
+    <p>Tiendas Premium · Consulta tus comunicados y actividades pendientes.</p></div>
     """,unsafe_allow_html=True)
     try:
         _, _, avisos_pend = _tp_com_pendientes()
