@@ -3473,6 +3473,8 @@ if not st.session_state.usuario_login:
                             _g["fails"].pop(_dni_k, None)
                         st.session_state.usuario_login = usuario_sel
                         st.session_state.pop("_tp_botellas_aviso_login", None)
+                        st.session_state.pop("_tp_botellas_dialogo_abierto", None)
+                        st.session_state.pop("_tp_com_modal_sesion", None)
                         st.session_state.pop("_tp_cumple_dialogo_abierto", None)
                         st.session_state["ver_como"] = None
                         st.session_state["ver_como_sel"] = "Mi vista (admin)"
@@ -4742,11 +4744,13 @@ def _tp_aviso_botellas_inicio(total):
     col_detalle, col_cerrar = st.columns(2)
     with col_detalle:
         if st.button("Ver botellas pendientes", key="tp_bf_modal_ver", use_container_width=True, type="primary"):
+            st.session_state["_tp_botellas_dialogo_abierto"] = False
             st.session_state["nav_radio"] = "Botellas Fiadas"
             st.session_state["gs_q"] = ""
             st.rerun()
     with col_cerrar:
         if st.button("Entendido, cerrar", key="tp_bf_modal_cerrar", use_container_width=True):
+            st.session_state["_tp_botellas_dialogo_abierto"] = False
             st.rerun()
 
 # El contador del perfil sigue disponible en todas las vistas, pero el diálogo
@@ -4756,6 +4760,7 @@ if (not st.session_state.get("_tp_cumple_dialogo_abierto", False)
     # Solo se consume el aviso de esta sesión cuando realmente puede mostrarse.
     st.session_state["_tp_botellas_aviso_login"] = True
     if _bf_total_pendientes > 0:
+        st.session_state["_tp_botellas_dialogo_abierto"] = True
         _tp_aviso_botellas_inicio(_bf_total_pendientes)
 
 # -------------------- ASISTENTE PREMIUM IA · V2 --------------------
@@ -5543,42 +5548,128 @@ def _vayro_com_admin():
                     else:
                         st.caption("Este comunicado no requiere confirmación.")
 
+def _tp_com_card(r, confirmado=False, compacto=False):
+    """Tarjeta corporativa de comunicado; contenido escapado contra HTML no confiable."""
+    import html as _h
+    titulo = _h.escape(str(r.get("titulo", "Comunicado")))
+    categoria = _h.escape(str(r.get("categoria", "General")))
+    prioridad = _h.escape(str(r.get("prioridad", "Normal")))
+    fecha = _h.escape(str(r.get("fecha_inicio", "")))
+    contenido = _h.escape(str(r.get("contenido", ""))).replace("\n", "<br>")
+    estado = "LECTURA CONFIRMADA" if confirmado else ("REQUIERE CONFIRMACIÓN" if str(r.get("requiere_confirmacion", "")) == "Sí" else "INFORMATIVO")
+    color = "#0B8F57" if confirmado else "#EC3237"
+    st.markdown(f"""<div class="tp-com-card">
+      <div class="tp-com-banner"><span class="tp-com-brand">TIENDAS <b>PREMIUM</b></span><span class="tp-com-badge">COMUNICADO INTERNO</span></div>
+      <div class="tp-com-content"><div class="tp-com-kicker">{categoria} · {prioridad} · {fecha}</div>
+      <h2>{titulo}</h2><div class="tp-com-message">{contenido}</div>
+      <div class="tp-com-sign"><span>Administración · Tiendas Premium</span><strong style="color:{color}">{estado}</strong></div></div>
+     </div>""", unsafe_allow_html=True)
+
+
+def _tp_com_estilos():
+    st.markdown("""<style>
+    .tp-com-card{background:#fff;border:1px solid #E3E6EC;border-radius:19px;overflow:hidden;
+      box-shadow:0 7px 24px rgba(15,23,42,.06);margin:12px 0 14px}
+    .tp-com-banner{background:linear-gradient(120deg,#EC3237,#B9252B 72%,#111827);
+      padding:22px 25px;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+    .tp-com-brand{font-size:15px;font-weight:750;letter-spacing:.3px;color:#fff}
+    .tp-com-brand b{color:#fff}
+    .tp-com-badge{font-size:10px;font-weight:750;letter-spacing:1px;border:1px solid #ffffff80;
+      border-radius:20px;padding:7px 10px;color:#fff}
+    .tp-com-content{padding:25px 27px 20px}
+    .tp-com-kicker{font-size:11px;letter-spacing:.7px;text-transform:uppercase;font-weight:700;color:#EC3237}
+    .tp-com-content h2{font-size:21px!important;line-height:1.28;color:#111827!important;
+      margin:9px 0 19px;font-weight:800}
+    .tp-com-message{font-size:14px;line-height:1.85;color:#334155;white-space:normal;overflow-wrap:anywhere}
+    .tp-com-sign{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;
+      border-top:1px solid #E3E6EC;margin-top:22px;padding-top:15px;font-size:11px;color:#64748B}
+    .tp-com-sign strong{font-size:10px;letter-spacing:.35px}
+    @media(max-width:640px){.tp-com-banner{padding:17px 18px}.tp-com-content{padding:20px 18px}
+      .tp-com-content h2{font-size:18px!important}.tp-com-message{font-size:13px}}
+     </style>""",unsafe_allow_html=True)
+
+
+def _tp_com_pendientes():
+    """Lista pendiente real por DNI. La confirmación es persistente en Google Sheets."""
+    fecha = obtener_ahora_peru().date().isoformat()
+    comunicados = _vayro_com_leer("VAYRO_Comunicados", _VAYRO_COM_COLS)
+    lecturas = _vayro_com_leer("VAYRO_Comunicados_Lecturas", _VAYRO_LECT_COLS)
+    visibles = comunicados[comunicados.apply(
+        lambda r: _vayro_com_vigente(r, fecha) and _vayro_com_dirigido(r, dni_actual),axis=1
+    )] if not comunicados.empty else comunicados
+    leidos = set(lecturas.loc[lecturas["dni"].astype(str)==str(dni_actual),"id_comunicado"].astype(str)) if not lecturas.empty else set()
+    pendientes = visibles[visibles.apply(lambda r: str(r.get("requiere_confirmacion", ""))=="Sí" and str(r.get("id_comunicado", "")) not in leidos,axis=1)] if not visibles.empty else visibles
+    return visibles, leidos, pendientes
+
+
 def _vayro_com_colaborador():
+    _tp_com_estilos()
     st.markdown('<div class="market-header"><h1>Comunicados</h1><p>Tiendas Premium · Información y novedades de tu equipo</p></div>', unsafe_allow_html=True)
     try:
-        comunicados = _vayro_com_leer("VAYRO_Comunicados", _VAYRO_COM_COLS)
-        lecturas = _vayro_com_leer("VAYRO_Comunicados_Lecturas", _VAYRO_LECT_COLS)
+        visibles, leidos, pendientes = _tp_com_pendientes()
     except Exception as exc:
         st.error(f"No se pudieron cargar los comunicados: {exc}")
         return
-    hoy = obtener_ahora_peru().date().isoformat()
-    visibles = comunicados[comunicados.apply(lambda r: _vayro_com_vigente(r, hoy) and _vayro_com_dirigido(r, dni_actual), axis=1)] if not comunicados.empty else comunicados
     if visibles.empty:
         st.info("No tienes comunicados vigentes por el momento.")
         return
-    leidos = set(lecturas[lecturas["dni"].astype(str) == str(dni_actual)]["id_comunicado"]) if not lecturas.empty else set()
-    pendientes = sum(str(r["requiere_confirmacion"]) == "Sí" and str(r["id_comunicado"]) not in leidos for _, r in visibles.iterrows())
-    a, b = st.columns(2)
-    a.metric("Comunicados vigentes", len(visibles))
-    b.metric("Pendientes de confirmar", pendientes)
-    for _, r in visibles.iloc[::-1].iterrows():
+    a,b = st.columns(2)
+    a.metric("Comunicados vigentes",len(visibles))
+    b.metric("Pendientes de confirmar",len(pendientes))
+    for _,r in visibles.iloc[::-1].iterrows():
         confirmado = str(r["id_comunicado"]) in leidos
-        etiqueta = "Confirmado" if confirmado else ("Pendiente de lectura" if r["requiere_confirmacion"] == "Sí" else "Informativo")
-        with st.container(border=True):
-            st.markdown(f"### {r['titulo']}")
-            st.caption(f"{r['categoria']} · {r['prioridad']} · {r['fecha_inicio']} · {etiqueta}")
-            st.write(str(r["contenido"]))
-            if str(r["requiere_confirmacion"]) == "Sí":
-                if confirmado:
-                    st.success("Lectura confirmada")
-                elif st.session_state.get("ver_como"):
-                    st.info("Vista previa: ingresa con la cuenta del colaborador para confirmar la lectura.")
-                elif st.button("Confirmar que he leído", key=f"vayro_leer_{r['id_comunicado']}", type="primary", use_container_width=True):
-                    try:
-                        _vayro_com_confirmar(r)
-                        st.rerun()
-                    except Exception as exc:
-                        st.error(f"No se pudo confirmar la lectura: {exc}")
+        _tp_com_card(r,confirmado)
+        if str(r.get("requiere_confirmacion", ""))=="Sí":
+            if confirmado:
+                st.success("Lectura confirmada correctamente.")
+            elif st.session_state.get("ver_como"):
+                st.info("Vista previa: solo el colaborador puede confirmar la lectura.")
+            elif st.button("Confirmar que he leído",key=f"vayro_leer_{r['id_comunicado']}",type="primary",use_container_width=True):
+                try:
+                    _vayro_com_confirmar(r)
+                    st.session_state["_tp_aviso_lectura"]="Lectura confirmada correctamente."
+                    st.rerun()
+                except Exception as exc:
+                    st.error(f"No se pudo confirmar la lectura: {exc}")
+    if st.session_state.pop("_tp_aviso_lectura",None):
+        st.toast("Lectura confirmada correctamente.")
+
+
+def _tp_com_modal_inicio():
+    """Un solo diálogo por ejecución: cumpleaños > botellas > comunicado."""
+    if rol_actual == "admin" or st.session_state.get("ver_como"):
+        return
+    if st.session_state.get("_tp_cumple_dialogo_abierto") or st.session_state.get("_tp_botellas_dialogo_abierto"):
+        return
+    try:
+        _,_,pendientes = _tp_com_pendientes()
+    except Exception:
+        # Si falla la red no se bloquea el inicio ni se marca como visto.
+        return
+    if pendientes.empty:
+        return
+    # Una sola aparición automática por comunicado y sesión, sin repetir al navegar.
+    mostrados = st.session_state.setdefault("_tp_com_modal_sesion",set())
+    siguiente = next((r for _,r in pendientes.iloc[::-1].iterrows() if str(r["id_comunicado"]) not in mostrados),None)
+    if siguiente is None:
+        return
+    cid = str(siguiente["id_comunicado"])
+    mostrados.add(cid)
+    @st.dialog("Nuevo comunicado · Tiendas Premium",width="large")
+    def _dialogo():
+        _tp_com_estilos()
+        _tp_com_card(siguiente,False)
+        st.caption("Confirma la lectura para dejar constancia de que recibiste este comunicado.")
+        if st.button("Confirmar que he leído",key=f"tp_com_modal_confirm_{cid}",type="primary",use_container_width=True):
+            try:
+                _vayro_com_confirmar(siguiente)
+                st.session_state["_tp_aviso_lectura"]="Lectura confirmada correctamente."
+                st.rerun()
+            except Exception as exc:
+                st.error(f"No se pudo registrar la confirmación: {exc}")
+        if st.button("Leer más tarde",key=f"tp_com_modal_luego_{cid}",use_container_width=True):
+            st.rerun()
+    _dialogo()
 
 # =========================================================
 # VAYRO · FASE 4 — MI DÍA (PANEL DEL COLABORADOR)
@@ -5745,6 +5836,9 @@ def _vayro_mi_dia():
                   on_click=_ir_a, args=("Mis Vacaciones",))
     if st.session_state.get("ver_como"):
         st.info("Estás en vista previa. Las acciones de registro se realizan desde la sesión real del colaborador.")
+
+# Notificación inicial de comunicados, después de resolver cumpleaños y botellas.
+_tp_com_modal_inicio()
 
 if choice == "Mi día":
     _vayro_mi_dia()
