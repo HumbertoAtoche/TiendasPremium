@@ -5365,13 +5365,23 @@ def _vayro_mis_rutinas():
     .tp-rut-stats b{color:#0f172a;font-size:18px}
     .tp-rut-card strong{font-size:1.04rem;color:#192334}
     .tp-rut-card small{display:block;color:#64748b;margin-top:5px}
-    .tp-rut-task{padding:13px 15px;border:1px solid #e8eaf0;background:#fafbfc;
-      border-radius:12px;margin:13px 0 7px;font-weight:650;color:#202938}
+    .tp-task-line{display:flex;align-items:center;gap:12px;font-size:.91rem;
+      line-height:1.35;color:#202938;font-weight:650;min-height:28px}
+    .tp-task-num{display:inline-flex;align-items:center;justify-content:center;
+      flex-shrink:0;width:29px;height:29px;border-radius:8px;
+      background:#f2f4f7;color:#64748b;font-size:.72rem;font-weight:800}
+    div[data-testid="stVerticalBlockBorderWrapper"]:has(.tp-task-line){
+      background:#fff;border-color:#e7eaf0!important;border-radius:11px!important;
+      margin:5px 0!important}
+    div[data-testid="stVerticalBlockBorderWrapper"]:has(.tp-task-line) [data-testid="stVerticalBlock"]{
+      gap:.25rem!important}
+    @media(max-width:640px){.tp-task-line{font-size:.84rem;gap:8px}
+      .tp-task-num{width:25px;height:25px}}
     .tp-rut-ok{color:#08784a;font-weight:700}
     .tp-rut-warning{color:#b45309;font-weight:700}
     div[data-testid="stProgress"]>div>div{background-color:#EC3237}
     @media(max-width:640px){.tp-rut-head{padding:16px}.tp-rut-head h1{font-size:1.35rem!important}
-      .tp-rut-task{padding:11px}}
+      }
     </style>
     """, unsafe_allow_html=True)
     st.markdown("""<style>
@@ -5452,14 +5462,26 @@ def _vayro_mis_rutinas():
             for i, tarea in enumerate(tareas):
                 clave = f"tp_check_{rid}_{fecha}_{i}"
                 clave_obs = f"tp_check_obs_{rid}_{fecha}_{i}"
-                st.markdown(f'<div class="tp-rut-task">{i+1:02d}. '
-                            f'{_html.escape(str(tarea))}</div>', unsafe_allow_html=True)
-                col_switch, col_inc = st.columns([1.1, 1.4], gap="small")
-                with col_switch:
-                    realizado = st.toggle("Realizada", key=clave)
-                with col_inc:
-                    incidencia = st.checkbox("No se pudo realizar", key=f"{clave}_inc",
-                                            disabled=realizado)
+                # Una fila compacta: actividad a la izquierda, interruptor a la derecha.
+                # Se conserva la clave del widget para no perder el avance al actualizar.
+                with st.container(border=True):
+                    col_actividad, col_switch = st.columns([5, 1.3], gap="small", vertical_alignment="center")
+                    with col_actividad:
+                        st.markdown(
+                            f'<div class="tp-task-line"><span class="tp-task-num">{i+1:02d}</span>'
+                            f'<span>{_html.escape(str(tarea))}</span></div>',
+                            unsafe_allow_html=True)
+                    with col_switch:
+                        realizado = st.toggle(
+                            "Realizada", key=clave, label_visibility="collapsed",
+                            help="Activa cuando hayas completado la actividad")
+                    # La incidencia se registra solo si la actividad sigue apagada.
+                    if not realizado:
+                        incidencia = st.checkbox(
+                            "No se pudo realizar (registrar incidencia)",
+                            key=f"{clave}_inc")
+                    else:
+                        incidencia = False
                 if realizado:
                     respuesta = "Sí"
                 elif incidencia:
