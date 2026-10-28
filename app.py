@@ -5488,7 +5488,8 @@ def _vayro_com_admin():
     c.metric("Confirmaciones", len(lecturas))
     tab1, tab2 = st.tabs(["Publicar comunicado", "Historial y seguimiento"])
     with tab1:
-        with st.form("vayro_form_comunicado", clear_on_submit=True):
+        st.caption("Redacta el comunicado, revisa su apariencia y publícalo solo cuando estés conforme.")
+        with st.form("vayro_form_comunicado", clear_on_submit=False):
             titulo = st.text_input("Título", max_chars=110)
             contenido = st.text_area("Mensaje", height=180, max_chars=4000)
             col1, col2 = st.columns(2)
@@ -5502,21 +5503,55 @@ def _vayro_com_admin():
                 confirmacion = st.checkbox("Solicitar confirmación de lectura", value=True)
             opciones = _vayro_com_dnis()
             seleccion = st.multiselect("Selecciona los colaboradores", list(opciones), disabled=destino != "Colaboradores específicos")
-            confirmar = st.checkbox("Confirmo que deseo publicar este comunicado")
-            publicar = st.form_submit_button("Publicar comunicado", type="primary", use_container_width=True)
-        if publicar:
+            previsualizar = st.form_submit_button("Previsualizar comunicado", type="primary", use_container_width=True)
+
+        if previsualizar:
             if not titulo.strip() or not contenido.strip():
-                st.error("Completa el título y el mensaje.")
+                st.error("Completa el título y el mensaje para generar la vista previa.")
+                st.session_state.pop("_tp_com_borrador_preview", None)
             elif fin < inicio:
                 st.error("La fecha final no puede ser anterior a la fecha inicial.")
+                st.session_state.pop("_tp_com_borrador_preview", None)
             elif destino == "Colaboradores específicos" and not seleccion:
                 st.error("Selecciona al menos un destinatario.")
-            elif not confirmar:
-                st.error("Confirma la publicación antes de continuar.")
+                st.session_state.pop("_tp_com_borrador_preview", None)
             else:
-                datos = dict(titulo=titulo.strip(), contenido=contenido.strip(), categoria=categoria, prioridad=prioridad, tipo_destino=destino, destinatarios_dni="|".join(opciones[n] for n in seleccion), fecha_inicio=inicio.isoformat(), fecha_fin=fin.isoformat(), requiere_confirmacion="Sí" if confirmacion else "No", estado="Publicado")
+                st.session_state["_tp_com_borrador_preview"] = dict(
+                    titulo=titulo.strip(), contenido=contenido.strip(), categoria=categoria,
+                    prioridad=prioridad, tipo_destino=destino,
+                    destinatarios_dni="|".join(opciones[n] for n in seleccion),
+                    fecha_inicio=inicio.isoformat(), fecha_fin=fin.isoformat(),
+                    requiere_confirmacion="Sí" if confirmacion else "No", estado="Publicado"
+                )
+
+        borrador = st.session_state.get("_tp_com_borrador_preview")
+        if borrador:
+            st.markdown("### Vista previa antes de publicar")
+            st.info("Esta es la tarjeta que verá el colaborador. Todavía no se ha enviado ni guardado el comunicado.")
+            _tp_com_estilos()
+            _tp_com_card(borrador, confirmado=False)
+            if borrador["tipo_destino"] == "Todos los colaboradores":
+                st.caption("Destinatarios: todos los colaboradores")
+            else:
+                dnis = set(borrador["destinatarios_dni"].split("|"))
+                etiquetas = [nombre for nombre, dni in opciones.items() if dni in dnis]
+                st.caption("Destinatarios: " + ", ".join(etiquetas))
+            st.caption(f"Vigencia: {borrador['fecha_inicio']} al {borrador['fecha_fin']} · Confirmación de lectura: {borrador['requiere_confirmacion']}")
+            st.warning("Si modificas el formulario, pulsa nuevamente «Previsualizar comunicado» para actualizar esta tarjeta antes de publicarla.")
+            confirmar_envio = st.checkbox("He revisado el comunicado y autorizo su publicación", key="tp_com_autorizar_publicacion")
+            col_publicar, col_cancelar = st.columns([2, 1])
+            with col_publicar:
+                publicar = st.button("Publicar comunicado ahora", type="primary", use_container_width=True, disabled=not confirmar_envio, key="tp_com_publicar_confirmado")
+            with col_cancelar:
+                descartar = st.button("Descartar vista previa", use_container_width=True, key="tp_com_descartar_preview")
+            if descartar:
+                st.session_state.pop("_tp_com_borrador_preview", None)
+                st.session_state["tp_com_autorizar_publicacion"] = False
+                st.rerun()
+            if publicar:
                 try:
-                    _vayro_com_guardar(datos)
+                    _vayro_com_guardar(dict(borrador))
+                    st.session_state.pop("_tp_com_borrador_preview", None)
                     st.session_state["_tp_aviso_comunicados"] = "Comunicado publicado correctamente. Ya está registrado en el historial."
                     st.rerun()
                 except Exception as exc:
