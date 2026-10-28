@@ -5549,45 +5549,91 @@ def _vayro_com_admin():
                         st.caption("Este comunicado no requiere confirmación.")
 
 def _tp_com_card(r, confirmado=False, compacto=False):
-    """Tarjeta corporativa de comunicado; contenido escapado contra HTML no confiable."""
+    """Comunicado con identidad Tiendas Premium, seguro para texto ingresado por usuarios."""
     import html as _h
+    import re as _re
     titulo = _h.escape(str(r.get("titulo", "Comunicado")))
-    categoria = _h.escape(str(r.get("categoria", "General")))
+    categoria = _h.escape(str(r.get("categoria", "Información general")))
     prioridad = _h.escape(str(r.get("prioridad", "Normal")))
-    fecha = _h.escape(str(r.get("fecha_inicio", "")))
-    contenido = _h.escape(str(r.get("contenido", ""))).replace("\n", "<br>")
+    fecha_raw = str(r.get("fecha_inicio", ""))[:10]
+    try:
+        fecha_legible = datetime.strptime(fecha_raw, "%Y-%m-%d").strftime("%d/%m/%Y")
+    except ValueError:
+        fecha_legible = fecha_raw
+    fecha = _h.escape(fecha_legible)
+    mensaje_raw = str(r.get("contenido", ""))
+    contenido = _h.escape(mensaje_raw).replace("\n", "<br>")
     estado = "LECTURA CONFIRMADA" if confirmado else ("REQUIERE CONFIRMACIÓN" if str(r.get("requiere_confirmacion", "")) == "Sí" else "INFORMATIVO")
-    color = "#0B8F57" if confirmado else "#EC3237"
-    st.markdown(f"""<div class="tp-com-card">
-      <div class="tp-com-banner"><span class="tp-com-brand">TIENDAS <b>PREMIUM</b></span><span class="tp-com-badge">COMUNICADO INTERNO</span></div>
-      <div class="tp-com-content"><div class="tp-com-kicker">{categoria} · {prioridad} · {fecha}</div>
-      <h2>{titulo}</h2><div class="tp-com-message">{contenido}</div>
-      <div class="tp-com-sign"><span>Administración · Tiendas Premium</span><strong style="color:{color}">{estado}</strong></div></div>
-     </div>""", unsafe_allow_html=True)
+    logo = logo_tag_app39(90)
+    if not logo:
+        logo = '<div class="tpcom-logo-fallback">Tiendas <strong>Premium</strong></div>'
+    # Ilustración vectorial integrada: no requiere instalar librerías ni subir imágenes.
+    megafono = """<svg class="tpcom-megafono" viewBox="0 0 280 260" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+      <defs><linearGradient id="tpmeg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ff6b6f"/><stop offset="1" stop-color="#db1720"/></linearGradient></defs>
+      <path d="M105 108L216 53Q227 46 228 61L228 181Q226 193 215 186L105 148Z" fill="#fff" stroke="#e52630" stroke-width="8"/>
+      <ellipse cx="228" cy="121" rx="20" ry="64" fill="url(#tpmeg)" stroke="#bb1c26" stroke-width="6"/>
+      <path d="M65 106Q50 107 50 127Q50 149 68 151L106 151L106 106Z" fill="url(#tpmeg)"/>
+      <path d="M76 151L97 214Q100 221 110 217L131 210L111 147" fill="#fff" stroke="#dc242c" stroke-width="8" stroke-linejoin="round"/>
+      <path d="M246 55L261 35M257 119H276M247 183L262 201" stroke="#ec3237" stroke-width="9" stroke-linecap="round"/>
+      <ellipse cx="228" cy="121" rx="9" ry="41" fill="#ff8c8f" opacity=".55"/>
+    </svg>"""
+    st.markdown(f"""<div class="tpcom-shell">
+      <aside class="tpcom-aside">
+        <div class="tpcom-logo">{logo}</div>
+        <div class="tpcom-art">{megafono}</div>
+        <div class="tpcom-aside-foot">Información que nos conecta.<br><strong>Trabajamos en equipo.</strong></div>
+      </aside>
+      <article class="tpcom-body">
+        <div class="tpcom-top"><span class="tpcom-pill">COMUNICADO INTERNO</span><span class="tpcom-date">{fecha}</span></div>
+        <div class="tpcom-category">{categoria} &nbsp;·&nbsp; {prioridad}</div>
+        <h2 class="tpcom-title">{titulo}</h2>
+        <div class="tpcom-rule"></div>
+        <div class="tpcom-message">{contenido}</div>
+        <div class="tpcom-bottom"><span>Administración · Tiendas Premium</span><span class="{'tpcom-ok' if confirmado else 'tpcom-status'}">{estado}</span></div>
+      </article>
+    </div>""", unsafe_allow_html=True)
 
 
 def _tp_com_estilos():
     st.markdown("""<style>
-    .tp-com-card{background:#fff;border:1px solid #E3E6EC;border-radius:19px;overflow:hidden;
-      box-shadow:0 7px 24px rgba(15,23,42,.06);margin:12px 0 14px}
-    .tp-com-banner{background:linear-gradient(120deg,#EC3237,#B9252B 72%,#111827);
-      padding:22px 25px;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
-    .tp-com-brand{font-size:15px;font-weight:750;letter-spacing:.3px;color:#fff}
-    .tp-com-brand b{color:#fff}
-    .tp-com-badge{font-size:10px;font-weight:750;letter-spacing:1px;border:1px solid #ffffff80;
-      border-radius:20px;padding:7px 10px;color:#fff}
-    .tp-com-content{padding:25px 27px 20px}
-    .tp-com-kicker{font-size:11px;letter-spacing:.7px;text-transform:uppercase;font-weight:700;color:#EC3237}
-    .tp-com-content h2{font-size:21px!important;line-height:1.28;color:#111827!important;
-      margin:9px 0 19px;font-weight:800}
-    .tp-com-message{font-size:14px;line-height:1.85;color:#334155;white-space:normal;overflow-wrap:anywhere}
-    .tp-com-sign{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;
-      border-top:1px solid #E3E6EC;margin-top:22px;padding-top:15px;font-size:11px;color:#64748B}
-    .tp-com-sign strong{font-size:10px;letter-spacing:.35px}
-    @media(max-width:640px){.tp-com-banner{padding:17px 18px}.tp-com-content{padding:20px 18px}
-      .tp-com-content h2{font-size:18px!important}.tp-com-message{font-size:13px}}
-     </style>""",unsafe_allow_html=True)
-
+    /* Modal corporativo, coherente con los colores originales de Tiendas Premium. */
+    div[data-testid="stDialog"] div[role="dialog"] {max-width:1100px!important;width:min(96vw,1100px)!important;}
+    .tpcom-shell{display:grid;grid-template-columns:minmax(205px,31%) minmax(0,1fr);background:#fff;
+      border:1px solid #E3E6EC;border-radius:18px;overflow:hidden;box-shadow:0 12px 30px rgba(15,23,42,.07);margin:12px 0 16px}
+    .tpcom-aside{position:relative;display:flex;flex-direction:column;justify-content:space-between;
+      min-height:410px;padding:29px 23px 26px;background:linear-gradient(155deg,#fff 0%,#FFF1F1 48%,#EC3237 100%);overflow:hidden}
+    .tpcom-aside:after{content:'';position:absolute;width:360px;height:180px;border-radius:50%;background:rgba(236,50,55,.13);
+      bottom:-112px;left:-70px;transform:rotate(-16deg)}
+    .tpcom-logo{position:relative;z-index:2;min-height:75px;display:flex;align-items:center;justify-content:center}
+    .tpcom-logo img{max-width:100%;height:auto!important;max-height:95px;object-fit:contain}
+    .tpcom-logo-fallback{color:#111827;font-size:21px;font-weight:700;text-align:center}
+    .tpcom-logo-fallback strong{color:#EC3237;font-size:28px}
+    .tpcom-art{position:relative;z-index:1;text-align:center;padding:10px 0}
+    .tpcom-megafono{width:min(100%,235px);height:auto;filter:drop-shadow(0 14px 16px rgba(110,20,25,.15))}
+    .tpcom-aside-foot{position:relative;z-index:2;color:#fff;text-align:center;font-size:13px;line-height:1.65;font-weight:500;
+      text-shadow:0 1px 2px rgba(0,0,0,.12)}
+    .tpcom-aside-foot strong{font-weight:800}
+    .tpcom-body{min-width:0;padding:30px 34px 24px;display:flex;flex-direction:column}
+    .tpcom-top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+    .tpcom-pill{display:inline-flex;background:#EC3237;color:#fff;padding:9px 15px;border-radius:24px;
+      font-size:11px;font-weight:800;letter-spacing:.65px}
+    .tpcom-date{background:#F3F4F7;color:#475569;border-radius:20px;padding:9px 13px;font-size:12px;font-weight:650}
+    .tpcom-category{color:#EC3237;font-size:11px;font-weight:750;letter-spacing:.6px;text-transform:uppercase;margin-top:25px}
+    .tpcom-title{color:#111827!important;font-size:clamp(21px,2.3vw,29px)!important;font-weight:800!important;
+      line-height:1.25!important;margin:8px 0 10px!important;overflow-wrap:anywhere}
+    .tpcom-rule{width:60px;height:4px;background:#EC3237;border-radius:5px;margin-bottom:22px}
+    .tpcom-message{color:#334155;font-size:14px;line-height:1.9;overflow-wrap:anywhere;flex:1;padding-bottom:24px}
+    .tpcom-bottom{border-top:1px solid #E3E6EC;padding-top:14px;display:flex;justify-content:space-between;
+      align-items:center;gap:10px;flex-wrap:wrap;font-size:11px;color:#64748B}
+    .tpcom-status{font-weight:750;color:#EC3237;font-size:10px;letter-spacing:.25px}
+    .tpcom-ok{font-weight:750;color:#0B8F57;font-size:10px;letter-spacing:.25px}
+    @media(max-width:720px){.tpcom-shell{grid-template-columns:1fr}.tpcom-aside{min-height:0;padding:16px 18px;
+      display:grid;grid-template-columns:100px 1fr;align-items:center;gap:12px;background:#FFF1F1}
+      .tpcom-logo{min-height:0}.tpcom-logo img{max-height:65px}.tpcom-art{display:none}
+      .tpcom-aside-foot{color:#B9252B;text-shadow:none;text-align:right;font-size:11px}
+      .tpcom-body{padding:21px 18px 20px}.tpcom-category{margin-top:18px}
+      .tpcom-message{font-size:13px;line-height:1.75}.tpcom-title{font-size:20px!important}}
+    </style>""",unsafe_allow_html=True)
 
 def _tp_com_pendientes():
     """Lista pendiente real por DNI. La confirmación es persistente en Google Sheets."""
