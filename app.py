@@ -2120,8 +2120,10 @@ def _tp_toast(body, *args, **kwargs):
         color, titulo, icono = "orange", "Actualizado", ""
     elif any(k in low for k in ("pendiente", "devolución", "botellas fiadas", "recordatorio", "aviso")):
         color, titulo, icono = "orange", "Aviso de pendientes", ""
+    elif any(k in low for k in ("confirmad", "completad", "finalizad", "enviado", "registrad", "publicad")):
+        color, titulo, icono = "green", "Acción completada", ""
     else:
-        color, titulo, icono = "green", "Guardado con éxito", ""
+        color, titulo, icono = "green", "Operación realizada", ""
     try:
         return st._tp_toast_orig(f":{color}[●] **{titulo}**\n\n{txt}", *args, **kwargs)
     except Exception:
@@ -4729,6 +4731,7 @@ if st.sidebar.button("Cerrar Sesión", use_container_width=True):
 st.sidebar.markdown('</div>', unsafe_allow_html=True)
 
 # Notificación de botellas: se abre una sola vez por inicio de sesión.
+# No convertirla en aviso recurrente por cada navegación o actualización de pantalla.
 # Debe invocarse en el cuerpo principal, nunca dentro de st.sidebar ni st.columns.
 @st.dialog("🍾 Botellas pendientes de devolución", width="large")
 def _tp_aviso_botellas_inicio(total):
@@ -5126,8 +5129,8 @@ def _vayro_guardar_rutina(datos, id_existente=None):
     return datos["id_rutina"]
 
 def _vayro_rutinas_admin():
-    st.markdown('<div class="market-header"><h1>Gestión de rutinas</h1><p>VAYRO · Planifica, asigna y organiza las actividades de tu equipo</p></div>', unsafe_allow_html=True)
-    st.caption("FASES 1 y 2 · Plantillas y ejecución de rutinas por colaboradores.")
+    st.markdown('<div class="market-header"><h1>Gestión de rutinas</h1><p>Tiendas Premium · Planifica, asigna y organiza las actividades de tu equipo</p></div>', unsafe_allow_html=True)
+    st.caption("Crea rutinas reutilizables y asigna su ejecución a los colaboradores.")
     try:
         df = _vayro_leer_rutinas()
     except Exception as e:
@@ -5151,18 +5154,32 @@ def _vayro_rutinas_admin():
             if busqueda: vista=vista[vista['nombre'].str.contains(busqueda,case=False,na=False,regex=False)]
             vista=vista.assign(actividades=vista['tareas_json'].apply(lambda x:len(_vayro_json.loads(x)) if x else 0))
             st.dataframe(vista[['nombre','frecuencia','dias','hora','tipo_asignacion','destinatarios','turno','actividades','estado','fecha_actualizacion']],hide_index=True,use_container_width=True)
-            st.caption("Para editar una rutina, abre la pestaña Crear / editar rutina y selecciónala.")
+            st.caption("En Crear / editar rutina puedes crear, editar o duplicar una existente sin alterar su original.")
     with tab2:
-        opciones={"Nueva rutina":None}
-        for _,r in df.iterrows(): opciones[f"{r['nombre']} · {r['id_rutina']}"]=r['id_rutina']
-        elegido=st.selectbox("Rutina a editar",list(opciones),key="vayro_edicion")
-        rid=opciones[elegido]
-        row=df.loc[df['id_rutina']==rid].iloc[0].to_dict() if rid else {}
+        st.markdown("**¿Qué deseas hacer?**")
+        modo = st.radio("Acción", ["Crear nueva", "Editar existente", "Duplicar existente"],
+                        horizontal=True, key="tp_rutina_modo")
+        opciones={f"{r['nombre']} · {r['id_rutina']}":r['id_rutina'] for _,r in df.iterrows()}
+        rid = None
+        origen_id = None
+        if modo != "Crear nueva":
+            if not opciones:
+                st.info("Primero crea una rutina para poder editarla o duplicarla.")
+                return
+            elegido=st.selectbox("Selecciona la rutina" if modo == "Editar existente" else "Rutina que deseas duplicar",
+                                 list(opciones),key=f"tp_rutina_origen_{modo}")
+            origen_id=opciones[elegido]
+            if modo == "Editar existente":
+                rid=origen_id
+            else:
+                st.info("Se copiarán las actividades, días, horario y destinatarios. Al guardar se creará una rutina nueva sin modificar la original.")
+        row=df.loc[df['id_rutina']==origen_id].iloc[0].to_dict() if origen_id else {}
         def _valor(c,defecto=""): return str(row.get(c,defecto) or defecto)
-        # Los widgets usan claves vinculadas a la rutina para evitar heredar valores de otra.
-        k=rid or "nueva"
+        # Clave independiente por modo y rutina: no hereda campos de otra edición.
+        k=("dup_" if modo == "Duplicar existente" else "edit_")+str(origen_id) if origen_id else "nueva"
         with st.form(f"vayro_form_{k}"):
-            nombre=st.text_input("Nombre de la rutina *",value=_valor('nombre'),key=f"vr_nombre_{k}")
+            nombre_inicial=_valor('nombre') + " (copia)" if modo == "Duplicar existente" else _valor('nombre')
+            nombre=st.text_input("Nombre de la rutina *",value=nombre_inicial,key=f"vr_nombre_{k}")
             descripcion=st.text_area("Instrucciones generales",value=_valor('descripcion'),key=f"vr_desc_{k}")
             f1,f2,f3=st.columns(3)
             frecuencias=["Diaria","Semanal","Días específicos","Una vez"]
@@ -5190,8 +5207,8 @@ def _vayro_rutinas_admin():
             try: prev_tareas=_vayro_json.loads(_valor('tareas_json','[]'))
             except Exception: prev_tareas=[]
             tareas_texto=st.text_area("Una actividad por línea *",value="\n".join(str(t) for t in prev_tareas),height=190,placeholder="Verificar limpieza general\nRevisar góndolas\nComprobar refrigeración",key=f"vr_tareas_{k}")
-            st.caption("Cada línea es una pregunta Sí/No; el colaborador podrá agregar observaciones.")
-            enviar=st.form_submit_button("Guardar cambios" if rid else "Crear rutina",type="primary",use_container_width=True)
+            st.caption("Cada línea es una pregunta Sí/No. Crea la rutina una sola vez: se mostrará automáticamente en los días programados.")
+            enviar=st.form_submit_button("Guardar cambios" if rid else ("Crear copia independiente" if modo == "Duplicar existente" else "Crear rutina"),type="primary",use_container_width=True)
         if enviar:
             tareas=[t.strip() for t in tareas_texto.splitlines() if t.strip()]
             if not nombre.strip() or not tareas:
@@ -5204,7 +5221,7 @@ def _vayro_rutinas_admin():
                 datos=dict(nombre=nombre.strip(),descripcion=descripcion.strip(),frecuencia=frecuencia,dias=",".join(dias),hora=hora.strftime('%H:%M'),tipo_asignacion=tipo,destinatarios="|".join(seleccion) if seleccion else ("TODOS" if tipo=="Todos los colaboradores" else "POR_TURNO"),turno=turno,tareas_json=_vayro_json.dumps(tareas,ensure_ascii=False),estado=est)
                 try:
                     _vayro_guardar_rutina(datos,rid)
-                    st.success("Rutina guardada correctamente en Google Sheets.")
+                    st.success("Copia creada correctamente. La rutina original no se modificó." if modo == "Duplicar existente" else "Rutina guardada correctamente en Google Sheets.")
                     st.rerun()
                 except Exception as e:
                     st.error(f"No se pudo guardar: {e}")
@@ -5295,7 +5312,7 @@ def _vayro_guardar_ejecucion(r, fecha, respuestas):
     return fila
 
 def _vayro_mis_rutinas():
-    st.markdown('<div class="market-header"><h1>Mis rutinas</h1><p>VAYRO · Actividades y verificaciones de tu jornada</p></div>', unsafe_allow_html=True)
+    st.markdown('<div class="market-header"><h1>Mis rutinas</h1><p>Tiendas Premium · Actividades y verificaciones de tu jornada</p></div>', unsafe_allow_html=True)
     hoy = obtener_ahora_peru().date()
     fecha = st.date_input("Fecha de consulta", value=hoy, max_value=hoy, key="vayro_fecha_ejecucion").isoformat()
     try:
@@ -5441,7 +5458,7 @@ def _vayro_com_confirmar(r):
     return True
 
 def _vayro_com_admin():
-    st.markdown('<div class="market-header"><h1>Centro de comunicados</h1><p>VAYRO · Informa a tu equipo y supervisa las confirmaciones</p></div>', unsafe_allow_html=True)
+    st.markdown('<div class="market-header"><h1>Centro de comunicados</h1><p>Tiendas Premium · Informa a tu equipo y supervisa las confirmaciones</p></div>', unsafe_allow_html=True)
     try:
         comunicados = _vayro_com_leer("VAYRO_Comunicados", _VAYRO_COM_COLS)
         lecturas = _vayro_com_leer("VAYRO_Comunicados_Lecturas", _VAYRO_LECT_COLS)
@@ -5517,7 +5534,7 @@ def _vayro_com_admin():
                         st.caption("Este comunicado no requiere confirmación.")
 
 def _vayro_com_colaborador():
-    st.markdown('<div class="market-header"><h1>Comunicados</h1><p>VAYRO · Información y novedades de tu equipo</p></div>', unsafe_allow_html=True)
+    st.markdown('<div class="market-header"><h1>Comunicados</h1><p>Tiendas Premium · Información y novedades de tu equipo</p></div>', unsafe_allow_html=True)
     try:
         comunicados = _vayro_com_leer("VAYRO_Comunicados", _VAYRO_COM_COLS)
         lecturas = _vayro_com_leer("VAYRO_Comunicados_Lecturas", _VAYRO_LECT_COLS)
@@ -5566,24 +5583,38 @@ def _vayro_mi_dia():
     saludo = "Buenos días" if ahora.hour < 12 else ("Buenas tardes" if ahora.hour < 19 else "Buenas noches")
     st.markdown("""
     <style>
-    .vmd-hero{background:linear-gradient(115deg,#12356d,#2563eb);color:white;
-      padding:26px 28px;border-radius:20px;margin:0 0 20px;box-shadow:0 12px 30px rgba(29,78,216,.14)}
-    .vmd-hero h1{font-size:30px;color:white!important;margin:5px 0;font-weight:750}
-    .vmd-hero p{color:#dbeafe;margin:0;font-size:14px}
-    .vmd-eyebrow{letter-spacing:1.5px;text-transform:uppercase;font-size:11px;font-weight:750;color:#bfdbfe}
-    .vmd-card{background:white;border:1px solid #e5eaf2;border-radius:16px;
-      padding:18px 20px;margin:9px 0;min-height:115px}
-    .vmd-label{font-size:12px;color:#64748b;font-weight:650;margin-bottom:8px}
-    .vmd-value{font-size:25px;color:#12284c;font-weight:800;line-height:1.3}
-    .vmd-sub{font-size:12px;color:#64748b;margin-top:6px}
-    .vmd-section{font-size:19px;font-weight:750;color:#142b50;margin:20px 0 7px}
-    @media(max-width:640px){.vmd-hero{padding:21px 19px;border-radius:16px}
-    .vmd-hero h1{font-size:25px}.vmd-card{padding:14px;min-height:105px}
-    .vmd-value{font-size:20px}}
+    .vmd-hero{background:linear-gradient(105deg,#fff 0%,#fff 60%,#fff0f0 100%);
+      border:1px solid #E3E6EC;border-left:5px solid #EC3237;color:#0F172A;
+      padding:25px 28px;border-radius:16px;margin:0 0 20px;box-shadow:0 4px 15px rgba(15,23,42,.035)}
+    .vmd-hero h1{font-size:29px;color:#0F172A!important;margin:7px 0;font-weight:750}
+    .vmd-hero p{color:#64748B;margin:0;font-size:13px}
+    .vmd-eyebrow{letter-spacing:1.3px;text-transform:uppercase;font-size:11px;font-weight:750;color:#EC3237}
+    .vmd-card{background:#FFFFFF;border:1px solid #E3E6EC;border-radius:14px;
+      padding:20px 20px;margin:9px 0;min-height:132px;box-shadow:0 2px 8px rgba(15,23,42,.035)}
+    .vmd-label{font-size:11px;color:#64748B;font-weight:750;margin-bottom:9px;letter-spacing:.65px}
+    .vmd-value{font-size:25px;color:#111827;font-weight:800;line-height:1.3}
+    .vmd-sub{font-size:12px;color:#64748B;margin-top:7px}
+    .vmd-section{font-size:18px;font-weight:750;color:#111827;margin:22px 0 10px}
+    .vmd-routine{background:#fff;border:1px solid #E3E6EC;border-radius:12px;padding:17px 18px;margin:9px 0;
+      display:flex;justify-content:space-between;align-items:center;gap:12px;box-shadow:0 1px 3px rgba(15,23,42,.025)}
+    .vmd-routine-name{color:#111827;font-weight:700;font-size:13px}
+    .vmd-routine-sub{color:#64748B;font-size:11px;margin-top:6px}
+    .vmd-chip{border-radius:30px;padding:6px 11px;font-size:11px;font-weight:700;white-space:nowrap;
+      color:#B45309;background:#FEF3C7}
+    .vmd-chip.done{color:#0B8F57;background:#E3F6EC}
+    .vmd-progress{height:8px;background:#F1F2F5;border-radius:10px;overflow:hidden;margin-top:10px}
+    .vmd-progress>div{height:100%;background:#EC3237;border-radius:10px}
+    .vmd-empty{background:#E3F6EC;border:1px solid #C8EAD8;border-radius:12px;
+      color:#0B8F57;padding:17px 20px;font-size:13px;font-weight:600;margin:8px 0}
+    .vmd-section-card{background:#fff;border:1px solid #E3E6EC;border-radius:16px;
+      padding:18px 20px;margin:12px 0 20px;box-shadow:0 2px 8px rgba(15,23,42,.025)}
+    @media(max-width:640px){.vmd-hero{padding:21px 19px;border-radius:13px}
+    .vmd-hero h1{font-size:23px}.vmd-card{padding:14px;min-height:112px}
+    .vmd-value{font-size:20px}.vmd-routine{padding:13px 12px}}
     </style>
     """, unsafe_allow_html=True)
     st.markdown(
-        f'<div class="vmd-hero"><div class="vmd-eyebrow">VAYRO · Mi día</div>'
+        f'<div class="vmd-hero"><div class="vmd-eyebrow">Tiendas Premium · Mi día</div>'
         f'<h1>{_html_md.escape(saludo)}, {_html_md.escape(nombre_corto)}</h1>'
         f'<p>{ahora.strftime("%d/%m/%Y")} · Tu jornada, en un solo lugar</p></div>',
         unsafe_allow_html=True,
@@ -5666,12 +5697,18 @@ def _vayro_mi_dia():
     else:
         for _,r in rutinas_hoy.iterrows():
             hecha = str(r["id_rutina"]) in completadas
-            with st.container(border=True):
-                a,b = st.columns([4,1])
-                a.markdown(f"**{r.get('nombre','Rutina')}**")
-                a.caption(f"{r.get('hora','')} · {'Completada' if hecha else 'Pendiente'}")
-                b.markdown("**Realizada**" if hecha else "**Por hacer**")
-        st.progress(n_hechas/n_rutinas if n_rutinas else 0)
+            try:
+                num_tareas = len(_vayro_json.loads(str(r.get("tareas_json", "[]"))))
+            except Exception:
+                num_tareas = 0
+            estado_txt = "Completada" if hecha else "Pendiente"
+            st.markdown(
+                f'<div class="vmd-routine"><div><div class="vmd-routine-name">{_html_md.escape(str(r.get("nombre", "Rutina")))}</div>'
+                f'<div class="vmd-routine-sub">{_html_md.escape(str(r.get("hora", "")))} · {num_tareas} verificaciones</div></div>'
+                f'<span class="vmd-chip {"done" if hecha else ""}">{estado_txt}</span></div>',
+                unsafe_allow_html=True,
+            )
+        st.markdown(f'<div class="vmd-progress"><div style="width:{(n_hechas/n_rutinas*100) if n_rutinas else 0:.1f}%"></div></div>', unsafe_allow_html=True)
     if st.button("Abrir Mis Rutinas",key="vmd_ir_rutinas",use_container_width=True,type="primary"):
         _ir_a("Mis Rutinas")
         st.rerun()
@@ -5680,7 +5717,7 @@ def _vayro_mi_dia():
     if error_avisos:
         st.warning("No se pudieron consultar los comunicados en este momento.")
     elif pendientes_avisos.empty:
-        st.success("No tienes comunicados pendientes de confirmar.")
+        st.markdown('<div class="vmd-empty">No tienes comunicados pendientes de confirmar.</div>', unsafe_allow_html=True)
     else:
         for _,r in pendientes_avisos.iterrows():
             with st.container(border=True):
