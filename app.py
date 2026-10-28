@@ -4670,7 +4670,7 @@ if rol_actual == "admin":
     div[data-testid="stTabs"] button[role="tab"] {font-weight:600!important;}
     div[data-testid="stDataFrame"], div[data-testid="stDataEditor"] {border-radius:10px!important; overflow:hidden!important;}
     </style>""", unsafe_allow_html=True)
-    menu = ["Dashboard General", "Centro de Alertas", "Analítica (BI)", "Gestión Colaboradores", "Onboarding / Offboarding", "Gestión de Vacaciones", "Programación de Turnos", "Boletas de Pago", "Solicitudes y Permisos", "Historial de Descuadres", "Incidencias y Daños", "Botellas Fiadas", "Historial de Asistencias", "Auditoría y Configuración"]
+    menu = ["Dashboard General", "Centro de Alertas", "Analítica (BI)", "Gestión Colaboradores", "Onboarding / Offboarding", "Gestión de Vacaciones", "Programación de Turnos", "Gestión de Rutinas", "Boletas de Pago", "Solicitudes y Permisos", "Historial de Descuadres", "Incidencias y Daños", "Botellas Fiadas", "Historial de Asistencias", "Auditoría y Configuración"]
 else:
     menu = ["Marcar Asistencia", "Registrar Descuadre", "Registrar Incidencia", "Botellas Fiadas", "Mi Ficha Técnica", "Mis Vacaciones", "Mis Boletas", "Solicitar Permiso / Adelanto", "Mi Dashboard Mensual"]
 
@@ -5069,7 +5069,152 @@ if len(_gq) >= 2:
     render_busqueda(_gq, rol_actual == "admin", dni_actual, menu)
     st.stop()
 
-if choice == "Marcar Asistencia":
+# =============================================================
+# VAYRO · FASE 1 — GESTIÓN DE RUTINAS (ADMINISTRACIÓN)
+# Hoja independiente, sin modificar las tablas de producción.
+# =============================================================
+import json as _vayro_json
+import uuid as _vayro_uuid
+
+_VAYRO_COLS = ["id_rutina", "nombre", "descripcion", "frecuencia", "dias", "hora", "tipo_asignacion", "destinatarios", "turno", "tareas_json", "estado", "creado_por", "fecha_creacion", "fecha_actualizacion"]
+
+def _vayro_hoja_rutinas(crear=False):
+    if not doc_sheets:
+        raise RuntimeError("No hay conexión con Google Sheets")
+    try:
+        return doc_sheets.worksheet("VAYRO_Rutinas")
+    except gspread.exceptions.WorksheetNotFound:
+        if not crear:
+            return None
+        hoja = doc_sheets.add_worksheet(title="VAYRO_Rutinas", rows=500, cols=len(_VAYRO_COLS))
+        hoja.append_row(_VAYRO_COLS)
+        return hoja
+
+def _vayro_leer_rutinas():
+    hoja = _vayro_hoja_rutinas()
+    if hoja is None:
+        return pd.DataFrame(columns=_VAYRO_COLS)
+    valores = hoja.get_all_values()
+    if not valores:
+        return pd.DataFrame(columns=_VAYRO_COLS)
+    cab = valores[0]
+    filas = [dict(zip(cab, fila + [""] * max(0, len(cab)-len(fila)))) for fila in valores[1:] if any(str(v).strip() for v in fila)]
+    return pd.DataFrame(filas).reindex(columns=_VAYRO_COLS, fill_value="")
+
+def _vayro_guardar_rutina(datos, id_existente=None):
+    if rol_real != "admin" or st.session_state.get("ver_como"):
+        raise PermissionError("No se permite guardar en modo de vista previa")
+    hoja = _vayro_hoja_rutinas(crear=True)
+    ahora = obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S")
+    if id_existente:
+        filas = hoja.get_all_values()
+        cab = filas[0]
+        indice_id = cab.index("id_rutina")
+        indice = next((i for i, fila in enumerate(filas[1:], 2) if len(fila)>indice_id and fila[indice_id]==id_existente), None)
+        if indice is None:
+            raise ValueError("La rutina ya no existe. Actualiza la página")
+        creado = filas[indice-1][cab.index("fecha_creacion")] if len(filas[indice-1])>cab.index("fecha_creacion") else ahora
+        autor = filas[indice-1][cab.index("creado_por")] if len(filas[indice-1])>cab.index("creado_por") else user_real
+        datos.update(id_rutina=id_existente, fecha_creacion=creado, creado_por=autor, fecha_actualizacion=ahora)
+        hoja.update(range_name=f"A{indice}:N{indice}", values=[[str(datos.get(c,"")) for c in _VAYRO_COLS]])
+        accion = "Editar rutina"
+    else:
+        datos.update(id_rutina="RUT-"+_vayro_uuid.uuid4().hex[:10].upper(), fecha_creacion=ahora, fecha_actualizacion=ahora, creado_por=user_real)
+        hoja.append_row([str(datos.get(c,"")) for c in _VAYRO_COLS])
+        accion = "Crear rutina"
+    registrar_auditoria(accion, "VAYRO_Rutinas", f"{datos['id_rutina']} - {datos['nombre']}")
+    return datos["id_rutina"]
+
+def _vayro_rutinas_admin():
+    st.markdown('<div class="market-header"><h1>Gestión de rutinas</h1><p>VAYRO · Planifica, asigna y organiza las actividades de tu equipo</p></div>', unsafe_allow_html=True)
+    st.caption("FASE 1 · Administración de plantillas. El registro de ejecución por colaborador se incorporará en la siguiente fase.")
+    try:
+        df = _vayro_leer_rutinas()
+    except Exception as e:
+        st.error(f"No se pudieron consultar las rutinas: {e}")
+        return
+    c1,c2,c3,c4=st.columns(4)
+    c1.metric("Rutinas",len(df))
+    c2.metric("Activas",int((df['estado']=='Activa').sum()) if not df.empty else 0)
+    c3.metric("Borradores",int((df['estado']=='Borrador').sum()) if not df.empty else 0)
+    c4.metric("Inactivas",int((df['estado']=='Inactiva').sum()) if not df.empty else 0)
+    tab1,tab2=st.tabs(["Rutinas registradas","Crear / editar rutina"])
+    with tab1:
+        if df.empty:
+            st.info("Todavía no hay rutinas. Ve a 'Crear / editar rutina' para registrar la primera.")
+        else:
+            filtros=st.columns([1,2])
+            estado=filtros[0].selectbox("Estado",["Todas","Activa","Borrador","Inactiva"],key="vayro_filtro_estado")
+            busqueda=filtros[1].text_input("Buscar rutina",key="vayro_buscar")
+            vista=df.copy()
+            if estado!="Todas": vista=vista[vista['estado']==estado]
+            if busqueda: vista=vista[vista['nombre'].str.contains(busqueda,case=False,na=False,regex=False)]
+            vista=vista.assign(actividades=vista['tareas_json'].apply(lambda x:len(_vayro_json.loads(x)) if x else 0))
+            st.dataframe(vista[['nombre','frecuencia','dias','hora','tipo_asignacion','destinatarios','turno','actividades','estado','fecha_actualizacion']],hide_index=True,use_container_width=True)
+            st.caption("Para editar una rutina, abre la pestaña Crear / editar rutina y selecciónala.")
+    with tab2:
+        opciones={"Nueva rutina":None}
+        for _,r in df.iterrows(): opciones[f"{r['nombre']} · {r['id_rutina']}"]=r['id_rutina']
+        elegido=st.selectbox("Rutina a editar",list(opciones),key="vayro_edicion")
+        rid=opciones[elegido]
+        row=df.loc[df['id_rutina']==rid].iloc[0].to_dict() if rid else {}
+        def _valor(c,defecto=""): return str(row.get(c,defecto) or defecto)
+        # Los widgets usan claves vinculadas a la rutina para evitar heredar valores de otra.
+        k=rid or "nueva"
+        with st.form(f"vayro_form_{k}"):
+            nombre=st.text_input("Nombre de la rutina *",value=_valor('nombre'),key=f"vr_nombre_{k}")
+            descripcion=st.text_area("Instrucciones generales",value=_valor('descripcion'),key=f"vr_desc_{k}")
+            f1,f2,f3=st.columns(3)
+            frecuencias=["Diaria","Semanal","Días específicos","Una vez"]
+            frecuencia=f1.selectbox("Frecuencia",frecuencias,index=frecuencias.index(_valor('frecuencia','Diaria')) if _valor('frecuencia','Diaria') in frecuencias else 0,key=f"vr_frec_{k}")
+            hora=f2.time_input("Hora programada",value=dt_time.fromisoformat(_valor('hora','08:45')),key=f"vr_hora_{k}")
+            estados=["Borrador","Activa","Inactiva"]
+            est=f3.selectbox("Estado",estados,index=estados.index(_valor('estado','Borrador')) if _valor('estado','Borrador') in estados else 0,key=f"vr_est_{k}")
+            dias_op=["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"]
+            prev_dias=[d for d in _valor('dias').split(',') if d in dias_op]
+            dias=st.multiselect("Días de ejecución",dias_op,default=prev_dias or dias_op[:6],key=f"vr_dias_{k}")
+            st.markdown("**Asignación**")
+            tipos=["Todos los colaboradores","Colaboradores específicos","Todos los de un turno"]
+            tipo=st.radio("Destinatarios",tipos,index=tipos.index(_valor('tipo_asignacion',tipos[0])) if _valor('tipo_asignacion',tipos[0]) in tipos else 0,horizontal=True,key=f"vr_tipo_{k}")
+            empleados=sorted([n for n,d in USUARIOS.items() if d.get('rol')!='admin'])
+            seleccion=[]
+            turno=""
+            if tipo=="Colaboradores específicos":
+                prev=[x for x in _valor('destinatarios').split('|') if x in empleados]
+                seleccion=st.multiselect("Selecciona colaboradores *",empleados,default=prev,key=f"vr_colabs_{k}")
+            elif tipo=="Todos los de un turno":
+                turnos=["Mañana","Tarde","Todos los turnos"]
+                turno=st.selectbox("Turno",turnos,index=turnos.index(_valor('turno','Mañana')) if _valor('turno','Mañana') in turnos else 0,key=f"vr_turno_{k}")
+                st.caption("La asignación se aplicará según el turno programado cuando implementemos las ejecuciones.")
+            st.markdown("**Actividades / preguntas**")
+            try: prev_tareas=_vayro_json.loads(_valor('tareas_json','[]'))
+            except Exception: prev_tareas=[]
+            tareas_texto=st.text_area("Una actividad por línea *",value="\n".join(str(t) for t in prev_tareas),height=190,placeholder="Verificar limpieza general\nRevisar góndolas\nComprobar refrigeración",key=f"vr_tareas_{k}")
+            st.caption("Cada línea será una tarea independiente. En la fase 2 añadiremos respuestas y evidencias.")
+            enviar=st.form_submit_button("Guardar cambios" if rid else "Crear rutina",type="primary",use_container_width=True)
+        if enviar:
+            tareas=[t.strip() for t in tareas_texto.splitlines() if t.strip()]
+            if not nombre.strip() or not tareas:
+                st.error("Completa el nombre y al menos una actividad.")
+            elif tipo=="Colaboradores específicos" and not seleccion:
+                st.error("Selecciona al menos un colaborador.")
+            elif frecuencia in ("Semanal","Días específicos") and not dias:
+                st.error("Selecciona los días de ejecución.")
+            else:
+                datos=dict(nombre=nombre.strip(),descripcion=descripcion.strip(),frecuencia=frecuencia,dias=",".join(dias),hora=hora.strftime('%H:%M'),tipo_asignacion=tipo,destinatarios="|".join(seleccion) if seleccion else ("TODOS" if tipo=="Todos los colaboradores" else "POR_TURNO"),turno=turno,tareas_json=_vayro_json.dumps(tareas,ensure_ascii=False),estado=est)
+                try:
+                    _vayro_guardar_rutina(datos,rid)
+                    st.success("Rutina guardada correctamente en Google Sheets.")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"No se pudo guardar: {e}")
+
+if choice == "Gestión de Rutinas":
+    if rol_actual == "admin" and rol_real == "admin" and not st.session_state.get("ver_como"):
+        _vayro_rutinas_admin()
+    else:
+        st.error("Esta sección está reservada para administradores.")
+elif choice == "Marcar Asistencia":
     st.markdown(f"""
         <div class="market-header">
             <h1>Terminal de Asistencia</h1>
