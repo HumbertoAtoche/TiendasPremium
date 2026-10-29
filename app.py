@@ -3357,6 +3357,86 @@ def _salir_preview():
     st.session_state["ver_como_sel"] = "Mi vista (admin)"
     _cambiar_preview()
 
+# =========================================================
+# CAPA DE EXPERIENCIA DE USUARIO (UX PRO)
+# Solo presentación: no modifica datos ni lógica de negocio.
+# =========================================================
+st.markdown("""
+<style>
+/* --- Interacción más fluida: menos parpadeo al recargar --- */
+.stApp [data-stale="true"]{opacity:.6!important;transition:opacity .25s ease!important;}
+html{scroll-behavior:smooth;}
+::selection{background:rgba(236,50,55,.18);}
+
+/* --- Barras de desplazamiento discretas --- */
+.stApp ::-webkit-scrollbar{width:10px;height:10px;}
+.stApp ::-webkit-scrollbar-thumb{background:#CBD2DE;border-radius:10px;border:2px solid transparent;background-clip:content-box;}
+.stApp ::-webkit-scrollbar-thumb:hover{background:#9AA6BB;background-clip:content-box;}
+.stApp ::-webkit-scrollbar-track{background:transparent;}
+
+/* --- Menú lateral con iconos --- */
+[data-testid="stSidebar"] [role="radiogroup"] label{min-height:42px;display:flex;align-items:center;}
+[data-testid="stSidebar"] [role="radiogroup"] label [data-testid="stIconMaterial"]{
+  font-size:1.2rem!important;margin-right:10px;vertical-align:-4px;color:var(--tp-mute)!important;transition:color .15s ease;}
+[data-testid="stSidebar"] [role="radiogroup"] label:hover [data-testid="stIconMaterial"]{color:var(--tp-ink)!important;}
+[data-testid="stSidebar"] [role="radiogroup"] label:has(input:checked) [data-testid="stIconMaterial"]{color:var(--tp-red)!important;}
+
+/* --- Barra de ubicación (dónde estoy / qué día es) --- */
+.tp-crumbbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 14px;}
+.tp-crumb{display:flex;align-items:center;gap:8px;font-size:.8rem;color:var(--tp-mute);font-weight:600;min-width:0;}
+.tp-crumb b{color:var(--tp-ink);font-weight:700;}
+.tp-crumb svg{flex:0 0 auto;opacity:.55;}
+.tp-crumbmeta{display:flex;gap:8px;flex-wrap:wrap;}
+.tp-pill{display:inline-flex;align-items:center;gap:7px;background:var(--tp-surface);border:1px solid var(--tp-line);border-radius:999px;
+  padding:5px 12px;font-size:.74rem;font-weight:650;color:var(--tp-ink-2);box-shadow:var(--tp-sh-1);white-space:nowrap;}
+.tp-pill i{width:7px;height:7px;border-radius:50%;background:var(--tp-ok);display:inline-block;}
+@media(max-width:650px){.tp-crumbmeta{display:none;}}
+
+/* --- Detalles de acabado --- */
+.stTabs [data-baseweb="tab"]:hover{color:var(--tp-ink)!important;}
+div[role="dialog"]{border-radius:20px!important;}
+[data-testid="stToast"]{border-radius:14px!important;border:1px solid var(--tp-line)!important;box-shadow:var(--tp-sh-2)!important;}
+[data-testid="stExpander"] summary{transition:background-color .15s ease;}
+[data-testid="stExpander"] summary:hover{background:#F8FAFC;}
+::placeholder{color:#9AA6BB!important;opacity:1!important;}
+@media (prefers-reduced-motion:reduce){
+  .stApp [data-stale="true"]{transition:none!important;}
+  html{scroll-behavior:auto;}
+}
+</style>
+""", unsafe_allow_html=True)
+
+# Iconos del menú lateral. El valor devuelto por el menú sigue siendo el texto original,
+# por lo que ninguna comparación del tipo `choice == "Dashboard General"` cambia.
+_TP_NAV_ICONOS = {
+    "Dashboard General": "dashboard", "Centro de Alertas": "notifications", "Analítica (BI)": "analytics",
+    "Gestión Colaboradores": "groups", "Onboarding / Offboarding": "person_add", "Gestión de Vacaciones": "beach_access",
+    "Programación de Turnos": "calendar_month", "Boletas de Pago": "receipt_long", "Solicitudes y Permisos": "inbox",
+    "Historial de Descuadres": "price_check", "Incidencias y Daños": "report_problem", "Botellas Fiadas": "liquor",
+    "Historial de Asistencias": "history", "Auditoría y Configuración": "admin_panel_settings",
+    "Marcar Asistencia": "fingerprint", "Registrar Descuadre": "price_check", "Registrar Incidencia": "report_problem",
+    "Mi Ficha Técnica": "badge", "Mis Vacaciones": "beach_access", "Mis Boletas": "receipt_long",
+    "Solicitar Permiso / Adelanto": "edit_note", "Mi Dashboard Mensual": "calendar_month",
+}
+
+def _tp_iconos_soportados():
+    """Los iconos Material en etiquetas requieren una versión reciente de Streamlit."""
+    try:
+        v = tuple(int(x) for x in st.__version__.split(".")[:2])
+        return v >= (1, 40)
+    except Exception:
+        return False
+
+def _tp_nav_label(opcion):
+    ico = _TP_NAV_ICONOS.get(opcion)
+    return f":material/{ico}:  {opcion}" if (ico and _tp_iconos_soportados()) else opcion
+
+_TP_DIAS = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
+_TP_MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
+
+def _tp_fecha_larga(dt):
+    return f"{_TP_DIAS[dt.weekday()].capitalize()} {dt.day} de {_TP_MESES[dt.month - 1]}"
+
 # --- LOGIN EJECUTIVO ---
 # Si prefieres NO mostrar nombre/foto al escribir un DNI (antes de autenticar), pon False.
 LOGIN_MOSTRAR_FOTO = True
@@ -4697,7 +4777,7 @@ if _bf_total_pendientes:
     )
 
 # Menú original: lista completa sin agrupaciones ni resúmenes.
-choice = st.sidebar.radio("Navegación", menu, key="nav_radio", on_change=_limpiar_busqueda)
+choice = st.sidebar.radio("Navegación", menu, key="nav_radio", on_change=_limpiar_busqueda, format_func=_tp_nav_label)
 
 if rol_actual == "admin":
     _nav_items = [("Dashboard General", "Resumen", ":material/dashboard:"), ("Centro de Alertas", "Alertas", ":material/notifications:"),
@@ -4713,6 +4793,14 @@ try:
                           type="primary" if choice == _dest else "secondary", on_click=_ir_a, args=(_dest,))
 except Exception:
     pass  # versiones antiguas de Streamlit: se usa solo el menú lateral
+
+# Barra de ubicación: indica en qué sección estás y la fecha de hoy (hora de Perú).
+_chev = "<svg width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><path d='M9 6l6 6-6 6'/></svg>"
+st.markdown(
+    f'<div class="tp-crumbbar"><div class="tp-crumb">Tiendas Premium {_chev}<b>{_html.escape(str(choice))}</b></div>'
+    f'<div class="tp-crumbmeta"><span class="tp-pill">{_tp_fecha_larga(obtener_ahora_peru())}</span>'
+    f'<span class="tp-pill"><i></i>{_html.escape(str(rol_actual).capitalize())}</span></div></div>',
+    unsafe_allow_html=True)
 
 st.sidebar.markdown("<br><br>", unsafe_allow_html=True)
 st.sidebar.markdown('<div class="btn-logout">', unsafe_allow_html=True)
