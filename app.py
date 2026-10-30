@@ -1040,7 +1040,8 @@ section[data-testid="stSidebar"] .tp-brand {margin-bottom:12px;}
 }
 html,body,.stApp{font-family:var(--pm-font)!important;}
 .stApp{background:#f7f9fc!important;color:var(--pm-ink)!important;}
-#MainMenu,footer,[data-testid="stToolbar"],[data-testid="stDecoration"]{display:none!important;}
+#MainMenu,footer,[data-testid="stDecoration"]{display:none!important;}
+/* No ocultar stToolbar: en Streamlit actual contiene el botón real para reabrir el sidebar. */
 header[data-testid="stHeader"]{background:transparent!important;box-shadow:none!important;}
 [data-testid="stMain"] .block-container{max-width:1470px!important;padding-top:1.5rem!important;padding-bottom:5rem!important;}
 /* Sidebar as a real application navigation rail */
@@ -1480,7 +1481,7 @@ section[data-testid="stSidebar"]:has(.pm-nav-kind-employee) [role="radiogroup"]>
 /* The native Streamlit collapsed control is never hidden on authenticated screens. */
 .stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stHeader"]{
   display:block!important;visibility:visible!important;background:transparent!important;
-  pointer-events:none!important;min-height:56px!important;z-index:1001!important;
+  pointer-events:auto!important;min-height:56px!important;z-index:1001!important;
 }
 .stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stSidebarCollapsedControl"]{
   display:flex!important;visibility:visible!important;opacity:1!important;
@@ -1747,6 +1748,95 @@ section[data-testid="stSidebar"] a.pm-side-negosy:hover{transform:translateY(-2p
 @media(prefers-reduced-motion:reduce){
  .pm-side-brand,.pm-side-negosy,section[data-testid="stSidebar"] [role="radiogroup"]>label{transition:none!important;}
 }
+
+
+/* === PREMIUM MARKET · CORRECCIÓN DEFINITIVA DE APERTURA LATERAL ===
+   Streamlit >=1.36 usa stExpandSidebarButton DENTRO de stToolbar.
+   No se monta un botón JS ficticio: se usa el control React real. */
+.stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stHeader"]{
+  display:block!important;visibility:visible!important;
+  pointer-events:auto!important; background:transparent!important;
+  min-height:60px!important;
+}
+.stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stToolbar"]{
+  display:flex!important;visibility:visible!important;
+  pointer-events:auto!important;
+}
+.stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stExpandSidebarButton"],
+.stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stSidebarCollapsedControl"]{
+  position:fixed!important;top:14px!important;left:18px!important;
+  z-index:100020!important;display:flex!important;visibility:visible!important;
+  opacity:1!important;pointer-events:auto!important;align-items:center!important;
+  justify-content:flex-start!important;width:122px!important;height:44px!important;
+  background:#fff!important;border:1px solid #e2e8f0!important;border-radius:14px!important;
+  box-shadow:0 10px 32px rgba(25,38,60,.13)!important;
+  padding:0 5px!important;
+}
+.stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stExpandSidebarButton"] button,
+.stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stSidebarCollapsedControl"] button{
+  display:flex!important;align-items:center!important;justify-content:flex-start!important;
+  gap:8px!important;width:110px!important;height:40px!important;
+  padding:0 10px!important;min-height:40px!important;
+  opacity:1!important;visibility:visible!important;pointer-events:auto!important;
+  background:transparent!important;border:0!important;border-radius:11px!important;
+  cursor:pointer!important;color:#263750!important;
+}
+.stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stExpandSidebarButton"] button::after,
+.stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stSidebarCollapsedControl"] button::after{
+  content:"Abrir menú";display:inline-block;white-space:nowrap;
+  font-family:var(--pm-font)!important;color:#25354b!important;
+  font-size:.74rem!important;font-weight:850!important;
+}
+.stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stExpandSidebarButton"] button:hover,
+.stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stSidebarCollapsedControl"] button:hover{
+  background:#fff3f5!important;
+}
+.stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stExpandSidebarButton"] button:focus-visible,
+.stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stSidebarCollapsedControl"] button:focus-visible{
+  outline:3px solid #f2a3b0!important;outline-offset:2px!important;
+}
+@media(max-width:700px){
+  .stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stExpandSidebarButton"],
+  .stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stSidebarCollapsedControl"]{
+    left:9px!important;top:8px!important;width:112px!important;
+  }
+  .stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stExpandSidebarButton"] button,
+  .stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stSidebarCollapsedControl"] button{width:102px!important;}
+}
+/* El botón permanece protegido ante los estilos globales de iconos. */
+[data-testid="stExpandSidebarButton"] [data-testid="stIconMaterial"],
+[data-testid="stSidebarCollapsedControl"] [data-testid="stIconMaterial"]{
+  display:inline-flex!important;visibility:visible!important;font-size:22px!important;
+}
+
+
+/* Iconos de navegación sincronizados con el orden real de los nuevos módulos. */
+section[data-testid="stSidebar"]:has(.pm-nav-kind-admin) [role="radiogroup"]>label:nth-child(1){--pm-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Crect%20x%3D%223%22%20y%3D%223%22%20width%3D%227%22%20height%3D%227%22%20rx%3D%221%22%2F%3E%3Crect%20x%3D%2214%22%20y%3D%223%22%20width%3D%227%22%20height%3D%227%22%20rx%3D%221%22%2F%3E%3Crect%20x%3D%223%22%20y%3D%2214%22%20width%3D%227%22%20height%3D%227%22%20rx%3D%221%22%2F%3E%3Crect%20x%3D%2214%22%20y%3D%2214%22%20width%3D%227%22%20height%3D%227%22%20rx%3D%221%22%2F%3E%3C%2Fsvg%3E")!important;}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-admin) [role="radiogroup"]>label:nth-child(2){--pm-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M18%208a6%206%200%200%200-12%200c0%207-3%207-3%209h18c0-2-3-2-3-9%22%2F%3E%3Cpath%20d%3D%22M10%2021h4%22%2F%3E%3C%2Fsvg%3E")!important;}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-admin) [role="radiogroup"]>label:nth-child(3){--pm-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Ccircle%20cx%3D%2212%22%20cy%3D%228%22%20r%3D%224%22%2F%3E%3Cpath%20d%3D%22M4%2021v-2a8%208%200%200%201%2016%200v2%22%2F%3E%3C%2Fsvg%3E")!important;}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-admin) [role="radiogroup"]>label:nth-child(4){--pm-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Crect%20x%3D%225%22%20y%3D%224%22%20width%3D%2214%22%20height%3D%2218%22%20rx%3D%222%22%2F%3E%3Cpath%20d%3D%22M9%202h6v4H9zM8%2011l2%202%204-4M8%2017l2%202%204-4%22%2F%3E%3C%2Fsvg%3E")!important;}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-admin) [role="radiogroup"]>label:nth-child(5){--pm-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M4%2020V10M10%2020V4M16%2020v-7M22%2020v-9%22%2F%3E%3Cpath%20d%3D%22M2%2020h22%22%2F%3E%3C%2Fsvg%3E")!important;}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-admin) [role="radiogroup"]>label:nth-child(6){--pm-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Ccircle%20cx%3D%229%22%20cy%3D%227%22%20r%3D%223%22%2F%3E%3Cpath%20d%3D%22M3%2020v-2a6%206%200%200%201%2012%200v2M17%204a3%203%200%200%201%200%206M19%2020v-2a6%206%200%200%200-3-5%22%2F%3E%3C%2Fsvg%3E")!important;}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-admin) [role="radiogroup"]>label:nth-child(7){--pm-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Ccircle%20cx%3D%228%22%20cy%3D%227%22%20r%3D%223%22%2F%3E%3Cpath%20d%3D%22M2%2021v-2a6%206%200%200%201%2012%200v2M19%208v8M15%2012h8%22%2F%3E%3C%2Fsvg%3E")!important;}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-admin) [role="radiogroup"]>label:nth-child(8){--pm-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M3%2012a9%209%200%200%201%2018%200H3M12%2012v7a2%202%200%200%201-4%200%22%2F%3E%3C%2Fsvg%3E")!important;}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-admin) [role="radiogroup"]>label:nth-child(9){--pm-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Crect%20x%3D%223%22%20y%3D%225%22%20width%3D%2218%22%20height%3D%2217%22%20rx%3D%222%22%2F%3E%3Cpath%20d%3D%22M7%202v6M17%202v6M3%2011h18%22%2F%3E%3C%2Fsvg%3E")!important;}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-admin) [role="radiogroup"]>label:nth-child(10){--pm-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M5%202h9l5%205v15H5z%22%2F%3E%3Cpath%20d%3D%22M14%202v6h5M8%2013h8M8%2017h7%22%2F%3E%3C%2Fsvg%3E")!important;}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-admin) [role="radiogroup"]>label:nth-child(11){--pm-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Crect%20x%3D%223%22%20y%3D%225%22%20width%3D%2218%22%20height%3D%2215%22%20rx%3D%222%22%2F%3E%3Cpath%20d%3D%22M3%2014h5l2%203h4l2-3h5%22%2F%3E%3C%2Fsvg%3E")!important;}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-admin) [role="radiogroup"]>label:nth-child(12){--pm-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Crect%20x%3D%222%22%20y%3D%225%22%20width%3D%2220%22%20height%3D%2214%22%20rx%3D%222%22%2F%3E%3Ccircle%20cx%3D%2212%22%20cy%3D%2212%22%20r%3D%223%22%2F%3E%3Cpath%20d%3D%22M5%209h1M18%2015h1%22%2F%3E%3C%2Fsvg%3E")!important;}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-admin) [role="radiogroup"]>label:nth-child(13){--pm-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M12%203%202%2021h20L12%203Z%22%2F%3E%3Cpath%20d%3D%22M12%209v5M12%2018h.01%22%2F%3E%3C%2Fsvg%3E")!important;}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-admin) [role="radiogroup"]>label:nth-child(14){--pm-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Crect%20x%3D%223%22%20y%3D%224%22%20width%3D%2218%22%20height%3D%2217%22%20rx%3D%222%22%2F%3E%3Cpath%20d%3D%22M3%209h18M9%2013h6%22%2F%3E%3C%2Fsvg%3E")!important;}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-admin) [role="radiogroup"]>label:nth-child(15){--pm-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M4%2011a8%208%200%201%201%202%206M4%204v7h7M12%207v5l4%203%22%2F%3E%3C%2Fsvg%3E")!important;}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-admin) [role="radiogroup"]>label:nth-child(16){--pm-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Ccircle%20cx%3D%2212%22%20cy%3D%2212%22%20r%3D%223%22%2F%3E%3Cpath%20d%3D%22M12%202v3M12%2019v3M2%2012h3M19%2012h3M5%205l2%202M17%2017l2%202M19%205l-2%202M7%2017l-2%202%22%2F%3E%3C%2Fsvg%3E")!important;}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-employee) [role="radiogroup"]>label:nth-child(1){--pm-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Ccircle%20cx%3D%2212%22%20cy%3D%228%22%20r%3D%224%22%2F%3E%3Cpath%20d%3D%22M4%2021v-2a8%208%200%200%201%2016%200v2%22%2F%3E%3C%2Fsvg%3E")!important;}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-employee) [role="radiogroup"]>label:nth-child(2){--pm-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M3%2015v-3a9%209%200%200%201%2018%200v4M6%2020c2-3%201-6%201-8a5%205%200%200%201%2010%200v3M10%2022c2-3%202-7%202-10M16%2020c1-2%202-5%201-8%22%2F%3E%3C%2Fsvg%3E")!important;}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-employee) [role="radiogroup"]>label:nth-child(3){--pm-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Crect%20x%3D%222%22%20y%3D%225%22%20width%3D%2220%22%20height%3D%2214%22%20rx%3D%222%22%2F%3E%3Ccircle%20cx%3D%2212%22%20cy%3D%2212%22%20r%3D%223%22%2F%3E%3Cpath%20d%3D%22M5%209h1M18%2015h1%22%2F%3E%3C%2Fsvg%3E")!important;}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-employee) [role="radiogroup"]>label:nth-child(4){--pm-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M12%203%202%2021h20L12%203Z%22%2F%3E%3Cpath%20d%3D%22M12%209v5M12%2018h.01%22%2F%3E%3C%2Fsvg%3E")!important;}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-employee) [role="radiogroup"]>label:nth-child(5){--pm-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Crect%20x%3D%223%22%20y%3D%224%22%20width%3D%2218%22%20height%3D%2217%22%20rx%3D%222%22%2F%3E%3Cpath%20d%3D%22M3%209h18M9%2013h6%22%2F%3E%3C%2Fsvg%3E")!important;}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-employee) [role="radiogroup"]>label:nth-child(6){--pm-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Crect%20x%3D%223%22%20y%3D%224%22%20width%3D%2218%22%20height%3D%2216%22%20rx%3D%222%22%2F%3E%3Ccircle%20cx%3D%229%22%20cy%3D%2210%22%20r%3D%222%22%2F%3E%3Cpath%20d%3D%22M6%2016a3%203%200%200%201%206%200M15%209h4M15%2013h4%22%2F%3E%3C%2Fsvg%3E")!important;}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-employee) [role="radiogroup"]>label:nth-child(7){--pm-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M3%2012a9%209%200%200%201%2018%200H3M12%2012v7a2%202%200%200%201-4%200%22%2F%3E%3C%2Fsvg%3E")!important;}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-employee) [role="radiogroup"]>label:nth-child(8){--pm-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M5%202h9l5%205v15H5z%22%2F%3E%3Cpath%20d%3D%22M14%202v6h5M8%2013h8M8%2017h7%22%2F%3E%3C%2Fsvg%3E")!important;}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-employee) [role="radiogroup"]>label:nth-child(9){--pm-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M4%2020h16M5%2016l10-10%203%203-10%2010-4%201%201-4ZM14%207l3%203%22%2F%3E%3C%2Fsvg%3E")!important;}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-employee) [role="radiogroup"]>label:nth-child(10){--pm-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Crect%20x%3D%223%22%20y%3D%225%22%20width%3D%2218%22%20height%3D%2217%22%20rx%3D%222%22%2F%3E%3Cpath%20d%3D%22M7%202v6M17%202v6M3%2011h18%22%2F%3E%3C%2Fsvg%3E")!important;}
 
 </style>"""
 
@@ -5683,67 +5773,132 @@ def _pm_rutinas_df(fecha_ref=None, dni=None):
 
 
 def _pm_generar_rutinas_operativas(fecha_ref=None):
+    """Genera checklists solamente desde la acción administrativa y confirma Google Sheets.
+
+    No se muestran éxitos falsos ni se modifica la copia local si falla la escritura.
+    """
+    import uuid
+    st.session_state["_pm_rut_last_error"] = ""
     fecha_iso = _pm_fecha_iso(fecha_ref)
-    tipo = _pm_tipo_rutina(fecha_iso)
-    actuales = st.session_state.get("checklist", pd.DataFrame()).copy()
-    if not isinstance(actuales, pd.DataFrame):
-        actuales = pd.DataFrame(columns=["id_item", "dni", "nombre", "tipo", "tarea", "estado", "fecha_creacion", "fecha_completado"])
-    existentes = set()
-    if not actuales.empty:
-        for _, r in actuales[actuales["tipo"].astype(str) == tipo].iterrows():
-            existentes.add((str(r.get("dni", "")).strip(), str(r.get("tarea", "")).strip()))
+    if rol_real != "admin" or st.session_state.get("ver_como"):
+        st.session_state["_pm_rut_last_error"] = "Esta operación requiere la sesión real de administración."
+        return 0, 0
+    if not doc_sheets or "Checklist" in st.session_state.get("_hojas_fallidas", set()):
+        st.session_state["_pm_rut_last_error"] = "No hay una conexión verificada con Checklist en Google Sheets."
+        return 0, 0
     personas = _pm_programados(fecha_iso)
+    if not personas:
+        st.session_state["_pm_rut_last_error"] = "No hay colaboradores activos disponibles para esa fecha."
+        return 0, 0
+    columnas = ["id_item", "dni", "nombre", "tipo", "tarea", "estado", "fecha_creacion", "fecha_completado"]
+    tipo = _pm_tipo_rutina(fecha_iso)
     nuevas = []
     fecha_c = obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S")
-    for pos, persona in enumerate(personas):
-        for j, tarea in enumerate(_pm_tareas_rutina(persona.get("turno", "General"))):
-            clave = (str(persona.get("dni", "")).strip(), tarea)
-            if clave in existentes:
+    try:
+        try:
+            hoja = doc_sheets.worksheet("Checklist")
+        except gspread.exceptions.WorksheetNotFound:
+            hoja = doc_sheets.add_worksheet(title="Checklist", rows="1000", cols=str(len(columnas)))
+            hoja.append_row(columnas)
+        encabezados = hoja.row_values(1)
+        if encabezados[:len(columnas)] != columnas:
+            raise ValueError("La estructura de la hoja Checklist no coincide con las columnas esperadas.")
+        # Lectura fresca: evita duplicados al recargar o cuando otro administrador generó rutinas.
+        remotos = hoja._ws.get_all_records() if isinstance(hoja, _HojaProxy) else hoja.get_all_records()
+        existentes = {(str(r.get("dni", "")).strip(), str(r.get("tarea", "")).strip())
+                     for r in remotos if str(r.get("tipo", "")) == tipo}
+        for persona in personas:
+            dni = str(persona.get("dni", "")).strip()
+            if not dni:
                 continue
-            id_item = f"RUT-{fecha_iso.replace('-', '')}-{pos+1:03d}-{j+1:02d}-{int(time.time()*1000)%100000}"
-            fila = {
-                "id_item": id_item,
-                "dni": str(persona.get("dni", "")).strip(),
-                "nombre": str(persona.get("nombre", "")).strip(),
-                "tipo": tipo,
-                "tarea": tarea,
-                "estado": "Pendiente",
-                "fecha_creacion": fecha_c,
-                "fecha_completado": "",
-            }
-            if not st.session_state.get("ver_como"):
-                guardar_item_checklist_gsheets(id_item, fila["dni"], fila["nombre"], tipo, tarea, "Pendiente", fecha_c, "")
-            nuevas.append(fila)
+            for tarea in _pm_tareas_rutina(persona.get("turno", "General")):
+                clave = (dni, tarea)
+                if clave in existentes:
+                    continue
+                existentes.add(clave)
+                nuevas.append({
+                    "id_item": "RUT-" + uuid.uuid4().hex[:18],
+                    "dni": dni,
+                    "nombre": str(persona.get("nombre", "")).strip(),
+                    "tipo": tipo,
+                    "tarea": tarea,
+                    "estado": "Pendiente",
+                    "fecha_creacion": fecha_c,
+                    "fecha_completado": "",
+                })
+        if nuevas:
+            hoja.append_rows([[fila[c] for c in columnas] for fila in nuevas], value_input_option="RAW")
+        # Solo actualizar en memoria si la escritura terminó correctamente.
+        st.session_state.checklist = pd.DataFrame(remotos + nuevas, columns=columnas)
+    except Exception as exc:
+        st.session_state["_pm_rut_last_error"] = "No se pudieron guardar las rutinas en Google Sheets. No se aplicaron cambios locales."
+        print("Premium Market: error al generar rutinas", type(exc).__name__)
+        return 0, len(personas)
     if nuevas:
-        st.session_state.checklist = pd.concat([pd.DataFrame(nuevas), actuales], ignore_index=True)
-        registrar_auditoria("Generar Rutinas Operativas", "Checklist", f"{fecha_iso}: {len(nuevas)} tarea(s) creadas para {len(personas)} colaborador(es).")
+        try:
+            registrar_auditoria("Generar Rutinas Operativas", "Checklist",
+                                f"{fecha_iso}: {len(nuevas)} tareas para {len(personas)} colaboradores")
+        except Exception:
+            pass
     return len(nuevas), len(personas)
 
 
 def _pm_actualizar_rutina(id_item, completado, nombre_usuario=""):
+    """Actualiza solo una fila, sin borrar/recrear la hoja Checklist completa."""
     if st.session_state.get("ver_como"):
         st.toast("Vista previa: no se guardó ningún dato")
         return False
-    chk = st.session_state.get("checklist", pd.DataFrame()).copy()
-    if chk.empty or "id_item" not in chk.columns:
+    df = st.session_state.get("checklist", pd.DataFrame())
+    if not isinstance(df, pd.DataFrame) or df.empty or "id_item" not in df.columns:
         return False
-    mask = chk["id_item"].astype(str) == str(id_item)
+    mask = df["id_item"].astype(str) == str(id_item)
     if not mask.any():
+        return False
+    fila = df.loc[mask].iloc[0]
+    if not str(fila.get("tipo", "")).startswith("Rutina Operativa "):
+        st.error("El registro seleccionado no corresponde a una rutina operativa.")
+        return False
+    if rol_real != "admin" and str(fila.get("dni", "")).strip() != str(dni_actual).strip():
+        st.error("Solo puedes registrar tus propias tareas.")
+        return False
+    if not doc_sheets or "Checklist" in st.session_state.get("_hojas_fallidas", set()):
+        st.error("No se puede confirmar el cambio: Google Sheets no está disponible.")
         return False
     nuevo_estado = "Completado" if completado else "Pendiente"
     fecha_c = obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S") if completado else ""
+    try:
+        hoja = doc_sheets.worksheet("Checklist")
+        # La primera columna es id_item; no se toca ninguna otra tarea ni módulo.
+        ids = hoja._ws.col_values(1) if isinstance(hoja, _HojaProxy) else hoja.col_values(1)
+        pos = next((i for i, x in enumerate(ids, start=1) if str(x) == str(id_item) and i > 1), None)
+        if pos is None:
+            raise ValueError("No se encontró la tarea en Google Sheets.")
+        hoja.batch_update([
+            {"range": f"F{pos}", "values": [[nuevo_estado]]},
+            {"range": f"H{pos}", "values": [[fecha_c]]},
+        ], value_input_option="RAW")
+    except Exception as exc:
+        st.error("No se guardó el cambio en Google Sheets. Se mantiene el estado anterior.")
+        print("Premium Market: error al actualizar rutina", type(exc).__name__)
+        return False
+    # Confirmación remota recibida: reflejar el nuevo estado local.
     st.session_state.checklist.loc[mask, "estado"] = nuevo_estado
     st.session_state.checklist.loc[mask, "fecha_completado"] = fecha_c
     try:
-        actualizar_hoja_completa("Checklist", st.session_state.checklist)
-    except Exception as _exc_rut:
-        print("Premium: no se pudo actualizar rutina", type(_exc_rut).__name__)
-    try:
-        _fila = st.session_state.checklist[mask].iloc[0]
-        registrar_auditoria("Actualizar Rutina Operativa", "Checklist", f"{nombre_usuario or _fila.get('nombre', '')}: {_fila.get('tarea', '')} → {nuevo_estado}")
+        registrar_auditoria("Actualizar Rutina Operativa", "Checklist",
+                            f"{nombre_usuario or fila.get('nombre','')}: {fila.get('tarea','')} → {nuevo_estado}")
     except Exception:
         pass
     return True
+
+
+def _pm_on_rutina_change(key_widget, id_item, original, nombre_usuario=""):
+    """Callback ANTES del rerun: en fallo revierte el checkbox sin entrar en bucles."""
+    nuevo = bool(st.session_state.get(key_widget, original))
+    if nuevo == bool(original):
+        return
+    if not _pm_actualizar_rutina(id_item, nuevo, nombre_usuario):
+        st.session_state[key_widget] = bool(original)
 
 
 def _pm_resumen_colaborador(nombre, dni, fecha_ref=None):
@@ -5756,7 +5911,7 @@ def _pm_resumen_colaborador(nombre, dni, fecha_ref=None):
         if m.any():
             turno = str(prog.loc[m].iloc[0].get("turno", "General"))
     if turno == "Sin programación":
-        inf = _info_turno("Mañana", fecha_d)
+        inf = None
         turno_txt = "Sin programación cargada"
     else:
         inf = _info_turno(turno, fecha_d)
@@ -5811,55 +5966,10 @@ def _pm_resumen_colaborador(nombre, dni, fecha_ref=None):
     }
 
 
-def _pm_mount_sidebar_fab():
-    components.html("""
-    <script>
-    (function(){
-      const doc = window.parent.document;
-      if (!doc) return;
-      function isSidebarOpen(){
-        const sidebar = doc.querySelector('section[data-testid="stSidebar"]');
-        if (!sidebar) return false;
-        const style = window.parent.getComputedStyle(sidebar);
-        return style.display !== 'none' && parseFloat(style.width || '0') > 120;
-      }
-      function clickOpen(){
-        const btn = doc.querySelector('[data-testid="stSidebarCollapsedControl"] button, button[aria-label="Open sidebar"]');
-        if (btn) { btn.click(); return; }
-        const alt = doc.querySelector('[data-testid="stSidebar"]');
-        if (alt) { alt.scrollIntoView({block:'start'}); }
-      }
-      function ensure(){
-        let btn = doc.getElementById('pm-sidebar-fab');
-        if (!btn) {
-          btn = doc.createElement('button');
-          btn.id = 'pm-sidebar-fab';
-          btn.type = 'button';
-          btn.innerHTML = '<span class="pm-sidebar-fab-ico">☰</span><span>Menú</span>';
-          btn.style.cssText = 'position:fixed;left:18px;top:14px;z-index:100050;display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:14px;border:1px solid #e5eaf1;background:#ffffff;box-shadow:0 12px 34px rgba(18,31,53,.14);font:800 13px/1.1 Plus Jakarta Sans,system-ui,sans-serif;color:#22324a;cursor:pointer;';
-          btn.onmouseenter = () => btn.style.transform='translateY(-1px)';
-          btn.onmouseleave = () => btn.style.transform='translateY(0)';
-          btn.onclick = clickOpen;
-          doc.body.appendChild(btn);
-        }
-        btn.style.display = isSidebarOpen() ? 'none' : 'flex';
-      }
-      ensure();
-      const obs = new MutationObserver(ensure);
-      obs.observe(doc.body, {childList:true, subtree:true, attributes:true});
-      window.addEventListener('resize', ensure);
-      setInterval(ensure, 1200);
-    })();
-    </script>
-    """, height=0, width=0)
-
 
 _PM_NEXTLEVEL_CSS = """
 <style>
-/* Recuperación fiable del sidebar */
-#pm-sidebar-fab{transition:transform .18s ease, box-shadow .18s ease, background .18s ease;}
-#pm-sidebar-fab:hover{background:#fff7f8!important;box-shadow:0 16px 38px rgba(18,31,53,.16)!important;}
-#pm-sidebar-fab .pm-sidebar-fab-ico{font-size:16px;line-height:1;display:inline-flex;align-items:center;justify-content:center;}
+/* El menú superior utiliza ahora directamente el botón nativo de Streamlit. */
 /* Chat Premium IA 2.0 */
 .st-key-tp_chat_panel{width:min(430px,calc(100vw - 24px))!important;top:78px!important;right:18px!important;border-radius:28px!important;box-shadow:0 32px 88px rgba(16,27,45,.20),0 3px 14px rgba(16,27,45,.06)!important;border:1px solid #e7ecf2!important;background:linear-gradient(180deg,#fff 0%,#fff 72%,#fbfcfe 100%)!important;}
 .st-key-tp_chat_panel > div[data-testid="stVerticalBlock"]{padding:0 18px 18px!important;gap:.55rem!important;}
@@ -5915,7 +6025,7 @@ _PM_NEXTLEVEL_CSS = """
 </style>
 """
 st.markdown(_PM_NEXTLEVEL_CSS, unsafe_allow_html=True)
-_pm_mount_sidebar_fab()
+
 
 if rol_actual == "admin":
     # El asistente ahora se abre desde un botón flotante; no ocupa espacio en el menú.
@@ -9854,11 +9964,13 @@ elif choice == "Rutinas Operativas":
             st.markdown("<div style='height:29px'></div>", unsafe_allow_html=True)
             if st.button("Generar rutinas del día", key="pm_rut_gen", use_container_width=True, type="primary"):
                 n_tareas, n_personas = _pm_generar_rutinas_operativas(fecha_rut)
-                if n_tareas:
-                    st.success(f"Se generaron {n_tareas} tarea(s) para {n_personas} colaborador(es).")
+                _error_rut = st.session_state.get("_pm_rut_last_error", "")
+                if _error_rut:
+                    st.error(_error_rut)
+                elif n_tareas:
+                    st.success(f"Se guardaron {n_tareas} tarea(s) en Google Sheets para {n_personas} colaborador(es).")
                 else:
                     st.info("Las rutinas de ese día ya estaban creadas.")
-                st.rerun()
 
         df_rut = _pm_rutinas_df(fecha_rut)
         if df_rut.empty:
@@ -9908,22 +10020,25 @@ elif choice == "Rutinas Operativas":
                             cols_item = st.columns([.16, .84])
                             marcada = str(rr.get("estado", "")).strip() == "Completado"
                             key_chk = f"pm_rut_{rr.get('id_item', '')}"
+                            if key_chk in st.session_state and bool(st.session_state[key_chk]) != marcada:
+                                st.session_state[key_chk] = marcada
                             with cols_item[0]:
-                                nuevo = st.checkbox("", value=marcada, key=key_chk, label_visibility="collapsed")
+                                st.checkbox("", value=marcada, key=key_chk, label_visibility="collapsed",
+                                            disabled=bool(st.session_state.get("ver_como")),
+                                            on_change=_pm_on_rutina_change,
+                                            args=(key_chk, rr.get("id_item", ""), marcada, nom))
                             with cols_item[1]:
                                 tarea = str(rr.get("tarea", ""))
                                 meta = "Completada" if marcada else "Pendiente"
                                 st.markdown(f'<div class="pm-rut-row" style="padding:0 0 10px;border-bottom:none"><div class="pm-rut-main"><b>{_html.escape(tarea)}</b><span>{meta}</span></div>'
                                             f'<span class="pm-rut-badge">{meta}</span></div>', unsafe_allow_html=True)
-                            if nuevo != marcada:
-                                _pm_actualizar_rutina(rr.get("id_item", ""), nuevo, nom)
-                                st.rerun()
+
 
 elif choice == "Portal del Colaborador 2.0":
     premium_module_shell('Portal del Colaborador 2.0', 'EXPERIENCIA DEL COLABORADOR', 'Tu jornada, documentos, solicitudes y tareas reunidos en un solo espacio.')
 
     with st.container(key="pm_v_portal_colaborador_20"):
-        _pm_generar_rutinas_operativas(obtener_ahora_peru().date())
+        # La apertura del portal no modifica datos. Las rutinas se generan desde Administración.
         res_portal = _pm_resumen_colaborador(user_actual, dni_actual, obtener_ahora_peru().date())
         st.markdown(
             '<section class="pm-portal-hero">'
@@ -9956,7 +10071,9 @@ elif choice == "Portal del Colaborador 2.0":
             st.markdown('<div class="pm-section-card pm-portal-shortcuts"><h3>Acciones rápidas</h3><p>Ve a tus módulos más usados sin perder tiempo.</p></div>', unsafe_allow_html=True)
             s1, s2 = st.columns(2)
             with s1:
-                st.button("Marcar asistencia", key="pm_go_asistencia", use_container_width=True, on_click=_ir_a, args=("Marcar Asistencia",), icon=":material/fingerprint:")
+                st.button("Ver asistencias" if rol_actual == "admin" else "Marcar asistencia", key="pm_go_asistencia", use_container_width=True,
+                          on_click=_ir_a, args=("Historial de Asistencias" if rol_actual == "admin" else "Marcar Asistencia",),
+                          icon=":material/fingerprint:")
                 st.button("Mis boletas", key="pm_go_boletas", use_container_width=True, on_click=_ir_a, args=("Mis Boletas" if rol_actual != "admin" else "Boletas de Pago",), icon=":material/receipt_long:")
             with s2:
                 st.button("Solicitudes", key="pm_go_sol", use_container_width=True, on_click=_ir_a, args=("Solicitar Permiso / Adelanto" if rol_actual != "admin" else "Solicitudes y Permisos",), icon=":material/inbox:")
@@ -9974,14 +10091,18 @@ elif choice == "Portal del Colaborador 2.0":
                 for _, rr in df_mis_rut.iterrows():
                     marcada = str(rr.get("estado", "")).strip() == "Completado"
                     c1, c2 = st.columns([.14, .86])
+                    key_portal = f"pm_portal_rut_{rr.get('id_item', '')}"
+                    if key_portal in st.session_state and bool(st.session_state[key_portal]) != marcada:
+                        st.session_state[key_portal] = marcada
                     with c1:
-                        nuevo = st.checkbox("", value=marcada, key=f"pm_portal_rut_{rr.get('id_item', '')}", label_visibility="collapsed")
+                        st.checkbox("", value=marcada, key=key_portal, label_visibility="collapsed",
+                                    disabled=bool(st.session_state.get("ver_como")),
+                                    on_change=_pm_on_rutina_change,
+                                    args=(key_portal, rr.get("id_item", ""), marcada, user_actual))
                     with c2:
                         estado_label = "Completada" if marcada else "Pendiente"
                         st.markdown(f'<div class="pm-rut-row" style="padding:0 0 8px;border-bottom:none"><div class="pm-rut-main"><b>{_html.escape(str(rr.get("tarea", "")))}</b><span>{estado_label}</span></div><span class="pm-rut-badge">{estado_label}</span></div>', unsafe_allow_html=True)
-                    if nuevo != marcada:
-                        _pm_actualizar_rutina(rr.get("id_item", ""), nuevo, user_actual)
-                        st.rerun()
+
             st.markdown('</div>', unsafe_allow_html=True)
 
             st.markdown('<div style="height:14px"></div>', unsafe_allow_html=True)
