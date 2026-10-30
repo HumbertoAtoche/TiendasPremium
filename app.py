@@ -3130,6 +3130,107 @@ st.markdown(r"""<style>
 }
 </style>""", unsafe_allow_html=True)
 
+# =============================================================
+# PREMIUM MARKET · CONTROL INTERNO INSPIRED · DESIGN SYSTEM 2026
+# Exclusivamente presentación: no modifica datos, sesiones ni reglas.
+# Insertado después de las capas globales anteriores para unificar UI.
+# =============================================================
+st.markdown(r"""<style>
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+:root {
+  --tp-red:#EC3237; --tp-red-dk:#C9262B; --tp-red-soft:#FFF0F0;
+  --tp-ink:#0F172A; --tp-ink-2:#334155; --tp-mute:#64748B;
+  --tp-bg:#FFFFFF; --tp-surface:#FFFFFF; --tp-line:#E2E8F0;
+  --tp-r-sm:12px; --tp-r-md:18px; --tp-r-lg:24px;
+  --tp-sh-1:0 12px 30px -18px rgba(15,23,42,.18);
+  --tp-sh-2:0 22px 48px -24px rgba(15,23,42,.25);
+}
+html,body,[class*="css"],.stApp,.stMarkdown,div,button,input,select,textarea,
+[data-testid="stSidebar"] * {font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif!important;}
+.stApp,[data-testid="stAppViewContainer"],[data-testid="stMain"] {background:#fff!important;}
+.block-container,[data-testid="stMainBlockContainer"] {
+  max-width:1180px!important;padding-top:1.65rem!important;padding-bottom:3.5rem!important;
+}
+h1,h2,h3,h4 {letter-spacing:-.035em!important;font-weight:800!important;color:#0f172a;}
+p {line-height:1.58;}
+/* Cabecera: misma gramática visual del hero de Control Interno, marca Premium */
+.market-header {
+  position:relative!important;isolation:isolate;overflow:hidden!important;
+  background:linear-gradient(118deg,#3b0b13 0%,#8e1724 52%,#ec3237 110%)!important;
+  color:#fff!important;border:0!important;border-radius:28px!important;
+  padding:35px 40px!important;margin:12px 0 27px!important;
+  box-shadow:0 30px 60px -28px rgba(114,20,34,.48)!important;
+}
+.market-header::before {
+  content:""!important;position:absolute!important;inset:0!important;width:auto!important;height:auto!important;
+  left:0!important;top:0!important;border-radius:0!important;pointer-events:none;
+  background-image:linear-gradient(rgba(255,255,255,.055) 1px,transparent 1px),
+   linear-gradient(90deg,rgba(255,255,255,.055) 1px,transparent 1px)!important;
+  background-size:42px 42px!important;opacity:.7!important;
+}
+.market-header::after {content:"";position:absolute;width:280px;height:280px;right:-65px;top:-125px;
+  border-radius:50%;background:rgba(255,132,139,.19);filter:blur(30px);pointer-events:none;}
+.market-header h1,.market-header h1 * {
+  position:relative;color:#fff!important;font-size:clamp(1.5rem,2.8vw,2.35rem)!important;
+  font-weight:800!important;line-height:1.2!important;letter-spacing:-.04em!important;
+}
+.market-header p,.market-header p * {position:relative;color:#ffe4e6!important;font-size:.97rem!important;font-weight:500!important;}
+/* Tarjetas, métricas y formularios: superficies limpias y elevación elegante */
+.tp-card,.tp-kpi,.info-card,.cal-card,.boleta-container,
+[data-testid="stMetric"],div[data-testid="stVerticalBlockBorderWrapper"],
+div[data-testid="stForm"],div[data-testid="stExpander"] {
+  background:#fff!important;border:1px solid #e2e8f0!important;
+  border-radius:22px!important;box-shadow:0 12px 30px -18px rgba(15,23,42,.17)!important;
+}
+.tp-card,.tp-kpi,.info-card,.cal-card,[data-testid="stMetric"] {
+  transition:transform .35s cubic-bezier(.16,1,.3,1),box-shadow .35s,border-color .35s;
+}
+.tp-card:hover,.tp-kpi:hover,.info-card:hover,[data-testid="stMetric"]:hover {
+  transform:translateY(-3px);border-color:#f0b4b7!important;
+  box-shadow:0 24px 42px -22px rgba(121,27,40,.23)!important;
+}
+.tp-kpi-val,[data-testid="stMetricValue"] {font-weight:800!important;letter-spacing:-.045em!important;}
+.tp-kpi-lbl,[data-testid="stMetricLabel"] {font-weight:700!important;}
+/* Botones: Control Interno (gradiente, 14px, elevación), sin recolorear estados */
+.stButton>button[kind="primary"],.stFormSubmitButton>button[kind="primary"],
+.stButton>button[data-testid="stBaseButton-primary"],
+.stFormSubmitButton>button[data-testid="stBaseButton-primary"] {
+  background:linear-gradient(135deg,#bd2530,#ec3237)!important;color:#fff!important;
+  border:1px solid transparent!important;box-shadow:0 8px 18px -8px rgba(180,30,46,.55)!important;
+}
+.stButton>button,.stFormSubmitButton>button,.stDownloadButton>button {
+  border-radius:14px!important;font-weight:700!important;
+  transition:transform .25s cubic-bezier(.16,1,.3,1),box-shadow .25s,border-color .25s!important;
+}
+.stButton>button:hover:not(:disabled),.stFormSubmitButton>button:hover:not(:disabled),
+.stDownloadButton>button:hover:not(:disabled) {transform:translateY(-2px);box-shadow:0 12px 24px -12px rgba(15,23,42,.3)!important;}
+/* Campos y pestañas */
+[data-baseweb="input"],[data-baseweb="select"]>div,[data-baseweb="textarea"] {
+  border-radius:13px!important;border-color:#e2e8f0!important;background:#fff!important;
+}
+[data-baseweb="input"]:focus-within,[data-baseweb="select"]>div:focus-within {
+  border-color:#ec3237!important;box-shadow:0 0 0 3px rgba(236,50,55,.1)!important;
+}
+.stTabs [data-baseweb="tab"] {font-weight:700!important;}
+.stTabs [data-baseweb="tab-highlight"] {background:#ec3237!important;}
+.stTabs [aria-selected="true"] {color:#b91c2a!important;}
+/* Sidebar: mantener navegación operativa; refinar superficies y opciones */
+[data-testid="stSidebar"] {border-right:1px solid #e2e8f0!important;}
+[data-testid="stSidebar"] [data-testid="stWidgetLabel"] p {font-weight:700!important;}
+[data-testid="stSidebar"] button {border-radius:12px!important;}
+/* Tablas y cuadros de datos */
+[data-testid="stDataFrame"],[data-testid="stDataEditor"] {border-radius:16px!important;overflow:hidden;}
+[data-testid="stDialog"]>div,[role="dialog"] {border-radius:24px!important;}
+@media(max-width:767px){
+ .block-container,[data-testid="stMainBlockContainer"] {max-width:100%!important;padding:70px 12px 30px!important;}
+ .market-header {padding:24px 20px!important;border-radius:21px!important;margin:8px 0 18px!important;}
+ .market-header h1,.market-header h1 * {font-size:1.48rem!important;}
+ .market-header p {font-size:.88rem!important;}
+ .tp-card,.tp-kpi,.info-card,[data-testid="stMetric"] {border-radius:17px!important;}
+}
+@media(prefers-reduced-motion:reduce){.tp-card,.tp-kpi,.info-card,[data-testid="stMetric"],.stButton>button{transition:none!important;}}
+</style>""", unsafe_allow_html=True)
+
 # --- COMPONENTES UI REUTILIZABLES ---
 def ui_iniciales(nombre):
     p = [x for x in str(nombre).split() if x]
