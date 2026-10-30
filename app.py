@@ -1475,6 +1475,140 @@ section[data-testid="stSidebar"]:has(.pm-nav-kind-employee) [role="radiogroup"]>
 section[data-testid="stSidebar"]:has(.pm-nav-kind-employee) [role="radiogroup"]>label:nth-child(7){--pm-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M5%202h9l5%205v15H5z%22%2F%3E%3Cpath%20d%3D%22M14%202v6h5M8%2013h8M8%2017h7%22%2F%3E%3C%2Fsvg%3E");}
 section[data-testid="stSidebar"]:has(.pm-nav-kind-employee) [role="radiogroup"]>label:nth-child(8){--pm-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M4%2020h16M5%2016l10-10%203%203-10%2010-4%201%201-4ZM14%207l3%203%22%2F%3E%3C%2Fsvg%3E");}
 section[data-testid="stSidebar"]:has(.pm-nav-kind-employee) [role="radiogroup"]>label:nth-child(9){--pm-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Crect%20x%3D%223%22%20y%3D%225%22%20width%3D%2218%22%20height%3D%2217%22%20rx%3D%222%22%2F%3E%3Cpath%20d%3D%22M7%202v6M17%202v6M3%2011h18%22%2F%3E%3C%2Fsvg%3E");}
+
+/* ========== Premium Market · Asistente 3.0 & navegación recuperable ========== */
+/* The native Streamlit collapsed control is never hidden on authenticated screens. */
+.stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stHeader"]{
+  display:block!important;visibility:visible!important;background:transparent!important;
+  pointer-events:none!important;min-height:56px!important;z-index:1001!important;
+}
+.stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stSidebarCollapsedControl"]{
+  display:flex!important;visibility:visible!important;opacity:1!important;
+  position:fixed!important;top:14px!important;left:15px!important;z-index:10002!important;
+  width:43px!important;height:43px!important;align-items:center!important;justify-content:center!important;
+  background:#fff!important;border:1px solid #e6e9f0!important;border-radius:13px!important;
+  box-shadow:0 8px 22px rgba(25,36,57,.12)!important;pointer-events:auto!important;
+}
+.stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stSidebarCollapsedControl"] button{
+  display:flex!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;
+  width:40px!important;height:40px!important;align-items:center!important;justify-content:center!important;
+  border-radius:11px!important;color:#25354d!important;
+}
+.stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stSidebarCollapseButton"] button{
+  display:flex!important;visibility:visible!important;pointer-events:auto!important;
+  border-radius:10px!important;
+}
+/* Independent menu popover: a functional fallback if Streamlit's native control is missing. */
+.st-key-pm_nav_recovery{
+  position:fixed!important;left:68px!important;top:15px!important;z-index:10000!important;
+  width:108px!important;max-width:108px!important;
+}
+.st-key-pm_nav_recovery button[data-testid="stPopoverButton"],
+.st-key-pm_nav_recovery [data-testid="stPopover"]>button{
+  min-height:42px!important;padding:7px 12px!important;border-radius:13px!important;
+  background:#fff!important;border:1px solid #e7eaf0!important;
+  box-shadow:0 8px 21px rgba(25,36,57,.09)!important;
+  color:#27344d!important;font-size:.78rem!important;font-weight:800!important;
+}
+.st-key-pm_nav_recovery button:hover{border-color:#edb7c0!important;background:#fff5f6!important;}
+.st-key-pm_nav_recovery button:focus-visible{outline:3px solid #f3b4be!important;outline-offset:2px!important;}
+section[data-testid="stSidebar"]{z-index:10005!important;}
+[data-testid="stPopoverBody"]:has(.pm-nav-popover-marker){max-height:min(77dvh,690px)!important;overflow-y:auto!important;overscroll-behavior:contain!important;min-width:min(310px,calc(100vw - 26px))!important;}
+[data-testid="stPopoverBody"]:has(.pm-nav-popover-marker) button{min-height:37px!important;font-size:.77rem!important;border-radius:9px!important;}
+/* AI launcher remains an unobtrusive round avatar at upper-right. */
+.st-key-tp_chat_fab{right:19px!important;top:14px!important;}
+.st-key-tp_chat_fab button{transition:transform .22s cubic-bezier(.2,.8,.2,1),box-shadow .22s ease!important;}
+.st-key-tp_chat_fab button:focus-visible{outline:3px solid #ff9fb0!important;outline-offset:3px!important;}
+/* The chat panel has a visible brand identity, conversation rhythm and comfortable touch targets. */
+.st-key-tp_chat_panel{
+  width:min(448px,calc(100vw - 28px))!important;top:83px!important;right:19px!important;
+  padding:0!important;max-height:calc(100dvh - 105px)!important;overflow-x:hidden!important;
+  overflow-y:auto!important;overscroll-behavior:contain!important;
+  background:linear-gradient(170deg,#fff 0%,#fff 68%,#f9fafc 100%)!important;
+  border-radius:25px!important;border:1px solid #e7eaf1!important;
+  box-shadow:0 28px 80px rgba(21,34,56,.2),0 2px 9px rgba(21,34,56,.05)!important;
+  scrollbar-width:thin;scrollbar-color:#d5dce7 transparent;
+}
+.st-key-tp_chat_panel > div[data-testid="stVerticalBlock"]{
+  gap:.62rem!important;padding:0 19px 19px!important;
+}
+.st-key-tp_chat_panel [data-testid="stHorizontalBlock"]{align-items:center!important;gap:9px!important;}
+.pm-ai-topline{height:5px;background:linear-gradient(90deg,#e53048,#fe7987 52%,#efb6bf);margin:0 -19px 13px;}
+.pm-ai-brand{display:flex;align-items:center;gap:11px;min-width:0;}
+.pm-ai-brand-avatar{width:42px;height:42px;flex:none;background:linear-gradient(145deg,#fff3f5,#fce2e6);border:1px solid #f7dbe1;border-radius:14px;display:grid;place-items:center;overflow:hidden;color:#c32a41;font-size:23px;font-weight:800;}
+.pm-ai-brand-avatar img{height:100%;width:100%;object-fit:cover;}
+.pm-ai-brand h3{font-size:1.02rem!important;margin:0!important;line-height:1.4!important;letter-spacing:-.03em!important;color:#202c41!important;font-weight:850!important;}
+.pm-ai-brand small{color:#75849a;font-weight:600;font-size:.70rem;line-height:1.4;display:block;}
+.pm-ai-online{display:inline-flex;align-items:center;gap:6px;font-size:.69rem;color:#17815e;font-weight:700;}
+.pm-ai-online::before{content:"";width:7px;height:7px;background:#23b789;border-radius:100%;box-shadow:0 0 0 3px #e0f7eb;}
+.pm-ai-online.offline{color:#b16b1a;}
+.pm-ai-online.offline::before{background:#e5a23e;box-shadow:0 0 0 3px #fff1d8;}
+.st-key-tp_chat_panel .st-key-cerrar_chat_flotante button{
+  width:35px!important;height:35px!important;min-height:35px!important;padding:0!important;
+  border:1px solid #e7eaf0!important;border-radius:11px!important;background:#fff!important;
+  color:#526078!important;box-shadow:none!important;font-size:1.1rem!important;
+}
+.st-key-tp_chat_panel .st-key-cerrar_chat_flotante button:hover{color:#b92b42!important;background:#fff1f3!important;}
+.pm-ai-rule{height:1px;background:#edf0f4;margin:4px 0 7px;}
+.pm-ai-welcome{border:1px solid #f1e4e8;border-radius:17px;padding:16px 16px 13px;background:linear-gradient(135deg,#fff5f6 0%,#fff 72%);}
+.pm-ai-welcome-k{color:#c52d45;font-weight:850;letter-spacing:.12em;font-size:.61rem;margin-bottom:8px;}
+.pm-ai-welcome h4{color:#1f2b40;font-size:1.04rem;letter-spacing:-.04em;margin:0 0 7px;font-weight:820;line-height:1.36;}
+.pm-ai-welcome p{color:#66768c!important;font-size:.78rem!important;line-height:1.65!important;margin:0!important;}
+.pm-ai-suggestions-k{font-size:.65rem;letter-spacing:.11em;font-weight:850;color:#8c98ab;margin:8px 0 3px;}
+.st-key-tp_chat_panel [class*="st-key-tp_sug_"] button{
+  background:#fff!important;border:1px solid #e6eaf1!important;border-radius:12px!important;
+  min-height:43px!important;padding:9px 12px!important;color:#344258!important;
+  font-size:.74rem!important;font-weight:750!important;line-height:1.35!important;text-align:left!important;
+  box-shadow:0 3px 10px -8px rgba(20,31,54,.25)!important;
+}
+.st-key-tp_chat_panel [class*="st-key-tp_sug_"] button:hover{background:#fff5f6!important;border-color:#efb8c3!important;transform:translateY(-1px)!important;}
+.st-key-tp_chat_panel [data-testid="stChatMessage"]{border-radius:16px!important;padding:12px!important;margin:2px 0!important;border:1px solid #edf0f4!important;background:#fff!important;}
+.st-key-tp_chat_panel [data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] p{font-size:.79rem!important;line-height:1.65!important;color:#39475e!important;}
+.st-key-tp_chat_panel [data-testid="stChatMessageAvatarUser"]{background:#fbe5e8!important;color:#c52b41!important;}
+.st-key-tp_chat_panel [data-testid="stChatMessageAvatarAssistant"]{background:#eaf1fc!important;color:#356ac1!important;}
+.pm-ai-compose-k{font-size:.7rem;font-weight:800;color:#66748a;margin:6px 0 0;}
+.st-key-tp_chat_panel [data-testid="stForm"]{border:0!important;background:transparent!important;padding:0!important;box-shadow:none!important;}
+.st-key-tp_chat_panel [data-testid="stForm"] [data-testid="stTextInput"] input{
+  border-radius:13px!important;background:#f5f7fa!important;border:1px solid #e8edf2!important;
+  height:45px!important;font-size:.81rem!important;color:#25334a!important;
+}
+.st-key-tp_chat_panel [data-testid="stForm"] [data-testid="stTextInput"] input:focus{background:#fff!important;border-color:#f1a8b5!important;box-shadow:0 0 0 3px #fff0f2!important;}
+.st-key-tp_chat_panel [data-testid="stForm"] [data-testid="stFormSubmitButton"] button{
+  min-height:43px!important;background:linear-gradient(110deg,#ed354b,#cc263d)!important;border:0!important;
+  border-radius:12px!important;box-shadow:0 9px 18px -11px rgba(202,38,61,.55)!important;
+  font-size:.8rem!important;font-weight:800!important;color:#fff!important;
+}
+.st-key-tp_chat_panel [data-testid="stForm"] [data-testid="stFormSubmitButton"] button:hover{transform:translateY(-1px)!important;}
+.st-key-tp_chat_panel .st-key-limpiar_chat_flotante button{
+  border:1px solid #e8edf2!important;background:transparent!important;box-shadow:none!important;
+  color:#7a8799!important;font-weight:700!important;font-size:.74rem!important;border-radius:12px!important;min-height:38px!important;
+}
+.st-key-tp_chat_panel .st-key-limpiar_chat_flotante button:hover{background:#f7f8fa!important;color:#c22d45!important;}
+.pm-ai-foot{font-size:.65rem;color:#94a0b1;text-align:center;margin:0;padding:0 4px;line-height:1.4;}
+/* Daily welcome message: a tasteful personal communication, not a disruptive alert. */
+[data-testid="stDialog"]:has(.pm-daily-note) [role="dialog"]{border-radius:26px!important;box-shadow:0 30px 90px rgba(18,30,50,.24)!important;overflow:hidden!important;}
+.pm-daily-note{position:relative;overflow:hidden;padding:23px 14px 8px;text-align:center;}
+.pm-daily-note:before{content:"";position:absolute;left:50%;top:-90px;transform:translateX(-50%);width:290px;height:220px;background:radial-gradient(ellipse,rgba(237,53,74,.1),transparent 70%);pointer-events:none;}
+.pm-daily-symbol{width:65px;height:65px;display:grid;place-items:center;border:1px solid #f5dce1;border-radius:21px;background:linear-gradient(135deg,#fff0f3,#fffbfb);color:#ca2d44;margin:0 auto 17px;box-shadow:0 14px 27px -20px rgba(202,45,68,.35);}
+.pm-daily-symbol svg{width:31px;height:31px;display:block;stroke:currentColor;}
+.pm-daily-eyebrow{font-size:.64rem;letter-spacing:.15em;color:#c82d43;font-weight:900;margin-bottom:12px;}
+.pm-daily-note h2{font-size:clamp(1.38rem,4vw,1.9rem)!important;line-height:1.22!important;font-weight:850!important;color:#17263e!important;margin:0 0 13px!important;letter-spacing:-.045em!important;}
+.pm-daily-quote{font-weight:680!important;font-size:clamp(.98rem,3vw,1.15rem)!important;line-height:1.75!important;color:#35465d!important;padding:0 10px;margin:0 auto 18px;max-width:500px;}
+.pm-daily-rule{width:46px;height:4px;background:linear-gradient(90deg,#f25b70,#cb2941);border-radius:10px;margin:0 auto 17px;}
+.pm-daily-note small{color:#8491a4;font-size:.72rem;line-height:1.55;display:block;margin:0 auto 14px;}
+[data-testid="stDialog"]:has(.pm-daily-note) [data-testid="stButton"] button{border-radius:13px!important;min-height:47px!important;font-weight:800!important;}
+@media(max-width:640px){
+ .st-key-pm_nav_recovery{top:10px!important;left:58px!important;}
+ .stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stSidebarCollapsedControl"]{top:10px!important;left:9px!important;}
+ .st-key-tp_chat_panel{right:7px!important;top:67px!important;width:calc(100vw - 14px)!important;max-height:calc(100dvh - 83px)!important;border-radius:20px!important;}
+ .st-key-tp_chat_panel > div[data-testid="stVerticalBlock"]{padding:0 14px 16px!important;}
+ .st-key-tp_chat_fab{top:8px!important;right:11px!important;}
+ .pm-ai-topline{margin-left:-14px;margin-right:-14px;}
+ .pm-ai-welcome{padding:13px!important;}
+ .pm-ai-brand-avatar{width:37px;height:37px;}
+}
+@media(prefers-reduced-motion:reduce){.st-key-tp_chat_panel,.st-key-tp_chat_fab button{animation:none!important;transition:none!important;}}
+
 </style>"""
 
 # El ícono opcional del asistente se incluye en el mismo bloque CSS.
@@ -4140,6 +4274,8 @@ if _tiempo_desde_login > SESION_MAX_SEGUNDOS or _tiempo_inactivo > INACTIVIDAD_M
     _motivo_cierre = "duración máxima (10 horas)" if _tiempo_desde_login > SESION_MAX_SEGUNDOS else "inactividad (30 minutos)"
     st.session_state.usuario_login = None
     st.session_state.login_auditado = False
+    st.session_state["chat_flotante_abierto"] = False
+    st.session_state["chat_datos_historial"] = []
     st.warning(f"Tu sesión se cerró automáticamente por {_motivo_cierre}. Por favor, vuelve a iniciar sesión.")
     time.sleep(1.2)
     st.rerun()
@@ -5329,6 +5465,19 @@ try:
 except Exception:
     pass  # versiones antiguas de Streamlit: se usa solo el menú lateral
 
+# Acceso alternativo siempre disponible si el sidebar se oculta.
+# Usa los mismos destinos y callbacks que la navegación original.
+with st.container(key="pm_nav_recovery"):
+    with st.popover("☰ Menú", help="Abrir navegación rápida de Premium Market"):
+        st.markdown('<div class="pm-nav-popover-marker"></div>', unsafe_allow_html=True)
+        st.caption("IR A UNA SECCIÓN")
+        for _idx, _dest_nav in enumerate(menu):
+            st.button(
+                _tp_nav_label(_dest_nav), key=f"pm_nav_quick_{_idx}",
+                on_click=_ir_a, args=(_dest_nav,),
+                use_container_width=True, type="primary" if choice == _dest_nav else "secondary",
+            )
+
 # Barra de ubicación: indica en qué sección estás y la fecha de hoy (hora de Perú).
 _chev = "<svg width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><path d='M9 6l6 6-6 6'/></svg>"
 st.markdown(
@@ -5358,6 +5507,8 @@ def _pm_cerrar_sesion():
         st.session_state["ver_como"] = None
         st.session_state["ver_como_sel"] = "Mi vista (admin)"
         st.session_state["chat_flotante_abierto"] = False
+        st.session_state["chat_datos_historial"] = []
+        st.session_state.pop("tp_pregunta_sugerida", None)
         st.session_state.pop("_tp_botellas_aviso_login", None)
         st.session_state.pop("_tp_cumple_dialogo_abierto", None)
         st.session_state.pop("login_clave", None)
@@ -5410,12 +5561,95 @@ def _tp_aviso_botellas_inicio(total):
 
 # El contador del perfil sigue disponible en todas las vistas, pero el diálogo
 # solo aparece al entrar y no vuelve a abrirse al navegar por el dashboard.
+_pm_modal_botellas_este_rerun = False
 if (not st.session_state.get("_tp_cumple_dialogo_abierto", False)
         and not st.session_state.get("_tp_botellas_aviso_login", False)):
     # Solo se consume el aviso de esta sesión cuando realmente puede mostrarse.
     st.session_state["_tp_botellas_aviso_login"] = True
     if _bf_total_pendientes > 0:
+        _pm_modal_botellas_este_rerun = True
         _tp_aviso_botellas_inicio(_bf_total_pendientes)
+
+# Mensaje de bienvenida diario. No compite con el modal de cumpleaños o botellas.
+def _pm_frase_dia(nombre, dni, hoy):
+    """Selección determinista por colaborador y fecha; no requiere Internet ni APIs."""
+    import hashlib
+    mensajes = (
+        "Tu dedicación se nota en cada detalle. Hoy tienes otra oportunidad de hacer que alguien se sienta bien atendido.",
+        "Los grandes resultados comienzan con acciones pequeñas, hechas con cuidado y constancia.",
+        "Cada cliente es una oportunidad para demostrar el orgullo que sentimos por nuestro trabajo.",
+        "La excelencia no es un momento especial: es la suma de los buenos hábitos de cada día.",
+        "Tu actitud puede transformar un día normal en una gran experiencia para quienes nos visitan.",
+        "Un equipo crece cuando cada persona aporta su mejor versión y ayuda a los demás a brillar.",
+        "Hoy vale la pena hacer las cosas con cariño, paciencia y la seguridad de que tu esfuerzo cuenta.",
+        "El buen servicio comienza con una sonrisa sincera y continúa con atención a los detalles.",
+        "No necesitas que todo sea perfecto para dar un excelente primer paso.",
+        "Detrás de cada gran tienda hay personas comprometidas que hacen la diferencia.",
+        "La confianza de nuestros clientes se construye con cada promesa que cumplimos.",
+        "Cada jornada trae algo que aprender, alguien a quien apoyar y un motivo para sentir orgullo.",
+        "Tu trabajo tiene valor porque ayuda a que otras personas encuentren lo que necesitan.",
+        "El compromiso se demuestra en lo cotidiano: puntualidad, respeto y trabajo en equipo.",
+        "Cuando compartimos soluciones, los retos se vuelven más pequeños y los logros más grandes.",
+        "Haz que hoy cuente: escucha, aprende y celebra los avances, incluso los más pequeños.",
+        "El talento abre caminos; la constancia convierte esos caminos en resultados.",
+        "Tu energía y tu amabilidad son parte de la experiencia Premium.",
+        "Siempre hay una oportunidad de mejorar algo y de agradecer a alguien por su ayuda.",
+        "El trabajo en equipo empieza cuando todos sentimos que podemos contar con los demás.",
+        "Cada detalle bien hecho es una manera de mostrar respeto por nuestro equipo y nuestros clientes.",
+        "Lo que haces hoy puede inspirar a quien trabaja a tu lado mañana.",
+        "Trabajar con propósito es saber que incluso las tareas pequeñas construyen algo importante.",
+        "La mejor manera de crecer es seguir aprendiendo, compartiendo y apoyando al equipo.",
+        "Hoy puedes dejar una buena huella con algo tan sencillo como atender con empatía.",
+        "Ser parte de Premium significa construir juntos un lugar donde dé gusto trabajar y comprar.",
+        "Un paso bien dado vale más que muchas buenas intenciones que nunca empezaron.",
+        "No subestimes el poder de un gesto amable: a veces mejora el día completo de alguien.",
+        "Los logros del equipo también llevan tu esfuerzo, tu cuidado y tu compromiso.",
+        "Nuestro mejor resultado es que cada persona se sienta valorada, escuchada y bien atendida.",
+        "Que este día te encuentre con ánimo para aportar, aprender y seguir construyendo algo bueno.",
+    )
+    digest = hashlib.sha256((str(dni) + "|" + hoy.isoformat()).encode("utf-8")).digest()
+    return mensajes[int.from_bytes(digest[:8], "big") % len(mensajes)]
+
+@st.cache_resource(show_spinner=False)
+def _pm_diario_registro_proceso():
+    # Reutilizado entre sesiones de este proceso; un reinicio del servidor limpia el registro.
+    import threading
+    return {"vistos": set(), "lock": threading.Lock()}
+
+@st.dialog("Un mensaje para ti", width="small")
+def _pm_dialogo_motivacion(nombre, frase):
+    _nombre_esc = _html.escape(str(nombre).split()[0].capitalize() if nombre else "equipo")
+    _frase_esc = _html.escape(frase)
+    st.markdown(
+        '<div class="pm-daily-note">'
+        '<div class="pm-daily-symbol"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+        '<path d="M12 3 9 10l-7 2 7 3 3 7 3-7 7-3-7-2-3-7Z"/><path d="M19 2v4M17 4h4"/></svg></div>'
+        '<div class="pm-daily-eyebrow">PREMIUM MARKET · MENSAJE DEL DÍA</div>'
+        f'<h2>¡Un gran día comienza contigo, {_nombre_esc}!</h2>'
+        f'<p class="pm-daily-quote">“{_frase_esc}”</p>'
+        '<div class="pm-daily-rule"></div>'
+        '<small>Gracias por el compromiso que aportas a nuestro equipo.</small></div>',
+        unsafe_allow_html=True,
+    )
+    if st.button("¡Vamos por un gran día!", key="pm_diario_continuar", type="primary", use_container_width=True):
+        st.rerun()
+
+# La frase se muestra una vez por usuario/día en la sesión y, mientras siga
+# activo el proceso Streamlit, también entre sesiones. No escribe en Sheets.
+if (not st.session_state.get("_tp_cumple_dialogo_abierto", False)
+        and not _pm_modal_botellas_este_rerun):
+    _pm_hoy_dia = obtener_ahora_peru().date()
+    _pm_clave_dia = (str(USUARIOS[user_real]["dni"]), _pm_hoy_dia.isoformat())
+    _pm_flag_dia = "pm_frase_vista_" + _pm_clave_dia[0] + "_" + _pm_clave_dia[1]
+    if not st.session_state.get(_pm_flag_dia, False):
+        _pm_registro = _pm_diario_registro_proceso()
+        with _pm_registro["lock"]:
+            _pm_ya_visto = _pm_clave_dia in _pm_registro["vistos"]
+            if not _pm_ya_visto:
+                _pm_registro["vistos"].add(_pm_clave_dia)
+        st.session_state[_pm_flag_dia] = True
+        if not _pm_ya_visto:
+            _pm_dialogo_motivacion(user_real, _pm_frase_dia(user_real, _pm_clave_dia[0], _pm_hoy_dia))
 
 # -------------------- ASISTENTE PREMIUM IA · V2 --------------------
 # IA opcional con Gemini (REST, sin librerías adicionales). No se envían tablas ni datos privados.
@@ -5638,55 +5872,96 @@ if "chat_flotante_abierto" not in st.session_state:
     st.session_state.chat_flotante_abierto = False
 if "chat_datos_historial" not in st.session_state:
     st.session_state.chat_datos_historial = []
+
+# Avatar flotante en la esquina superior derecha: botón real de Streamlit.
 with st.container(key="tp_chat_fab"):
-    if st.button("✦", key="abrir_chat_flotante", help="Abrir Premium IA", use_container_width=True):
+    if st.button("✦", key="abrir_chat_flotante", help="Abrir o cerrar Premium IA", use_container_width=True):
         st.session_state.chat_flotante_abierto = not st.session_state.chat_flotante_abierto
         st.rerun()
 
 if st.session_state.chat_flotante_abierto:
     with st.container(key="tp_chat_panel"):
-        _cp1, _cp2 = st.columns([5, 1])
-        with _cp1:
-            st.markdown("### Premium IA")
-            _api_key, _api_model = _tp_ia_config()
-            st.caption("🟢 Conversación inteligente" if _api_key else "🟡 Asistente local · activa IA en Secrets")
-        with _cp2:
-            if st.button("✕", key="cerrar_chat_flotante", help="Cerrar asistente"):
+        st.markdown('<div class="pm-ai-topline"></div>', unsafe_allow_html=True)
+        _chat_h_izq, _chat_h_der = st.columns([6, 1], vertical_alignment="center")
+        with _chat_h_izq:
+            _clave_chat, _modelo_chat = _tp_ia_config()
+            _ai_avatar_img = (
+                f'<img src="data:{BOT_MIME};base64,{_bot_b64}" alt="Premium IA">'
+                if _bot_b64 else '✦'
+            )
+            _ai_estado = ('<span class="pm-ai-online">IA conectada</span>' if _clave_chat
+                          else '<span class="pm-ai-online offline">Asistente local</span>')
+            st.markdown(
+                '<div class="pm-ai-brand"><div class="pm-ai-brand-avatar">' + _ai_avatar_img + '</div>'
+                '<div><h3>Premium IA</h3><small>Tu asistente de trabajo</small>' + _ai_estado + '</div></div>',
+                unsafe_allow_html=True,
+            )
+        with _chat_h_der:
+            if st.button("×", key="cerrar_chat_flotante", help="Cerrar Premium IA"):
                 st.session_state.chat_flotante_abierto = False
                 st.rerun()
+        st.markdown('<div class="pm-ai-rule"></div>', unsafe_allow_html=True)
+
         if not st.session_state.chat_datos_historial:
-            _saludo = str(user_actual).split()[0].capitalize() if user_actual else "equipo"
-            st.markdown(f"¡Hola, **{_tp_html.escape(_saludo)}**! 👋 Soy **Premium**, tu asistente. Pregúntame lo que necesites, como si habláramos en persona.")
-            _sugerencias = (["🌟 Dame una frase motivacional", "😄 Cuéntame un chiste", "📊 Tardanzas del mes"] if rol_actual == "admin" else
-                            ["🌟 Dame una frase motivacional", "😄 Cuéntame un chiste", "📅 Mi horario"])
-            for _i, _s in enumerate(_sugerencias):
-                if st.button(_s, key=f"tp_sug_{_i}", use_container_width=True):
-                    st.session_state["tp_pregunta_sugerida"] = _s.split(" ", 1)[-1]
+            _saludo_chat = _tp_html.escape(str(user_actual).split()[0].capitalize() if user_actual else "equipo")
+            st.markdown(
+                '<section class="pm-ai-welcome"><div class="pm-ai-welcome-k">TU ESPACIO DE CONVERSACIÓN</div>'
+                f'<h4>¡Hola, {_saludo_chat}! Qué gusto verte.</h4>'
+                '<p>Resuelve dudas, consulta información disponible o pide algo para alegrar tu día. '
+                'Estoy aquí para ayudarte.</p></section>',
+                unsafe_allow_html=True,
+            )
+            st.markdown('<div class="pm-ai-suggestions-k">¿POR DÓNDE EMPEZAMOS?</div>', unsafe_allow_html=True)
+            _chat_sugerencias = (
+                [("Inspirarme hoy", "Dame una frase motivacional"),
+                 ("Algo divertido", "Cuéntame un chiste"),
+                 ("Tardanzas del mes", "Tardanzas del mes")]
+                if rol_actual == "admin" else
+                [("Inspirarme hoy", "Dame una frase motivacional"),
+                 ("Algo divertido", "Cuéntame un chiste"),
+                 ("Mi horario", "Mi horario")]
+            )
+            _s1, _s2 = st.columns(2)
+            for _i_s, (_label_s, _query_s) in enumerate(_chat_sugerencias):
+                _target_s = _s1 if _i_s == 0 else (_s2 if _i_s == 1 else st)
+                if _target_s.button(_label_s, key=f"tp_sug_{_i_s}", use_container_width=True):
+                    st.session_state["tp_pregunta_sugerida"] = _query_s
                     st.rerun()
+
+        # Historial nativo de Streamlit; evita HTML interactivo sin conexión con Python.
         for _mensaje_f in st.session_state.chat_datos_historial[-12:]:
             with st.chat_message(_mensaje_f["role"]):
                 st.markdown(_mensaje_f["content"])
                 if _mensaje_f.get("data") is not None:
                     st.dataframe(_mensaje_f["data"], use_container_width=True, hide_index=True)
+
+        st.markdown('<div class="pm-ai-compose-k">Escribe tu mensaje</div>', unsafe_allow_html=True)
         with st.form("form_chat_flotante", clear_on_submit=True):
-            _pregunta_f = st.text_input("Tu mensaje", key="chat_flotante_pregunta", placeholder="Escríbeme con confianza…")
-            _enviar_f = st.form_submit_button("➤ Enviar", use_container_width=True, type="primary")
+            _pregunta_f = st.text_input("Tu mensaje", key="chat_flotante_pregunta",
+                                        placeholder="¿En qué puedo ayudarte?", label_visibility="collapsed")
+            _enviar_f = st.form_submit_button("Enviar mensaje  →", use_container_width=True, type="primary")
         _pregunta_elegida = (st.session_state.pop("tp_pregunta_sugerida", "") or (_pregunta_f if _enviar_f else "")).strip()
         if _pregunta_elegida:
             st.session_state.chat_datos_historial.append({"role": "user", "content": _pregunta_elegida[:900], "data": None})
             try:
-                with st.spinner("Premium está pensando…"):
+                with st.spinner("Premium está preparando tu respuesta…"):
                     _respuesta_f, _tabla_f, _usando_ia = _tp_chat_consulta(_pregunta_elegida)
-                st.session_state.chat_datos_historial.append({"role": "assistant", "content": _respuesta_f,
-                    "data": _tabla_f.copy() if _tabla_f is not None else None})
+                st.session_state.chat_datos_historial.append({
+                    "role": "assistant", "content": _respuesta_f,
+                    "data": _tabla_f.copy() if _tabla_f is not None else None,
+                })
             except Exception as _error_f:
                 print("Error en Premium: ", type(_error_f).__name__)
-                st.session_state.chat_datos_historial.append({"role": "assistant", "content": "Tuve un pequeño problema al responder. ¿Lo intentamos de nuevo? 😊", "data": None})
+                st.session_state.chat_datos_historial.append({
+                    "role": "assistant", "content": "Hubo un problema al responder. Inténtalo nuevamente.", "data": None,
+                })
             st.session_state.chat_datos_historial = st.session_state.chat_datos_historial[-20:]
             st.rerun()
-        if st.button("🗑️ Nueva conversación", key="limpiar_chat_flotante", use_container_width=True):
+        if st.button("Nueva conversación", key="limpiar_chat_flotante", use_container_width=True):
             st.session_state.chat_datos_historial = []
             st.rerun()
+        st.markdown('<p class="pm-ai-foot">Tus consultas se realizan dentro de tu sesión Premium.</p>',
+                    unsafe_allow_html=True)
 
 
 # =============================================================
