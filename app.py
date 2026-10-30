@@ -5985,12 +5985,478 @@ _PM_RESTORE_SIDEBAR_CHAT = """<style>
 </style>"""
 st.markdown(_PM_RESTORE_SIDEBAR_CHAT, unsafe_allow_html=True)
 
+# ============================================================================
+# PREMIUM MARKET · RUTINAS PERSONALIZADAS
+# Registros separados de Checklist de onboarding/offboarding.
+# Las acciones escriben en Google Sheets antes de confirmar el estado local.
+# ============================================================================
+import uuid as _pm2_uuid
+
+_PM2_COLS = [
+    "id_rutina", "fecha", "dni", "nombre", "tienda", "zona", "titulo",
+    "instrucciones", "hora_inicio", "hora_limite", "prioridad", "estado",
+    "observacion", "creado_por", "fecha_creacion", "fecha_actualizacion",
+    "completado_por", "fecha_completado", "origen",
+]
+_PM2_SHEET = "Rutinas_Operativas"
+_PM2_STATES = ("Pendiente", "En curso", "Completada", "Cancelada")
+_PM2_TEMPLATES = {
+    "Personalizada · desde cero": ("", "", "", "Operación", "Normal"),
+    "Apertura de tienda": (
+        "Verificar apertura de tienda",
+        "Confirmar limpieza, presentación del local, exhibición, caja y equipos de frío. Reportar cualquier novedad.",
+        "Área de ventas", "Apertura", "Alta"),
+    "Control de refrigeradoras": (
+        "Revisar refrigeradoras y congeladores",
+        "Verificar funcionamiento, temperaturas y presentación de los productos. Avisar de inmediato si existe una anomalía.",
+        "Zona de frío", "Control", "Alta"),
+    "Reposición y exhibición": (
+        "Reponer productos prioritarios",
+        "Revisar quiebres, frenteo, fechas de vencimiento y presentación de las góndolas asignadas.",
+        "Góndolas", "Reposición", "Normal"),
+    "Limpieza y orden": (
+        "Verificar limpieza y orden del turno",
+        "Revisar piso, vitrinas, caja, repisas y zona de atención. Registrar incidentes si corresponde.",
+        "Toda la tienda", "Limpieza", "Normal"),
+    "Cierre operativo": (
+        "Ejecutar checklist de cierre",
+        "Comprobar orden final, equipos, pendientes, caja y entrega de novedades al siguiente responsable.",
+        "Caja y área de ventas", "Cierre", "Alta"),
+}
+
+
+def _pm2_now():
+    return obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S")
+
+
+def _pm2_dni(value):
+    text_ = str(value or "").strip()
+    return text_[:-2] if text_.endswith(".0") and text_[:-2].isdigit() else text_
+
+
+def _pm2_people():
+    emp = st.session_state.get("empleados", pd.DataFrame())
+    if not isinstance(emp, pd.DataFrame) or emp.empty or "dni" not in emp.columns:
+        return []
+    rows = []
+    seen = set()
+    for _, row in emp.iterrows():
+        if str(row.get("rol", "")).strip().lower() == "admin":
+            continue
+        if str(row.get("estado", "activo")).strip().lower() not in ("activo", "activos"):
+            continue
+        dni = _pm2_dni(row.get("dni", ""))
+        if not dni or dni in seen:
+            continue
+        seen.add(dni)
+        rows.append({"dni": dni, "nombre": str(row.get("nombre", "Colaborador")).strip(),
+                     "cargo": str(row.get("cargo", "Colaborador")).strip()})
+    return sorted(rows, key=lambda x: (x["nombre"].lower(), x["dni"]))
+
+
+def _pm2_ws(create=False):
+    if not doc_sheets:
+        raise ConnectionError("Google Sheets no está conectado. No se puede consultar ni guardar rutinas.")
+    try:
+        ws = doc_sheets.worksheet(_PM2_SHEET)
+    except gspread.exceptions.WorksheetNotFound:
+        if not create:
+            return None
+        ws = doc_sheets.add_worksheet(title=_PM2_SHEET, rows=2000, cols=len(_PM2_COLS))
+    headers = ws._ws.row_values(1) if isinstance(ws, _HojaProxy) else ws.row_values(1)
+    if not headers:
+        if not create:
+            return None
+        ws.append_row(_PM2_COLS, value_input_option="RAW")
+    elif [str(x).strip() for x in headers] != _PM2_COLS:
+        raise ValueError("La estructura de Rutinas_Operativas no coincide. No se modificó la hoja.")
+    return ws
+
+
+def _pm2_fresh(ws):
+    if ws is None:
+        return pd.DataFrame(columns=_PM2_COLS)
+    raw = ws._ws.get_all_records() if isinstance(ws, _HojaProxy) else ws.get_all_records()
+    df = pd.DataFrame(raw)
+    for col in _PM2_COLS:
+        if col not in df.columns:
+            df[col] = ""
+    return df[_PM2_COLS].fillna("")
+
+
+def _pm2_load(force=False):
+    cache = st.session_state.get("_pm2_cache")
+    if not force and isinstance(cache, dict) and time.time() - cache.get("at", 0) < 35:
+        return cache["data"].copy(), None
+    try:
+        df = _pm2_fresh(_pm2_ws(create=False))
+        st.session_state["_pm2_cache"] = {"data": df.copy(), "at": time.time()}
+        return df, None
+    except Exception as exc:
+        print("Premium Market: lectura de rutinas:", type(exc).__name__)
+        # Nunca interpretamos un fallo remoto como ausencia de tareas.
+        return None, "No se pudieron consultar las rutinas en Google Sheets. Revisa la conexión y vuelve a intentarlo."
+
+
+def _pm2_clear_cache():
+    st.session_state.pop("_pm2_cache", None)
+
+
+def _pm2_is_admin():
+    return rol_real == "admin" and not bool(st.session_state.get("ver_como"))
+
+
+def _pm2_validate_time(a, b):
+    if not a or not b:
+        return False
+    try:
+        return datetime.strptime(str(a), "%H:%M") < datetime.strptime(str(b), "%H:%M")
+    except Exception:
+        return False
+
+
+def _pm2_assign(dnis, day, days, title, details, store, zone, start, end, priority, origin="Manual"):
+    """Una escritura por lote, sin filas locales ficticias ni borrado de la hoja."""
+    if not _pm2_is_admin():
+        return False, "Solo un administrador real puede asignar actividades.", 0
+    persons = {p["dni"]: p for p in _pm2_people()}
+    dnis = list(dict.fromkeys(_pm2_dni(d) for d in dnis))
+    if not dnis or any(d not in persons for d in dnis):
+        return False, "Selecciona colaboradores activos válidos.", 0
+    title, details, store, zone = (str(x).strip() for x in (title, details, store, zone))
+    if not title or not details or not store or not zone:
+        return False, "Completa el nombre, instrucciones, tienda y ubicación de la actividad.", 0
+    if len(title) > 120 or len(details) > 1000 or len(store) > 80 or len(zone) > 80:
+        return False, "Alguno de los textos supera el tamaño permitido.", 0
+    if priority not in ("Normal", "Alta", "Urgente") or not _pm2_validate_time(start, end):
+        return False, "Revisa la prioridad y las horas: el límite debe ser posterior a la hora inicial.", 0
+    try:
+        days = int(days)
+        day = day if isinstance(day, date) else datetime.strptime(str(day)[:10], "%Y-%m-%d").date()
+    except (TypeError, ValueError):
+        return False, "La fecha de asignación no es válida.", 0
+    if days < 1 or days > 14 or days * len(dnis) > 120:
+        return False, "El máximo por operación es 14 días y 120 asignaciones.", 0
+    stamp = _pm2_now()
+    new_rows = []
+    try:
+        ws = _pm2_ws(create=True)
+        existing = _pm2_fresh(ws)
+        known = {(_pm2_dni(r.get("dni")), str(r.get("fecha"))[:10],
+                  str(r.get("titulo", "")).strip().casefold(), str(r.get("hora_inicio", "")),
+                  str(r.get("tienda", "")).strip().casefold(), str(r.get("zona", "")).strip().casefold())
+                 for _, r in existing.iterrows() if str(r.get("estado")) != "Cancelada"}
+        for offset in range(days):
+            task_day = (day + timedelta(days=offset)).isoformat()
+            for dni in dnis:
+                key = (dni, task_day, title.casefold(), str(start), store.casefold(), zone.casefold())
+                if key in known:
+                    continue
+                known.add(key)
+                record = {
+                    "id_rutina": "PMR-" + _pm2_uuid.uuid4().hex[:24], "fecha": task_day,
+                    "dni": dni, "nombre": persons[dni]["nombre"], "tienda": store,
+                    "zona": zone, "titulo": title, "instrucciones": details,
+                    "hora_inicio": str(start), "hora_limite": str(end),
+                    "prioridad": priority, "estado": "Pendiente", "observacion": "",
+                    "creado_por": str(user_real), "fecha_creacion": stamp,
+                    "fecha_actualizacion": stamp, "completado_por": "",
+                    "fecha_completado": "", "origen": origin,
+                }
+                new_rows.append([record[c] for c in _PM2_COLS])
+        if new_rows:
+            ws.append_rows(new_rows, value_input_option="RAW")
+        _pm2_clear_cache()
+    except Exception as exc:
+        print("Premium Market: asignación de rutinas:", type(exc).__name__)
+        return False, "No se pudo confirmar la asignación en Google Sheets. Revisa la conexión antes de reintentar.", 0
+    if not new_rows:
+        return True, "Las actividades indicadas ya estaban asignadas; no se crearon duplicados.", 0
+    try:
+        registrar_auditoria("Asignar rutinas", "Rutinas Operativas",
+                            f"{len(new_rows)} actividades para {len(dnis)} colaborador(es) desde {day.isoformat()}")
+    except Exception:
+        pass
+    return True, f"Se guardaron {len(new_rows)} actividades personalizadas.", len(new_rows)
+
+
+def _pm2_remote_row(task_id):
+    ws = _pm2_ws(create=False)
+    if ws is None:
+        raise ValueError("No existe una hoja de rutinas.")
+    values = ws._ws.get_all_values() if isinstance(ws, _HojaProxy) else ws.get_all_values()
+    matches = [(idx, raw) for idx, raw in enumerate(values[1:], start=2)
+               if raw and str(raw[0]) == str(task_id)]
+    if len(matches) != 1:
+        raise ValueError("No se encontró una actividad única con ese identificador.")
+    row_no, raw = matches[0]
+    data = dict(zip(_PM2_COLS, raw + [""] * max(0, len(_PM2_COLS) - len(raw))))
+    return ws, row_no, data
+
+
+def _pm2_update_progress(task_id, new_state, note=""):
+    if bool(st.session_state.get("ver_como")):
+        return False, "La vista previa es de solo lectura; inicia sesión como trabajador para marcar actividades."
+    if new_state not in _PM2_STATES:
+        return False, "Estado no permitido."
+    if not _pm2_is_admin() and new_state not in ("En curso", "Completada"):
+        return False, "Solo administración puede cancelar o reabrir actividades."
+    note = str(note or "").strip()
+    if len(note) > 800:
+        return False, "La observación supera los 800 caracteres."
+    try:
+        ws, row, record = _pm2_remote_row(task_id)
+        if not _pm2_is_admin() and _pm2_dni(record.get("dni")) != _pm2_dni(dni_actual):
+            return False, "No puedes modificar actividades de otro colaborador."
+        if not _pm2_is_admin() and str(record.get("fecha", ""))[:10] > obtener_ahora_peru().strftime("%Y-%m-%d"):
+            return False, "Esta actividad corresponde a una fecha futura. Podrás marcarla el día programado."
+        current = record.get("estado") or "Pendiente"
+        if current == "Cancelada" and not _pm2_is_admin():
+            return False, "Esta actividad está cancelada."
+        if current == "Completada" and not _pm2_is_admin():
+            return False, "Una actividad completada solo puede reabrirla administración."
+        now = _pm2_now()
+        completed_at = now if new_state == "Completada" else ""
+        completed_by = str(user_real) if new_state == "Completada" else ""
+        ws.batch_update([
+            {"range": f"L{row}:M{row}", "values": [[new_state, note]]},
+            {"range": f"P{row}:R{row}", "values": [[now, completed_by, completed_at]]},
+        ], value_input_option="RAW")
+        _pm2_clear_cache()
+    except Exception as exc:
+        print("Premium Market: actualización de rutina:", type(exc).__name__)
+        return False, "No se confirmó el cambio en Google Sheets; el estado anterior se conserva."
+    try:
+        registrar_auditoria("Actualizar actividad", "Rutinas Operativas",
+                            f"{task_id}: {record.get('titulo', '')} → {new_state}")
+    except Exception:
+        pass
+    return True, f"Actividad actualizada: {new_state.lower()}."
+
+
+def _pm2_edit_task(task_id, day, store, zone, title, details, start, end, priority):
+    if not _pm2_is_admin():
+        return False, "Solo administración puede cambiar la programación."
+    title, details, store, zone = (str(x).strip() for x in (title, details, store, zone))
+    if not all((title, details, store, zone)) or not _pm2_validate_time(start, end):
+        return False, "Revisa los textos obligatorios y el orden de las horas."
+    if len(title) > 120 or len(details) > 1000 or len(store) > 80 or len(zone) > 80:
+        return False, "Algún campo supera el tamaño permitido."
+    if priority not in ("Normal", "Alta", "Urgente"):
+        return False, "Prioridad inválida."
+    try:
+        ws, row, record = _pm2_remote_row(task_id)
+        if record.get("estado") in ("Completada", "Cancelada"):
+            return False, "Reabre la actividad antes de modificarla."
+        iso = day.isoformat() if isinstance(day, date) else str(day)[:10]
+        datetime.strptime(iso, "%Y-%m-%d")
+        ws.batch_update([
+            {"range": f"B{row}", "values": [[iso]]},
+            {"range": f"E{row}:K{row}", "values": [[store, zone, title, details, start, end, priority]]},
+            {"range": f"P{row}", "values": [[_pm2_now()]]},
+        ], value_input_option="RAW")
+        _pm2_clear_cache()
+    except Exception as exc:
+        print("Premium Market: edición de rutina:", type(exc).__name__)
+        return False, "No se pudo guardar la modificación en Google Sheets."
+    try:
+        registrar_auditoria("Reprogramar actividad", "Rutinas Operativas", f"{task_id}: {title} / {iso} {start}-{end}")
+    except Exception:
+        pass
+    return True, "Actividad reprogramada correctamente."
+
+
+def _pm2_import_legacy():
+    """Migración explícita del checklist anterior, sin editar ni borrar su origen."""
+    if not _pm2_is_admin():
+        return False, "Solo administración puede importar actividades anteriores.", 0
+    legacy = st.session_state.get("checklist", pd.DataFrame())
+    if not isinstance(legacy, pd.DataFrame) or legacy.empty or "tipo" not in legacy.columns:
+        return True, "No hay rutinas antiguas para importar.", 0
+    old = legacy[legacy["tipo"].astype(str).str.startswith("Rutina Operativa ")]
+    if old.empty:
+        return True, "No hay rutinas antiguas para importar.", 0
+    try:
+        ws = _pm2_ws(create=True)
+        existing = _pm2_fresh(ws)
+        imported = set(existing["origen"].astype(str)) if not existing.empty else set()
+        rows = []
+        for _, r in old.iterrows():
+            legacy_id = str(r.get("id_item", "")).strip()
+            marker = "Checklist:" + legacy_id
+            if not legacy_id or marker in imported:
+                continue
+            task_date = str(r.get("tipo", ""))[len("Rutina Operativa "):][:10]
+            try:
+                datetime.strptime(task_date, "%Y-%m-%d")
+            except ValueError:
+                continue
+            state = "Completada" if str(r.get("estado")) == "Completado" else "Pendiente"
+            rec = {
+                "id_rutina": "PMR-" + _pm2_uuid.uuid4().hex[:24], "fecha": task_date,
+                "dni": _pm2_dni(r.get("dni")), "nombre": str(r.get("nombre", "")),
+                "tienda": "Sin especificar", "zona": "Por definir",
+                "titulo": str(r.get("tarea", "")),
+                "instrucciones": "Actividad importada del checklist anterior; administración debe completar hora y ubicación.",
+                "hora_inicio": "", "hora_limite": "", "prioridad": "Normal", "estado": state,
+                "observacion": "", "creado_por": str(user_real),
+                "fecha_creacion": str(r.get("fecha_creacion", "")),
+                "fecha_actualizacion": _pm2_now(),
+                "completado_por": "" if state != "Completada" else str(r.get("nombre", "")),
+                "fecha_completado": str(r.get("fecha_completado", "")) if state == "Completada" else "",
+                "origen": marker,
+            }
+            rows.append([rec[c] for c in _PM2_COLS])
+            imported.add(marker)
+        for start_index in range(0, len(rows), 100):
+            ws.append_rows(rows[start_index:start_index+100], value_input_option="RAW")
+        _pm2_clear_cache()
+    except Exception as exc:
+        print("Premium Market: importación histórica:", type(exc).__name__)
+        return False, "La importación no pudo confirmarse. Revisa la hoja antes de reintentar; los IDs evitan repetir las filas confirmadas.", 0
+    return True, f"Importadas {len(rows)} actividades anteriores. Los horarios deben ser revisados.", len(rows)
+
+
+def _pm2_state_visual(row):
+    state = str(row.get("estado", "Pendiente"))
+    if state == "Completada":
+        return "Completada", "success"
+    if state == "Cancelada":
+        return "Cancelada", "neutral"
+    if state == "En curso":
+        return "En curso", "info"
+    today = obtener_ahora_peru().strftime("%Y-%m-%d %H:%M")
+    deadline = f"{str(row.get('fecha', ''))[:10]} {str(row.get('hora_limite', ''))}"
+    if len(deadline) == 16 and deadline < today:
+        return "Vencida", "danger"
+    return "Pendiente", "warning"
+
+
+def _pm2_notice(ok, msg):
+    (st.success if ok else st.error)(msg)
+
+
+def _pm2_css():
+    st.markdown("""
+    <style>
+    .pm2-hero{position:relative;overflow:hidden;border:1px solid rgba(255,255,255,.1);border-radius:23px;
+      background:linear-gradient(113deg,#14233d 4%,#263552 58%,#dc3149 150%);padding:24px 27px;color:#fff;margin-bottom:19px;
+      box-shadow:0 17px 38px -26px rgba(14,28,52,.42)}
+    .pm2-hero::after{content:"";position:absolute;right:-25px;top:-90px;width:290px;height:290px;border-radius:50%;
+      background:radial-gradient(circle,rgba(248,92,115,.22),transparent 67%);pointer-events:none}
+    .pm2-hero h2{margin:3px 0 8px!important;color:#fff!important;font-weight:850!important;font-size:clamp(1.32rem,2.6vw,2.1rem)!important;letter-spacing:-.035em}
+    .pm2-hero p{margin:0!important;color:#dbe5f3!important;line-height:1.65!important;font-size:.92rem!important;max-width:740px}
+    .pm2-kicker{font-size:.7rem;font-weight:850;letter-spacing:.15em;color:#ffb3c1}
+    .pm2-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:18px 0}
+    .pm2-stat{padding:18px 18px 16px;background:#fff;border:1px solid #e4eaf2;border-radius:18px;min-width:0;box-shadow:0 6px 21px rgba(26,40,64,.035)}
+    .pm2-stat .k{font-size:.8rem;color:#708099;font-weight:750;line-height:1.4}
+    .pm2-stat b{display:block;font-size:1.85rem;line-height:1.45;font-variant-numeric:tabular-nums;color:#1a2b47;letter-spacing:-.04em}
+    .pm2-stat small{font-size:.73rem;color:#8a96a9}
+    .pm2-staff{background:#fff;border:1px solid #e4eaf2;border-radius:18px;padding:17px;margin-bottom:11px;box-shadow:0 6px 20px rgba(15,35,65,.025)}
+    .pm2-staff-head{display:flex;gap:12px;align-items:center;justify-content:space-between;min-width:0}
+    .pm2-staff-name{font-size:.91rem;color:#23344d;font-weight:830;line-height:1.4;min-width:0;overflow-wrap:anywhere}
+    .pm2-staff-sub{color:#8190a3;font-size:.76rem;margin-top:3px}
+    .pm2-track{height:7px;border-radius:40px;background:#eaf0f4;overflow:hidden;margin-top:12px}
+    .pm2-track i{display:block;height:100%;border-radius:40px;background:linear-gradient(90deg,#1ca77c,#41ca9c)}
+    .pm2-task-info{display:flex;justify-content:space-between;align-items:flex-start;gap:13px;flex-wrap:wrap;margin:1px 0 12px}
+    .pm2-task-title{font-size:1rem;font-weight:840;color:#192c47;line-height:1.45;overflow-wrap:anywhere}
+    .pm2-task-meta{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin:10px 0}
+    .pm2-pill{display:inline-flex;gap:5px;align-items:center;border-radius:999px;padding:6px 10px;border:1px solid #e8edf2;
+      background:#f8fafc;font-size:.73rem;font-weight:740;color:#617086;line-height:1.2;max-width:100%;overflow-wrap:anywhere}
+    .pm2-pill.danger{color:#a72a43;border-color:#f9d4dc;background:#fff0f3}
+    .pm2-pill.success{color:#147856;border-color:#ceefe1;background:#eaf9f1}
+    .pm2-pill.info{color:#2466ad;border-color:#d3e5fa;background:#edf6ff}
+    .pm2-pill.warning{color:#a36a13;border-color:#f6e3b7;background:#fff8e9}
+    .pm2-pill.neutral{color:#738093}
+    .pm2-task-detail{color:#687a92;font-size:.86rem;line-height:1.65;margin:0 0 10px;white-space:pre-wrap;overflow-wrap:anywhere}
+    .pm2-split-title{margin:15px 0 9px;font-size:1.02rem;font-weight:850;color:#1d2d45}
+    .pm2-overline{font-weight:850;letter-spacing:.12em;color:#d7324b;font-size:.69rem;text-transform:uppercase}
+    .st-key-pm_v_rutinas_operativas [data-testid="stVerticalBlockBorderWrapper"],
+    .st-key-pm_v_mis_rutinas [data-testid="stVerticalBlockBorderWrapper"]{min-width:0}
+    .st-key-pm_v_rutinas_operativas [data-testid="stVerticalBlockBorderWrapper"]:has(>div[data-testid="stVerticalBlock"]),
+    .st-key-pm_v_mis_rutinas [data-testid="stVerticalBlockBorderWrapper"]:has(>div[data-testid="stVerticalBlock"]){border-radius:18px}
+    .st-key-pm_v_rutinas_operativas [data-testid="stButton"] button,
+    .st-key-pm_v_mis_rutinas [data-testid="stButton"] button{border-radius:12px!important;min-height:42px!important;font-weight:760!important}
+    .st-key-pm_v_rutinas_operativas [data-testid="stForm"],
+    .st-key-pm_v_mis_rutinas [data-testid="stForm"]{border:1px solid #e4ebf3!important;border-radius:17px!important;background:#fff!important;padding:16px!important}
+    .st-key-pm_v_rutinas_operativas [data-testid="stExpander"],
+    .st-key-pm_v_mis_rutinas [data-testid="stExpander"]{border-color:#e5ebf3!important;border-radius:14px!important}
+    /* Asistencia: reservar márgenes simétricos para hora, concepto y estado */
+    .st-key-pm_v_marcar_asistencia .tp-row{padding:14px 16px!important;gap:16px!important;border:1px solid #e8edf3!important;
+      border-radius:16px!important;display:flex!important;align-items:center!important;min-width:0}
+    .st-key-pm_v_marcar_asistencia .tp-row-time{display:flex;align-items:center;justify-content:center;flex:0 0 70px!important;
+      min-width:70px!important;margin:0!important;padding:0 9px!important;box-sizing:border-box;font-variant-numeric:tabular-nums;font-size:1rem}
+    .st-key-pm_v_marcar_asistencia .tp-row-main{flex:1;min-width:0}
+    .st-key-pm_v_marcar_asistencia .tp-row .tp-chips{flex:none}
+    @media(max-width:900px){.pm2-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:600px){
+      .pm2-hero{padding:22px 19px;border-radius:20px}.pm2-stats{gap:9px}
+      .pm2-stat{padding:12px 13px}.pm2-stat b{font-size:1.55rem}
+      .pm2-staff{padding:13px}.pm2-task-title{font-size:.96rem}
+      .st-key-pm_v_marcar_asistencia .tp-row{gap:11px!important;padding:12px!important}
+      .st-key-pm_v_marcar_asistencia .tp-row-time{flex-basis:57px!important;min-width:57px!important;padding:0 3px!important;font-size:.86rem}
+      .st-key-pm_v_marcar_asistencia .tp-row .tp-chips{max-width:36%}
+    }
+    @media(prefers-reduced-motion:reduce){.pm2-staff,.pm2-stat{transition:none!important}}
+    </style>
+    """, unsafe_allow_html=True)
+
+
+def _pm2_metrics(data, personal=False):
+    total = len(data)
+    done = int((data["estado"].astype(str) == "Completada").sum()) if total else 0
+    active = int((data["estado"].astype(str) == "En curso").sum()) if total else 0
+    canceled = int((data["estado"].astype(str) == "Cancelada").sum()) if total else 0
+    pending = total - done - canceled
+    people = data["dni"].astype(str).nunique() if total else 0
+    pct = round(done * 100 / max(1, total - canceled))
+    first_card = ("Mis actividades", total - canceled, "Actividades asignadas") if personal else ("Colaboradores", people, "Con asignaciones")
+    cards = [first_card, ("Finalizadas", done, "Tareas completadas"),
+             ("Pendientes", pending, f"{active} en curso"), ("Cumplimiento", f"{pct}%", "Excluye canceladas")]
+    html = '<div class="pm2-stats">'
+    for label, value, sub in cards:
+        html += (f'<article class="pm2-stat"><div class="k">{_html.escape(str(label))}</div><b>{_html.escape(str(value))}</b>'
+                 f'<small>{_html.escape(str(sub))}</small></article>')
+    st.markdown(html + "</div>", unsafe_allow_html=True)
+
+
+def _pm2_task_summary_html(row, show_worker=False):
+    esc = _html.escape
+    status_label, tone = _pm2_state_visual(row)
+    meta = (
+        ("Fecha", str(row.get("fecha", ""))),
+        ("Horario", (str(row.get("hora_inicio", "")) + " – " + str(row.get("hora_limite", "")))
+         if str(row.get("hora_inicio", "")) and str(row.get("hora_limite", "")) else "Por definir"),
+        ("Tienda", str(row.get("tienda", ""))),
+        ("Lugar", str(row.get("zona", ""))),
+        ("Prioridad", str(row.get("prioridad", "Normal"))),
+    )
+    head = f'<div class="pm2-task-info"><div><div class="pm2-task-title">{esc(str(row.get("titulo", "")))}</div>'
+    if show_worker:
+        head += f'<div style="font-size:.77rem;color:#7b8aa0;margin-top:3px">Asignada a {esc(str(row.get("nombre", "")))}</div>'
+    head += f'</div><span class="pm2-pill {tone}">{esc(status_label)}</span></div>'
+    tags = '<div class="pm2-task-meta">' + ''.join(
+        f'<span class="pm2-pill">{esc(label)}: {esc(value)}</span>' for label, value in meta
+    ) + '</div>'
+    note = f'<p class="pm2-task-detail">{esc(str(row.get("instrucciones", "")))}</p>'
+    comment = (f'<p class="pm2-task-detail"><b>Comentario:</b> {esc(str(row.get("observacion", "")))}</p>'
+               if str(row.get("observacion", "")).strip() else "")
+    return head + tags + note + comment
+
+
+def _pm2_legacy_count():
+    df = st.session_state.get("checklist", pd.DataFrame())
+    if not isinstance(df, pd.DataFrame) or df.empty or "tipo" not in df.columns:
+        return 0
+    return int(df["tipo"].astype(str).str.startswith("Rutina Operativa ").sum())
+
+
 if rol_actual == "admin":
     # El asistente ahora se abre desde un botón flotante; no ocupa espacio en el menú.
     # Estilo uniforme para paneles de operación: conserva lógica y menú original.
     menu = ["Dashboard General", "Centro de Alertas", "Rutinas Operativas", "Analítica (BI)", "Gestión Colaboradores", "Onboarding / Offboarding", "Gestión de Vacaciones", "Programación de Turnos", "Boletas de Pago", "Solicitudes y Permisos", "Historial de Descuadres", "Incidencias y Daños", "Botellas Fiadas", "Historial de Asistencias", "Auditoría y Configuración"]
 else:
-    menu = ["Marcar Asistencia", "Registrar Descuadre", "Registrar Incidencia", "Botellas Fiadas", "Mi Ficha Técnica", "Mis Vacaciones", "Mis Boletas", "Solicitar Permiso / Adelanto", "Mi Dashboard Mensual"]
+    menu = ["Mis Rutinas", "Marcar Asistencia", "Registrar Descuadre", "Registrar Incidencia", "Botellas Fiadas", "Mi Ficha Técnica", "Mis Vacaciones", "Mis Boletas", "Solicitar Permiso / Adelanto", "Mi Dashboard Mensual"]
 
 if rol_real == "admin":
     _opc_vc = ["Mi vista (admin)"] + sorted(n for n, d in USUARIOS.items() if d["rol"] != "admin")
@@ -6053,7 +6519,7 @@ _PM_NAV_KIND = {
     "Gestión de Vacaciones":"calendar", "Programación de Turnos":"calendar", "Boletas de Pago":"file",
     "Solicitudes y Permisos":"inbox", "Historial de Descuadres":"cash", "Incidencias y Daños":"alert",
     "Botellas Fiadas":"bottle", "Historial de Asistencias":"history", "Auditoría y Configuración":"settings",
-    "Marcar Asistencia":"fingerprint", "Registrar Descuadre":"cash", "Registrar Incidencia":"alert",
+    "Mis Rutinas":"list", "Marcar Asistencia":"fingerprint", "Registrar Descuadre":"cash", "Registrar Incidencia":"alert",
     "Mi Ficha Técnica":"user", "Mis Vacaciones":"calendar", "Mis Boletas":"file",
     "Solicitar Permiso / Adelanto":"inbox", "Mi Dashboard Mensual":"chart",
 }
@@ -6069,8 +6535,8 @@ if rol_actual == "admin":
     _nav_items = [("Dashboard General", "Resumen", ":material/dashboard:"), ("Centro de Alertas", "Alertas", ":material/notifications:"),
                   ("Rutinas Operativas", "Rutinas", ":material/fact_check:"), ("Solicitudes y Permisos", "Solicitudes", ":material/inbox:")]
 else:
-    _nav_items = [("Marcar Asistencia", "Marcar", ":material/fingerprint:"), ("Mi Dashboard Mensual", "Mi mes", ":material/calendar_month:"),
-                  ("Solicitar Permiso / Adelanto", "Permisos", ":material/edit_note:"), ("Mi Ficha Técnica", "Ficha", ":material/badge:")]
+    _nav_items = [("Mis Rutinas", "Rutinas", ":material/fact_check:"), ("Marcar Asistencia", "Marcar", ":material/fingerprint:"),
+                  ("Solicitar Permiso / Adelanto", "Permisos", ":material/edit_note:"), ("Mi Dashboard Mensual", "Mi mes", ":material/calendar_month:")]
 try:
     with st.container(key="tp_bottomnav"):
         for _col, (_dest, _lbl, _ico) in zip(st.columns(len(_nav_items)), _nav_items):
@@ -6565,12 +7031,12 @@ PM7_MODULES = {
     'Onboarding / Offboarding': 'person_add',
     'Auditoría y Configuración': 'settings',
 }
-PM7_MODULES.update({'Rutinas Operativas': 'fact_check'})
+PM7_MODULES.update({'Rutinas Operativas': 'fact_check', 'Mis Rutinas': 'fact_check'})
 
 
 
 PM8_VIEW_DETAILS = {'Marcar Asistencia': ('Registro de jornada', 'Tus marcaciones se guardan al confirmar la operación.', 'personal'), 'Registrar Descuadre': ('Control de caja', 'Revisa el importe y la observación antes de registrar.', 'finanzas'), 'Registrar Incidencia': ('Registro operativo', 'Describe el hecho y verifica los datos del registro.', 'control'), 'Mi Ficha Técnica': ('Expediente personal', 'Información laboral y de contacto registrada.', 'personal'), 'Solicitar Permiso / Adelanto': ('Nueva solicitud', 'Completa los datos y revisa el estado de tus solicitudes.', 'personal'), 'Mis Boletas': ('Documentos personales', 'Consulta los documentos disponibles en tu historial.', 'personal'), 'Mi Dashboard Mensual': ('Resumen de mi mes', 'Consulta tus registros y resultados del periodo.', 'analitica'), 'Dashboard General': ('Centro de operaciones', 'Indicadores y asistencia para seguimiento diario.', 'analitica'), 'Gestión Colaboradores': ('Directorio de personal', 'Consulta, filtra y administra las fichas del equipo.', 'personal'), 'Boletas de Pago': ('Gestión documental', 'Consulta y administra los documentos de nómina.', 'finanzas'), 'Programación de Turnos': ('Planificación operativa', 'Organiza y revisa los horarios del equipo.', 'operaciones'), 'Solicitudes y Permisos': ('Bandeja de solicitudes', 'Revisa solicitudes y registra decisiones.', 'operaciones'), 'Historial de Descuadres': ('Auditoría de caja', 'Filtra movimientos y consulta el detalle de las diferencias.', 'finanzas'), 'Incidencias y Daños': ('Seguimiento de incidencias', 'Consulta y gestiona el estado de los casos.', 'control'), 'Botellas Fiadas': ('Préstamos y devoluciones', 'Consulta saldos pendientes y registros de devolución.', 'operaciones'), 'Historial de Asistencias': ('Control de asistencia', 'Consulta marcaciones y trazabilidad de jornadas.', 'personal'), 'Centro de Alertas': ('Prioridades del día', 'Revisa los pendientes que necesitan atención.', 'control'), 'Gestión de Vacaciones': ('Control de descansos', 'Consulta periodos, saldos y solicitudes registradas.', 'personal'), 'Mis Vacaciones': ('Mis descansos', 'Consulta tus periodos registrados.', 'personal'), 'Analítica (BI)': ('Inteligencia de negocio', 'Explora tendencias y reportes operativos.', 'analitica'), 'Onboarding / Offboarding': ('Ciclo de vida laboral', 'Gestiona altas, bajas y tareas asociadas.', 'personal'), 'Auditoría y Configuración': ('Administración del sistema', 'Consulta la trazabilidad y configuración autorizada.', 'control')}
-PM8_VIEW_DETAILS.update({'Rutinas Operativas': ('Ejecución diaria', 'Checklists, evidencias y seguimiento de apertura, operación y cierre.', 'operaciones'), })
+PM8_VIEW_DETAILS.update({'Rutinas Operativas': ('Asignación personalizada', 'Actividades programadas con persona, lugar y horario.', 'operaciones'), 'Mis Rutinas': ('Mi trabajo del día', 'Actividades pendientes y completadas con instrucciones.', 'personal')})
 
 
 def premium_module_context(titulo):
@@ -6798,6 +7264,74 @@ if choice == "Marcar Asistencia":
                     st.info("No hay marcaciones registradas la jornada de hoy.")
             else:
                 st.info("No hay marcaciones registradas la jornada de hoy.")
+
+elif choice == "Mis Rutinas":
+    premium_module_shell("Mis Rutinas", "MI OPERACIÓN", "Tus actividades asignadas con fecha, hora, lugar e instrucciones claras.")
+    with st.container(key="pm_v_mis_rutinas"):
+        _pm2_css()
+        first_name = _html.escape(str(user_actual).split()[0] if user_actual else "equipo")
+        st.markdown(
+            '<section class="pm2-hero"><div class="pm2-kicker">PREMIUM MARKET · MI JORNADA</div>'
+            f'<h2>{first_name}, tu trabajo organizado en un solo lugar.</h2>'
+            '<p>Consulta lo que tienes asignado, revisa el horario y la ubicación, y registra el progreso de cada actividad desde tu celular.</p>'
+            '</section>', unsafe_allow_html=True,
+        )
+        data, err = _pm2_load()
+        if err:
+            st.error(err)
+        elif data is not None:
+            own = data[data["dni"].astype(str).map(_pm2_dni) == _pm2_dni(dni_actual)].copy()
+            today = obtener_ahora_peru().date().isoformat()
+            cfilter, crefresh = st.columns([2, .8], vertical_alignment="bottom")
+            with cfilter:
+                scope = st.selectbox("Ver actividades", ["Hoy", "Próximos 7 días", "Historial completo"], key="pm2_worker_scope")
+            with crefresh:
+                if st.button("Actualizar", key="pm2_worker_refresh", use_container_width=True):
+                    _pm2_clear_cache()
+                    st.rerun()
+            if scope == "Hoy":
+                own = own[own["fecha"].astype(str) == today]
+            elif scope == "Próximos 7 días":
+                end_day = (obtener_ahora_peru().date() + timedelta(days=7)).isoformat()
+                own = own[(own["fecha"].astype(str) >= today) & (own["fecha"].astype(str) <= end_day)]
+            _pm2_metrics(own, personal=True)
+            if own.empty:
+                st.markdown('<div class="pm2-staff"><div class="pm2-task-title">No tienes actividades asignadas en este periodo.</div>'
+                            '<p class="pm2-task-detail" style="margin-top:8px">Tu administrador puede asignarte rutinas desde el módulo de gestión. '
+                            'Cuando se publiquen aparecerán aquí.</p></div>', unsafe_allow_html=True)
+            else:
+                tasks_sorted = own.sort_values(["fecha", "hora_inicio", "titulo"], ascending=True)
+                st.markdown('<div class="pm2-split-title">Mi lista de actividades</div>', unsafe_allow_html=True)
+                for _, task in tasks_sorted.iterrows():
+                    task_id = str(task["id_rutina"])
+                    current_state = str(task.get("estado", "Pendiente"))
+                    with st.container(border=True, key="pm2_worker_task_" + task_id):
+                        st.markdown(_pm2_task_summary_html(task), unsafe_allow_html=True)
+                        if current_state in ("Pendiente", "En curso"):
+                            if st.session_state.get("ver_como"):
+                                st.caption("Vista previa de administración: no puedes registrar cambios desde aquí.")
+                            else:
+                                if current_state == "Pendiente":
+                                    if st.button("Comenzar actividad", key="pm2_start_task_" + task_id, use_container_width=True):
+                                        ok, msg = _pm2_update_progress(task_id, "En curso", str(task.get("observacion", "")))
+                                        _pm2_notice(ok, msg)
+                                        if ok:
+                                            st.rerun()
+                                with st.form("pm2_complete_" + task_id):
+                                    note = st.text_area("Comentario o novedad", value=str(task.get("observacion", "")), max_chars=800,
+                                                        placeholder="Si encontraste alguna incidencia, escríbela aquí.", key="pm2_note_" + task_id)
+                                    clicked = st.form_submit_button("Marcar como completada", type="primary", use_container_width=True)
+                                if clicked:
+                                    ok, msg = _pm2_update_progress(task_id, "Completada", note)
+                                    _pm2_notice(ok, msg)
+                                    if ok:
+                                        st.rerun()
+                        elif current_state == "Completada":
+                            finished = str(task.get("fecha_completado", ""))
+                            st.success("Actividad completada" + (f" el {finished}" if finished else "."))
+                        else:
+                            st.caption("Esta actividad fue cancelada por administración.")
+
 
 elif choice == "Registrar Descuadre":
     premium_module_shell('Registrar Descuadre', 'CAJA', 'Reporta diferencias de caja de forma segura.')
@@ -7225,12 +7759,6 @@ elif choice == "Mi Dashboard Mensual":
             "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
         ]
 
-        st.markdown(f"""
-            <div class="market-header">
-                <h1>Rendimiento Mensual</h1>
-                <p>Resumen del período seleccionado para <b>{user_actual}</b></p>
-            </div>
-        """, unsafe_allow_html=True)
 
         col_mes_dash, col_anio_dash = st.columns(2)
         mes_dash_sel = col_mes_dash.selectbox(
@@ -9904,113 +10432,186 @@ elif choice == "Auditoría y Configuración":
 
 elif choice == "Rutinas Operativas":
     premium_module_shell(
-        "Rutinas Operativas", "OPERACIÓN DIARIA",
-        "Apertura, atención y cierre: una operación consistente en cada turno.",
+        "Rutinas Operativas", "GESTIÓN OPERATIVA",
+        "Asigna actividades personalizadas, define horarios y supervisa el cumplimiento por colaborador.",
     )
     with st.container(key="pm_v_rutinas_operativas"):
-        with st.container(key="pm_rut_filter_bar"):
-            fcol, pcol, bcol = st.columns([1, 1.4, 1.15], vertical_alignment="bottom", gap="medium")
-            with fcol:
-                fecha_rut = st.date_input("Fecha operativa", obtener_ahora_peru().date(), key="pm_rut_fecha")
-            with pcol:
-                personas_rut = _pm_programados(fecha_rut)
-                filtro_rut = ["Todos"] + [p["nombre"] for p in personas_rut]
-                nombre_rut = st.selectbox("Colaborador", filtro_rut, key="pm_rut_colab")
-            with bcol:
-                if st.button("Generar rutinas del día", key="pm_rut_gen", type="primary", use_container_width=True,
-                             disabled=bool(st.session_state.get("ver_como"))):
-                    n_tareas, n_personas = _pm_generar_rutinas_operativas(fecha_rut)
-                    error_guardado = st.session_state.get("_pm_rut_last_error", "")
-                    if error_guardado:
-                        st.error(error_guardado)
-                    elif n_tareas:
-                        st.success(f"Se guardaron {n_tareas} tareas para {n_personas} colaboradores.")
-                    else:
-                        st.info("Ya hay rutinas asignadas para esta fecha.")
-        df_rut = _pm_rutinas_df(fecha_rut)
-        if df_rut.empty:
-            st.markdown(
-                '<div class="pm-up-empty pm-up-empty-page"><div class="pm-up-empty-icon">✓</div>'
-                '<strong>Prepara las rutinas del equipo</strong><p>Selecciona la fecha y pulsa «Generar rutinas del día». '
-                'Las actividades quedarán vinculadas al checklist de cada colaborador.</p></div>',
-                unsafe_allow_html=True,
-            )
-        else:
-            if nombre_rut != "Todos":
-                df_rut = df_rut[df_rut["nombre"].astype(str) == nombre_rut].copy()
-            total_r = len(df_rut)
-            complete_r = int((df_rut["estado"].astype(str) == "Completado").sum()) if total_r else 0
-            pending_r = total_r - complete_r
-            people_r = df_rut["dni"].astype(str).nunique() if total_r else 0
-            percentage_r = round(complete_r * 100 / total_r) if total_r else 0
-            metrics_r = [
-                ("Colaboradores", people_r, "Con rutinas asignadas", "blue"),
-                ("Completadas", complete_r, f"De {total_r} actividades", "green"),
-                ("Pendientes", pending_r, "Por completar", "orange"),
-                ("Cumplimiento", f"{percentage_r}%", "Avance operativo", "rose"),
-            ]
-            _metric_cards = '<div class="pm-up-kpi-grid">'
-            for _name, _val, _hint, _tone in metrics_r:
-                _metric_cards += (f'<article class="pm-up-kpi"><div class="pm-up-kpi-top"><span>{_html.escape(str(_name))}</span>'
-                                  f'<i class="pm-up-dot {_tone}"></i></div><strong>{_html.escape(str(_val))}</strong>'
-                                  f'<small>{_html.escape(str(_hint))}</small></article>')
-            st.markdown(_metric_cards + '</div>', unsafe_allow_html=True)
+        _pm2_css()
+        st.markdown(
+            '<section class="pm2-hero"><div class="pm2-kicker">PREMIUM MARKET · CONTROL OPERATIVO</div>'
+            '<h2>Una rutina para cada persona y cada momento.</h2>'
+            '<p>Organiza las tareas de tus tiendas, define quién debe realizarlas, a qué hora y en qué lugar. '
+            'Tu equipo verá únicamente las actividades que le corresponden.</p></section>',
+            unsafe_allow_html=True,
+        )
+        t_monitor, t_create, t_library = st.tabs(["Seguimiento", "Asignar actividades", "Biblioteca e historial"])
 
-            rcol, dcol = st.columns([1, 1.18], gap="large")
-            with rcol:
-                with st.container(key="pm_rut_summary_card"):
-                    st.markdown(
-                        '<div class="pm-up-card-heading"><div><span class="pm-up-overline">SEGUIMIENTO</span>'
-                        '<h3>Avance por colaborador</h3><p>Cumplimiento de las actividades asignadas.</p>'
-                        '</div></div>', unsafe_allow_html=True,
-                    )
-                    summary_html = '<div class="pm-up-staff-list">'
-                    for name_r, g in sorted(df_rut.groupby("nombre"), key=lambda x: str(x[0])):
-                        n_done = int((g["estado"].astype(str) == "Completado").sum())
-                        n_all = len(g)
-                        share = round(n_done * 100 / n_all) if n_all else 0
-                        dni_r = str(g.iloc[0].get("dni", ""))
-                        summary_html += (
-                            '<div class="pm-up-staff-row">'
-                            f'{ui_avatar(name_r, dni_r, "", 42)}'
-                            f'<div class="pm-up-staff-copy"><strong>{_html.escape(str(name_r))}</strong>'
-                            f'<span>{n_done} de {n_all} tareas</span>'
-                            f'<div class="pm-up-progress-track"><span style="width:{share}%"></span></div></div>'
-                            f'<em>{share}%</em></div>'
-                        )
-                    st.markdown(summary_html + '</div>', unsafe_allow_html=True)
-            with dcol:
-                with st.container(key="pm_rut_details_card"):
-                    st.markdown(
-                        '<div class="pm-up-card-heading"><div><span class="pm-up-overline">CHECKLIST</span>'
-                        '<h3>Detalle de actividades</h3><p>Marca el avance cuando una tarea esté terminada.</p>'
-                        '</div></div>', unsafe_allow_html=True,
-                    )
-                    if df_rut.empty:
-                        st.caption("No hay tareas con este filtro.")
-                    for name_r, g in df_rut.groupby("nombre"):
-                        st.markdown(f'<div class="pm-up-person-heading">{_html.escape(str(name_r))}</div>', unsafe_allow_html=True)
-                        for _, task in g.iterrows():
-                            task_id = str(task.get("id_item", ""))
-                            done = str(task.get("estado", "")) == "Completado"
-                            widget_key = f"pm_rut_{task_id}"
-                            if widget_key in st.session_state and bool(st.session_state[widget_key]) != done:
-                                st.session_state[widget_key] = done
-                            with st.container(key=f"pm_rut_task_{task_id}"):
-                                tick, body = st.columns([.12, .88], gap="small", vertical_alignment="center")
-                                with tick:
-                                    st.checkbox(
-                                        "", value=done, key=widget_key, label_visibility="collapsed",
-                                        disabled=bool(st.session_state.get("ver_como")),
-                                        on_change=_pm_on_rutina_change,
-                                        args=(widget_key, task_id, done, name_r),
-                                    )
-                                with body:
-                                    st.markdown(
-                                        f'<div class="pm-up-task-copy"><strong>{_html.escape(str(task.get("tarea", "")))}</strong>'
-                                        f'<span>{"Completada" if done else "Pendiente"}</span></div>',
-                                        unsafe_allow_html=True,
-                                    )
+        with t_monitor:
+            st.markdown('<div class="pm2-split-title">Control diario</div>', unsafe_allow_html=True)
+            cf, cp, cs, cr = st.columns([1.1, 1.4, 1.05, .8], vertical_alignment="bottom", gap="small")
+            with cf:
+                monitor_date = st.date_input("Fecha", value=obtener_ahora_peru().date(), key="pm2_monitor_date")
+            workers = _pm2_people()
+            people_choices = ["Todos"] + [p["nombre"] + " · " + p["dni"][-4:] for p in workers]
+            map_people = {p["nombre"] + " · " + p["dni"][-4:]: p["dni"] for p in workers}
+            with cp:
+                selected_worker = st.selectbox("Colaborador", people_choices, key="pm2_monitor_worker")
+            with cs:
+                selected_state = st.selectbox("Estado", ["Todos", "Pendiente", "En curso", "Completada", "Cancelada", "Vencida"], key="pm2_monitor_status")
+            with cr:
+                if st.button("Actualizar", key="pm2_admin_refresh", use_container_width=True):
+                    _pm2_clear_cache()
+                    st.rerun()
+            data, err = _pm2_load()
+            if err:
+                st.error(err)
+            elif data is not None:
+                df_day = data[data["fecha"].astype(str) == monitor_date.isoformat()].copy()
+                if selected_worker != "Todos":
+                    df_day = df_day[df_day["dni"].astype(str).map(_pm2_dni) == map_people[selected_worker]].copy()
+                if selected_state != "Todos":
+                    if selected_state == "Vencida":
+                        df_day = df_day[df_day.apply(lambda x: _pm2_state_visual(x)[0] == "Vencida", axis=1)]
+                    else:
+                        df_day = df_day[df_day["estado"].astype(str) == selected_state]
+                _pm2_metrics(df_day)
+                if df_day.empty:
+                    st.info("No hay actividades con estos filtros. Puedes crearlas en «Asignar actividades».")
+                else:
+                    c_staff, c_list = st.columns([.88, 1.5], gap="large")
+                    with c_staff:
+                        st.markdown('<div class="pm2-split-title">Avance por colaborador</div>', unsafe_allow_html=True)
+                        for worker_name, group in df_day.groupby("nombre", sort=True):
+                            active_group = group[group["estado"].astype(str) != "Cancelada"]
+                            done_g = int((active_group["estado"].astype(str) == "Completada").sum())
+                            total_g = len(active_group)
+                            pct = round(done_g * 100 / max(total_g, 1))
+                            dni_g = _pm2_dni(group.iloc[0]["dni"])
+                            html = (
+                                '<div class="pm2-staff"><div class="pm2-staff-head">'
+                                f'{ui_avatar(str(worker_name), dni_g, "", 43)}'
+                                '<div style="flex:1;min-width:0">'
+                                f'<div class="pm2-staff-name">{_html.escape(str(worker_name))}</div>'
+                                f'<div class="pm2-staff-sub">{done_g} de {total_g} actividades</div></div>'
+                                f'<span class="pm2-pill">{pct}%</span></div>'
+                                f'<div class="pm2-track"><i style="width:{pct}%"></i></div></div>'
+                            )
+                            st.markdown(html, unsafe_allow_html=True)
+                    with c_list:
+                        st.markdown('<div class="pm2-split-title">Actividades programadas</div>', unsafe_allow_html=True)
+                        df_day = df_day.sort_values(["hora_inicio", "nombre", "titulo"])
+                        for _, task in df_day.iterrows():
+                            task_id = str(task["id_rutina"])
+                            with st.container(border=True, key="pm2_admin_" + task_id):
+                                st.markdown(_pm2_task_summary_html(task, show_worker=True), unsafe_allow_html=True)
+                                current = str(task["estado"])
+                                if current != "Cancelada":
+                                    with st.expander("Editar horario, ubicación o instrucciones", expanded=False):
+                                        with st.form("pm2_edit_form_" + task_id):
+                                            edate = st.date_input("Fecha", value=datetime.strptime(str(task["fecha"])[:10], "%Y-%m-%d").date(), key="pm2_edate_" + task_id)
+                                            etitle = st.text_input("Actividad", value=str(task["titulo"]), max_chars=120, key="pm2_etitle_" + task_id)
+                                            edesc = st.text_area("Instrucciones", value=str(task["instrucciones"]), max_chars=1000, key="pm2_edesc_" + task_id)
+                                            c_st, c_zo = st.columns(2)
+                                            estore = c_st.text_input("Tienda", value=str(task["tienda"]), key="pm2_estore_" + task_id)
+                                            ezone = c_zo.text_input("Ubicación", value=str(task["zona"]), key="pm2_ezone_" + task_id)
+                                            ct1, ct2, ct3 = st.columns(3)
+                                            def _t(value, fallback):
+                                                try:
+                                                    return datetime.strptime(str(value), "%H:%M").time()
+                                                except Exception:
+                                                    return dt_time(*fallback)
+                                            ebegin = ct1.time_input("Desde", value=_t(task["hora_inicio"], (8, 45)), key="pm2_ebegin_" + task_id)
+                                            eend = ct2.time_input("Hasta", value=_t(task["hora_limite"], (9, 30)), key="pm2_eend_" + task_id)
+                                            epri = ct3.selectbox("Prioridad", ["Normal", "Alta", "Urgente"], index=["Normal", "Alta", "Urgente"].index(str(task["prioridad"])) if str(task["prioridad"]) in ("Normal", "Alta", "Urgente") else 0, key="pm2_epri_" + task_id)
+                                            edit_submitted = st.form_submit_button("Guardar cambios", use_container_width=True)
+                                        if edit_submitted:
+                                            ok, msg = _pm2_edit_task(task_id, edate, estore, ezone, etitle, edesc, ebegin.strftime("%H:%M"), eend.strftime("%H:%M"), epri)
+                                            _pm2_notice(ok, msg)
+                                            if ok:
+                                                st.rerun()
+                                if current not in ("Completada", "Cancelada"):
+                                    if st.button("Cancelar actividad", key="pm2_cancel_" + task_id, use_container_width=True):
+                                        ok, msg = _pm2_update_progress(task_id, "Cancelada", str(task.get("observacion", "")))
+                                        _pm2_notice(ok, msg)
+                                        if ok:
+                                            st.rerun()
+                                elif current in ("Cancelada", "Completada"):
+                                    if st.button("Reabrir actividad", key="pm2_reopen_" + task_id, use_container_width=True):
+                                        ok, msg = _pm2_update_progress(task_id, "Pendiente", str(task.get("observacion", "")))
+                                        _pm2_notice(ok, msg)
+                                        if ok:
+                                            st.rerun()
+
+        with t_create:
+            st.markdown('<div class="pm2-split-title">Nueva asignación personalizada</div>', unsafe_allow_html=True)
+            st.caption("Puedes asignar una actividad diferente a cada trabajador, reutilizar un ejemplo y repetirla varios días. Todas las fechas y horas son de Perú.")
+            active_people = _pm2_people()
+            label_to_person = {p["nombre"] + " · " + p["dni"][-4:] + " · " + p["cargo"]: p for p in active_people}
+            if not active_people:
+                st.warning("No hay colaboradores operativos activos para asignar actividades.")
+            template_selected = st.selectbox("Empezar desde", list(_PM2_TEMPLATES), key="pm2_template_choice")
+            preset = _PM2_TEMPLATES[template_selected]
+            with st.form("pm2_new_assignment", clear_on_submit=False):
+                assigned_labels = st.multiselect("¿Quién realizará esta actividad?", list(label_to_person),
+                                                 placeholder="Selecciona uno o varios colaboradores", key="pm2_assignees")
+                ct1, ct2 = st.columns([1.4, 1])
+                day = ct1.date_input("Fecha programada", value=obtener_ahora_peru().date(), key="pm2_ass_date")
+                repetition = ct2.selectbox("Frecuencia", ["Una sola fecha", "Repetir diariamente"], key="pm2_repeat")
+                repeat_days = st.number_input("Cantidad de días (máx. 14)", min_value=1, max_value=14, value=1, step=1, key="pm2_repeat_days") if repetition == "Repetir diariamente" else 1
+                title = st.text_input("Título de la actividad", value=preset[0], max_chars=120,
+                                      placeholder="Ej. Revisar fechas de vencimiento en lácteos", key="pm2_title_" + str(list(_PM2_TEMPLATES).index(template_selected)))
+                details = st.text_area("Instrucciones para el colaborador", value=preset[1], max_chars=1000,
+                                       placeholder="Describe claramente qué debe revisar y cómo reportar novedades.", key="pm2_details_" + str(list(_PM2_TEMPLATES).index(template_selected)))
+                store_col, area_col = st.columns(2)
+                store = store_col.text_input("Tienda / sede", value="Premium Market", key="pm2_store")
+                zone = area_col.text_input("Lugar exacto", value=preset[2], placeholder="Ej. Refrigeradora del fondo", key="pm2_area_" + str(list(_PM2_TEMPLATES).index(template_selected)))
+                start_col, end_col, pri_col = st.columns(3)
+                start_time = start_col.time_input("Inicia a las", value=dt_time(8, 45), key="pm2_start")
+                due_time = end_col.time_input("Debe finalizar a las", value=dt_time(9, 30), key="pm2_due")
+                priority = pri_col.selectbox("Prioridad", ["Normal", "Alta", "Urgente"], index=["Normal", "Alta", "Urgente"].index(preset[4]), key="pm2_priority_" + str(list(_PM2_TEMPLATES).index(template_selected)))
+                submitted = st.form_submit_button("Asignar actividad al equipo", type="primary", use_container_width=True)
+            if submitted:
+                ok, msg, added = _pm2_assign([label_to_person[l]["dni"] for l in assigned_labels], day, repeat_days,
+                                             title, details, store, zone, start_time.strftime("%H:%M"), due_time.strftime("%H:%M"), priority,
+                                             "Plantilla: " + template_selected if template_selected != "Personalizada · desde cero" else "Manual")
+                _pm2_notice(ok, msg)
+                if ok and added:
+                    st.caption("Las nuevas actividades ya están disponibles para los colaboradores asignados en «Mis Rutinas».")
+            st.info("Consejo: para asignar tareas diferentes a cada persona, selecciona un trabajador y crea una actividad por vez. Usa «Empezar desde» para reutilizar una plantilla sin volver a escribir todo.")
+
+        with t_library:
+            st.markdown('<div class="pm2-split-title">Biblioteca de actividades</div>', unsafe_allow_html=True)
+            st.caption("Ideas reutilizables para apertura, reposición, limpieza, frío y cierre. Puedes cambiar el texto y crear tareas completamente nuevas.")
+            for name, tpl in _PM2_TEMPLATES.items():
+                if name.startswith("Personalizada"):
+                    continue
+                with st.expander(name):
+                    st.markdown(f"**Qué hacer:** {tpl[0]}")
+                    st.write(tpl[1])
+                    st.caption(f"Lugar sugerido: {tpl[2]} · Prioridad: {tpl[4]}")
+            st.divider()
+            st.markdown('<div class="pm2-split-title">Registro histórico</div>', unsafe_allow_html=True)
+            history, err_history = _pm2_load()
+            if err_history:
+                st.error(err_history)
+            elif history is not None and not history.empty:
+                columns_h = ["fecha", "nombre", "titulo", "tienda", "zona", "hora_inicio", "hora_limite", "prioridad", "estado"]
+                st.dataframe(history.sort_values("fecha", ascending=False)[columns_h].head(300),
+                             use_container_width=True, hide_index=True)
+                st.download_button("Exportar rutinas a CSV", history.to_csv(index=False).encode("utf-8-sig"),
+                                   file_name="rutinas_premium_market.csv", mime="text/csv", use_container_width=True)
+            else:
+                st.info("Aún no hay registros históricos en la nueva hoja de rutinas.")
+            count_old = _pm2_legacy_count()
+            if count_old:
+                st.markdown('<div class="pm2-split-title">Compatibilidad con rutinas anteriores</div>', unsafe_allow_html=True)
+                st.warning(f"Se encontraron {count_old} actividades del checklist antiguo. Puedes importarlas sin borrar sus registros de origen. Las actividades históricas no tenían horarios ni ubicaciones definidos.")
+                if st.button("Importar actividades anteriores", key="pm2_import_old"):
+                    ok, msg, count = _pm2_import_legacy()
+                    _pm2_notice(ok, msg)
+                    if ok and count:
+                        st.rerun()
+
 
 # --- PIE DE PÁGINA (FOOTER ESTILO WEB/APP) ---
 st.markdown("""
