@@ -10566,13 +10566,6 @@ elif choice == "Rutinas Operativas":
     )
     with st.container(key="pm_v_rutinas_operativas"):
         _pm2_css()
-        st.markdown(
-            '<section class="pm2-hero"><div class="pm2-kicker">PREMIUM MARKET · CONTROL OPERATIVO</div>'
-            '<h2>Una rutina para cada persona y cada momento.</h2>'
-            '<p>Organiza las tareas de tus tiendas, define quién debe realizarlas, a qué hora y en qué lugar. '
-            'Tu equipo verá únicamente las actividades que le corresponden.</p></section>',
-            unsafe_allow_html=True,
-        )
         t_monitor, t_create, t_library = st.tabs(["Seguimiento", "Asignar actividades", "Biblioteca e historial"])
 
         with t_monitor:
