@@ -6959,6 +6959,13 @@ _PM_MOBILE_EXPERIENCE_CSS = """
   .stApp:not(:has(.st-key-pm_auth_page)) .st-key-pm_mobile_employee_home [data-testid="stButton"] button{min-height:47px!important;}
   /* El saludo anterior se reemplaza sólo en móvil; sus controles siguen intactos. */
   .stApp:not(:has(.st-key-pm_auth_page)) .st-key-pm_v_marcar_asistencia .tp-hero{display:none!important;}
+  /* Premium IA: solo escritorio. Ocultamos lanzador y panel en móvil. */
+  .stApp .st-key-tp_chat_fab,
+  .stApp .st-key-tp_chat_panel{
+    display:none!important;
+    visibility:hidden!important;
+    pointer-events:none!important;
+  }
 }
 @media (prefers-reduced-motion:reduce){
  .pm-m-home-hero,.pm-m-home-task,.pm-m-home-metrics>div{animation:none!important;transition:none!important;}
