@@ -5951,8 +5951,8 @@ _PM_RESTORE_SIDEBAR_CHAT = """<style>
 .stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stSidebarCollapsedControl"] button::after{content:none!important;display:none!important;}
 /* Versión original de Premium IA con panel flotante de contenido compacto. */
 .stApp:not(:has(.st-key-pm_auth_page)) .st-key-tp_chat_fab{
-  position:fixed!important;z-index:100004!important;top:50%!important;left:12px!important;
-  right:auto!important;bottom:auto!important;transform:translateY(-50%)!important;
+  position:fixed!important;z-index:100004!important;top:50%!important;right:12px!important;
+  left:auto!important;bottom:auto!important;transform:translateY(-50%)!important;
   width:62px!important;height:62px!important;min-height:62px!important;
 }
 .stApp:not(:has(.st-key-pm_auth_page)) .st-key-tp_chat_fab button{
@@ -5964,7 +5964,7 @@ _PM_RESTORE_SIDEBAR_CHAT = """<style>
 }
 .stApp:not(:has(.st-key-pm_auth_page)) .st-key-tp_chat_fab button:hover{transform:scale(1.06)!important;box-shadow:0 12px 34px rgba(21,34,55,.29)!important;}
 .stApp:not(:has(.st-key-pm_auth_page)) .st-key-tp_chat_panel{
-  position:fixed!important;z-index:100003!important;left:83px!important;right:auto!important;top:50%!important;
+  position:fixed!important;z-index:100003!important;right:83px!important;left:auto!important;top:50%!important;
   bottom:auto!important;transform:translateY(-50%)!important;
   width:min(435px,calc(100vw - 103px))!important;max-height:min(740px,calc(100dvh - 28px))!important;
   overflow-x:hidden!important;overflow-y:auto!important;background:#fff!important;
@@ -5977,9 +5977,9 @@ _PM_RESTORE_SIDEBAR_CHAT = """<style>
 .stApp:not(:has(.st-key-pm_auth_page)) .st-key-tp_chat_panel [data-testid="stButton"] button{border-radius:12px!important;min-height:42px!important;}
 .stApp:not(:has(.st-key-pm_auth_page)) .st-key-tp_chat_panel [data-testid="stTextInput"] input{min-height:46px!important;background:#f8fafc!important;}
 @media(max-width:700px){
- .stApp:not(:has(.st-key-pm_auth_page)) .st-key-tp_chat_fab{left:9px!important;width:54px!important;height:54px!important;min-height:54px!important;}
+ .stApp:not(:has(.st-key-pm_auth_page)) .st-key-tp_chat_fab{right:9px!important;left:auto!important;width:54px!important;height:54px!important;min-height:54px!important;}
  .stApp:not(:has(.st-key-pm_auth_page)) .st-key-tp_chat_fab button{width:52px!important;min-width:52px!important;height:52px!important;min-height:52px!important;}
- .stApp:not(:has(.st-key-pm_auth_page)) .st-key-tp_chat_panel{left:67px!important;width:calc(100vw - 76px)!important;max-height:calc(100dvh - 24px)!important;padding:13px!important;border-radius:18px!important;}
+ .stApp:not(:has(.st-key-pm_auth_page)) .st-key-tp_chat_panel{right:67px!important;left:auto!important;width:calc(100vw - 76px)!important;max-height:calc(100dvh - 24px)!important;padding:13px!important;border-radius:18px!important;}
 }
 @media(prefers-reduced-motion:reduce){.st-key-tp_chat_fab button{transition:none!important;}}
 </style>"""
