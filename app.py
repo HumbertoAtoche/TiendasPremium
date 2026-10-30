@@ -2570,20 +2570,113 @@ def guardar_boleta_historial_gsheets(datos_b):
     return None
 
 def actualizar_hoja_completa(nombre_hoja, df):
+    """Actualización atómica de una hoja existente, sin clear()+update().
+
+    Google Sheets valida y aplica los cambios juntos; no existe un instante con
+    la hoja borrada. Las ediciones concurrentes de TODA la hoja siguen siendo
+    una limitación de Sheets, por lo que para rutinas nuevas se usa escritura
+    de filas específicas. Se prohíben encabezados distintos y borrados de filas
+    no contemplados para evitar pérdidas involuntarias.
+    """
     if st.session_state.get("ver_como"):
         st.toast("Vista previa: no se guardó ningún dato")
-        return
+        return False
     if nombre_hoja in st.session_state.get("_hojas_fallidas", set()):
-        st.error("No se pudo leer esta hoja desde Google Sheets, por eso se canceló el guardado para no borrar datos. Recarga la página e inténtalo de nuevo.")
-        return
-    if doc_sheets:
-        try:
-            hoja = doc_sheets.worksheet(nombre_hoja)
-            hoja.clear()
-            datos = [df.columns.tolist()] + df.astype(str).values.tolist()
-            hoja.update(datos)
-        except Exception as e:
-            st.error(f"Error al actualizar {nombre_hoja}: {e}")
+        st.error("La última lectura falló; se canceló el guardado para proteger los datos.")
+        return False
+    if not doc_sheets or not isinstance(df, pd.DataFrame):
+        st.error("No hay conexión de escritura a Google Sheets.")
+        return False
+    try:
+        ws = doc_sheets.worksheet(nombre_hoja)
+        original = ws._ws if isinstance(ws, _HojaProxy) else ws
+        # Lectura fresca, sin utilizar datos potencialmente antiguos de la caché.
+        previous = original.get_all_values()
+        new_headers = [str(c) for c in df.columns]
+        old_headers = [str(c) for c in previous[0]] if previous else []
+        if old_headers and old_headers != new_headers:
+            raise ValueError("Los encabezados remotos cambiaron; actualiza los datos antes de guardar.")
+        values = [new_headers] + df.fillna("").astype(str).values.tolist()
+        # No permitir borrar filas sin una migración específica, con copia de seguridad.
+        if len(values) < len(previous):
+            raise ValueError("La operación reduciría el número de filas. Se canceló por seguridad.")
+        if not values or not new_headers:
+            raise ValueError("La hoja debe tener encabezados válidos.")
+        if original.row_count < len(values):
+            original.add_rows(len(values) - original.row_count)  # solo amplía, nunca borra
+        if original.col_count < len(new_headers):
+            original.add_cols(len(new_headers) - original.col_count)
+        rows = [{"values": [{"userEnteredValue": {"stringValue": str(v)}} for v in row]}
+                for row in values]
+        # Máximo de 2 MB por petición para no lanzar cargas gigantes al servidor.
+        import json as _pm_json
+        request = {"requests": [{"updateCells": {
+            "range": {"sheetId": original.id, "startRowIndex": 0,
+                      "endRowIndex": len(values), "startColumnIndex": 0,
+                      "endColumnIndex": len(new_headers)},
+            "rows": rows, "fields": "userEnteredValue",
+        }}]}
+        if len(_pm_json.dumps(request, ensure_ascii=False).encode("utf-8")) > 1800000:
+            raise ValueError("La operación es demasiado grande para una actualización segura; divídela en lotes.")
+        doc_sheets.batch_update(request)
+        ws._invalidar() if isinstance(ws, _HojaProxy) else None
+        return True
+    except Exception as exc:
+        print("Premium: actualización segura de hoja:", nombre_hoja, type(exc).__name__)
+        st.error("No se pudo confirmar la escritura. Consulta Sheets antes de reintentar: " + str(exc)[:240])
+        return False
+
+
+
+def eliminar_registro_seguro(nombre_hoja, indice_original, fila_esperada):
+    """Elimina una fila confirmada por el usuario sin borrar toda la hoja.
+
+    Verifica con lectura fresca el mismo índice e identidad del registro. Google
+    Sheets sigue sin tener CAS transaccional entre instancias distintas.
+    """
+    if st.session_state.get("ver_como"):
+        st.error("No se puede eliminar en vista previa.")
+        return False
+    if not doc_sheets:
+        st.error("Sin conexión a Google Sheets.")
+        return False
+    try:
+        idx = int(indice_original)
+        hoja = doc_sheets.worksheet(nombre_hoja)
+        real = hoja._ws if isinstance(hoja, _HojaProxy) else hoja
+        data = real.get_all_values()
+        if idx < 0 or idx+1 >= len(data):
+            raise ValueError("El registro cambió de posición. Recarga la página.")
+        headers = data[0]
+        remote = dict(zip(headers, data[idx+1] + [""] * (len(headers) - len(data[idx+1]))))
+        if nombre_hoja == "Descuadres":
+            fields = ("dni", "fecha", "fecha_registro", "tipo", "monto")
+        elif nombre_hoja == "Vacaciones":
+            fields = ("id_vacacion", "dni", "fecha_inicio", "fecha_fin", "tipo")
+        else:
+            raise ValueError("La eliminación segura aún no está disponible para esta hoja.")
+        expected = dict(fila_esperada)
+        for field in fields:
+            a, b = str(remote.get(field, "")).strip(), str(expected.get(field, "")).strip()
+            if field == "monto":
+                try:
+                    same = abs(float(a) - float(b)) < 0.00001
+                except (ValueError, TypeError):
+                    same = a == b
+            else:
+                same = a == b
+            if not same:
+                raise ValueError("Otra persona modificó el registro. Actualiza la lista antes de eliminar.")
+        request = {"requests": [{"deleteDimension": {"range": {
+            "sheetId": real.id, "dimension": "ROWS",
+            "startIndex": idx + 1, "endIndex": idx + 2
+        }}}]}
+        doc_sheets.batch_update(request)
+        hoja._invalidar() if isinstance(hoja, _HojaProxy) else None
+        return True
+    except Exception as exc:
+        st.error("No se pudo confirmar la eliminación: " + str(exc)[:220])
+        return False
 
 # --- CSS MINIMALISTA Y ESTILOS ---
 
@@ -3555,8 +3648,42 @@ def _resolver_solicitud_administrativa(id_s, nuevo_estado, observacion=""):
         if "Solicitudes" in st.session_state.get("_hojas_fallidas", set()) or not doc_sheets:
             return False, "No hay conexión segura con la hoja Solicitudes. No se guardó el cambio."
         hoja = doc_sheets.worksheet("Solicitudes")
-        hoja.clear()
-        hoja.update([nuevo.columns.tolist()] + nuevo.astype(str).values.tolist())
+        real = hoja._ws if isinstance(hoja, _HojaProxy) else hoja
+        remote_values = real.get_all_values()
+        if not remote_values:
+            return False, "No se encontró información remota de solicitudes."
+        headers = remote_values[0]
+        if any(h not in headers for h in ("id_solicitud", "estado", "respuesta_admin")):
+            return False, "Los encabezados de Solicitudes no son los esperados."
+        iid, ist, ires = (headers.index(h) for h in ("id_solicitud", "estado", "respuesta_admin"))
+        matches = [(i, row) for i, row in enumerate(remote_values[1:], start=2)
+                   if len(row) > iid and str(row[iid]) == str(id_s)]
+        if len(matches) != 1:
+            return False, "La solicitud fue cambiada o duplicada; actualiza la página."
+        row_no, remote_row = matches[0]
+        if len(remote_row) <= ist or str(remote_row[ist]).strip() != "Pendiente":
+            return False, "Otro usuario ya atendió esta solicitud. Actualiza la pantalla."
+        # Verificar el domingo con datos actuales y evitar aprobar dos coberturas.
+        if nuevo_estado == "Aprobado" and tipo == "Trabajar Domingo (Descanso)":
+            itipo = headers.index("tipo_solicitud")
+            ifperm = headers.index("fecha_permiso")
+            for r in remote_values[1:]:
+                if len(r) > max(iid, ist, itipo, ifperm) and str(r[iid]) != str(id_s) \
+                    and r[itipo] == "Trabajar Domingo (Descanso)" and str(r[ist]) == "Aprobado" \
+                    and _norm_fecha_h(r[ifperm]) == f:
+                    return False, "Ya existe una cobertura de domingo aprobada; actualiza antes de decidir."
+        def _letter(idx):
+            n = idx + 1
+            out = ""
+            while n:
+                n, remainder = divmod(n - 1, 26)
+                out = chr(65 + remainder) + out
+            return out
+        hoja.batch_update([
+            {"range": f"{_letter(ist)}{row_no}", "values": [[nuevo_estado]]},
+            {"range": f"{_letter(ires)}{row_no}", "values": [[str(observacion)]]},
+        ], value_input_option="RAW")
+        hoja._invalidar() if isinstance(hoja, _HojaProxy) else None
     except Exception as exc:
         return False, f"Error al guardar en Google Sheets: {exc}"
     st.session_state.solicitudes = nuevo
@@ -6126,9 +6253,11 @@ _PM2_COLS = [
     "instrucciones", "hora_inicio", "hora_limite", "prioridad", "estado",
     "observacion", "creado_por", "fecha_creacion", "fecha_actualizacion",
     "completado_por", "fecha_completado", "origen",
+    "evidencia_obligatoria", "revision_estado", "revisado_por", "fecha_revision", "comentario_revision",
 ]
+_PM2_LEGACY_COLS = _PM2_COLS[:19]
 _PM2_SHEET = "Rutinas_Operativas"
-_PM2_STATES = ("Pendiente", "En curso", "Completada", "Cancelada")
+_PM2_STATES = ("Pendiente", "En curso", "Por validar", "Completada", "Cancelada")
 _PM2_TEMPLATES = {
     "Personalizada · desde cero": ("", "", "", "Operación", "Normal"),
     "Apertura de tienda": (
@@ -6184,21 +6313,31 @@ def _pm2_people():
 
 
 def _pm2_ws(create=False):
+    """Comprueba esquema; migra 19->24 columnas sin tocar los datos existentes."""
     if not doc_sheets:
-        raise ConnectionError("Google Sheets no está conectado. No se puede consultar ni guardar rutinas.")
+        raise ConnectionError("Google Sheets no está conectado.")
     try:
         ws = doc_sheets.worksheet(_PM2_SHEET)
     except gspread.exceptions.WorksheetNotFound:
         if not create:
             return None
         ws = doc_sheets.add_worksheet(title=_PM2_SHEET, rows=2000, cols=len(_PM2_COLS))
-    headers = ws._ws.row_values(1) if isinstance(ws, _HojaProxy) else ws.row_values(1)
+    real = ws._ws if isinstance(ws, _HojaProxy) else ws
+    headers = real.row_values(1)
+    headers = [str(x).strip() for x in headers]
     if not headers:
         if not create:
             return None
         ws.append_row(_PM2_COLS, value_input_option="RAW")
-    elif [str(x).strip() for x in headers] != _PM2_COLS:
-        raise ValueError("La estructura de Rutinas_Operativas no coincide. No se modificó la hoja.")
+    elif headers == _PM2_LEGACY_COLS:
+        if create:
+            missing = len(_PM2_COLS) - len(headers)
+            if real.col_count < len(_PM2_COLS):
+                real.add_cols(len(_PM2_COLS) - real.col_count)
+            real.update(range_name="T1:X1", values=[_PM2_COLS[19:]], value_input_option="RAW")
+            ws._invalidar() if isinstance(ws, _HojaProxy) else None
+    elif headers != _PM2_COLS:
+        raise ValueError("El esquema de Rutinas_Operativas es distinto; no se modificó la hoja.")
     return ws
 
 
@@ -6209,7 +6348,7 @@ def _pm2_fresh(ws):
     df = pd.DataFrame(raw)
     for col in _PM2_COLS:
         if col not in df.columns:
-            df[col] = ""
+            df[col] = "No" if col == "evidencia_obligatoria" else ""
     return df[_PM2_COLS].fillna("")
 
 
@@ -6244,7 +6383,7 @@ def _pm2_validate_time(a, b):
         return False
 
 
-def _pm2_assign(dnis, day, days, title, details, store, zone, start, end, priority, origin="Manual"):
+def _pm2_assign(dnis, day, days, title, details, store, zone, start, end, priority, origin="Manual", evidencia_obligatoria=False):
     """Una escritura por lote, sin filas locales ficticias ni borrado de la hoja."""
     if not _pm2_is_admin():
         return False, "Solo un administrador real puede asignar actividades.", 0
@@ -6291,6 +6430,8 @@ def _pm2_assign(dnis, day, days, title, details, store, zone, start, end, priori
                     "creado_por": str(user_real), "fecha_creacion": stamp,
                     "fecha_actualizacion": stamp, "completado_por": "",
                     "fecha_completado": "", "origen": origin,
+                    "evidencia_obligatoria": "Sí" if evidencia_obligatoria else "No",
+                    "revision_estado": "", "revisado_por": "", "fecha_revision": "", "comentario_revision": "",
                 }
                 new_rows.append([record[c] for c in _PM2_COLS])
         if new_rows:
@@ -6309,8 +6450,8 @@ def _pm2_assign(dnis, day, days, title, details, store, zone, start, end, priori
     return True, f"Se guardaron {len(new_rows)} actividades personalizadas.", len(new_rows)
 
 
-def _pm2_remote_row(task_id):
-    ws = _pm2_ws(create=False)
+def _pm2_remote_row(task_id, writable=False):
+    ws = _pm2_ws(create=writable)
     if ws is None:
         raise ValueError("No existe una hoja de rutinas.")
     values = ws._ws.get_all_values() if isinstance(ws, _HojaProxy) else ws.get_all_values()
@@ -6323,47 +6464,404 @@ def _pm2_remote_row(task_id):
     return ws, row_no, data
 
 
+# ---------------------------------------------------------------------------
+# PREMIUM MARKET · EVIDENCIAS PRIVADAS EN GOOGLE DRIVE
+# Requisitos: unidad compartida de Workspace, carpeta privada, API Drive
+# habilitada; biblioteca google-api-python-client y Pillow.
+# ---------------------------------------------------------------------------
+_PM3_EVIDENCE_SHEET = "Evidencias_Rutinas"
+_PM3_EVIDENCE_COLS = [
+    "id_evidencia", "id_rutina", "dni", "drive_file_id", "nombre_archivo",
+    "tipo_archivo", "tamano_bytes", "sha256", "subido_por", "fecha_subida",
+]
+_PM3_MAX_UPLOAD_BYTES = 6 * 1024 * 1024
+_PM3_MAX_EVIDENCES = 3
+
+
+def _pm3_evidence_ws(create=False):
+    if not doc_sheets:
+        raise ConnectionError("Google Sheets no está conectado.")
+    try:
+        ws = doc_sheets.worksheet(_PM3_EVIDENCE_SHEET)
+    except gspread.exceptions.WorksheetNotFound:
+        if not create:
+            return None
+        try:
+            ws = doc_sheets.add_worksheet(title=_PM3_EVIDENCE_SHEET, rows=1500, cols=len(_PM3_EVIDENCE_COLS))
+        except Exception:
+            # Otro trabajador podría haber creado la hoja en el mismo instante.
+            ws = doc_sheets.worksheet(_PM3_EVIDENCE_SHEET)
+    real = ws._ws if isinstance(ws, _HojaProxy) else ws
+    headers = [str(x).strip() for x in real.row_values(1)]
+    if not headers:
+        if not create:
+            return None
+        real.append_row(_PM3_EVIDENCE_COLS, value_input_option="RAW")
+    elif headers != _PM3_EVIDENCE_COLS:
+        raise ValueError("La hoja de evidencias tiene un formato inesperado; no se modificó.")
+    return ws
+
+
+def _pm3_evidences_for(task_id, fresh=False):
+    """Una lectura por sesión con caducidad breve; fresca para validar o subir."""
+    cache = st.session_state.get("_pm3_evidence_cache")
+    if fresh or not isinstance(cache, dict) or time.time() - cache.get("at", 0) > 18:
+        ws = _pm3_evidence_ws(create=False)
+        if ws is None:
+            rows = []
+        else:
+            real = ws._ws if isinstance(ws, _HojaProxy) else ws
+            rows = real.get_all_records()
+        st.session_state["_pm3_evidence_cache"] = {"at": time.time(), "rows": rows}
+    else:
+        rows = cache["rows"]
+    return [r for r in rows if str(r.get("id_rutina", "")) == str(task_id)]
+
+
+def _pm3_authorized(task_id, modify=False):
+    if modify and st.session_state.get("ver_como"):
+        raise PermissionError("La vista previa es de solo lectura.")
+    if not st.session_state.get("usuario_login"):
+        raise PermissionError("Primero inicia sesión.")
+    _, _, task = _pm2_remote_row(task_id, writable=False)
+    is_admin = _pm2_is_admin()
+    if not is_admin and _pm2_dni(task.get("dni", "")) != _pm2_dni(dni_actual):
+        raise PermissionError("Solo puedes ver evidencias de tus propias actividades.")
+    if modify:
+        if is_admin:
+            raise PermissionError("Las evidencias deben ser subidas por el colaborador responsable.")
+        if str(task.get("estado")) not in ("Pendiente", "En curso"):
+            raise PermissionError("Esta actividad no admite nuevas evidencias.")
+        if str(task.get("fecha", ""))[:10] > obtener_ahora_peru().strftime("%Y-%m-%d"):
+            raise PermissionError("Todavía no puedes completar esta actividad futura.")
+    return task
+
+
+def _pm3_drive_config():
+    """Compatibilidad con Drive compartido (servicio) y Mi unidad (OAuth)."""
+    try:
+        section = st.secrets.get("pm_evidencias", {})
+        folder = str(section.get("drive_folder_id", "")).strip()
+        mode = str(section.get("mode", "shared_drive")).strip().lower()
+        if mode not in ("shared_drive", "personal_oauth"):
+            raise RuntimeError("Modo no reconocido.")
+        if not folder:
+            raise RuntimeError("No hay ID de carpeta configurado.")
+        if mode == "shared_drive":
+            info = dict(st.secrets["gcp_service_account"])
+            if "private_key" in info:
+                info["private_key"] = str(info["private_key"]).replace("\\n", "\n")
+            if not info.get("client_email") or not info.get("private_key"):
+                raise RuntimeError("La cuenta de servicio no está completa.")
+        else:
+            info = dict(st.secrets["pm_drive_oauth"])
+            if not all(str(info.get(k, "")).strip() for k in ("client_id", "client_secret", "refresh_token")):
+                raise RuntimeError("Faltan datos de autorización OAuth de Drive.")
+        info["_pm_mode"] = mode
+        return folder, info
+    except Exception as exc:
+        raise RuntimeError("Revisa Secrets: pm_evidencias y credenciales de Drive no configuradas.") from exc
+
+
+def _pm3_drive_client():
+    try:
+        from google.oauth2 import service_account as _sa
+        from google.oauth2.credentials import Credentials as _UserCredentials
+        from googleapiclient.discovery import build as _build
+    except ImportError as exc:
+        raise RuntimeError("Instala google-api-python-client, google-auth y Pillow en requirements.txt.") from exc
+    folder, info = _pm3_drive_config()
+    mode = info.pop("_pm_mode")
+    if mode == "personal_oauth":
+        creds = _UserCredentials(
+            token=None, refresh_token=info["refresh_token"],
+            token_uri="https://oauth2.googleapis.com/token",
+            client_id=info["client_id"], client_secret=info["client_secret"],
+            scopes=["https://www.googleapis.com/auth/drive"],
+        )
+    else:
+        creds = _sa.Credentials.from_service_account_info(
+            info, scopes=["https://www.googleapis.com/auth/drive"])
+    return _build("drive", "v3", credentials=creds, cache_discovery=False), folder
+
+
+def _pm3_validate_private_folder(drive, folder_id):
+    meta = drive.files().get(fileId=folder_id, supportsAllDrives=True,
+                             fields="id,mimeType,driveId,trashed,capabilities(canAddChildren)").execute()
+    if meta.get("mimeType") != "application/vnd.google-apps.folder" or meta.get("trashed"):
+        raise RuntimeError("El destino de evidencias no es una carpeta válida.")
+    try:
+        mode = str(st.secrets.get("pm_evidencias", {}).get("mode", "shared_drive")).lower()
+    except Exception:
+        mode = "shared_drive"
+    if mode != "personal_oauth" and not meta.get("driveId"):
+        raise RuntimeError("En modo servicio la carpeta debe estar en una unidad compartida de Workspace.")
+    if not meta.get("capabilities", {}).get("canAddChildren"):
+        raise RuntimeError("La cuenta autorizada no tiene permiso de escritura en la carpeta.")
+    return True
+
+
+def _pm3_prepare_image(file_obj):
+    """WebP sin EXIF ni metadatos, dimensiones seguras y límite estricto."""
+    from io import BytesIO
+    from PIL import Image as PILImage, ImageOps, UnidentifiedImageError
+    try:
+        from pillow_heif import register_heif_opener
+        register_heif_opener()  # iPhone: permite procesar HEIC/HEIF cuando se instala pillow-heif
+    except ImportError:
+        pass
+    if file_obj is None:
+        raise ValueError("Selecciona una fotografía.")
+    if int(getattr(file_obj, "size", _PM3_MAX_UPLOAD_BYTES + 1)) > _PM3_MAX_UPLOAD_BYTES:
+        raise ValueError("La fotografía supera 6 MB. Selecciona otra más pequeña.")
+    raw = file_obj.getvalue() if hasattr(file_obj, "getvalue") else file_obj.read()
+    if len(raw) > _PM3_MAX_UPLOAD_BYTES:
+        raise ValueError("El archivo es demasiado grande.")
+    try:
+        with PILImage.open(BytesIO(raw)) as image:
+            if image.format not in ("JPEG", "PNG", "WEBP", "HEIF", "HEIC"):
+                raise ValueError("Formato no permitido. Utiliza JPEG, PNG, WebP o HEIC.")
+            if image.width * image.height > 28_000_000:
+                raise ValueError("La imagen supera las dimensiones seguras.")
+            normalized = ImageOps.exif_transpose(image).convert("RGB")
+            normalized.thumbnail((1280, 1280))
+            for quality in (82, 74, 64, 53):
+                buf = BytesIO()
+                normalized.save(buf, format="WEBP", quality=quality, method=5)
+                if buf.tell() <= 450_000:
+                    return buf.getvalue()
+            if buf.tell() > 900_000:
+                raise ValueError("No se pudo comprimir la imagen adecuadamente.")
+            return buf.getvalue()
+    except (UnidentifiedImageError, OSError, PILImage.DecompressionBombError) as exc:
+        raise ValueError("El archivo no es una fotografía válida.") from exc
+
+
+def _pm3_upload_evidence(task_id, file_obj):
+    if st.session_state.get("ver_como"):
+        return False, "La vista previa no puede subir fotografías."
+    try:
+        task = _pm3_authorized(task_id, modify=True)
+        data = _pm3_prepare_image(file_obj)
+        import hashlib as _hashlib
+        digest = _hashlib.sha256(data).hexdigest()
+        # Verificación previa: si Sheets no está disponible no se envía nada a Drive.
+        sheet = _pm3_evidence_ws(create=True)
+        existing = _pm3_evidences_for(task_id, fresh=True)
+        if any(str(x.get("sha256", "")) == digest for x in existing):
+            return True, "Esta fotografía ya está registrada en la actividad."
+        if len(existing) >= _PM3_MAX_EVIDENCES:
+            return False, "Máximo tres fotografías por actividad."
+        drive, folder = _pm3_drive_client()
+        _pm3_validate_private_folder(drive, folder)
+        from googleapiclient.http import MediaIoBaseUpload
+        from io import BytesIO
+        fname = "PM_EVID_" + _pm2_uuid.uuid4().hex + ".webp"
+        meta = {"name": fname, "mimeType": "image/webp", "parents": [folder],
+                "appProperties": {"premium_rutina": str(task_id)}}
+        uploaded = drive.files().create(
+            body=meta, media_body=MediaIoBaseUpload(BytesIO(data), mimetype="image/webp", resumable=False),
+            supportsAllDrives=True, fields="id,name,size"
+        ).execute()
+        file_id = str(uploaded.get("id", ""))
+        if not file_id:
+            raise RuntimeError("Drive no devolvió un identificador válido.")
+        try:
+            # Revalidar sesión/permisos tras la subida, antes de registrar la evidencia.
+            _pm3_authorized(task_id, modify=True)
+            record = ["EVD-" + _pm2_uuid.uuid4().hex, str(task_id), _pm2_dni(task.get("dni")),
+                      file_id, fname, "image/webp", len(data), digest, str(user_real), _pm2_now()]
+            sheet.append_row(record, value_input_option="RAW")
+            st.session_state.pop("_pm3_evidence_cache", None)
+            sheet._invalidar() if isinstance(sheet, _HojaProxy) else None
+        except Exception as save_exc:
+            # Una respuesta de timeout NO demuestra que Sheets no haya guardado.
+            # Comprobar antes de borrar el archivo evita referencias rotas.
+            try:
+                remote = _pm3_evidences_for(task_id, fresh=True)
+            except Exception:
+                print("Premium: escritura incierta; se conservó archivo Drive para conciliación.")
+                raise RuntimeError("No se pudo confirmar la evidencia. Se conservará temporalmente la foto para evitar pérdida; no vuelvas a enviarla hasta revisar Sheets.") from save_exc
+            if any(str(x.get("drive_file_id", "")) == file_id for x in remote):
+                return True, "La evidencia quedó registrada correctamente; Google Sheets tardó en confirmar."
+            try:
+                drive.files().delete(fileId=file_id, supportsAllDrives=True).execute()
+            except Exception as cleanup_exc:
+                print("Premium: archivo Drive pendiente de conciliación:", type(cleanup_exc).__name__)
+            raise save_exc
+        try:
+            registrar_auditoria("Subir evidencia", "Rutinas Operativas", "Evidencia registrada para " + str(task_id))
+        except Exception:
+            pass
+        return True, "Fotografía guardada en Drive y vinculada a la actividad."
+    except (PermissionError, ValueError, RuntimeError) as exc:
+        return False, str(exc)
+    except Exception as exc:
+        print("Premium: error al subir evidencia:", type(exc).__name__)
+        return False, "No fue posible confirmar la evidencia. Revisa Drive, Sheets y vuelve a intentarlo."
+
+
+def _pm3_download_evidence(task_id, file_id):
+    """Privacidad: autorización comprobada antes de descargar cada archivo."""
+    _pm3_authorized(task_id, modify=False)
+    records = _pm3_evidences_for(task_id)
+    if not any(str(r.get("drive_file_id", "")) == str(file_id) for r in records):
+        raise PermissionError("La fotografía no pertenece a esta actividad.")
+    drive, _ = _pm3_drive_client()
+    photo = drive.files().get_media(fileId=str(file_id), supportsAllDrives=True).execute()
+    if not isinstance(photo, bytes) or len(photo) > 2_000_000:
+        raise ValueError("La evidencia no tiene un tamaño válido.")
+    return photo
+
+
+def _pm3_gallery(task_id, prefix="worker"):
+    """Ver imágenes solo bajo petición. Sin predescarga al abrir el módulo."""
+    flag = f"pm3_gallery_{prefix}_{task_id}"
+    shown = bool(st.session_state.get(flag))
+    if st.button("Ocultar fotografías" if shown else "Ver evidencias fotográficas",
+                 key="pm3_gallery_btn_" + prefix + "_" + str(task_id), use_container_width=True):
+        st.session_state[flag] = shown = not shown
+    if not shown:
+        return
+    try:
+        _pm3_authorized(task_id, modify=False)
+        evidence = _pm3_evidences_for(task_id)
+        if not evidence:
+            st.caption("Aún no se han cargado fotografías para esta actividad.")
+        for item in evidence:
+            try:
+                photo = _pm3_download_evidence(task_id, item["drive_file_id"])
+                st.image(photo, caption="Evidencia · " + str(item.get("fecha_subida", ""))[:16], use_container_width=True)
+            except Exception as exc:
+                st.warning("No se pudo mostrar la fotografía: " + str(exc)[:120])
+    except Exception as exc:
+        st.caption("Evidencias no disponibles: " + str(exc)[:120])
+
+
+def _pm3_worker_upload_ui(task_id):
+    if st.session_state.get("ver_como"):
+        return
+    with st.expander("Añadir fotografía de evidencia", expanded=False):
+        st.caption("Foto o galería del celular (incluye HEIC de iPhone). Se comprime y guarda en Drive privado. Máximo 6 MB.")
+        image = st.file_uploader("Fotografía", type=["jpg", "jpeg", "png", "webp", "heic", "heif"],
+                                 key="pm3_file_" + str(task_id), accept_multiple_files=False)
+        if st.button("Guardar evidencia", key="pm3_upload_" + str(task_id),
+                     disabled=image is None, use_container_width=True, type="primary"):
+            with st.spinner("Guardando evidencia de forma segura…"):
+                ok, message = _pm3_upload_evidence(task_id, image)
+            _pm2_notice(ok, message)
+            if ok:
+                st.rerun()
+
+
+def _pm3_evidence_setup_ui():
+    with st.expander("Configuración de evidencias y conexión", expanded=False):
+        st.caption("Almacenamiento privado en Drive (unidad compartida de Workspace o Mi unidad autorizada mediante OAuth).")
+        try:
+            folder, _ = _pm3_drive_config()
+            st.success("Carpeta configurada: …" + folder[-6:])
+            if st.button("Verificar acceso a Drive", key="pm3_test_drive", use_container_width=True):
+                drive, folder = _pm3_drive_client()
+                _pm3_validate_private_folder(drive, folder)
+                _pm3_evidence_ws(create=True)
+                _pm2_ws(create=True)
+                st.success("Drive, Sheets y estructuras de rutinas disponibles para la cuenta de servicio.")
+        except Exception as exc:
+            st.warning(str(exc)[:230])
+            st.caption("Secrets: [pm_evidencias] mode='shared_drive' o 'personal_oauth'; "
+                       "drive_folder_id='ID_CARPETA'. Instala google-api-python-client, Pillow y pillow-heif.")
+
 def _pm2_update_progress(task_id, new_state, note=""):
-    if bool(st.session_state.get("ver_como")):
-        return False, "La vista previa es de solo lectura; inicia sesión como trabajador para marcar actividades."
+    """Transiciones limitadas por rol, con revisión supervisora posterior.
+
+    Se actualizan celdas del registro identificado; nunca se reescribe la hoja.
+    """
+    if st.session_state.get("ver_como"):
+        return False, "La vista previa es de solo lectura."
     if new_state not in _PM2_STATES:
         return False, "Estado no permitido."
-    if not _pm2_is_admin() and new_state not in ("En curso", "Completada"):
-        return False, "Solo administración puede cancelar o reabrir actividades."
+    is_admin = _pm2_is_admin()
     note = str(note or "").strip()
     if len(note) > 800:
         return False, "La observación supera los 800 caracteres."
     try:
-        ws, row, record = _pm2_remote_row(task_id)
-        if not _pm2_is_admin() and _pm2_dni(record.get("dni")) != _pm2_dni(dni_actual):
+        ws, row, record = _pm2_remote_row(task_id, writable=True)
+        if not is_admin and _pm2_dni(record.get("dni")) != _pm2_dni(dni_actual):
             return False, "No puedes modificar actividades de otro colaborador."
-        if not _pm2_is_admin() and str(record.get("fecha", ""))[:10] > obtener_ahora_peru().strftime("%Y-%m-%d"):
-            return False, "Esta actividad corresponde a una fecha futura. Podrás marcarla el día programado."
-        current = record.get("estado") or "Pendiente"
-        if current == "Cancelada" and not _pm2_is_admin():
-            return False, "Esta actividad está cancelada."
-        if current == "Completada" and not _pm2_is_admin():
-            return False, "Una actividad completada solo puede reabrirla administración."
+        if not is_admin and str(record.get("fecha", ""))[:10] > obtener_ahora_peru().strftime("%Y-%m-%d"):
+            return False, "Esta actividad es para una fecha futura."
+        current = str(record.get("estado") or "Pendiente")
+        if not is_admin:
+            valid = ((current == "Pendiente" and new_state == "En curso") or
+                     (current == "En curso" and new_state == "Por validar"))
+            if not valid:
+                return False, "La actividad ya cambió de estado. Actualiza la pantalla."
+            if new_state == "Por validar" and str(record.get("evidencia_obligatoria", "No")).strip().lower() in ("sí", "si", "true", "1"):
+                photos = _pm3_evidences_for(task_id, fresh=True)
+                if not photos:
+                    return False, "Esta actividad requiere una fotografía de evidencia antes de enviarla a revisión."
+                # Si fue observada, exigir una evidencia posterior a la revisión.
+                if str(record.get("revision_estado", "")) == "Observada":
+                    reviewed_at = str(record.get("fecha_revision", ""))
+                    if not any(str(p.get("fecha_subida", "")) > reviewed_at for p in photos):
+                        return False, "El supervisor solicitó correcciones. Adjunta una fotografía nueva antes de reenviar."
+        else:
+            valid_admin = (new_state == "Cancelada" and current not in ("Cancelada", "Completada")) or (new_state == "Pendiente" and current in ("Cancelada", "Completada", "Por validar")) or (new_state == "En curso" and current in ("Pendiente", "Por validar"))
+            if not valid_admin:
+                return False, "Para validar o rechazar utiliza los botones de revisión supervisora."
         now = _pm2_now()
-        completed_at = now if new_state == "Completada" else ""
-        completed_by = str(user_real) if new_state == "Completada" else ""
+        new_review = "Pendiente" if new_state == "Por validar" else ("" if new_state == "Pendiente" else str(record.get("revision_estado", "")))
         ws.batch_update([
             {"range": f"L{row}:M{row}", "values": [[new_state, note]]},
-            {"range": f"P{row}:R{row}", "values": [[now, completed_by, completed_at]]},
+            {"range": f"P{row}", "values": [[now]]},
+            {"range": f"U{row}", "values": [[new_review]]},
         ], value_input_option="RAW")
         _pm2_clear_cache()
     except Exception as exc:
-        print("Premium Market: actualización de rutina:", type(exc).__name__)
-        return False, "No se confirmó el cambio en Google Sheets; el estado anterior se conserva."
+        print("Premium: cambio de rutina:", type(exc).__name__)
+        return False, "No se confirmó el cambio en Sheets. Actualiza la vista antes de reintentar."
     try:
-        registrar_auditoria("Actualizar actividad", "Rutinas Operativas",
-                            f"{task_id}: {record.get('titulo', '')} → {new_state}")
+        registrar_auditoria("Estado rutina", "Rutinas Operativas", f"{task_id}: {current} -> {new_state}")
     except Exception:
         pass
-    return True, f"Actividad actualizada: {new_state.lower()}."
+    return True, ("Actividad enviada al supervisor para validar." if new_state == "Por validar" else "Estado actualizado: " + new_state.lower())
 
 
-def _pm2_edit_task(task_id, day, store, zone, title, details, start, end, priority):
+def _pm3_review(task_id, accept, comment=""):
+    """Validación explícita de supervisor; no puede aprobarse desde vista previa."""
+    if not _pm2_is_admin():
+        return False, "Solo administración puede validar actividades."
+    comment = str(comment or "").strip()
+    if not accept and not comment:
+        return False, "Indica qué debe corregir el colaborador."
+    if len(comment) > 800:
+        return False, "El comentario supera el límite de 800 caracteres."
+    try:
+        ws, row, record = _pm2_remote_row(task_id, writable=True)
+        if str(record.get("estado")) != "Por validar":
+            return False, "La actividad cambió de estado; vuelve a actualizar la página."
+        if accept and str(record.get("evidencia_obligatoria", "No")).lower() in ("sí", "si", "true", "1"):
+            if not _pm3_evidences_for(task_id, fresh=True):
+                return False, "No se puede aprobar una actividad sin su fotografía obligatoria."
+        now = _pm2_now()
+        new_state = "Completada" if accept else "En curso"
+        ws.batch_update([
+            {"range": f"L{row}", "values": [[new_state]]},
+            {"range": f"P{row}:R{row}", "values": [[now, str(record.get("nombre", "")) if accept else "", now if accept else ""]]},
+            {"range": f"U{row}:X{row}", "values": [["Aprobada" if accept else "Observada", str(user_real), now, comment]]},
+        ], value_input_option="RAW")
+        _pm2_clear_cache()
+    except Exception as exc:
+        print("Premium: revisión de rutina:", type(exc).__name__)
+        return False, "No se confirmó la validación. Revisa la conexión y vuelve a intentarlo."
+    try:
+        registrar_auditoria("Validar rutina" if accept else "Observar rutina", "Rutinas Operativas", f"{task_id}: {comment[:180]}")
+    except Exception:
+        pass
+    return True, "Actividad aprobada." if accept else "Actividad devuelta al colaborador con observaciones."
+
+
+def _pm2_edit_task(task_id, day, store, zone, title, details, start, end, priority, evidencia_obligatoria=None):
     if not _pm2_is_admin():
         return False, "Solo administración puede cambiar la programación."
     title, details, store, zone = (str(x).strip() for x in (title, details, store, zone))
@@ -6374,15 +6872,16 @@ def _pm2_edit_task(task_id, day, store, zone, title, details, start, end, priori
     if priority not in ("Normal", "Alta", "Urgente"):
         return False, "Prioridad inválida."
     try:
-        ws, row, record = _pm2_remote_row(task_id)
-        if record.get("estado") in ("Completada", "Cancelada"):
-            return False, "Reabre la actividad antes de modificarla."
+        ws, row, record = _pm2_remote_row(task_id, writable=True)
+        if record.get("estado") in ("Completada", "Cancelada", "Por validar"):
+            return False, "La actividad está cerrada o esperando revisión; resuelve esa etapa antes de editar."
         iso = day.isoformat() if isinstance(day, date) else str(day)[:10]
         datetime.strptime(iso, "%Y-%m-%d")
         ws.batch_update([
             {"range": f"B{row}", "values": [[iso]]},
             {"range": f"E{row}:K{row}", "values": [[store, zone, title, details, start, end, priority]]},
             {"range": f"P{row}", "values": [[_pm2_now()]]},
+            {"range": f"T{row}", "values": [[str(record.get("evidencia_obligatoria", "No")) if evidencia_obligatoria is None else ("Sí" if evidencia_obligatoria else "No")]]},
         ], value_input_option="RAW")
         _pm2_clear_cache()
     except Exception as exc:
@@ -6434,6 +6933,8 @@ def _pm2_import_legacy():
                 "completado_por": "" if state != "Completada" else str(r.get("nombre", "")),
                 "fecha_completado": str(r.get("fecha_completado", "")) if state == "Completada" else "",
                 "origen": marker,
+                "evidencia_obligatoria": "No", "revision_estado": "Aprobada" if state == "Completada" else "",
+                "revisado_por": "", "fecha_revision": "", "comentario_revision": "",
             }
             rows.append([rec[c] for c in _PM2_COLS])
             imported.add(marker)
@@ -6449,7 +6950,9 @@ def _pm2_import_legacy():
 def _pm2_state_visual(row):
     state = str(row.get("estado", "Pendiente"))
     if state == "Completada":
-        return "Completada", "success"
+        return "Validada", "success"
+    if state == "Por validar":
+        return "Por validar", "warning"
     if state == "Cancelada":
         return "Cancelada", "neutral"
     if state == "En curso":
@@ -6536,12 +7039,13 @@ def _pm2_metrics(data, personal=False):
     done = int((data["estado"].astype(str) == "Completada").sum()) if total else 0
     active = int((data["estado"].astype(str) == "En curso").sum()) if total else 0
     canceled = int((data["estado"].astype(str) == "Cancelada").sum()) if total else 0
+    under_review = int((data["estado"].astype(str) == "Por validar").sum()) if total else 0
     pending = total - done - canceled
     people = data["dni"].astype(str).nunique() if total else 0
     pct = round(done * 100 / max(1, total - canceled))
     first_card = ("Mis actividades", total - canceled, "Actividades asignadas") if personal else ("Colaboradores", people, "Con asignaciones")
     cards = [first_card, ("Finalizadas", done, "Tareas completadas"),
-             ("Pendientes", pending, f"{active} en curso"), ("Cumplimiento", f"{pct}%", "Excluye canceladas")]
+             ("Pendientes", pending, f"{active} en curso · {under_review} por validar"), ("Cumplimiento", f"{pct}%", "Solo validadas")]
     html = '<div class="pm2-stats">'
     for label, value, sub in cards:
         html += (f'<article class="pm2-stat"><div class="k">{_html.escape(str(label))}</div><b>{_html.escape(str(value))}</b>'
@@ -6570,7 +7074,11 @@ def _pm2_task_summary_html(row, show_worker=False):
     note = f'<p class="pm2-task-detail">{esc(str(row.get("instrucciones", "")))}</p>'
     comment = (f'<p class="pm2-task-detail"><b>Comentario:</b> {esc(str(row.get("observacion", "")))}</p>'
                if str(row.get("observacion", "")).strip() else "")
-    return head + tags + note + comment
+    required = str(row.get("evidencia_obligatoria", "No")).lower() in ("sí", "si", "true", "1")
+    evidence_tag = ('<span class="pm2-pill warning">Foto obligatoria</span>' if required else '<span class="pm2-pill">Foto opcional</span>')
+    review_msg = str(row.get("comentario_revision", "")).strip()
+    review = (f'<p class="pm2-task-detail"><b>Nota del supervisor:</b> {esc(review_msg)}</p>' if review_msg else "")
+    return head + tags + evidence_tag + note + comment + review
 
 
 def _pm2_legacy_count():
@@ -6578,6 +7086,29 @@ def _pm2_legacy_count():
     if not isinstance(df, pd.DataFrame) or df.empty or "tipo" not in df.columns:
         return 0
     return int(df["tipo"].astype(str).str.startswith("Rutina Operativa ").sum())
+
+
+# Evita escrituras simultáneas dentro de una misma instancia de Streamlit.
+# Google Sheets no ofrece CAS/transactions entre instancias diferentes.
+@st.cache_resource(show_spinner=False)
+def _pm3_routine_write_lock():
+    return threading.RLock()
+
+
+def _pm3_synchronized(func):
+    from functools import wraps
+    @wraps(func)
+    def inner(*args, **kwargs):
+        with _pm3_routine_write_lock():
+            return func(*args, **kwargs)
+    return inner
+
+
+_pm2_assign = _pm3_synchronized(_pm2_assign)
+_pm2_update_progress = _pm3_synchronized(_pm2_update_progress)
+_pm3_review = _pm3_synchronized(_pm3_review)
+_pm2_edit_task = _pm3_synchronized(_pm2_edit_task)
+_pm2_import_legacy = _pm3_synchronized(_pm2_import_legacy)
 
 
 if rol_actual == "admin":
@@ -6614,6 +7145,12 @@ if _sol_pend_n:
                    "tp_acc_sol", "Solicitudes y Permisos" if rol_actual == "admin" else "Solicitar Permiso / Adelanto", ":material/inbox:")
 if _bf_total_pendientes:
     _btn_pendiente(f"Botellas por devolver · {_bf_total_pendientes}", "tp_acc_bot", "Botellas Fiadas", ":material/liquor:")
+if rol_actual == "admin":
+    _r_for_review, _r_err = _pm2_load()
+    if _r_err is None and _r_for_review is not None and not _r_for_review.empty:
+        _r_wait = int((_r_for_review["estado"].astype(str) == "Por validar").sum())
+        if _r_wait:
+            _btn_pendiente(f"Rutinas por validar · {_r_wait}", "tp_acc_rutinas_review", "Rutinas Operativas", ":material/fact_check:")
 
 st.sidebar.markdown('<div class="tp-note-t pm-restored-nav-title">Navegación</div>', unsafe_allow_html=True)
 st.sidebar.markdown('<div class="pm-nav-kind-' + ('admin' if rol_actual == 'admin' else 'employee') + '"></div>', unsafe_allow_html=True)
@@ -6726,6 +7263,7 @@ def _pm_cerrar_sesion():
         st.session_state["ver_como_sel"] = "Mi vista (admin)"
         st.session_state["chat_flotante_abierto"] = False
         st.session_state["chat_datos_historial"] = []
+        st.session_state.pop("_pm3_evidence_cache", None)
         st.session_state.pop("tp_pregunta_sugerida", None)
         st.session_state.pop("_tp_botellas_aviso_login", None)
         st.session_state.pop("_tp_cumple_dialogo_abierto", None)
@@ -7688,7 +8226,18 @@ def _pm_mobile_notices():
     botellas_pend = 0
     if isinstance(bot, pd.DataFrame) and not bot.empty and "estado" in bot.columns:
         botellas_pend = int((bot["estado"].astype(str).str.strip().str.casefold() != "devuelta").sum())
+    rut, rut_err = _pm2_load()
+    por_validar = 0
+    observadas = 0
+    if rut_err is None and isinstance(rut, pd.DataFrame) and not rut.empty:
+        mis_rut = rut[rut["dni"].astype(str).map(_pm2_dni) == dni]
+        por_validar = int((mis_rut["estado"].astype(str) == "Por validar").sum())
+        observadas = int((mis_rut["revision_estado"].astype(str) == "Observada").sum())
     with st.container(key="pm_mobile_notices"):
+        if por_validar or observadas:
+            st.info(f"Rutinas: {por_validar} por validar · {observadas} con observaciones.")
+            st.button("Abrir mis rutinas", key="pm_mobile_review_link", use_container_width=True,
+                      on_click=_ir_a, args=("Mis Rutinas",), icon=":material/fact_check:")
         st.markdown(
             '<section class="pm-m-notice-heading"><div class="pm-m-eyebrow">MIS AVISOS</div>'
             '<h2>Lo que necesitas revisar</h2>'
@@ -7840,6 +8389,12 @@ elif choice == "Mis Rutinas":
                 end_day = (obtener_ahora_peru().date() + timedelta(days=7)).isoformat()
                 own = own[(own["fecha"].astype(str) >= today) & (own["fecha"].astype(str) <= end_day)]
             _pm2_metrics(own, personal=True)
+            observed = int((own["revision_estado"].astype(str) == "Observada").sum()) if not own.empty else 0
+            waiting = int((own["estado"].astype(str) == "Por validar").sum()) if not own.empty else 0
+            if observed:
+                st.warning(f"Tienes {observed} actividad(es) con observaciones del supervisor. Revisa los comentarios en sus tarjetas.")
+            elif waiting:
+                st.info(f"Tienes {waiting} actividad(es) enviadas y pendientes de validación.")
             if own.empty:
                 st.markdown('<div class="pm2-staff"><div class="pm2-task-title">No tienes actividades asignadas en este periodo.</div>'
                             '<p class="pm2-task-detail" style="margin-top:8px">Tu administrador puede asignarte rutinas desde el módulo de gestión. '
@@ -7852,7 +8407,10 @@ elif choice == "Mis Rutinas":
                     current_state = str(task.get("estado", "Pendiente"))
                     with st.container(border=True, key="pm2_worker_task_" + task_id):
                         st.markdown(_pm2_task_summary_html(task), unsafe_allow_html=True)
+                        _pm3_gallery(task_id, "worker")
                         if current_state in ("Pendiente", "En curso"):
+                            if not st.session_state.get("ver_como"):
+                                _pm3_worker_upload_ui(task_id)
                             if st.session_state.get("ver_como"):
                                 st.caption("Vista previa de administración: no puedes registrar cambios desde aquí.")
                             else:
@@ -7865,15 +8423,17 @@ elif choice == "Mis Rutinas":
                                 with st.form("pm2_complete_" + task_id):
                                     note = st.text_area("Comentario o novedad", value=str(task.get("observacion", "")), max_chars=800,
                                                         placeholder="Si encontraste alguna incidencia, escríbela aquí.", key="pm2_note_" + task_id)
-                                    clicked = st.form_submit_button("Marcar como completada", type="primary", use_container_width=True)
+                                    clicked = st.form_submit_button("Enviar para validación", type="primary", use_container_width=True)
                                 if clicked:
-                                    ok, msg = _pm2_update_progress(task_id, "Completada", note)
+                                    ok, msg = _pm2_update_progress(task_id, "Por validar", note)
                                     _pm2_notice(ok, msg)
                                     if ok:
                                         st.rerun()
+                        elif current_state == "Por validar":
+                            st.info("Actividad enviada. Está esperando la revisión del supervisor.")
                         elif current_state == "Completada":
                             finished = str(task.get("fecha_completado", ""))
-                            st.success("Actividad completada" + (f" el {finished}" if finished else "."))
+                            st.success("Actividad validada por supervisión" + (f" el {finished}" if finished else "."))
                         else:
                             st.caption("Esta actividad fue cancelada por administración.")
 
@@ -8836,7 +9396,9 @@ elif choice == "Gestión Colaboradores":
                         if st.button("Guardar Estado de Planilla", use_container_width=True, key="ep_btn"):
                             idx_ep = st.session_state.empleados[st.session_state.empleados["nombre"] == colab_ep_sel].index
                             st.session_state.empleados.loc[idx_ep, "en_planilla"] = nuevo_ep
-                            actualizar_hoja_completa("Colaboradores", st.session_state.empleados)
+                            if not actualizar_hoja_completa("Colaboradores", st.session_state.empleados):
+                                st.session_state.pop("empleados", None)
+                                st.stop()
                             registrar_auditoria("Actualizar Estado de Planilla", "Colaboradores", f"{colab_ep_sel} → en_planilla={nuevo_ep}")
                             st.toast(f"Estado de planilla de {colab_ep_sel} actualizado a '{nuevo_ep}'")
                             st.rerun()
@@ -8858,7 +9420,9 @@ elif choice == "Gestión Colaboradores":
                                     dni_baja_ep = str(st.session_state.empleados.loc[idx[0], "dni"])
                                     st.session_state.empleados.loc[idx, "estado"] = "Desactivado"
                                     st.session_state.empleados.loc[idx, "fecha_cese"] = str(f_cese_input)
-                                    actualizar_hoja_completa("Colaboradores", st.session_state.empleados)
+                                    if not actualizar_hoja_completa("Colaboradores", st.session_state.empleados):
+                                        st.session_state.pop("empleados", None)
+                                        st.stop()
                                     registrar_auditoria("Dar de Baja Colaborador", "Colaboradores", f"{colab_a_desactivar} — cese: {f_cese_input}")
                                     crear_checklist_offboarding(dni_baja_ep, colab_a_desactivar)
                                     st.toast(f"Colaborador {colab_a_desactivar} desactivado correctamente")
@@ -9569,7 +10133,9 @@ elif choice == "Programación de Turnos":
                 _prog_df = st.session_state.programacion
                 _resto = _prog_df[_prog_df["semana_inicio"].apply(_norm_fecha_h) != _lunes_iso] if not _prog_df.empty else _prog_df
                 _nuevo_df = pd.concat([_resto, pd.DataFrame(_nuevas, columns=COLS_PROG)], ignore_index=True)[COLS_PROG]
-                actualizar_hoja_completa("Programacion", _nuevo_df)
+                if not actualizar_hoja_completa("Programacion", _nuevo_df):
+                    st.session_state.pop("programacion", None)
+                    st.stop()
                 registrar_auditoria("Guardar Programación de Turnos", "Programación", f"Semana del {_lunes_iso}: {len(_nuevas)} casilla(s)")
                 st.session_state.programacion = obtener_programacion_gsheets()
                 st.session_state.pop(f"prog_base_{_lunes_iso}", None)
@@ -9856,7 +10422,9 @@ elif choice == "Historial de Descuadres":
                                 st.session_state.descuadres.at[idx_mod, "monto"] = nuevo_monto
                                 st.session_state.descuadres.at[idx_mod, "tipo"] = nuevo_tipo
                                 st.session_state.descuadres.at[idx_mod, "observacion"] = nueva_obs
-                                actualizar_hoja_completa("Descuadres", st.session_state.descuadres)
+                                if not actualizar_hoja_completa("Descuadres", st.session_state.descuadres):
+                                    st.session_state.pop("descuadres", None)
+                                    st.stop()
                                 registrar_auditoria("Editar Descuadre", "Descuadres", f"{row_mod['nombre']} ({row_mod['fecha']}): {valor_anterior_desc} → S/. {nuevo_monto} ({nuevo_tipo})")
                                 st.toast("Descuadre actualizado correctamente")
                                 time.sleep(0.3)
@@ -9872,8 +10440,10 @@ elif choice == "Historial de Descuadres":
                             if confirm_del_desc:
                                 idx_del = int(sel_del.split(" | ")[0])
                                 row_del_desc = st.session_state.descuadres.loc[idx_del]
+                                if not eliminar_registro_seguro("Descuadres", idx_del, row_del_desc):
+                                    st.session_state.pop("descuadres", None)
+                                    st.stop()
                                 st.session_state.descuadres = st.session_state.descuadres.drop(idx_del).reset_index(drop=True)
-                                actualizar_hoja_completa("Descuadres", st.session_state.descuadres)
                                 registrar_auditoria("Eliminar Descuadre", "Descuadres", f"{row_del_desc['nombre']} ({row_del_desc['fecha']}): S/. {row_del_desc['monto']} ({row_del_desc['tipo']})")
                                 st.toast("Descuadre eliminado correctamente")
                                 time.sleep(0.3)
@@ -9951,7 +10521,9 @@ elif choice == "Incidencias y Daños":
                         _nuevo = "Resuelto / Condonado"
                     if _nuevo:
                         st.session_state.incidencias.at[idx_inc_resolver, "estado"] = _nuevo
-                        actualizar_hoja_completa("Incidencias", st.session_state.incidencias)
+                        if not actualizar_hoja_completa("Incidencias", st.session_state.incidencias):
+                            st.session_state.pop("incidencias", None)
+                            st.stop()
                         registrar_auditoria("Actualizar Estado de Incidencia", "Incidencias", f"Incidencia #{idx_inc_resolver} → {_nuevo}")
                         st.toast("Estado actualizado")
                         time.sleep(0.3)
@@ -10046,7 +10618,9 @@ elif choice == "Botellas Fiadas":
                         if st.button("Marcar devueltas", key=f"bf_dev_{idx_bf}", use_container_width=True):
                             st.session_state.botellas_fiadas.at[idx_bf, "estado"] = "Devuelta"
                             st.session_state.botellas_fiadas.at[idx_bf, "fecha_devolucion"] = obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S")
-                            actualizar_hoja_completa("BotellasFiadas", st.session_state.botellas_fiadas)
+                            if not actualizar_hoja_completa("BotellasFiadas", st.session_state.botellas_fiadas):
+                                st.session_state.pop("botellas_fiadas", None)
+                                st.stop()
                             registrar_auditoria("Marcar Botellas Devueltas", "BotellasFiadas", f"{r_bf['cliente_nombre']} — {r_bf['cantidad_botellas']} botella(s)")
                             st.toast("Botellas marcadas como devueltas")
                             st.rerun()
@@ -10423,7 +10997,9 @@ elif choice == "Gestión de Vacaciones":
                     st.markdown(ui_vac_card(r_pr, admin=True), unsafe_allow_html=True)
                     if st.button("Marcar Recuperado", key=f"recup_btn_{idx_pr}", use_container_width=True):
                         st.session_state.vacaciones.at[idx_pr, "estado_recuperacion"] = "Recuperado"
-                        actualizar_hoja_completa("Vacaciones", st.session_state.vacaciones)
+                        if not actualizar_hoja_completa("Vacaciones", st.session_state.vacaciones):
+                            st.session_state.pop("vacaciones", None)
+                            st.stop()
                         registrar_auditoria("Marcar Permiso Recuperado", "Vacaciones", f"{r_pr['nombre']} — recuperación del {r_pr['fecha_recuperacion']}")
                         st.toast("Marcado como recuperado")
                         time.sleep(0.3)
@@ -10455,8 +11031,10 @@ elif choice == "Gestión de Vacaciones":
                     if confirm_vac_del:
                         idx_vac_del = int(sel_vac_del.split(" | ")[0])
                         row_vac_del = st.session_state.vacaciones.loc[idx_vac_del]
+                        if not eliminar_registro_seguro("Vacaciones", idx_vac_del, row_vac_del):
+                            st.session_state.pop("vacaciones", None)
+                            st.stop()
                         st.session_state.vacaciones = st.session_state.vacaciones.drop(idx_vac_del).reset_index(drop=True)
-                        actualizar_hoja_completa("Vacaciones", st.session_state.vacaciones)
                         registrar_auditoria("Eliminar Registro de Descanso", "Vacaciones", f"{row_vac_del['nombre']} — {row_vac_del['tipo']} ({row_vac_del['fecha_inicio']} a {row_vac_del['fecha_fin']})")
                         st.toast("Registro eliminado correctamente")
                         time.sleep(0.3)
@@ -10772,7 +11350,9 @@ elif choice == "Onboarding / Offboarding":
                         if nuevo_marcado != marcado:
                             st.session_state.checklist.at[idx_chk, "estado"] = "Completado" if nuevo_marcado else "Pendiente"
                             st.session_state.checklist.at[idx_chk, "fecha_completado"] = obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S") if nuevo_marcado else ""
-                            actualizar_hoja_completa("Checklist", st.session_state.checklist)
+                            if not actualizar_hoja_completa("Checklist", st.session_state.checklist):
+                                st.session_state.pop("checklist", None)
+                                st.stop()
                             registrar_auditoria(f"Actualizar Ítem de {tipo_chk}", "Checklist", f"{colab_chk_sel}: '{row_chk['tarea']}' → {'Completado' if nuevo_marcado else 'Pendiente'}")
                             st.rerun()
 
@@ -10985,6 +11565,7 @@ elif choice == "Rutinas Operativas":
     )
     with st.container(key="pm_v_rutinas_operativas"):
         _pm2_css()
+        _pm3_evidence_setup_ui()
         t_monitor, t_create, t_library = st.tabs(["Seguimiento", "Asignar actividades", "Biblioteca e historial"])
 
         with t_monitor:
@@ -10998,7 +11579,7 @@ elif choice == "Rutinas Operativas":
             with cp:
                 selected_worker = st.selectbox("Colaborador", people_choices, key="pm2_monitor_worker")
             with cs:
-                selected_state = st.selectbox("Estado", ["Todos", "Pendiente", "En curso", "Completada", "Cancelada", "Vencida"], key="pm2_monitor_status")
+                selected_state = st.selectbox("Estado", ["Todos", "Pendiente", "En curso", "Por validar", "Completada", "Cancelada", "Vencida"], key="pm2_monitor_status")
             with cr:
                 if st.button("Actualizar", key="pm2_admin_refresh", use_container_width=True):
                     _pm2_clear_cache()
@@ -11016,6 +11597,9 @@ elif choice == "Rutinas Operativas":
                     else:
                         df_day = df_day[df_day["estado"].astype(str) == selected_state]
                 _pm2_metrics(df_day)
+                waiting_review = int((df_day["estado"].astype(str) == "Por validar").sum()) if not df_day.empty else 0
+                if waiting_review:
+                    st.warning(f"Tienes {waiting_review} actividad(es) esperando validación del supervisor.")
                 if df_day.empty:
                     st.info("No hay actividades con estos filtros. Puedes crearlas en «Asignar actividades».")
                 else:
@@ -11045,8 +11629,22 @@ elif choice == "Rutinas Operativas":
                             task_id = str(task["id_rutina"])
                             with st.container(border=True, key="pm2_admin_" + task_id):
                                 st.markdown(_pm2_task_summary_html(task, show_worker=True), unsafe_allow_html=True)
+                                _pm3_gallery(task_id, "admin")
                                 current = str(task["estado"])
-                                if current != "Cancelada":
+                                if current == "Por validar":
+                                    with st.form("pm3_review_" + task_id):
+                                        st.caption("Validación del supervisor · revisa evidencias e instrucciones antes de decidir")
+                                        review_note = st.text_area("Comentario de revisión", key="pm3_review_note_" + task_id,
+                                                                   placeholder="Indica las correcciones necesarias si observas la tarea", max_chars=800)
+                                        r_a, r_b = st.columns(2)
+                                        approved = r_a.form_submit_button("Aprobar", use_container_width=True, type="primary")
+                                        rejected = r_b.form_submit_button("Solicitar corrección", use_container_width=True)
+                                    if approved or rejected:
+                                        ok, msg = _pm3_review(task_id, approved, review_note)
+                                        _pm2_notice(ok, msg)
+                                        if ok:
+                                            st.rerun()
+                                if current not in ("Cancelada", "Completada", "Por validar"):
                                     with st.expander("Editar horario, ubicación o instrucciones", expanded=False):
                                         with st.form("pm2_edit_form_" + task_id):
                                             edate = st.date_input("Fecha", value=datetime.strptime(str(task["fecha"])[:10], "%Y-%m-%d").date(), key="pm2_edate_" + task_id)
@@ -11064,13 +11662,14 @@ elif choice == "Rutinas Operativas":
                                             ebegin = ct1.time_input("Desde", value=_t(task["hora_inicio"], (8, 45)), key="pm2_ebegin_" + task_id)
                                             eend = ct2.time_input("Hasta", value=_t(task["hora_limite"], (9, 30)), key="pm2_eend_" + task_id)
                                             epri = ct3.selectbox("Prioridad", ["Normal", "Alta", "Urgente"], index=["Normal", "Alta", "Urgente"].index(str(task["prioridad"])) if str(task["prioridad"]) in ("Normal", "Alta", "Urgente") else 0, key="pm2_epri_" + task_id)
+                                            ereq = st.checkbox("Evidencia fotográfica obligatoria", value=str(task.get("evidencia_obligatoria", "No")).lower() in ("sí", "si", "true", "1"), key="pm2_ereq_" + task_id)
                                             edit_submitted = st.form_submit_button("Guardar cambios", use_container_width=True)
                                         if edit_submitted:
-                                            ok, msg = _pm2_edit_task(task_id, edate, estore, ezone, etitle, edesc, ebegin.strftime("%H:%M"), eend.strftime("%H:%M"), epri)
+                                            ok, msg = _pm2_edit_task(task_id, edate, estore, ezone, etitle, edesc, ebegin.strftime("%H:%M"), eend.strftime("%H:%M"), epri, ereq)
                                             _pm2_notice(ok, msg)
                                             if ok:
                                                 st.rerun()
-                                if current not in ("Completada", "Cancelada"):
+                                if current not in ("Completada", "Cancelada", "Por validar"):
                                     if st.button("Cancelar actividad", key="pm2_cancel_" + task_id, use_container_width=True):
                                         ok, msg = _pm2_update_progress(task_id, "Cancelada", str(task.get("observacion", "")))
                                         _pm2_notice(ok, msg)
@@ -11110,11 +11709,12 @@ elif choice == "Rutinas Operativas":
                 start_time = start_col.time_input("Inicia a las", value=dt_time(8, 45), key="pm2_start")
                 due_time = end_col.time_input("Debe finalizar a las", value=dt_time(9, 30), key="pm2_due")
                 priority = pri_col.selectbox("Prioridad", ["Normal", "Alta", "Urgente"], index=["Normal", "Alta", "Urgente"].index(preset[4]), key="pm2_priority_" + str(list(_PM2_TEMPLATES).index(template_selected)))
+                evidence_required = st.checkbox("Solicitar fotografía obligatoria de evidencia", value=template_selected in ("Control de refrigeradoras", "Limpieza y orden", "Cierre operativo"), key="pm2_evidence_required")
                 submitted = st.form_submit_button("Asignar actividad al equipo", type="primary", use_container_width=True)
             if submitted:
                 ok, msg, added = _pm2_assign([label_to_person[l]["dni"] for l in assigned_labels], day, repeat_days,
                                              title, details, store, zone, start_time.strftime("%H:%M"), due_time.strftime("%H:%M"), priority,
-                                             "Plantilla: " + template_selected if template_selected != "Personalizada · desde cero" else "Manual")
+                                             "Plantilla: " + template_selected if template_selected != "Personalizada · desde cero" else "Manual", evidencia_obligatoria=evidence_required)
                 _pm2_notice(ok, msg)
                 if ok and added:
                     st.caption("Las nuevas actividades ya están disponibles para los colaboradores asignados en «Mis Rutinas».")
