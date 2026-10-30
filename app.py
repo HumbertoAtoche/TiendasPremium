@@ -4180,6 +4180,8 @@ def _tp_panel_operacion_hoy():
     except Exception as _err:
         # El panel es un extra de lectura: si algo falla, el Dashboard sigue funcionando.
         st.caption(f"No se pudo calcular el panel de operación ({type(_err).__name__}).")
+_TP_NAV_ICONOS.update({"Rutinas Operativas": "fact_check", "Portal del Colaborador 2.0": "account_circle"})
+
 
 # =========================================================
 # CONTRASEÑAS PROTEGIDAS (PBKDF2-SHA256 con sal aleatoria, solo librería estándar)
@@ -5565,12 +5567,362 @@ def _chat_responder(pregunta):
 
 
 
+
+
+# =========================================================
+# PREMIUM MARKET · NUEVA CAPA DE EXPERIENCIA 2026
+# Sidebar recovery, Rutinas Operativas y Portal 2.0
+# =========================================================
+_PM_ROUTINE_TEMPLATE = {
+    "Mañana": [
+        "Apertura del área y revisión visual",
+        "Validar limpieza, orden y exhibición",
+        "Reponer productos clave y revisar quiebres",
+        "Confirmar temperatura de equipos y vitrinas",
+    ],
+    "Tarde": [
+        "Verificar reposición de góndolas y frío",
+        "Ordenar exhibiciones y material promocional",
+        "Actualizar pendientes operativos del turno",
+        "Preparar entrega ordenada al siguiente turno",
+    ],
+    "Cierre": [
+        "Revisar orden final del área",
+        "Cerrar pendientes de reposición y merma",
+        "Validar limpieza de equipos y superficies",
+        "Confirmar cierre operativo y novedades",
+    ],
+    "General": [
+        "Revisar presentación personal y área asignada",
+        "Mantener orden, limpieza y atención al cliente",
+        "Reportar incidencias, faltantes o riesgos",
+    ],
+}
+
+def _pm_fecha_iso(fecha_ref=None):
+    if fecha_ref is None:
+        return obtener_ahora_peru().strftime("%Y-%m-%d")
+    try:
+        return _norm_fecha_h(fecha_ref)
+    except Exception:
+        return str(fecha_ref)[:10]
+
+
+def _pm_tipo_rutina(fecha_ref=None):
+    return f"Rutina Operativa {_pm_fecha_iso(fecha_ref)}"
+
+
+def _pm_turno_normalizado(turno_raw):
+    t = str(turno_raw or "").strip().lower()
+    if any(x in t for x in ["mañ", "man", "apert", "morning", "1"]):
+        return "Mañana"
+    if any(x in t for x in ["cier", "close"]):
+        return "Cierre"
+    if any(x in t for x in ["tard", "noche", "late", "2", "3"]):
+        return "Tarde"
+    return "General"
+
+
+def _pm_programados(fecha_ref=None):
+    fecha_iso = _pm_fecha_iso(fecha_ref)
+    emp = st.session_state.get("empleados", pd.DataFrame()).copy()
+    if not isinstance(emp, pd.DataFrame) or emp.empty:
+        return []
+    if "rol" in emp.columns:
+        emp = emp[emp["rol"].astype(str).str.lower() != "admin"]
+    if "estado" in emp.columns:
+        emp = emp[emp["estado"].astype(str).str.lower() == "activo"]
+    prog = st.session_state.get("programacion", pd.DataFrame()).copy()
+    items = []
+    vistos = set()
+    if isinstance(prog, pd.DataFrame) and not prog.empty and {"dni", "nombre", "fecha"} <= set(prog.columns):
+        prog = prog[prog["fecha"].apply(_norm_fecha_h) == fecha_iso]
+        for _, r in prog.iterrows():
+            dni = str(r.get("dni", "")).strip()
+            if not dni or dni in vistos:
+                continue
+            nom = str(r.get("nombre", "")).strip()
+            turno = str(r.get("turno", "General")).strip() or "General"
+            fila_emp = emp[emp["dni"].astype(str).str.strip() == dni]
+            sede = str(fila_emp.iloc[0].get("sede", fila_emp.iloc[0].get("tienda", "Tienda")) if not fila_emp.empty else "Tienda")
+            cargo = str(fila_emp.iloc[0].get("cargo", "Colaborador") if not fila_emp.empty else "Colaborador")
+            items.append({"dni": dni, "nombre": nom, "turno": turno, "sede": sede, "cargo": cargo})
+            vistos.add(dni)
+    if not items:
+        for _, r in emp.sort_values("nombre").iterrows():
+            items.append({
+                "dni": str(r.get("dni", "")).strip(),
+                "nombre": str(r.get("nombre", "")).strip(),
+                "turno": "General",
+                "sede": str(r.get("sede", r.get("tienda", "Tienda"))),
+                "cargo": str(r.get("cargo", "Colaborador")),
+            })
+    return items
+
+
+def _pm_tareas_rutina(turno_raw):
+    turno = _pm_turno_normalizado(turno_raw)
+    base = list(_PM_ROUTINE_TEMPLATE["General"])
+    extras = list(_PM_ROUTINE_TEMPLATE.get(turno, []))
+    tareas = []
+    for t in base + extras:
+        if t not in tareas:
+            tareas.append(t)
+    return tareas
+
+
+def _pm_rutinas_df(fecha_ref=None, dni=None):
+    chk = st.session_state.get("checklist", pd.DataFrame()).copy()
+    if not isinstance(chk, pd.DataFrame) or chk.empty:
+        return pd.DataFrame(columns=["id_item", "dni", "nombre", "tipo", "tarea", "estado", "fecha_creacion", "fecha_completado"])
+    tipo = _pm_tipo_rutina(fecha_ref)
+    df = chk[chk["tipo"].astype(str) == tipo].copy() if "tipo" in chk.columns else pd.DataFrame(columns=chk.columns)
+    if dni is not None and not df.empty and "dni" in df.columns:
+        df = df[df["dni"].astype(str).str.strip() == str(dni).strip()].copy()
+    return df
+
+
+def _pm_generar_rutinas_operativas(fecha_ref=None):
+    fecha_iso = _pm_fecha_iso(fecha_ref)
+    tipo = _pm_tipo_rutina(fecha_iso)
+    actuales = st.session_state.get("checklist", pd.DataFrame()).copy()
+    if not isinstance(actuales, pd.DataFrame):
+        actuales = pd.DataFrame(columns=["id_item", "dni", "nombre", "tipo", "tarea", "estado", "fecha_creacion", "fecha_completado"])
+    existentes = set()
+    if not actuales.empty:
+        for _, r in actuales[actuales["tipo"].astype(str) == tipo].iterrows():
+            existentes.add((str(r.get("dni", "")).strip(), str(r.get("tarea", "")).strip()))
+    personas = _pm_programados(fecha_iso)
+    nuevas = []
+    fecha_c = obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S")
+    for pos, persona in enumerate(personas):
+        for j, tarea in enumerate(_pm_tareas_rutina(persona.get("turno", "General"))):
+            clave = (str(persona.get("dni", "")).strip(), tarea)
+            if clave in existentes:
+                continue
+            id_item = f"RUT-{fecha_iso.replace('-', '')}-{pos+1:03d}-{j+1:02d}-{int(time.time()*1000)%100000}"
+            fila = {
+                "id_item": id_item,
+                "dni": str(persona.get("dni", "")).strip(),
+                "nombre": str(persona.get("nombre", "")).strip(),
+                "tipo": tipo,
+                "tarea": tarea,
+                "estado": "Pendiente",
+                "fecha_creacion": fecha_c,
+                "fecha_completado": "",
+            }
+            if not st.session_state.get("ver_como"):
+                guardar_item_checklist_gsheets(id_item, fila["dni"], fila["nombre"], tipo, tarea, "Pendiente", fecha_c, "")
+            nuevas.append(fila)
+    if nuevas:
+        st.session_state.checklist = pd.concat([pd.DataFrame(nuevas), actuales], ignore_index=True)
+        registrar_auditoria("Generar Rutinas Operativas", "Checklist", f"{fecha_iso}: {len(nuevas)} tarea(s) creadas para {len(personas)} colaborador(es).")
+    return len(nuevas), len(personas)
+
+
+def _pm_actualizar_rutina(id_item, completado, nombre_usuario=""):
+    if st.session_state.get("ver_como"):
+        st.toast("Vista previa: no se guardó ningún dato")
+        return False
+    chk = st.session_state.get("checklist", pd.DataFrame()).copy()
+    if chk.empty or "id_item" not in chk.columns:
+        return False
+    mask = chk["id_item"].astype(str) == str(id_item)
+    if not mask.any():
+        return False
+    nuevo_estado = "Completado" if completado else "Pendiente"
+    fecha_c = obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S") if completado else ""
+    st.session_state.checklist.loc[mask, "estado"] = nuevo_estado
+    st.session_state.checklist.loc[mask, "fecha_completado"] = fecha_c
+    try:
+        actualizar_hoja_completa("Checklist", st.session_state.checklist)
+    except Exception as _exc_rut:
+        print("Premium: no se pudo actualizar rutina", type(_exc_rut).__name__)
+    try:
+        _fila = st.session_state.checklist[mask].iloc[0]
+        registrar_auditoria("Actualizar Rutina Operativa", "Checklist", f"{nombre_usuario or _fila.get('nombre', '')}: {_fila.get('tarea', '')} → {nuevo_estado}")
+    except Exception:
+        pass
+    return True
+
+
+def _pm_resumen_colaborador(nombre, dni, fecha_ref=None):
+    fecha_iso = _pm_fecha_iso(fecha_ref)
+    fecha_d = parsear_fecha_segura(fecha_iso) or obtener_ahora_peru().date()
+    prog = st.session_state.get("programacion", pd.DataFrame()).copy()
+    turno = "Sin programación"
+    if isinstance(prog, pd.DataFrame) and not prog.empty and {"dni", "fecha"} <= set(prog.columns):
+        m = (prog["dni"].astype(str).str.strip() == str(dni).strip()) & (prog["fecha"].apply(_norm_fecha_h) == fecha_iso)
+        if m.any():
+            turno = str(prog.loc[m].iloc[0].get("turno", "General"))
+    if turno == "Sin programación":
+        inf = _info_turno("Mañana", fecha_d)
+        turno_txt = "Sin programación cargada"
+    else:
+        inf = _info_turno(turno, fecha_d)
+        turno_txt = turno
+    rango_turno = f"{inf['entrada']} – {inf['salida']}" if inf else "Por definir"
+
+    asi = st.session_state.get("asistencia", pd.DataFrame()).copy()
+    estado_asistencia = "Sin marcar"
+    hora_ing = "-"
+    if isinstance(asi, pd.DataFrame) and not asi.empty and {"dni", "fecha", "tipo"} <= set(asi.columns):
+        a = asi[(asi["dni"].astype(str).str.strip() == str(dni).strip()) & (asi["fecha"].astype(str) == fecha_iso)].copy()
+        if not a.empty:
+            ing = a[a["tipo"].astype(str) == "INGRESO"].copy()
+            if not ing.empty:
+                hora_ing = str(pd.to_datetime(ing.iloc[0].get("fecha_hora"), errors="coerce").strftime("%H:%M") if pd.notna(pd.to_datetime(ing.iloc[0].get("fecha_hora"), errors="coerce")) else str(ing.iloc[0].get("fecha_hora", ""))[11:16])
+                mins_t, es_t, _t = calcular_tardanza_ingreso(ing.iloc[0].get("fecha_hora", ""))
+                estado_asistencia = f"Tardanza de {mins_t} min" if es_t else "Marcación al día"
+
+    sol = st.session_state.get("solicitudes", pd.DataFrame()).copy()
+    sol_pend = 0
+    if isinstance(sol, pd.DataFrame) and not sol.empty and {"dni", "estado"} <= set(sol.columns):
+        sol_pend = int(((sol["dni"].astype(str).str.strip() == str(dni).strip()) & (sol["estado"].astype(str).str.lower() == "pendiente")).sum())
+
+    bol = st.session_state.get("boletas_historial", pd.DataFrame()).copy()
+    boletas = 0
+    if isinstance(bol, pd.DataFrame) and not bol.empty and "dni" in bol.columns:
+        boletas = int((bol["dni"].astype(str).str.strip() == str(dni).strip()).sum())
+
+    bot = st.session_state.get("botellas_fiadas", pd.DataFrame()).copy()
+    bot_pend = 0
+    if isinstance(bot, pd.DataFrame) and not bot.empty and {"dni", "estado"} <= set(bot.columns):
+        bot_pend = int(((bot["dni"].astype(str).str.strip() == str(dni).strip()) & (bot["estado"].astype(str).str.lower() != "devuelta")).sum())
+
+    rut = _pm_rutinas_df(fecha_ref, dni)
+    total_r = int(len(rut))
+    comp_r = int((rut["estado"].astype(str) == "Completado").sum()) if total_r else 0
+    pct_r = int(round((comp_r / total_r) * 100)) if total_r else 0
+
+    return {
+        "turno": turno_txt,
+        "rango_turno": rango_turno,
+        "estado_asistencia": estado_asistencia,
+        "hora_ingreso": hora_ing,
+        "solicitudes_pendientes": sol_pend,
+        "boletas": boletas,
+        "botellas_pendientes": bot_pend,
+        "rutinas_total": total_r,
+        "rutinas_completadas": comp_r,
+        "rutinas_pct": pct_r,
+        "fecha_iso": fecha_iso,
+        "nombre": nombre,
+    }
+
+
+def _pm_mount_sidebar_fab():
+    components.html("""
+    <script>
+    (function(){
+      const doc = window.parent.document;
+      if (!doc) return;
+      function isSidebarOpen(){
+        const sidebar = doc.querySelector('section[data-testid="stSidebar"]');
+        if (!sidebar) return false;
+        const style = window.parent.getComputedStyle(sidebar);
+        return style.display !== 'none' && parseFloat(style.width || '0') > 120;
+      }
+      function clickOpen(){
+        const btn = doc.querySelector('[data-testid="stSidebarCollapsedControl"] button, button[aria-label="Open sidebar"]');
+        if (btn) { btn.click(); return; }
+        const alt = doc.querySelector('[data-testid="stSidebar"]');
+        if (alt) { alt.scrollIntoView({block:'start'}); }
+      }
+      function ensure(){
+        let btn = doc.getElementById('pm-sidebar-fab');
+        if (!btn) {
+          btn = doc.createElement('button');
+          btn.id = 'pm-sidebar-fab';
+          btn.type = 'button';
+          btn.innerHTML = '<span class="pm-sidebar-fab-ico">☰</span><span>Menú</span>';
+          btn.style.cssText = 'position:fixed;left:18px;top:14px;z-index:100050;display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:14px;border:1px solid #e5eaf1;background:#ffffff;box-shadow:0 12px 34px rgba(18,31,53,.14);font:800 13px/1.1 Plus Jakarta Sans,system-ui,sans-serif;color:#22324a;cursor:pointer;';
+          btn.onmouseenter = () => btn.style.transform='translateY(-1px)';
+          btn.onmouseleave = () => btn.style.transform='translateY(0)';
+          btn.onclick = clickOpen;
+          doc.body.appendChild(btn);
+        }
+        btn.style.display = isSidebarOpen() ? 'none' : 'flex';
+      }
+      ensure();
+      const obs = new MutationObserver(ensure);
+      obs.observe(doc.body, {childList:true, subtree:true, attributes:true});
+      window.addEventListener('resize', ensure);
+      setInterval(ensure, 1200);
+    })();
+    </script>
+    """, height=0, width=0)
+
+
+_PM_NEXTLEVEL_CSS = """
+<style>
+/* Recuperación fiable del sidebar */
+#pm-sidebar-fab{transition:transform .18s ease, box-shadow .18s ease, background .18s ease;}
+#pm-sidebar-fab:hover{background:#fff7f8!important;box-shadow:0 16px 38px rgba(18,31,53,.16)!important;}
+#pm-sidebar-fab .pm-sidebar-fab-ico{font-size:16px;line-height:1;display:inline-flex;align-items:center;justify-content:center;}
+/* Chat Premium IA 2.0 */
+.st-key-tp_chat_panel{width:min(430px,calc(100vw - 24px))!important;top:78px!important;right:18px!important;border-radius:28px!important;box-shadow:0 32px 88px rgba(16,27,45,.20),0 3px 14px rgba(16,27,45,.06)!important;border:1px solid #e7ecf2!important;background:linear-gradient(180deg,#fff 0%,#fff 72%,#fbfcfe 100%)!important;}
+.st-key-tp_chat_panel > div[data-testid="stVerticalBlock"]{padding:0 18px 18px!important;gap:.55rem!important;}
+.pm-ai-topline{height:6px!important;border-radius:24px 24px 0 0!important;background:linear-gradient(90deg,#ee3850,#ff7584 56%,#ffc0c7)!important;margin:0 -18px 10px!important;}
+.pm-ai-brand{display:flex;align-items:center;gap:12px!important;}
+.pm-ai-brand-avatar{width:48px!important;height:48px!important;border-radius:18px!important;box-shadow:0 10px 24px rgba(229,55,80,.12)!important;background:linear-gradient(145deg,#fff2f4,#ffe4e8)!important;}
+.pm-ai-brand h3{font-size:1.1rem!important;font-weight:860!important;letter-spacing:-.03em!important;}
+.pm-ai-brand small{font-size:.74rem!important;color:#7b8aa0!important;}
+.pm-ai-online{margin-top:5px!important;font-size:.73rem!important;font-weight:800!important;color:#169a63!important;}
+.pm-ai-rule{height:1px!important;background:linear-gradient(90deg,rgba(225,231,239,0),#e5ebf2 14%,#e5ebf2 86%,rgba(225,231,239,0))!important;margin:4px 0 10px!important;}
+.pm-ai-welcome{padding:16px 16px 15px!important;border:1px solid #e8edf3!important;border-radius:22px!important;background:linear-gradient(180deg,#fff8f9,#ffffff)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.8);}
+.pm-ai-welcome-k{font-size:.72rem!important;letter-spacing:.16em!important;color:#d3394f!important;font-weight:900!important;margin-bottom:10px!important;}
+.pm-ai-welcome h4{font-size:1.12rem!important;line-height:1.4!important;margin:0 0 10px!important;color:#213048!important;}
+.pm-ai-welcome p{font-size:.93rem!important;line-height:1.72!important;color:#62718a!important;margin:0!important;}
+.pm-ai-suggestions-k,.pm-ai-compose-k{font-size:.80rem!important;letter-spacing:.11em!important;color:#8d98ab!important;font-weight:900!important;margin-top:4px!important;}
+.st-key-tp_chat_panel [data-testid="column"] [data-testid="stButton"] button,
+.st-key-tp_chat_panel > div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlockBorderWrapper"] > div > div[data-testid="stButton"] button{min-height:48px!important;border-radius:16px!important;border:1px solid #dfe6ef!important;background:#fff!important;box-shadow:none!important;font-weight:760!important;color:#2b3952!important;}
+.st-key-tp_chat_panel [data-testid="stTextInputRootElement"] input{height:50px!important;border-radius:16px!important;border-color:#e1e7ef!important;background:#f8fafc!important;color:#24334b!important;}
+.st-key-tp_chat_panel [data-testid="stForm"]{padding:0!important;border:none!important;background:transparent!important;}
+.st-key-tp_chat_panel [data-testid="stForm"] [data-testid="stButton"] button[kind="primary"],
+.st-key-tp_chat_panel button[kind="primary"]{min-height:50px!important;border-radius:16px!important;font-weight:860!important;background:linear-gradient(90deg,#ef3550,#c92040)!important;border:none!important;box-shadow:0 14px 24px rgba(228,55,82,.22)!important;}
+.st-key-tp_chat_panel [data-testid="stChatMessage"]{padding:0!important;background:transparent!important;}
+.st-key-tp_chat_panel [data-testid="stChatMessageAvatarAssistant"], .st-key-tp_chat_panel [data-testid="stChatMessageAvatarUser"]{margin-top:6px!important;}
+.st-key-tp_chat_panel [data-testid="stChatMessageContent"]{width:100%!important;}
+.st-key-tp_chat_panel [data-testid="stChatMessageContent"] > div{padding:12px 14px!important;border-radius:18px!important;background:#ffffff!important;border:1px solid #e7edf4!important;box-shadow:0 8px 20px rgba(23,35,55,.05)!important;}
+.st-key-tp_chat_panel [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) [data-testid="stChatMessageContent"] > div{background:linear-gradient(180deg,#fdf0f3,#fff)!important;border-color:#f3d6de!important;}
+.pm-ai-foot{font-size:.72rem!important;color:#92a0b2!important;text-align:center!important;margin:6px 0 0!important;}
+/* Portal del colaborador y rutinas */
+.pm-portal-hero{position:relative;overflow:hidden;border:1px solid #e6ebf2;border-radius:26px;padding:24px 24px 20px;background:radial-gradient(circle at 82% 18%, rgba(236,50,55,.15), transparent 18%),linear-gradient(135deg,#101e35 0%,#1e2f4d 52%,#f03b56 100%);color:#fff;box-shadow:0 28px 60px -38px rgba(15,29,50,.45);}
+.pm-portal-hero:before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(255,255,255,.06) 1px,transparent 1px),linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px);background-size:28px 28px;pointer-events:none;opacity:.28;}
+.pm-portal-hero > *{position:relative;z-index:1;}
+.pm-portal-eyebrow{font-size:.74rem;font-weight:900;letter-spacing:.16em;text-transform:uppercase;color:#ffced6;margin-bottom:10px;}
+.pm-portal-hero h2{font-size:clamp(1.5rem,3vw,2.25rem);line-height:1.08;margin:0 0 10px;font-weight:860;letter-spacing:-.045em;color:#fff;}
+.pm-portal-hero p{max-width:760px;font-size:1rem;line-height:1.7;color:#eef2f8;margin:0;}
+.pm-portal-meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px;}
+.pm-portal-chip{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.14);color:#fff;font-size:.82rem;font-weight:700;backdrop-filter:blur(10px);}
+.pm-section-card{background:#fff;border:1px solid #e7edf4;border-radius:22px;padding:18px;box-shadow:0 12px 30px rgba(21,32,51,.05);}
+.pm-section-card h3{margin:0 0 6px;font-size:1.02rem;color:#22314a;font-weight:820;}
+.pm-section-card p{margin:0;color:#7a8798;font-size:.88rem;line-height:1.6;}
+.pm-rut-row{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:14px 0;border-bottom:1px solid #edf1f5;}
+.pm-rut-row:last-child{border-bottom:none;padding-bottom:0;}
+.pm-rut-main b{display:block;color:#24344c;font-size:.96rem;margin-bottom:3px;}
+.pm-rut-main span{display:block;color:#7c8999;font-size:.81rem;line-height:1.5;}
+.pm-rut-badge{display:inline-flex;align-items:center;padding:8px 12px;border-radius:999px;font-weight:800;font-size:.74rem;background:#fff5f6;color:#cb3148;border:1px solid #f5d3d9;white-space:nowrap;}
+.pm-mini-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;}
+.pm-portal-shortcuts .stButton button{min-height:46px!important;border-radius:16px!important;font-weight:760!important;}
+.pm-rut-progress{height:10px;border-radius:999px;background:#e8edf3;overflow:hidden;margin-top:10px;}
+.pm-rut-progress i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#0e9f6e,#23c181);}
+.pm-ai-shell-note{background:#f8fbff;border:1px solid #e7eef7;border-radius:18px;padding:14px 16px;color:#5f6f87;line-height:1.65;}
+@media(max-width:900px){
+  .pm-mini-grid{grid-template-columns:1fr;}
+}
+</style>
+"""
+st.markdown(_PM_NEXTLEVEL_CSS, unsafe_allow_html=True)
+_pm_mount_sidebar_fab()
+
 if rol_actual == "admin":
     # El asistente ahora se abre desde un botón flotante; no ocupa espacio en el menú.
     # Estilo uniforme para paneles de operación: conserva lógica y menú original.
-    menu = ["Dashboard General", "Centro de Alertas", "Analítica (BI)", "Gestión Colaboradores", "Onboarding / Offboarding", "Gestión de Vacaciones", "Programación de Turnos", "Boletas de Pago", "Solicitudes y Permisos", "Historial de Descuadres", "Incidencias y Daños", "Botellas Fiadas", "Historial de Asistencias", "Auditoría y Configuración"]
+    menu = ["Dashboard General", "Centro de Alertas", "Portal del Colaborador 2.0", "Rutinas Operativas", "Analítica (BI)", "Gestión Colaboradores", "Onboarding / Offboarding", "Gestión de Vacaciones", "Programación de Turnos", "Boletas de Pago", "Solicitudes y Permisos", "Historial de Descuadres", "Incidencias y Daños", "Botellas Fiadas", "Historial de Asistencias", "Auditoría y Configuración"]
 else:
-    menu = ["Marcar Asistencia", "Registrar Descuadre", "Registrar Incidencia", "Botellas Fiadas", "Mi Ficha Técnica", "Mis Vacaciones", "Mis Boletas", "Solicitar Permiso / Adelanto", "Mi Dashboard Mensual"]
+    menu = ["Portal del Colaborador 2.0", "Marcar Asistencia", "Registrar Descuadre", "Registrar Incidencia", "Botellas Fiadas", "Mi Ficha Técnica", "Mis Vacaciones", "Mis Boletas", "Solicitar Permiso / Adelanto", "Mi Dashboard Mensual"]
 
 if rol_real == "admin":
     _opc_vc = ["Mi vista (admin)"] + sorted(n for n, d in USUARIOS.items() if d["rol"] != "admin")
@@ -5616,10 +5968,10 @@ st.sidebar.markdown('<div class="pm-nav-kind-' + ('admin' if rol_actual == 'admi
 choice = st.sidebar.radio("Navegación", menu, key="nav_radio", on_change=_limpiar_busqueda, format_func=_tp_nav_label, label_visibility="collapsed")
 
 if rol_actual == "admin":
-    _nav_items = [("Dashboard General", "Resumen", ":material/dashboard:"), ("Centro de Alertas", "Alertas", ":material/notifications:"),
-                  ("Historial de Asistencias", "Asistencia", ":material/schedule:"), ("Solicitudes y Permisos", "Solicitudes", ":material/inbox:")]
+    _nav_items = [("Dashboard General", "Resumen", ":material/dashboard:"), ("Rutinas Operativas", "Rutinas", ":material/fact_check:"),
+                  ("Portal del Colaborador 2.0", "Portal", ":material/account_circle:"), ("Centro de Alertas", "Alertas", ":material/notifications:")]
 else:
-    _nav_items = [("Marcar Asistencia", "Marcar", ":material/fingerprint:"), ("Mi Dashboard Mensual", "Mi mes", ":material/calendar_month:"),
+    _nav_items = [("Portal del Colaborador 2.0", "Portal", ":material/account_circle:"), ("Marcar Asistencia", "Marcar", ":material/fingerprint:"),
                   ("Solicitar Permiso / Adelanto", "Permisos", ":material/edit_note:"), ("Mi Ficha Técnica", "Ficha", ":material/badge:")]
 try:
     with st.container(key="tp_bottomnav"):
@@ -6064,19 +6416,19 @@ if st.session_state.chat_flotante_abierto:
         if not st.session_state.chat_datos_historial:
             _saludo_chat = _tp_html.escape(str(user_actual).split()[0].capitalize() if user_actual else "equipo")
             st.markdown(
-                '<section class="pm-ai-welcome"><div class="pm-ai-welcome-k">TU ESPACIO DE CONVERSACIÓN</div>'
-                f'<h4>¡Hola, {_saludo_chat}! Qué gusto verte.</h4>'
-                '<p>Resuelve dudas, consulta información disponible o pide algo para alegrar tu día. '
-                'Estoy aquí para ayudarte.</p></section>',
+                '<section class="pm-ai-welcome"><div class="pm-ai-welcome-k">PREMIUM IA · ASISTENTE DE TRABAJO</div>'
+                f'<h4>Hola, {_saludo_chat}. Estoy lista para ayudarte.</h4>'
+                '<p>Consulta indicadores, revisa pendientes, pide una frase motivacional o haz preguntas rápidas sobre tu operación. '
+                'La idea es que sientas una conversación útil, simple y cercana.</p></section>',
                 unsafe_allow_html=True,
             )
-            st.markdown('<div class="pm-ai-suggestions-k">¿POR DÓNDE EMPEZAMOS?</div>', unsafe_allow_html=True)
+            st.markdown('<div class="pm-ai-suggestions-k">ATAJOS RECOMENDADOS</div>', unsafe_allow_html=True)
             _chat_sugerencias = (
-                [("Inspirarme hoy", "Dame una frase motivacional"),
+                [("Frase del día", "Dame una frase motivacional"),
                  ("Algo divertido", "Cuéntame un chiste"),
                  ("Tardanzas del mes", "Tardanzas del mes")]
                 if rol_actual == "admin" else
-                [("Inspirarme hoy", "Dame una frase motivacional"),
+                [("Frase del día", "Dame una frase motivacional"),
                  ("Algo divertido", "Cuéntame un chiste"),
                  ("Mi horario", "Mi horario")]
             )
@@ -6086,6 +6438,7 @@ if st.session_state.chat_flotante_abierto:
                 if _target_s.button(_label_s, key=f"tp_sug_{_i_s}", use_container_width=True):
                     st.session_state["tp_pregunta_sugerida"] = _query_s
                     st.rerun()
+            st.markdown('<div class="pm-ai-shell-note">Prueba preguntas como: <b>¿Cuántas solicitudes están pendientes?</b>, <b>Muéstrame las incidencias del mes</b> o <b>¿Quién tuvo más tardanzas?</b>.</div>', unsafe_allow_html=True)
 
         # Historial nativo de Streamlit; evita HTML interactivo sin conexión con Python.
         for _mensaje_f in st.session_state.chat_datos_historial[-12:]:
@@ -6094,11 +6447,11 @@ if st.session_state.chat_flotante_abierto:
                 if _mensaje_f.get("data") is not None:
                     st.dataframe(_mensaje_f["data"], use_container_width=True, hide_index=True)
 
-        st.markdown('<div class="pm-ai-compose-k">Escribe tu mensaje</div>', unsafe_allow_html=True)
+        st.markdown('<div class="pm-ai-compose-k">ESCRIBE TU MENSAJE</div>', unsafe_allow_html=True)
         with st.form("form_chat_flotante", clear_on_submit=True):
             _pregunta_f = st.text_input("Tu mensaje", key="chat_flotante_pregunta",
-                                        placeholder="¿En qué puedo ayudarte?", label_visibility="collapsed")
-            _enviar_f = st.form_submit_button("Enviar mensaje  →", use_container_width=True, type="primary")
+                                        placeholder="Escribe tu consulta, idea o pedido rápido…", label_visibility="collapsed")
+            _enviar_f = st.form_submit_button("Enviar mensaje", use_container_width=True, type="primary")
         _pregunta_elegida = (st.session_state.pop("tp_pregunta_sugerida", "") or (_pregunta_f if _enviar_f else "")).strip()
         if _pregunta_elegida:
             st.session_state.chat_datos_historial.append({"role": "user", "content": _pregunta_elegida[:900], "data": None})
@@ -6116,7 +6469,7 @@ if st.session_state.chat_flotante_abierto:
                 })
             st.session_state.chat_datos_historial = st.session_state.chat_datos_historial[-20:]
             st.rerun()
-        if st.button("Nueva conversación", key="limpiar_chat_flotante", use_container_width=True):
+        if st.button("Limpiar conversación", key="limpiar_chat_flotante", use_container_width=True):
             st.session_state.chat_datos_historial = []
             st.rerun()
         st.markdown('<p class="pm-ai-foot">Tus consultas se realizan dentro de tu sesión Premium.</p>',
@@ -6158,9 +6511,13 @@ PM7_MODULES = {
     'Onboarding / Offboarding': 'person_add',
     'Auditoría y Configuración': 'settings',
 }
+PM7_MODULES.update({'Rutinas Operativas': 'fact_check', 'Portal del Colaborador 2.0': 'account_circle'})
+
 
 
 PM8_VIEW_DETAILS = {'Marcar Asistencia': ('Registro de jornada', 'Tus marcaciones se guardan al confirmar la operación.', 'personal'), 'Registrar Descuadre': ('Control de caja', 'Revisa el importe y la observación antes de registrar.', 'finanzas'), 'Registrar Incidencia': ('Registro operativo', 'Describe el hecho y verifica los datos del registro.', 'control'), 'Mi Ficha Técnica': ('Expediente personal', 'Información laboral y de contacto registrada.', 'personal'), 'Solicitar Permiso / Adelanto': ('Nueva solicitud', 'Completa los datos y revisa el estado de tus solicitudes.', 'personal'), 'Mis Boletas': ('Documentos personales', 'Consulta los documentos disponibles en tu historial.', 'personal'), 'Mi Dashboard Mensual': ('Resumen de mi mes', 'Consulta tus registros y resultados del periodo.', 'analitica'), 'Dashboard General': ('Centro de operaciones', 'Indicadores y asistencia para seguimiento diario.', 'analitica'), 'Gestión Colaboradores': ('Directorio de personal', 'Consulta, filtra y administra las fichas del equipo.', 'personal'), 'Boletas de Pago': ('Gestión documental', 'Consulta y administra los documentos de nómina.', 'finanzas'), 'Programación de Turnos': ('Planificación operativa', 'Organiza y revisa los horarios del equipo.', 'operaciones'), 'Solicitudes y Permisos': ('Bandeja de solicitudes', 'Revisa solicitudes y registra decisiones.', 'operaciones'), 'Historial de Descuadres': ('Auditoría de caja', 'Filtra movimientos y consulta el detalle de las diferencias.', 'finanzas'), 'Incidencias y Daños': ('Seguimiento de incidencias', 'Consulta y gestiona el estado de los casos.', 'control'), 'Botellas Fiadas': ('Préstamos y devoluciones', 'Consulta saldos pendientes y registros de devolución.', 'operaciones'), 'Historial de Asistencias': ('Control de asistencia', 'Consulta marcaciones y trazabilidad de jornadas.', 'personal'), 'Centro de Alertas': ('Prioridades del día', 'Revisa los pendientes que necesitan atención.', 'control'), 'Gestión de Vacaciones': ('Control de descansos', 'Consulta periodos, saldos y solicitudes registradas.', 'personal'), 'Mis Vacaciones': ('Mis descansos', 'Consulta tus periodos registrados.', 'personal'), 'Analítica (BI)': ('Inteligencia de negocio', 'Explora tendencias y reportes operativos.', 'analitica'), 'Onboarding / Offboarding': ('Ciclo de vida laboral', 'Gestiona altas, bajas y tareas asociadas.', 'personal'), 'Auditoría y Configuración': ('Administración del sistema', 'Consulta la trazabilidad y configuración autorizada.', 'control')}
+PM8_VIEW_DETAILS.update({'Rutinas Operativas': ('Ejecución diaria', 'Checklists, evidencias y seguimiento de apertura, operación y cierre.', 'operaciones'), 'Portal del Colaborador 2.0': ('Experiencia del colaborador', 'Tu jornada, documentos y tareas reunidos en un mismo espacio.', 'personal')})
+
 
 def premium_module_context(titulo):
     """Contextual introduction for each of the 22 modules; presentation only."""
@@ -6348,16 +6705,14 @@ if choice == "Marcar Asistencia":
                         if registrar_marca(dni_actual, user_actual, "INGRESO", obs_marca, es_turno_extra):
                             st.toast("Ingreso registrado correctamente")
                             st.rerun()
-                    st.markdown('</div>', unsafe_allow_html=True)
-
+    
                 with c2:
                     st.markdown('<div class="btn-salida">', unsafe_allow_html=True)
                     if st.button("Marcar Salida", use_container_width=True):
                         if registrar_marca(dni_actual, user_actual, "SALIDA", obs_marca, es_turno_extra):
                             st.toast("Salida registrada correctamente")
                             st.rerun()
-                    st.markdown('</div>', unsafe_allow_html=True)
-
+    
         with col_preview:
             st.markdown("<h4 style='margin:0; font-size:1rem; color:#111827; margin-bottom:12px;'>Marcaciones de Hoy</h4>", unsafe_allow_html=True)
             hoy_str = obtener_ahora_peru().strftime("%Y-%m-%d")
@@ -9481,6 +9836,164 @@ elif choice == "Auditoría y Configuración":
                         st.rerun()
             else:
                 ui_callout("Todas las contraseñas están protegidas.")
+
+
+
+elif choice == "Rutinas Operativas":
+    premium_module_shell('Rutinas Operativas', 'OPERACIÓN DIARIA', 'Checklists por turno para asegurar apertura, operación y cierre con seguimiento claro.')
+
+    with st.container(key="pm_v_rutinas_operativas"):
+        c_r1, c_r2, c_r3 = st.columns([1.1, 1.2, .9])
+        with c_r1:
+            fecha_rut = st.date_input("Fecha de operación", obtener_ahora_peru().date(), key="pm_rut_fecha")
+        with c_r2:
+            personas_rut = _pm_programados(fecha_rut)
+            filtro_rut = ["Todos"] + [p["nombre"] for p in personas_rut]
+            nombre_rut = st.selectbox("Colaborador", filtro_rut, key="pm_rut_colab")
+        with c_r3:
+            st.markdown("<div style='height:29px'></div>", unsafe_allow_html=True)
+            if st.button("Generar rutinas del día", key="pm_rut_gen", use_container_width=True, type="primary"):
+                n_tareas, n_personas = _pm_generar_rutinas_operativas(fecha_rut)
+                if n_tareas:
+                    st.success(f"Se generaron {n_tareas} tarea(s) para {n_personas} colaborador(es).")
+                else:
+                    st.info("Las rutinas de ese día ya estaban creadas.")
+                st.rerun()
+
+        df_rut = _pm_rutinas_df(fecha_rut)
+        if df_rut.empty:
+            ui_callout("Todavía no hay rutinas generadas para esta fecha. Usa el botón superior para crear el checklist operativo del día.", "warn")
+        else:
+            if nombre_rut != "Todos":
+                df_rut = df_rut[df_rut["nombre"].astype(str) == nombre_rut].copy()
+            total_rut = len(df_rut)
+            comp_rut = int((df_rut["estado"].astype(str) == "Completado").sum()) if total_rut else 0
+            pend_rut = total_rut - comp_rut
+            personas_work = int(df_rut["dni"].astype(str).nunique()) if total_rut else 0
+            pct_rut = int(round(comp_rut * 100 / total_rut)) if total_rut else 0
+            st.markdown('<div class="tp-gridk">' +
+                        ui_kpi_acc("Colaboradores con rutina", str(personas_work), "seguimiento del día", "info") +
+                        ui_kpi_acc("Tareas completadas", str(comp_rut), f"de {total_rut} registradas", "ok") +
+                        ui_kpi_acc("Pendientes", str(pend_rut), "por ejecutar", "warn" if pend_rut else "ok") +
+                        ui_kpi_acc("Cumplimiento", f"{pct_rut}%", "avance del checklist", "ok" if pct_rut >= 85 else "warn") +
+                        '</div>', unsafe_allow_html=True)
+
+            resumen_persona = []
+            for nom, g in df_rut.groupby("nombre"):
+                total_g = len(g)
+                comp_g = int((g["estado"].astype(str) == "Completado").sum())
+                pct_g = int(round(comp_g * 100 / total_g)) if total_g else 0
+                dni_g = str(g.iloc[0].get("dni", ""))
+                resumen_persona.append((pct_g, nom, dni_g, total_g, comp_g))
+            resumen_persona = sorted(resumen_persona, key=lambda x: (x[0], x[1]), reverse=True)
+
+            col_res, col_det = st.columns([1, 1.35])
+            with col_res:
+                st.markdown('<div class="pm-section-card"><h3>Vista ejecutiva</h3><p>Revisa rápidamente quién va al día y quién necesita seguimiento.</p></div>', unsafe_allow_html=True)
+                for pct_g, nom, dni_g, total_g, comp_g in resumen_persona:
+                    uri = ui_foto_uri(dni_g)
+                    avatar = f'<img class="tp-avatar" src="{uri}" alt="{_html.escape(nom)}">' if uri else f'<div class="tp-avatar">{ui_iniciales(nom)}</div>'
+                    st.markdown(
+                        f'<div class="pm-rut-row"><div style="display:flex;gap:12px;align-items:flex-start">{avatar}<div class="pm-rut-main"><b>{_html.escape(nom)}</b>'
+                        f'<span>{comp_g} de {total_g} tareas completadas</span><div class="pm-rut-progress"><i style="width:{pct_g}%"></i></div></div></div>'
+                        f'<span class="pm-rut-badge">{pct_g}%</span></div>', unsafe_allow_html=True)
+            with col_det:
+                st.markdown('<div class="pm-section-card"><h3>Detalle operativo</h3><p>Marca los avances y deja el módulo listo para el seguimiento diario.</p></div>', unsafe_allow_html=True)
+                if df_rut.empty:
+                    st.caption("Sin tareas para mostrar")
+                else:
+                    for nom, g in df_rut.groupby("nombre"):
+                        st.markdown(f"<div style='margin:6px 0 10px;font-weight:820;color:#23324a'>{_html.escape(nom)}</div>", unsafe_allow_html=True)
+                        for _, rr in g.iterrows():
+                            cols_item = st.columns([.16, .84])
+                            marcada = str(rr.get("estado", "")).strip() == "Completado"
+                            key_chk = f"pm_rut_{rr.get('id_item', '')}"
+                            with cols_item[0]:
+                                nuevo = st.checkbox("", value=marcada, key=key_chk, label_visibility="collapsed")
+                            with cols_item[1]:
+                                tarea = str(rr.get("tarea", ""))
+                                meta = "Completada" if marcada else "Pendiente"
+                                st.markdown(f'<div class="pm-rut-row" style="padding:0 0 10px;border-bottom:none"><div class="pm-rut-main"><b>{_html.escape(tarea)}</b><span>{meta}</span></div>'
+                                            f'<span class="pm-rut-badge">{meta}</span></div>', unsafe_allow_html=True)
+                            if nuevo != marcada:
+                                _pm_actualizar_rutina(rr.get("id_item", ""), nuevo, nom)
+                                st.rerun()
+
+elif choice == "Portal del Colaborador 2.0":
+    premium_module_shell('Portal del Colaborador 2.0', 'EXPERIENCIA DEL COLABORADOR', 'Tu jornada, documentos, solicitudes y tareas reunidos en un solo espacio.')
+
+    with st.container(key="pm_v_portal_colaborador_20"):
+        _pm_generar_rutinas_operativas(obtener_ahora_peru().date())
+        res_portal = _pm_resumen_colaborador(user_actual, dni_actual, obtener_ahora_peru().date())
+        st.markdown(
+            '<section class="pm-portal-hero">'
+            '<div class="pm-portal-eyebrow">Premium Market · Portal del colaborador</div>'
+            f'<h2>Hola, {_html.escape(str(user_actual).split()[0])}. Todo tu día en un solo lugar.</h2>'
+            '<p>Este espacio reúne tu operación, tus documentos y tus tareas para que trabajes con mayor claridad y autonomía.</p>'
+            '<div class="pm-portal-meta">'
+            f'<span class="pm-portal-chip">Turno: {_html.escape(res_portal["turno"])}</span>'
+            f'<span class="pm-portal-chip">Horario: {_html.escape(res_portal["rango_turno"])}</span>'
+            f'<span class="pm-portal-chip">Asistencia: {_html.escape(res_portal["estado_asistencia"])}</span>'
+            '</div></section>', unsafe_allow_html=True)
+
+        st.markdown('<div class="tp-gridk">' +
+                    ui_kpi_acc("Marcación de hoy", _html.escape(res_portal["hora_ingreso"]), res_portal["estado_asistencia"], "ok" if res_portal["hora_ingreso"] != "-" else "warn") +
+                    ui_kpi_acc("Solicitudes pendientes", str(res_portal["solicitudes_pendientes"]), "esperan respuesta", "warn" if res_portal["solicitudes_pendientes"] else "ok") +
+                    ui_kpi_acc("Mis boletas", str(res_portal["boletas"]), "documentos disponibles", "info") +
+                    ui_kpi_acc("Rutinas del día", f"{res_portal['rutinas_completadas']} / {res_portal['rutinas_total']}", "avance operativo", "ok" if res_portal['rutinas_pct'] >= 80 else "warn") +
+                    '</div>', unsafe_allow_html=True)
+
+        st.markdown('<div class="pm-mini-grid">', unsafe_allow_html=True)
+        col_p1, col_p2 = st.columns(2)
+        with col_p1:
+            st.markdown('<div class="pm-section-card"><h3>Mi jornada de hoy</h3><p>Resumen rápido de tu operación y prioridades del día.</p></div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="pm-rut-row"><div class="pm-rut-main"><b>Estado de asistencia</b><span>{_html.escape(res_portal["estado_asistencia"])} · ingreso {res_portal["hora_ingreso"]}</span></div><span class="pm-rut-badge">{_html.escape(res_portal["rango_turno"])}</span></div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="pm-rut-row"><div class="pm-rut-main"><b>Solicitudes</b><span>{res_portal["solicitudes_pendientes"]} pendiente(s) en revisión</span></div><span class="pm-rut-badge">Seguimiento</span></div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="pm-rut-row"><div class="pm-rut-main"><b>Botellas fiadas</b><span>{res_portal["botellas_pendientes"]} registro(s) pendientes de devolución</span></div><span class="pm-rut-badge">Control</span></div>', unsafe_allow_html=True)
+            st.markdown('</div>', unsafe_allow_html=True)
+
+            st.markdown('<div style="height:14px"></div>', unsafe_allow_html=True)
+            st.markdown('<div class="pm-section-card pm-portal-shortcuts"><h3>Acciones rápidas</h3><p>Ve a tus módulos más usados sin perder tiempo.</p></div>', unsafe_allow_html=True)
+            s1, s2 = st.columns(2)
+            with s1:
+                st.button("Marcar asistencia", key="pm_go_asistencia", use_container_width=True, on_click=_ir_a, args=("Marcar Asistencia",), icon=":material/fingerprint:")
+                st.button("Mis boletas", key="pm_go_boletas", use_container_width=True, on_click=_ir_a, args=("Mis Boletas" if rol_actual != "admin" else "Boletas de Pago",), icon=":material/receipt_long:")
+            with s2:
+                st.button("Solicitudes", key="pm_go_sol", use_container_width=True, on_click=_ir_a, args=("Solicitar Permiso / Adelanto" if rol_actual != "admin" else "Solicitudes y Permisos",), icon=":material/inbox:")
+                st.button("Vacaciones", key="pm_go_vac", use_container_width=True, on_click=_ir_a, args=("Mis Vacaciones" if rol_actual != "admin" else "Gestión de Vacaciones",), icon=":material/beach_access:")
+            st.markdown('</div>', unsafe_allow_html=True)
+
+        with col_p2:
+            st.markdown('<div class="pm-section-card"><h3>Mis rutinas de hoy</h3><p>Marca tu avance y mantén tu operación al día.</p></div>', unsafe_allow_html=True)
+            df_mis_rut = _pm_rutinas_df(obtener_ahora_peru().date(), dni_actual)
+            if df_mis_rut.empty:
+                ui_callout("No hay rutinas creadas todavía para hoy.")
+            else:
+                pct = int(round(res_portal['rutinas_pct'])) if res_portal['rutinas_total'] else 0
+                st.markdown(f'<div class="pm-rut-progress" style="margin-bottom:14px"><i style="width:{pct}%"></i></div>', unsafe_allow_html=True)
+                for _, rr in df_mis_rut.iterrows():
+                    marcada = str(rr.get("estado", "")).strip() == "Completado"
+                    c1, c2 = st.columns([.14, .86])
+                    with c1:
+                        nuevo = st.checkbox("", value=marcada, key=f"pm_portal_rut_{rr.get('id_item', '')}", label_visibility="collapsed")
+                    with c2:
+                        estado_label = "Completada" if marcada else "Pendiente"
+                        st.markdown(f'<div class="pm-rut-row" style="padding:0 0 8px;border-bottom:none"><div class="pm-rut-main"><b>{_html.escape(str(rr.get("tarea", "")))}</b><span>{estado_label}</span></div><span class="pm-rut-badge">{estado_label}</span></div>', unsafe_allow_html=True)
+                    if nuevo != marcada:
+                        _pm_actualizar_rutina(rr.get("id_item", ""), nuevo, user_actual)
+                        st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
+
+            st.markdown('<div style="height:14px"></div>', unsafe_allow_html=True)
+            st.markdown('<div class="pm-section-card"><h3>Lo importante para ti</h3><p>Un panel breve para que no pierdas el foco.</p></div>', unsafe_allow_html=True)
+            _items_focus = [
+                ("Próximo paso", "Marca asistencia o completa tus rutinas del turno."),
+                ("Documentos", f"Tienes {res_portal['boletas']} boleta(s) disponible(s) en tu historial."),
+                ("Solicitudes", f"Actualmente tienes {res_portal['solicitudes_pendientes']} solicitud(es) pendiente(s)."),
+            ]
+            for tit, sub in _items_focus:
+                st.markdown(f'<div class="pm-rut-row"><div class="pm-rut-main"><b>{_html.escape(tit)}</b><span>{_html.escape(sub)}</span></div><span class="pm-rut-badge">Portal</span></div>', unsafe_allow_html=True)
+            st.markdown('</div>', unsafe_allow_html=True)
 
 # --- PIE DE PÁGINA (FOOTER ESTILO WEB/APP) ---
 st.markdown("""
