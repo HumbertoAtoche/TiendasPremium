@@ -6,6 +6,7 @@ import calendar
 import zoneinfo  # Manejo de zona horaria de Perú (UTC-5)
 import io
 import time
+_T0 = time.perf_counter()   # diagnóstico: inicio de esta ejecución del script
 import gspread
 
 # Gráficos interactivos corporativos (opcionales; la app mantiene sus gráficos actuales si Plotly no está instalado).
@@ -303,7 +304,7 @@ import copy
 @st.cache_resource
 def _cache_sheets():
     """Caché compartida entre todas las sesiones: evita superar el límite de lecturas de Google Sheets."""
-    return {"lock": threading.Lock(), "ws": {}, "datos": {}}
+    return {"lock": threading.Lock(), "ws": {}, "datos": {}, "stats": {"hit": 0, "miss": 0, "seg": 0.0}}
 
 TTL_LECTURA_SEG = 90
 _LEC = {"get_all_records", "get_all_values", "get_values", "col_values", "row_values", "get"}
@@ -336,8 +337,10 @@ class _HojaProxy:
         with c["lock"]:
             hit = c["datos"].get(key)
             if hit and time.time() - hit[0] < TTL_LECTURA_SEG:
+                c.setdefault("stats", {"hit": 0, "miss": 0, "seg": 0.0})["hit"] += 1
                 _marcar_ok(self._n)
                 return copy.deepcopy(hit[1])
+        _t_ini = time.perf_counter()
         for intento in range(4):
             try:
                 val = real(*a, **k)
@@ -353,6 +356,9 @@ class _HojaProxy:
                 raise
         with c["lock"]:
             c["datos"][key] = (time.time(), copy.deepcopy(val))
+            _st = c.setdefault("stats", {"hit": 0, "miss": 0, "seg": 0.0})
+            _st["miss"] += 1
+            _st["seg"] += time.perf_counter() - _t_ini
         _marcar_ok(self._n)
         return val
 
@@ -3175,6 +3181,45 @@ div.stButton > button[kind=secondary]:hover { border-color:#ec3237!important; co
 div.stButton > button[kind=primary] { background:#ec3237!important; color:#fff!important; border-color:#ec3237!important; }
 </style>""", unsafe_allow_html=True)
 
+# --- PRECALENTAMIENTO EN PARALELO ---
+# Al abrir una sesión nueva, si la caché compartida no tiene las hojas, se leen todas a la vez
+# (en vez de una tras otra). Si algo falla, no pasa nada: el código de abajo las lee como siempre.
+_HOJAS_INICIO = ["Colaboradores", "Asistencia", "Descuadres", "Solicitudes", "Feriados", "Vacaciones", "Auditoria",
+                 "Checklist", "Boletas_Historial", "Horarios", "Programacion", "Incidencias", "BotellasFiadas"]
+
+def _precalentar_hojas():
+    if not doc_sheets:
+        return
+    try:
+        from streamlit.runtime.scriptrunner import add_script_run_ctx, get_script_run_ctx
+        ctx = get_script_run_ctx()
+        c = _cache_sheets()
+        pendientes = []
+        for n in _HOJAS_INICIO:
+            key = (n, "get_all_records", repr(()), repr(sorted({}.items())))
+            with c["lock"]:
+                hit = c["datos"].get(key)
+            if not (hit and time.time() - hit[0] < TTL_LECTURA_SEG):
+                pendientes.append(n)
+        if len(pendientes) < 2:
+            return
+        def _leer_una(nombre):
+            try:
+                doc_sheets.worksheet(nombre).get_all_records()
+            except Exception:
+                pass
+        hilos = [threading.Thread(target=_leer_una, args=(n,), daemon=True) for n in pendientes]
+        for h in hilos:
+            add_script_run_ctx(h, ctx)
+            h.start()
+        for h in hilos:
+            h.join(timeout=30)
+    except Exception:
+        pass
+
+if "empleados" not in st.session_state:
+    _precalentar_hojas()
+
 # --- INICIALIZACIÓN DE SESSION STATE ---
 if "usuario_login" not in st.session_state:
     st.session_state.usuario_login = None
@@ -3419,6 +3464,11 @@ div[role="dialog"]{border-radius:20px!important;}
 .tp-att.none .v span{font-size:.84rem;}
   border:1px solid var(--tp-line);border-radius:18px;box-shadow:var(--tp-sh-1);}
 @media(max-width:650px){.tp-focus{padding:18px;}.tp-focus-h{font-size:1.2rem;}.tp-att{width:100%;min-width:0;}}
+/* --- Accesos a pendientes en el sidebar --- */
+section[data-testid="stSidebar"] div.st-key-tp_acc_bot button{background:#FEE2E2!important;border:1px solid #FECACA!important;}
+section[data-testid="stSidebar"] div.st-key-tp_acc_bot button *{color:#991B1B!important;font-weight:700!important;}
+section[data-testid="stSidebar"] div.st-key-tp_acc_sol button{background:#FEF3C7!important;border:1px solid #F8DE95!important;}
+section[data-testid="stSidebar"] div.st-key-tp_acc_sol button *{color:#92400E!important;font-weight:700!important;}
 @media (prefers-reduced-motion:reduce){
   .stApp [data-stale="true"]{transition:none!important;}
   html{scroll-behavior:auto;}
@@ -3554,6 +3604,84 @@ def _tp_panel_operacion_hoy():
         # El panel es un extra de lectura: si algo falla, el Dashboard sigue funcionando.
         st.caption(f"No se pudo calcular el panel de operación ({type(_err).__name__}).")
 
+# =========================================================
+# CONTRASEÑAS PROTEGIDAS (PBKDF2-SHA256 con sal aleatoria, solo librería estándar)
+# Formato guardado: pbkdf2$<iteraciones>$<sal>$<hash>. Las contraseñas antiguas (texto plano)
+# siguen funcionando y se convierten solas al ingresar, o todas a la vez desde Auditoría > Configuración.
+# =========================================================
+_PBKDF2_ITER = 600_000
+
+def _hash_clave(clave):
+    sal = os.urandom(16)
+    dig = hashlib.pbkdf2_hmac("sha256", str(clave).encode("utf-8"), sal, _PBKDF2_ITER)
+    return f"pbkdf2${_PBKDF2_ITER}${sal.hex()}${dig.hex()}"
+
+def _clave_protegida(almacenada):
+    return str(almacenada).startswith("pbkdf2$")
+
+def _verificar_clave(ingresada, almacenada):
+    ingresada, almacenada = str(ingresada), str(almacenada)
+    if _clave_protegida(almacenada):
+        try:
+            _, it, sal, dig = almacenada.split("$")
+            for cand in {ingresada, ingresada.strip()}:   # tolera un espacio de más al pegar la clave
+                calc = hashlib.pbkdf2_hmac("sha256", cand.encode("utf-8"), bytes.fromhex(sal), int(it)).hex()
+                if hmac.compare_digest(calc, dig):
+                    return True
+        except Exception:
+            pass
+        return False
+    # Contraseña antigua en texto plano: comparación exacta y en tiempo constante; una clave vacía nunca entra.
+    return bool(almacenada) and hmac.compare_digest(ingresada.encode("utf-8"), almacenada.encode("utf-8"))
+
+def _guardar_clave_protegida_gsheets(dni, clave_plana, clave_hash):
+    """Reemplaza en la hoja Colaboradores la clave en texto plano de ese DNI por su versión protegida."""
+    try:
+        if not doc_sheets:
+            return False
+        hoja = doc_sheets.worksheet("Colaboradores")
+        enc = [str(h).strip().lower() for h in hoja._ws.row_values(1)]   # _ws: lectura fresca, sin caché
+        col = enc.index("clave") + 1
+        for i, r in enumerate(hoja._ws.get_all_records(), start=2):
+            if str(r.get("dni", "")).strip() == str(dni).strip() and str(r.get("clave", "")) == str(clave_plana):
+                hoja.update_cell(i, col, clave_hash)
+                return True
+    except Exception:
+        pass
+    return False
+
+def _proteger_todas_las_claves():
+    """Convierte todas las contraseñas en texto plano de la hoja. Devuelve cuántas cambió, o None si no se pudo."""
+    try:
+        if not doc_sheets or st.session_state.get("ver_como"):
+            return None
+        hoja = doc_sheets.worksheet("Colaboradores")
+        enc = [str(h).strip().lower() for h in hoja._ws.row_values(1)]
+        col = enc.index("clave") + 1
+        regs = hoja._ws.get_all_records()
+        if not regs:
+            return 0
+        nuevas, mapa = [], {}
+        for r in regs:
+            actual = str(r.get("clave", ""))
+            if actual.strip() and not _clave_protegida(actual):
+                mapa.setdefault(actual, _hash_clave(actual))
+                nuevas.append([mapa[actual]])
+            else:
+                nuevas.append([actual])
+        if not mapa:
+            return 0
+        a1 = gspread.utils.rowcol_to_a1(2, col) + ":" + gspread.utils.rowcol_to_a1(len(regs) + 1, col)
+        hoja.update(range_name=a1, values=nuevas)
+        emp = st.session_state.empleados
+        for idx, r in emp.iterrows():
+            act = str(r.get("clave", ""))
+            if act in mapa:
+                emp.at[idx, "clave"] = mapa[act]
+        return sum(1 for n in nuevas if _clave_protegida(n[0])) - sum(1 for r in regs if _clave_protegida(str(r.get("clave", ""))))
+    except Exception:
+        return None
+
 # --- LOGIN EJECUTIVO ---
 # Si prefieres NO mostrar nombre/foto al escribir un DNI (antes de autenticar), pon False.
 LOGIN_MOSTRAR_FOTO = True
@@ -3663,9 +3791,16 @@ if not st.session_state.usuario_login:
                     st.error(f"Demasiados intentos fallidos. Por seguridad, espera {int((_hasta - _ahora_l) // 60) + 1} minuto(s) e inténtalo de nuevo.")
                 else:
                     usuario_sel = next((n for n, d in USUARIOS.items() if str(d["dni"]).strip() == _dni_k), None)
-                    if usuario_sel and clave_input == USUARIOS[usuario_sel]["clave"]:
+                    if usuario_sel and _verificar_clave(clave_input, USUARIOS[usuario_sel]["clave"]):
                         with _g["lock"]:
                             _g["fails"].pop(_dni_k, None)
+                        _almacenada = USUARIOS[usuario_sel]["clave"]
+                        if not _clave_protegida(_almacenada):      # migración automática de contraseñas antiguas
+                            _h_nuevo = _hash_clave(clave_input)
+                            if _guardar_clave_protegida_gsheets(_dni_k, _almacenada, _h_nuevo):
+                                _emp_m = st.session_state.empleados
+                                _mask = (_emp_m["dni"].astype(str).str.strip() == _dni_k) & (_emp_m["clave"].astype(str) == _almacenada)
+                                st.session_state.empleados.loc[_mask, "clave"] = _h_nuevo
                         st.session_state.usuario_login = usuario_sel
                         st.session_state.pop("_tp_botellas_aviso_login", None)
                         st.session_state.pop("_tp_cumple_dialogo_abierto", None)
@@ -4669,22 +4804,13 @@ st.sidebar.markdown(f"""
         <div><b>{user_real}</b><span>{str(rol_real).capitalize()} · DNI {_dni_real}</span></div>
     </div>
 """, unsafe_allow_html=True)
-if _bf_total_pendientes:
-    # Contador visible junto al perfil, para todos los roles.
-    st.sidebar.markdown(
-        f'<div class="tp-notif" style="background:#FEE2E2;border:1px solid #FECACA;'
-        f'color:#991B1B;margin-bottom:10px">'
-        f'<span style="color:#991B1B;font-weight:700">🍾 Botellas por devolver</span>'
-        f'<span style="color:#991B1B;font-weight:800">{_bf_total_pendientes}</span></div>',
-        unsafe_allow_html=True,
-    )
+_sol_pend_n = 0
 _sol_n = st.session_state.get("solicitudes")
 if _sol_n is not None and not _sol_n.empty:
     _pend = _sol_n[_sol_n["estado"].astype(str) == "Pendiente"]
     if rol_actual != "admin":
         _pend = _pend[_pend["dni"].astype(str) == str(dni_actual)]
-    if len(_pend):
-        st.sidebar.markdown(f'<div class="tp-notif"><span>{"Solicitudes por revisar" if rol_actual == "admin" else "Tus solicitudes en revisión"}</span><span>{len(_pend)}</span></div>', unsafe_allow_html=True)
+    _sol_pend_n = len(_pend)
 
 # =========================================================
 # NUEVO MÓDULO: ASISTENTE INTELIGENTE DE DATOS (solo lectura)
@@ -4885,13 +5011,18 @@ def _ir_a(destino):
     st.session_state["nav_radio"] = destino
     st.session_state["gs_q"] = ""
 
-# Acceso directo a los registros pendientes sin cambiar el menú original.
+# Pendientes: un solo acceso por tema (muestra el número y lleva directo a la pantalla).
+def _btn_pendiente(etiqueta, key, destino, icono):
+    try:
+        st.sidebar.button(etiqueta, key=key, use_container_width=True, on_click=_ir_a, args=(destino,), icon=icono)
+    except TypeError:   # versiones antiguas de Streamlit sin parámetro icon
+        st.sidebar.button(etiqueta, key=key, use_container_width=True, on_click=_ir_a, args=(destino,))
+
+if _sol_pend_n:
+    _btn_pendiente(f"{'Solicitudes por revisar' if rol_actual == 'admin' else 'Tus solicitudes en revisión'} · {_sol_pend_n}",
+                   "tp_acc_sol", "Solicitudes y Permisos" if rol_actual == "admin" else "Solicitar Permiso / Adelanto", ":material/inbox:")
 if _bf_total_pendientes:
-    st.sidebar.button(
-        f"🍾 Botellas Fiadas · {_bf_total_pendientes} pendiente{'s' if _bf_total_pendientes != 1 else ''}",
-        key="tp_bf_acceso_rapido", use_container_width=True,
-        on_click=_ir_a, args=("Botellas Fiadas",),
-    )
+    _btn_pendiente(f"Botellas por devolver · {_bf_total_pendientes}", "tp_acc_bot", "Botellas Fiadas", ":material/liquor:")
 
 # Menú original: lista completa sin agrupaciones ni resúmenes.
 choice = st.sidebar.radio("Navegación", menu, key="nav_radio", on_change=_limpiar_busqueda, format_func=_tp_nav_label)
@@ -6274,6 +6405,7 @@ elif choice == "Gestión Colaboradores":
                 else:
                     foto_nombre = f"{str(dni_in).strip()}.png"
                     fnac_str = str(fnac_in)
+                    _clave_prot = _hash_clave(str(clave_in).strip())
                     finicio_str = str(finicio_in)
                     
                     nuevo_e = {
@@ -6281,7 +6413,7 @@ elif choice == "Gestión Colaboradores":
                         "nombre": nom_in.strip(),
                         "cargo": cargo_in,
                         "estado": "Activo",
-                        "clave": str(clave_in).strip(),
+                        "clave": _clave_prot,
                         "rol": rol_in,
                         "direccion": dir_in.strip(),
                         "telefono": str(tel_in).strip(),
@@ -6296,7 +6428,7 @@ elif choice == "Gestión Colaboradores":
                     }
                     st.session_state.empleados = pd.concat([st.session_state.empleados, pd.DataFrame([nuevo_e])], ignore_index=True)
                     guardar_colaborador_gsheets(
-                        dni_in, nom_in, cargo_in, "Activo", clave_in, rol_in, 
+                        dni_in, nom_in, cargo_in, "Activo", _clave_prot, rol_in, 
                         dir_in, tel_in, fnac_str, foto_nombre,
                         c_emerg_in.strip(), num_emerg_in.strip(), link_maps_in.strip(),
                         finicio_str, "", en_planilla_in
@@ -8495,6 +8627,26 @@ elif choice == "Auditoría y Configuración":
         st.markdown('<div class="tp-sec"><div><div class="tp-sec-title">Sesión y seguridad</div><div class="tp-sec-sub">Reglas de acceso al sistema</div></div></div>', unsafe_allow_html=True)
         ui_callout(f"Las sesiones se cierran automáticamente tras 30 minutos de inactividad o 10 horas desde el inicio de sesión. Sesión actual iniciada: {datetime.fromtimestamp(st.session_state.login_timestamp).strftime('%d/%m/%Y %H:%M:%S')}.")
 
+        st.markdown('<div class="tp-sec" style="margin-top:18px"><div><div class="tp-sec-title">Protección de contraseñas</div><div class="tp-sec-sub">Las contraseñas nuevas se guardan cifradas. Las antiguas se convierten al ingresar o con este botón</div></div></div>', unsafe_allow_html=True)
+        _cl = st.session_state.empleados["clave"].astype(str) if not st.session_state.empleados.empty else pd.Series([], dtype=str)
+        _n_prot = int(_cl.apply(_clave_protegida).sum())
+        _n_plan = int((~_cl.apply(_clave_protegida) & (_cl.str.strip() != "")).sum())
+        st.markdown('<div class="tp-gridk">' + ui_kpi_acc("Contraseñas protegidas", str(_n_prot), "guardadas de forma cifrada", "ok") +
+                    ui_kpi_acc("Pendientes de proteger", str(_n_plan), "aún en texto plano en la hoja", "ok" if _n_plan == 0 else "bad") + '</div>', unsafe_allow_html=True)
+        if _n_plan:
+            if st.button("Proteger todas las contraseñas ahora", key="proteger_claves", use_container_width=True, disabled=bool(st.session_state.get("ver_como"))):
+                with st.spinner("Protegiendo contraseñas…"):
+                    _n_cambio = _proteger_todas_las_claves()
+                if _n_cambio is None:
+                    st.error("No se pudo completar. No se perdió ninguna contraseña: inténtalo de nuevo en unos segundos.")
+                else:
+                    registrar_auditoria("Contraseñas protegidas", "Usuarios", f"Se cifraron {_n_cambio} contraseñas que estaban en texto plano.")
+                    st.success(f"Listo: {_n_cambio} contraseñas quedaron protegidas.")
+                    time.sleep(0.8)
+                    st.rerun()
+        else:
+            ui_callout("Todas las contraseñas están protegidas.")
+
 # --- PIE DE PÁGINA (FOOTER ESTILO WEB/APP) ---
 st.markdown("""
 <div class="app-footer">
@@ -8503,3 +8655,19 @@ st.markdown("""
     Todos los derechos reservados
 </div>
 """, unsafe_allow_html=True)
+
+# --- DIAGNÓSTICO DE RENDIMIENTO (solo administrador): abre la app con  ?diag=1  al final de la dirección ---
+try:
+    if st.query_params.get("diag") == "1" and "rol_actual" in globals() and rol_actual == "admin":
+        _seg_total = time.perf_counter() - _T0
+        _stc = _cache_sheets().get("stats", {"hit": 0, "miss": 0, "seg": 0.0})
+        with st.expander("Diagnóstico de rendimiento", expanded=True):
+            _d1, _d2, _d3, _d4 = st.columns(4)
+            _d1.metric("Esta ejecución", f"{_seg_total:.2f} s")
+            _d2.metric("Lecturas desde caché", _stc["hit"])
+            _d3.metric("Lecturas a Google Sheets", _stc["miss"])
+            _d4.metric("Tiempo total en Sheets", f"{_stc['seg']:.1f} s")
+            st.caption("Cifras acumuladas del servidor desde su último reinicio, salvo «Esta ejecución». "
+                       "Si «Esta ejecución» es alta con pocas lecturas, el cuello de botella está en los cálculos, no en Google Sheets.")
+except Exception:
+    pass
