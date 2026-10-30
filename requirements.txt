@@ -7,3 +7,7 @@ pytz
 tzdata
 reportlab
 plotly
+google-api-python-client
+google-auth
+Pillow
+pillow-heif
