@@ -1611,6 +1611,135 @@ section[data-testid="stSidebar"]{z-index:10005!important;}
 @media(prefers-reduced-motion:reduce){.st-key-tp_chat_panel,.st-key-tp_chat_fab button{animation:none!important;transition:none!important;}}
 
 
+
+/* ================================================================
+   PREMIUM MARKET · ACCESO MOBILE FIRST
+   Solo pantalla no autenticada. Desktop y módulos: sin cambios.
+   Corrige columnas de Streamlit que permanecían lado a lado en iPhone.
+   ================================================================ */
+@media screen and (max-width: 800px) {
+  .stApp:has(.st-key-pm_auth_page),
+  .stApp:has(.st-key-pm_auth_page) [data-testid="stAppViewContainer"],
+  .stApp:has(.st-key-pm_auth_page) [data-testid="stMain"] {
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    overflow-x:clip!important;
+    background:#f7f8fc!important;
+  }
+  .stApp:has(.st-key-pm_auth_page) [data-testid="stMain"] .block-container {
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    box-sizing:border-box!important;
+    margin:0 auto!important;
+    padding:calc(8px + env(safe-area-inset-top,0px)) max(15px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(15px,env(safe-area-inset-left,0px))!important;
+  }
+  .st-key-pm_auth_page, .st-key-pm_hero_wrapper {
+    box-sizing:border-box!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    margin:0 auto!important;
+    padding:0!important;
+  }
+  /* Apilar de verdad. No basta con reducir el gap: Streamlit fija flex-basis. */
+  .st-key-pm_auth_page .st-key-pm_hero_wrapper [data-testid="stHorizontalBlock"] {
+    display:flex!important;
+    flex-direction:column!important;
+    flex-wrap:nowrap!important;
+    align-items:stretch!important;
+    justify-content:flex-start!important;
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+    gap:16px!important;
+  }
+  .st-key-pm_auth_page .st-key-pm_hero_wrapper [data-testid="stColumn"],
+  .st-key-pm_auth_page .st-key-pm_hero_wrapper [data-testid="stHorizontalBlock"] > div {
+    flex:0 0 auto!important;
+    flex-grow:0!important;
+    flex-shrink:1!important;
+    flex-basis:auto!important;
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+    box-sizing:border-box!important;
+  }
+  .st-key-pm_hero_wrapper [data-testid="stVerticalBlock"],
+  .st-key-pm_hero_wrapper [data-testid="stVerticalBlockBorderWrapper"],
+  .st-key-pm_hero_wrapper [data-testid="stElementContainer"] {
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+    box-sizing:border-box!important;
+  }
+  /* Cabecera compacta y legible, sin saltos innecesarios. */
+  .pm-elite-nav{min-height:58px!important;margin:0 0 16px!important;gap:9px!important;width:100%!important;}
+  .pm-elite-navbrand{gap:10px!important;min-width:0!important;}
+  .pm-elite-navbrand img{width:101px!important;min-width:0!important;height:49px!important;padding:6px 10px!important;border-radius:14px!important;}
+  .pm-elite-navbrand span{display:flex!important;min-width:0!important;gap:3px!important;}
+  .pm-elite-navbrand b{font-size:.68rem!important;letter-spacing:.08em!important;white-space:nowrap!important;}
+  .pm-elite-navbrand small{font-size:.69rem!important;}
+  .pm-elite-navstatus{display:none!important;}
+  /* El banner se convierte en tarjeta horizontal completa. */
+  .pm-elite-hero{height:auto!important;min-height:0!important;width:100%!important;border-radius:22px!important;box-shadow:0 20px 34px -28px rgba(29,36,59,.65)!important;}
+  .pm-elite-hero-inner{height:auto!important;min-height:0!important;padding:25px 23px 24px!important;gap:0!important;}
+  .pm-elite-eyebrow{font-size:.64rem!important;letter-spacing:.105em!important;line-height:1.6!important;margin:0 0 12px!important;}
+  .pm-elite-hero h1{font-size:clamp(1.82rem,7.1vw,2.42rem)!important;line-height:1.12!important;letter-spacing:-.058em!important;margin:0 0 12px!important;max-width:19ch!important;overflow-wrap:normal!important;}
+  .pm-elite-hero p{font-size:.85rem!important;line-height:1.65!important;margin:0!important;max-width:42ch!important;}
+  .pm-elite-mini,.pm-elite-chips,.pm-elite-hero-footer{display:none!important;}
+  /* Tarjeta de bienvenida y formulario: toda la anchura del móvil. */
+  .st-key-pm_login_panel {
+    box-sizing:border-box!important;
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:stretch!important;
+    justify-content:flex-start!important;
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+    height:auto!important;
+    margin:0!important;
+    padding:clamp(20px,5vw,28px)!important;
+    border-radius:22px!important;
+    box-shadow:0 18px 38px -29px rgba(25,39,67,.4)!important;
+  }
+  .st-key-pm_login_panel [data-testid="stVerticalBlock"],
+  .st-key-pm_login_panel [data-testid="stForm"] {width:100%!important;min-width:0!important;max-width:100%!important;box-sizing:border-box!important;}
+  .pm-elite-welcome-icon{width:45px!important;height:45px!important;border-radius:14px!important;margin:0 0 14px!important;}
+  .pm-elite-kicker{display:block!important;font-size:.68rem!important;letter-spacing:.11em!important;margin:0 0 9px!important;}
+  .pm-elite-welcome h2,.pm-elite-login-head h2{font-size:clamp(1.48rem,5.7vw,1.95rem)!important;line-height:1.17!important;letter-spacing:-.045em!important;margin:0 0 10px!important;overflow-wrap:normal!important;}
+  .pm-elite-welcome>p,.pm-elite-login-head>p{font-size:.86rem!important;line-height:1.65!important;margin:0 0 12px!important;}
+  .pm-elite-feature{display:flex!important;align-items:center!important;gap:11px!important;padding:11px 0!important;}
+  .pm-elite-feature>svg{width:21px!important;height:21px!important;box-sizing:content-box!important;padding:9px!important;border-radius:12px!important;flex:0 0 21px!important;}
+  .pm-elite-feature b{font-size:.81rem!important;line-height:1.4!important;}
+  .pm-elite-feature small{font-size:.73rem!important;line-height:1.5!important;}
+  .st-key-pm_login_panel [data-testid="stButton"],
+  .st-key-pm_login_panel [data-testid="stFormSubmitButton"]{width:100%!important;min-width:0!important;max-width:100%!important;}
+  .st-key-pm_login_panel button,
+  .st-key-pm_login_panel [data-testid="stFormSubmitButton"] button{box-sizing:border-box!important;width:100%!important;max-width:100%!important;min-height:52px!important;padding:11px 16px!important;white-space:normal!important;line-height:1.35!important;font-size:.94rem!important;border-radius:13px!important;}
+  .st-key-pm_login_panel [data-testid="stTextInput"],
+  .st-key-pm_login_panel [data-baseweb="input"] {box-sizing:border-box!important;width:100%!important;max-width:100%!important;min-width:0!important;}
+  .st-key-pm_login_panel input{font-size:16px!important;min-width:0!important;} /* Evita zoom de Safari al enfocar */
+  .st-key-pm_login_panel [data-testid="stWidgetLabel"] p{font-size:.82rem!important;line-height:1.45!important;}
+  .pm-elite-login-head{margin-bottom:14px!important;}
+  .pm-elite-identity{min-width:0!important;max-width:100%!important;}
+  .pm-elite-secure{flex-wrap:wrap!important;text-align:center!important;font-size:.74rem!important;line-height:1.6!important;margin-top:16px!important;}
+  .pm-elite-footer{margin:17px 0 8px!important;padding:0 10px!important;font-size:.71rem!important;line-height:1.5!important;overflow-wrap:anywhere!important;}
+  /* En login directo, el banner desaparece solo en teléfono para mostrar
+     el formulario completo sin obligar a hacer scroll por la portada. */
+  .st-key-pm_auth_page:has(.pm-elite-login-head) .st-key-pm_hero_wrapper [data-testid="stColumn"]:has(.pm-elite-hero){display:none!important;}
+}
+@media screen and (max-width: 360px){
+  .stApp:has(.st-key-pm_auth_page) [data-testid="stMain"] .block-container{padding-left:12px!important;padding-right:12px!important;}
+  .pm-elite-navbrand img{width:91px!important;}
+  .pm-elite-navbrand b{font-size:.63rem!important;}
+  .pm-elite-hero-inner{padding:22px 19px!important;}
+  .pm-elite-hero h1{font-size:1.72rem!important;}
+  .st-key-pm_login_panel{padding:19px!important;}
+}
+
 </style>"""
 
 # El ícono opcional del asistente se incluye en el mismo bloque CSS.
