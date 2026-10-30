@@ -4209,7 +4209,7 @@ _TP_MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "ag
 def _tp_fecha_larga(dt):
     return f"{_TP_DIAS[dt.weekday()].capitalize()} {dt.day} de {_TP_MESES[dt.month - 1]}"
 
-def _tp_panel_operacion_hoy():
+def _tp_panel_operacion_hoy(*, mostrar_resumen=True, mostrar_detalles=True):
     """Panel 'Operación de hoy' del Dashboard: asistencia en vivo (quién no marcó, quién llegó tarde).
     Los pendientes administrativos (solicitudes, boletas, contratos...) viven en el Centro de Alertas."""
     try:
@@ -4282,26 +4282,28 @@ def _tp_panel_operacion_hoy():
                    f'<span>programados ya marcaron</span></div><div class="r"><i style="width:{pct}%"></i></div></div>')
         else:
             att = '<div class="tp-att none"><div class="l">Asistencia de hoy</div><div class="v"><span>No hay turnos programados</span></div></div>'
-        st.markdown(
-            f'<div class="tp-focus {tono_h}"><div class="tp-focus-main"><span class="tp-al-ico {tono_h}">{ico_h}</span>'
-            f'<div><div class="tp-focus-k">Operación de hoy · {_tp_fecha_larga(ahora)}</div>'
-            f'<div class="tp-focus-h">{e_(titulo)}</div><div class="tp-focus-s">{e_(sub)}</div></div></div>{att}</div>',
-            unsafe_allow_html=True)
+        if mostrar_resumen:
+            st.markdown(
+                f'<div class="tp-focus {tono_h}"><div class="tp-focus-main"><span class="tp-al-ico {tono_h}">{ico_h}</span>'
+                f'<div><div class="tp-focus-k">Operación de hoy · {_tp_fecha_larga(ahora)}</div>'
+                f'<div class="tp-focus-h">{e_(titulo)}</div><div class="tp-focus-s">{e_(sub)}</div></div></div>{att}</div>',
+                unsafe_allow_html=True)
 
         # ---- Detalle accionable ----
         def _fila(nom, sub_txt, chip):
             d_, f_ = ui_dni_foto(nom)
             return (f'<div class="tp-row">{ui_avatar(nom, d_, f_, 42)}<div class="tp-row-main"><b>{e_(str(nom))}</b>'
                     f'<span class="wrap">{sub_txt}</span></div><div class="tp-chips">{chip}</div></div>')
-        if sin_marcar:
-            filas = "".join(_fila(n, f'{e_(str(i["nombre"]))} · debía ingresar a las {e_(str(i["entrada"]))}', ui_chip(f"{r} min sin marcar", "bad"))
-                            for n, i, r in sorted(sin_marcar, key=lambda x: -x[2])[:6])
-            st.markdown('<div class="tp-card"><div class="tp-note-t">Sin marcar ingreso · requieren seguimiento ahora</div>' + filas + '</div>', unsafe_allow_html=True)
-        if tardes:
-            filas = "".join(_fila(n, f'Ingresó a las {h} · turno {e_(str(t))}', ui_chip(f"{m} min tarde", "warn"))
-                            for n, m, h, t in sorted(tardes, key=lambda x: -x[1])[:6])
-            st.markdown('<div class="tp-card"><div class="tp-note-t">Tardanzas de hoy</div>' + filas + '</div>', unsafe_allow_html=True)
-        st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
+        if mostrar_detalles:
+            if sin_marcar:
+                filas = "".join(_fila(n, f'{e_(str(i["nombre"]))} · debía ingresar a las {e_(str(i["entrada"]))}', ui_chip(f"{r} min sin marcar", "bad"))
+                                for n, i, r in sorted(sin_marcar, key=lambda x: -x[2])[:6])
+                st.markdown('<div class="tp-card"><div class="tp-note-t">Sin marcar ingreso · requieren seguimiento ahora</div>' + filas + '</div>', unsafe_allow_html=True)
+            if tardes:
+                filas = "".join(_fila(n, f'Ingresó a las {h} · turno {e_(str(t))}', ui_chip(f"{m} min tarde", "warn"))
+                                for n, m, h, t in sorted(tardes, key=lambda x: -x[1])[:6])
+                st.markdown('<div class="tp-card"><div class="tp-note-t">Tardanzas de hoy</div>' + filas + '</div>', unsafe_allow_html=True)
+            st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
     except Exception as _err:
         # El panel es un extra de lectura: si algo falla, el Dashboard sigue funcionando.
         st.caption(f"No se pudo calcular el panel de operación ({type(_err).__name__}).")
@@ -9621,6 +9623,9 @@ elif choice == "Dashboard General":
     with st.container(key="pm_v_dashboard_general"):
 
         pm_render_dashboard_kpis()
+        # Primero, el estado de la jornada: inmediatamente debajo de los 4 KPI.
+        # El detalle de tardanzas permanece después de Rendimiento Operativo.
+        _tp_panel_operacion_hoy(mostrar_resumen=True, mostrar_detalles=False)
         # Indicadores de Rutinas Operativas de toda la jornada, sin mezclar
         # actividades de otros días y sin asumir cero ante un fallo de Sheets.
         _rut_admin_data, _rut_admin_err = _pm2_load()
@@ -9642,7 +9647,7 @@ elif choice == "Dashboard General":
                                  use_container_width=True, icon=":material/fact_check:"):
                         _ir_a("Rutinas Operativas")
                         st.rerun()
-        _tp_panel_operacion_hoy()
+        _tp_panel_operacion_hoy(mostrar_resumen=False, mostrar_detalles=True)
 
         col_f1, col_f2 = st.columns([1.5, 1])
         with col_f1:
