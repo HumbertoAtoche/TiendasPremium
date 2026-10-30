@@ -2263,15 +2263,21 @@ def guardar_asistencia_gsheets(dni, nombre, tipo, fecha_hora, fecha, observacion
             st.error(f"Error al guardar asistencia: {e}")
 
 def guardar_descuadre_gsheets(fecha, dni, nombre, tipo, monto, observacion, fecha_registro):
+    """Confirma escritura remota antes de modificar el historial local."""
     if st.session_state.get("ver_como"):
-        st.toast("Vista previa: no se guardó ningún dato")
-        return
-    if doc_sheets:
-        try:
-            hoja = doc_sheets.worksheet("Descuadres")
-            hoja.append_row([str(fecha), str(dni), nombre, tipo, float(monto), observacion, str(fecha_registro)])
-        except Exception as e:
-            st.error(f"Error al guardar descuadre: {e}")
+        st.warning("Vista previa: no se guardó ningún dato")
+        return False
+    if doc_sheets is None:
+        st.error("No hay conexión con Google Sheets. No se guardó el descuadre.")
+        return False
+    try:
+        hoja = doc_sheets.worksheet("Descuadres")
+        hoja.append_row([str(fecha), str(dni), nombre, tipo, float(monto), observacion, str(fecha_registro)])
+        return True
+    except Exception as e:
+        print("Premium Market: error al guardar descuadre:", type(e).__name__)
+        st.error("No se pudo guardar el descuadre. Comprueba la conexión e inténtalo de nuevo.")
+        return False
 
 # =========================================================
 # NUEVO MÓDULO: INCIDENCIAS (Billete Falso, Botellas Rotas, Otros Daños)
@@ -4270,7 +4276,7 @@ def _tp_panel_operacion_hoy():
     except Exception as _err:
         # El panel es un extra de lectura: si algo falla, el Dashboard sigue funcionando.
         st.caption(f"No se pudo calcular el panel de operación ({type(_err).__name__}).")
-_TP_NAV_ICONOS.update({"Rutinas Operativas": "fact_check", "Portal del Colaborador 2.0": "account_circle"})
+_TP_NAV_ICONOS.update({"Rutinas Operativas": "fact_check", "Portal del Colaborador": "account_circle"})
 
 
 # =========================================================
@@ -6024,15 +6030,149 @@ _PM_NEXTLEVEL_CSS = """
 }
 </style>
 """
+
+
+# Solo pantallas autenticadas; evita interferir con la portada y el inicio de sesión.
+_PM_INTERFACE_POLISH = """
+<style>
+/* Premium Market / Diseño de producto 2026, inspirado en la claridad de un portal de operaciones. */
+.stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stMain"] .block-container{max-width:1450px!important;padding-left:clamp(14px,2.1vw,30px)!important;padding-right:clamp(14px,2.1vw,30px)!important;}
+/* BARRA LATERAL: respirar sin perder alcance. */
+.stApp:not(:has(.st-key-pm_auth_page)) section[data-testid="stSidebar"]{width:clamp(308px,24vw,342px)!important;min-width:308px!important;max-width:342px!important;border-right:1px solid #e8edf4!important;background:#fff!important;}
+.stApp:not(:has(.st-key-pm_auth_page)) section[data-testid="stSidebar"] [data-testid="stSidebarContent"]{padding:18px 16px 34px!important;overflow-x:hidden!important;scrollbar-width:thin;}
+.stApp:not(:has(.st-key-pm_auth_page)) section[data-testid="stSidebar"] [data-testid="stVerticalBlock"]{gap:.45rem!important;}
+section[data-testid="stSidebar"] .pm-side-brand{margin:0 0 16px!important;border-radius:20px!important;padding:21px 17px 17px!important;}
+section[data-testid="stSidebar"] .pm-side-brand-inner{gap:14px!important;}
+section[data-testid="stSidebar"] .pm-side-profile{margin:0 0 16px!important;padding:15px 13px!important;border-radius:17px!important;gap:14px!important;}
+section[data-testid="stSidebar"] .pm-side-profile-info strong{font-size:.84rem!important;line-height:1.42!important;letter-spacing:-.02em!important;}
+section[data-testid="stSidebar"] .pm-side-profile-info span{font-size:.71rem!important;}
+section[data-testid="stSidebar"] .pm-side-caption{margin:17px 5px 9px!important;font-size:.69rem!important;letter-spacing:.12em!important;}
+section[data-testid="stSidebar"] .pm-side-caption-search{margin-top:19px!important;}
+section[data-testid="stSidebar"] .pm-side-section-heading{margin:25px 5px 10px!important;font-size:.69rem!important;letter-spacing:.12em!important;}
+section[data-testid="stSidebar"] .pm-side-section-heading .pm-side-nav-sub{min-width:24px!important;}
+section[data-testid="stSidebar"] .pm-side-allclear{padding:13px!important;}
+section[data-testid="stSidebar"] [data-testid="stSelectbox"],
+section[data-testid="stSidebar"] [data-testid="stTextInput"]{margin-bottom:3px!important;}
+section[data-testid="stSidebar"] [data-testid="stSelectbox"] [data-baseweb="select"]>div,
+section[data-testid="stSidebar"] [data-testid="stTextInput"] [data-baseweb="input"]{min-height:47px!important;border-radius:13px!important;background:#f8fafc!important;}
+section[data-testid="stSidebar"] [role="radiogroup"]{gap:5px!important;}
+section[data-testid="stSidebar"] [role="radiogroup"]>label{position:relative;min-height:46px!important;margin:0!important;padding:10px 12px!important;gap:11px!important;border-radius:13px!important;border:1px solid transparent!important;align-items:center!important;}
+section[data-testid="stSidebar"] [role="radiogroup"]>label p{font-size:.825rem!important;line-height:1.45!important;font-weight:690!important;color:#4b5a70!important;overflow-wrap:anywhere!important;}
+section[data-testid="stSidebar"] [role="radiogroup"]>label::before{width:21px!important;min-width:21px!important;height:21px!important;flex:none!important;}
+section[data-testid="stSidebar"] [role="radiogroup"]>label:has(input:checked){border:1px solid #f2d7de!important;background:#fff1f4!important;box-shadow:inset 3px 0 0 #d92e49!important;}
+section[data-testid="stSidebar"] [role="radiogroup"]>label:has(input:checked) p{color:#bd2942!important;font-weight:850!important;}
+/* No se oculta el radio accesible; se sustituye el círculo visual por el pictograma del menú. */
+section[data-testid="stSidebar"] [role="radiogroup"]>label > div:has(> input[type="radio"]){position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;opacity:0!important;pointer-events:none!important;}
+section[data-testid="stSidebar"] [role="radiogroup"]>label input[type="radio"]{position:absolute!important;width:1px!important;height:1px!important;opacity:0!important;}
+section[data-testid="stSidebar"] .st-key-tp_acc_bot button,
+section[data-testid="stSidebar"] .st-key-tp_acc_sol button{min-height:51px!important;border-radius:14px!important;padding:12px 13px!important;}
+section[data-testid="stSidebar"] .st-key-tp_acc_bot button p,
+section[data-testid="stSidebar"] .st-key-tp_acc_sol button p{font-size:.83rem!important;font-weight:840!important;line-height:1.4!important;text-align:left!important;}
+section[data-testid="stSidebar"] .st-key-pm_sidebar_utilities{margin-top:17px!important;}
+/* PORTAL. Las tarjetas de Streamlit son contenedores reales, no HTML abierto entre widgets. */
+.pm-up-hero{display:flex;align-items:center;justify-content:space-between;gap:27px;position:relative;overflow:hidden;padding:clamp(22px,3.4vw,36px);border-radius:26px;background:linear-gradient(115deg,#101e34 0%,#253650 60%,#ad354d 100%);box-shadow:0 24px 46px -34px rgba(19,30,51,.65);color:#fff!important;margin-bottom:23px;}
+.pm-up-hero::after{content:"";position:absolute;right:-100px;top:-150px;width:350px;height:350px;border-radius:50%;background:radial-gradient(circle,rgba(249,123,143,.27),transparent 67%);pointer-events:none;}
+.pm-up-hero-text,.pm-up-hero-side{position:relative;z-index:1;min-width:0;}
+.pm-up-eyebrow{display:flex;align-items:center;gap:9px;font-size:.68rem!important;letter-spacing:.14em!important;text-transform:uppercase!important;color:#ffc6d2!important;font-weight:900!important;margin:0 0 22px!important;}
+.pm-up-pulse{height:8px;width:8px;background:#50d9aa;box-shadow:0 0 0 4px rgba(80,217,170,.18);border-radius:50%;}
+.pm-up-welcome-row{display:flex;align-items:center;gap:16px;}
+.pm-up-welcome-row .tp-avatar{height:60px!important;width:60px!important;border:3px solid rgba(255,255,255,.9)!important;box-shadow:0 0 0 4px rgba(255,255,255,.13)!important;flex:none;}
+.st-key-pm_v_portal_colaborador .pm-up-hero h2,.pm-up-hero h2{color:#fff!important;font-size:clamp(1.55rem,2.7vw,2.4rem)!important;line-height:1.2!important;letter-spacing:-.045em!important;font-weight:860!important;margin:0 0 6px!important;opacity:1!important;text-shadow:0 2px 14px rgba(7,15,27,.16);}
+.pm-up-hero p{font-size:clamp(.85rem,1.4vw,1rem)!important;line-height:1.6!important;color:#dfe8f5!important;margin:0!important;}
+.pm-up-hero-meta{display:flex;flex-wrap:wrap;align-items:center;gap:9px;margin-top:24px;}
+.pm-up-hero-meta span{display:inline-flex;padding:8px 12px;border:1px solid rgba(255,255,255,.17);border-radius:11px;background:rgba(255,255,255,.09);color:#f5f7fc!important;font-size:.75rem;font-weight:740;line-height:1.35;}
+.pm-up-hero-side{width:185px;flex:none;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.15);border-radius:20px;padding:17px;backdrop-filter:blur(8px);display:flex;flex-direction:column;align-items:flex-start;gap:6px;}
+.pm-up-side-kicker{font-size:.64rem!important;font-weight:870!important;letter-spacing:.13em;color:#ced9e7!important;}
+.pm-up-hero-side strong{font-size:1.75rem!important;font-weight:870!important;line-height:1.2!important;color:white!important;font-variant-numeric:tabular-nums;}
+.pm-up-hero-side small{font-size:.73rem!important;color:#e1e9f2!important;}
+.pm-up-status{display:inline-flex;max-width:100%;padding:6px 9px;border-radius:9px;font-size:.69rem!important;line-height:1.3!important;font-weight:830!important;white-space:normal;}
+.pm-up-status.pm-up-ok{background:#dcfce7;color:#166534!important;}
+.pm-up-status.pm-up-warn{background:#fef3c7;color:#854d0e!important;}
+.pm-up-status.pm-up-neutral{background:#eaf1fc;color:#37557e!important;}
+.pm-up-kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:15px;margin:0 0 24px;}
+.pm-up-kpi{min-width:0;background:white;border:1px solid #e5ebf3;border-radius:20px;padding:19px 20px 18px;box-shadow:0 8px 27px rgba(17,32,58,.035);display:flex;flex-direction:column;gap:7px;transition:transform .2s,box-shadow .2s;}
+.pm-up-kpi:hover{transform:translateY(-2px);box-shadow:0 16px 34px rgba(17,32,58,.07);}
+.pm-up-kpi-top{display:flex;align-items:center;justify-content:space-between;gap:9px;min-height:33px;}
+.pm-up-kpi-top>span:first-child{font-size:.8rem!important;font-weight:790!important;color:#6c7a90!important;line-height:1.45;}
+.pm-up-kpi-icon{display:grid;place-items:center;border-radius:12px;width:35px;height:35px;flex:none;}
+.pm-up-kpi-icon svg{width:19px;height:19px;}
+.pm-up-kpi-icon.green{background:#e7f6ef;color:#11996b;}.pm-up-kpi-icon.orange{background:#fff4df;color:#bd7a15;}.pm-up-kpi-icon.rose{background:#fff0f3;color:#d73451;}.pm-up-kpi-icon.blue{background:#eaf3fd;color:#3270ba;}.pm-up-kpi-icon.purple{background:#f2edff;color:#7452ba;}
+.pm-up-kpi strong{font-size:clamp(1.42rem,2.4vw,2rem)!important;line-height:1.15!important;font-weight:850!important;letter-spacing:-.05em!important;color:#1b293e!important;font-variant-numeric:tabular-nums;}
+.pm-up-kpi small{font-size:.75rem!important;line-height:1.45!important;color:#8793a6!important;}
+.pm-up-dot{height:10px;width:10px;border-radius:100%;background:#ce3350;box-shadow:0 0 0 4px #fff2f5;}.pm-up-dot.green{background:#21ae7b;box-shadow:0 0 0 4px #e9f8f1;}.pm-up-dot.orange{background:#e4a13d;box-shadow:0 0 0 4px #fff7e7;}.pm-up-dot.blue{background:#4e83d1;box-shadow:0 0 0 4px #edf4ff;}
+.st-key-pm_portal_jornada_card,.st-key-pm_portal_actions_card,.st-key-pm_portal_routines_card,.st-key-pm_portal_notice_card,.st-key-pm_rut_summary_card,.st-key-pm_rut_details_card{padding:22px!important;border:1px solid #e4ebf2!important;border-radius:23px!important;background:#fff!important;box-shadow:0 10px 32px rgba(21,35,61,.045)!important;min-width:0!important;margin-bottom:18px!important;}
+.st-key-pm_portal_jornada_card [data-testid="stVerticalBlock"],.st-key-pm_portal_routines_card [data-testid="stVerticalBlock"],.st-key-pm_portal_actions_card [data-testid="stVerticalBlock"],.st-key-pm_portal_notice_card [data-testid="stVerticalBlock"],.st-key-pm_rut_summary_card [data-testid="stVerticalBlock"],.st-key-pm_rut_details_card [data-testid="stVerticalBlock"]{gap:.4rem!important;}
+.pm-up-card-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:15px;margin-bottom:17px;}
+.pm-up-overline{font-size:.65rem!important;letter-spacing:.12em;font-weight:890;color:#d3354f!important;}
+.pm-up-card-heading h3{color:#223149!important;font-size:1.07rem!important;font-weight:860!important;line-height:1.28!important;letter-spacing:-.025em!important;margin:6px 0 7px!important;}
+.pm-up-card-heading p{color:#8995a7!important;font-size:.79rem!important;line-height:1.6!important;margin:0!important;}
+.pm-up-heading-glyph{display:grid;place-items:center;background:#fff1f3;border:1px solid #ffe1e6;width:36px;height:36px;border-radius:12px;font-size:20px;color:#d63350;flex:none;}
+.pm-up-detail-list{display:flex;flex-direction:column;gap:0;}
+.pm-up-detail-row,.pm-up-next-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 1px;border-top:1px solid #edf1f6;}
+.pm-up-detail-row>div,.pm-up-next-row>div{min-width:0;display:flex;flex-direction:column;gap:5px;}
+.pm-up-detail-row>div>span{color:#8490a3!important;font-size:.75rem!important;line-height:1.4;}
+.pm-up-detail-row strong,.pm-up-next-row strong{color:#25344a!important;font-size:.9rem!important;line-height:1.42!important;font-weight:790!important;overflow-wrap:anywhere;}
+.pm-up-detail-icon{width:28px;height:28px;display:grid;place-items:center;border-radius:10px;font-size:.55rem;background:#f1f5fa;color:#8192ad;flex:none;}
+.pm-up-detail-icon.asistencia{background:#e6f6ee;color:#119768;}.pm-up-detail-icon.turno{background:#ebf3ff;color:#4776b1;}.pm-up-detail-icon.solicitudes{background:#fff4e4;color:#be8019;}.pm-up-detail-icon.botellas{background:#fff0f3;color:#cd3351;}
+.pm-up-progress-badge{background:#f1f4f8;color:#57657b!important;border-radius:10px;padding:7px 11px;font-size:.82rem;font-weight:820;white-space:nowrap;}
+.pm-up-progress-track{height:8px;border-radius:999px;background:#eaf0f5;overflow:hidden;margin:10px 0 16px;}
+.pm-up-progress-track span{display:block;height:100%;background:linear-gradient(90deg,#ed3450,#f47c8b);border-radius:999px;min-width:0;transition:width .25s;}
+.pm-up-empty{text-align:center;padding:21px 14px 20px;background:linear-gradient(155deg,#fbfcfe,#f5f8fb);border:1px dashed #d8e2ec;border-radius:18px;display:flex;flex-direction:column;align-items:center;gap:9px;}
+.pm-up-empty-icon{width:43px;height:43px;display:grid;place-items:center;border-radius:15px;background:#e6f7ee;color:#189f73;font-weight:850;font-size:22px;margin-bottom:4px;}
+.pm-up-empty strong{font-size:.94rem!important;font-weight:820;color:#25344b!important;}
+.pm-up-empty p{margin:0!important;max-width:320px;font-size:.8rem!important;line-height:1.6!important;color:#8794a5!important;}
+.pm-up-empty-page{margin:12px auto 24px;max-width:630px;padding:35px!important;}
+.pm-up-next-row span{font-size:.77rem;color:#8592a6!important;line-height:1.52;}
+.pm-up-next-row em{font-style:normal;white-space:nowrap;flex:none;color:#b92f47;font-size:.68rem;font-weight:820;background:#fff0f3;border:1px solid #f8dce2;border-radius:9px;padding:7px 8px;}
+.st-key-pm_portal_actions_card button{min-height:45px!important;border-radius:13px!important;border:1px solid #e1e8f1!important;background:#fff!important;color:#304159!important;font-size:.80rem!important;font-weight:750!important;box-shadow:none!important;}
+.st-key-pm_portal_actions_card button:hover{background:#fff3f6!important;border-color:#efc1cc!important;color:#b62b45!important;}
+.st-key-pm_portal_routines_card [class*="st-key-pm_up_task_"],.st-key-pm_rut_details_card [class*="st-key-pm_rut_task_"]{border:1px solid #edf1f5;border-radius:14px;padding:11px 13px!important;margin-bottom:7px;background:#fbfcfe;}
+.pm-up-task-copy strong{display:block;font-size:.85rem!important;font-weight:760!important;line-height:1.45!important;color:#2a3850!important;}
+.pm-up-task-copy span{display:block;font-size:.70rem!important;line-height:1.4!important;color:#92a0af!important;margin-top:3px;}
+.st-key-pm_portal_routines_card [data-testid="stCheckbox"],.st-key-pm_rut_details_card [data-testid="stCheckbox"]{margin:0!important;}
+.st-key-pm_rut_filter_bar{padding:19px!important;border:1px solid #e6ecf2!important;border-radius:20px!important;background:white!important;margin-bottom:17px!important;}
+.st-key-pm_rut_filter_bar button{min-height:45px!important;border-radius:12px!important;}
+.pm-up-staff-row{display:flex;align-items:center;gap:12px;padding:14px 0;border-top:1px solid #eef1f6;}
+.pm-up-staff-row .tp-avatar{width:42px!important;height:42px!important;flex:none;border:2px solid white!important;box-shadow:0 0 0 1px #e8edf3!important;}
+.pm-up-staff-copy{flex:1;min-width:0;}.pm-up-staff-copy strong{display:block;font-size:.81rem;color:#29374e!important;font-weight:810!important;}.pm-up-staff-copy>span{display:block;font-size:.73rem;color:#8996a6;margin-top:3px;}
+.pm-up-staff-row em{font-style:normal;font-size:.8rem;font-weight:850;color:#cc3450!important;}
+.pm-up-staff-row .pm-up-progress-track{margin:8px 0 0;max-width:100%;height:6px;}
+.pm-up-person-heading{margin:14px 0 12px;font-size:.8rem;letter-spacing:.035em;font-weight:850;color:#40506b;}
+/* DESCUADRES: fecha, motivo e importe con columnas estables; ninguna cifra pegada al borde. */
+.pm-ds-list-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:27px 3px 12px;flex-wrap:wrap;}.pm-ds-list-head>span{font-size:.7rem;color:#61728a;font-weight:850;letter-spacing:.12em;}.pm-ds-list-head small{font-size:.74rem;color:#93a0b0;}
+.pm-ds-history{display:flex;flex-direction:column;gap:10px;}
+.pm-ds-row{display:grid;grid-template-columns:minmax(88px,105px) minmax(0,1fr) max-content;align-items:center;gap:18px;padding:18px 22px;border:1px solid #e5ecf4;border-radius:17px;background:#fff;box-shadow:0 4px 13px rgba(17,35,57,.022);min-width:0;}
+.pm-ds-date{font-size:.81rem;line-height:1.4;font-weight:850;color:#738298;white-space:nowrap;font-variant-numeric:tabular-nums;}
+.pm-ds-main{min-width:0;display:flex;flex-direction:column;gap:4px;}.pm-ds-main strong{color:#27364c;font-size:.91rem;font-weight:850;line-height:1.4;}.pm-ds-main span{color:#8c99ab;font-size:.76rem;font-weight:560;line-height:1.5;white-space:normal;overflow-wrap:anywhere;}
+.pm-ds-amount{display:inline-flex;align-items:center;justify-content:center;padding:9px 12px;border-radius:11px;font-size:.79rem;font-weight:860;white-space:nowrap;min-width:106px;font-variant-numeric:tabular-nums;}.pm-ds-amount.pos{background:#e5f8ef;color:#09865a;}.pm-ds-amount.neg{background:#ffebee;color:#c62944;}
+/* Tablets and mobile phones */
+@media(max-width:1100px){.pm-up-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr));}.pm-up-hero-side{width:165px;}}
+@media(max-width:760px){
+ .stApp:not(:has(.st-key-pm_auth_page)) section[data-testid="stSidebar"]{width:min(86vw,336px)!important;min-width:0!important;max-width:336px!important;}
+ .pm-up-hero{flex-direction:column;align-items:stretch;gap:19px;padding:23px 19px;border-radius:22px;margin-bottom:18px;}
+ .pm-up-hero-side{width:auto;max-width:none;display:grid;grid-template-columns:1fr auto;gap:5px 12px;align-items:center;padding:13px 15px;border-radius:15px;}
+ .pm-up-hero-side strong{grid-column:2;grid-row:1 / span 3;font-size:1.55rem!important;}
+ .pm-up-hero-side small{display:none;}.pm-up-hero-meta{gap:7px;margin-top:17px;}.pm-up-hero-meta span{font-size:.7rem;padding:7px 9px;}
+ .pm-up-welcome-row .tp-avatar{height:52px!important;width:52px!important;}
+ .pm-up-kpi-grid{gap:10px;margin-bottom:17px;}.pm-up-kpi{padding:15px 14px;border-radius:17px;}.pm-up-kpi strong{font-size:1.55rem!important;}
+ .st-key-pm_portal_jornada_card,.st-key-pm_portal_actions_card,.st-key-pm_portal_routines_card,.st-key-pm_portal_notice_card,.st-key-pm_rut_summary_card,.st-key-pm_rut_details_card{padding:18px!important;border-radius:19px!important;}
+ .pm-ds-row{grid-template-columns:80px minmax(0,1fr);padding:14px 15px;gap:9px 12px;}.pm-ds-date{font-size:.74rem;}.pm-ds-amount{grid-column:2;justify-self:start;margin-top:2px;padding:7px 10px;min-width:0;}.pm-ds-main span{font-size:.74rem;}
+}
+@media(max-width:420px){.pm-up-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr));}.pm-up-kpi{padding:13px 12px;}.pm-up-kpi-top>span:first-child{font-size:.71rem!important;}.pm-up-kpi-icon{height:29px;width:29px;}.pm-up-kpi-icon svg{width:16px;height:16px;}.pm-up-kpi strong{font-size:1.4rem!important;}.pm-up-hero h2{font-size:1.46rem!important;}.pm-up-detail-row{padding:13px 0;}.pm-up-next-row{align-items:flex-start;flex-wrap:wrap;}.pm-up-next-row em{margin-top:5px;}.pm-ds-row{grid-template-columns:72px minmax(0,1fr);}}
+@media(prefers-reduced-motion:reduce){.pm-up-kpi,.pm-up-progress-track span{transition:none!important;}}
+</style>
+"""
+
 st.markdown(_PM_NEXTLEVEL_CSS, unsafe_allow_html=True)
+st.markdown(_PM_INTERFACE_POLISH, unsafe_allow_html=True)
 
 
 if rol_actual == "admin":
     # El asistente ahora se abre desde un botón flotante; no ocupa espacio en el menú.
     # Estilo uniforme para paneles de operación: conserva lógica y menú original.
-    menu = ["Dashboard General", "Centro de Alertas", "Portal del Colaborador 2.0", "Rutinas Operativas", "Analítica (BI)", "Gestión Colaboradores", "Onboarding / Offboarding", "Gestión de Vacaciones", "Programación de Turnos", "Boletas de Pago", "Solicitudes y Permisos", "Historial de Descuadres", "Incidencias y Daños", "Botellas Fiadas", "Historial de Asistencias", "Auditoría y Configuración"]
+    menu = ["Dashboard General", "Centro de Alertas", "Rutinas Operativas", "Analítica (BI)", "Gestión Colaboradores", "Onboarding / Offboarding", "Gestión de Vacaciones", "Programación de Turnos", "Boletas de Pago", "Solicitudes y Permisos", "Historial de Descuadres", "Incidencias y Daños", "Botellas Fiadas", "Historial de Asistencias", "Auditoría y Configuración"]
 else:
-    menu = ["Portal del Colaborador 2.0", "Marcar Asistencia", "Registrar Descuadre", "Registrar Incidencia", "Botellas Fiadas", "Mi Ficha Técnica", "Mis Vacaciones", "Mis Boletas", "Solicitar Permiso / Adelanto", "Mi Dashboard Mensual"]
+    menu = ["Portal del Colaborador", "Marcar Asistencia", "Registrar Descuadre", "Registrar Incidencia", "Botellas Fiadas", "Mi Ficha Técnica", "Mis Vacaciones", "Mis Boletas", "Solicitar Permiso / Adelanto", "Mi Dashboard Mensual"]
 
 if rol_real == "admin":
     _opc_vc = ["Mi vista (admin)"] + sorted(n for n, d in USUARIOS.items() if d["rol"] != "admin")
@@ -6079,9 +6219,9 @@ choice = st.sidebar.radio("Navegación", menu, key="nav_radio", on_change=_limpi
 
 if rol_actual == "admin":
     _nav_items = [("Dashboard General", "Resumen", ":material/dashboard:"), ("Rutinas Operativas", "Rutinas", ":material/fact_check:"),
-                  ("Portal del Colaborador 2.0", "Portal", ":material/account_circle:"), ("Centro de Alertas", "Alertas", ":material/notifications:")]
+                  ("Historial de Asistencias", "Asistencia", ":material/schedule:"), ("Centro de Alertas", "Alertas", ":material/notifications:")]
 else:
-    _nav_items = [("Portal del Colaborador 2.0", "Portal", ":material/account_circle:"), ("Marcar Asistencia", "Marcar", ":material/fingerprint:"),
+    _nav_items = [("Portal del Colaborador", "Portal", ":material/account_circle:"), ("Marcar Asistencia", "Marcar", ":material/fingerprint:"),
                   ("Solicitar Permiso / Adelanto", "Permisos", ":material/edit_note:"), ("Mi Ficha Técnica", "Ficha", ":material/badge:")]
 try:
     with st.container(key="tp_bottomnav"):
@@ -6621,12 +6761,12 @@ PM7_MODULES = {
     'Onboarding / Offboarding': 'person_add',
     'Auditoría y Configuración': 'settings',
 }
-PM7_MODULES.update({'Rutinas Operativas': 'fact_check', 'Portal del Colaborador 2.0': 'account_circle'})
+PM7_MODULES.update({'Rutinas Operativas': 'fact_check', 'Portal del Colaborador': 'account_circle'})
 
 
 
 PM8_VIEW_DETAILS = {'Marcar Asistencia': ('Registro de jornada', 'Tus marcaciones se guardan al confirmar la operación.', 'personal'), 'Registrar Descuadre': ('Control de caja', 'Revisa el importe y la observación antes de registrar.', 'finanzas'), 'Registrar Incidencia': ('Registro operativo', 'Describe el hecho y verifica los datos del registro.', 'control'), 'Mi Ficha Técnica': ('Expediente personal', 'Información laboral y de contacto registrada.', 'personal'), 'Solicitar Permiso / Adelanto': ('Nueva solicitud', 'Completa los datos y revisa el estado de tus solicitudes.', 'personal'), 'Mis Boletas': ('Documentos personales', 'Consulta los documentos disponibles en tu historial.', 'personal'), 'Mi Dashboard Mensual': ('Resumen de mi mes', 'Consulta tus registros y resultados del periodo.', 'analitica'), 'Dashboard General': ('Centro de operaciones', 'Indicadores y asistencia para seguimiento diario.', 'analitica'), 'Gestión Colaboradores': ('Directorio de personal', 'Consulta, filtra y administra las fichas del equipo.', 'personal'), 'Boletas de Pago': ('Gestión documental', 'Consulta y administra los documentos de nómina.', 'finanzas'), 'Programación de Turnos': ('Planificación operativa', 'Organiza y revisa los horarios del equipo.', 'operaciones'), 'Solicitudes y Permisos': ('Bandeja de solicitudes', 'Revisa solicitudes y registra decisiones.', 'operaciones'), 'Historial de Descuadres': ('Auditoría de caja', 'Filtra movimientos y consulta el detalle de las diferencias.', 'finanzas'), 'Incidencias y Daños': ('Seguimiento de incidencias', 'Consulta y gestiona el estado de los casos.', 'control'), 'Botellas Fiadas': ('Préstamos y devoluciones', 'Consulta saldos pendientes y registros de devolución.', 'operaciones'), 'Historial de Asistencias': ('Control de asistencia', 'Consulta marcaciones y trazabilidad de jornadas.', 'personal'), 'Centro de Alertas': ('Prioridades del día', 'Revisa los pendientes que necesitan atención.', 'control'), 'Gestión de Vacaciones': ('Control de descansos', 'Consulta periodos, saldos y solicitudes registradas.', 'personal'), 'Mis Vacaciones': ('Mis descansos', 'Consulta tus periodos registrados.', 'personal'), 'Analítica (BI)': ('Inteligencia de negocio', 'Explora tendencias y reportes operativos.', 'analitica'), 'Onboarding / Offboarding': ('Ciclo de vida laboral', 'Gestiona altas, bajas y tareas asociadas.', 'personal'), 'Auditoría y Configuración': ('Administración del sistema', 'Consulta la trazabilidad y configuración autorizada.', 'control')}
-PM8_VIEW_DETAILS.update({'Rutinas Operativas': ('Ejecución diaria', 'Checklists, evidencias y seguimiento de apertura, operación y cierre.', 'operaciones'), 'Portal del Colaborador 2.0': ('Experiencia del colaborador', 'Tu jornada, documentos y tareas reunidos en un mismo espacio.', 'personal')})
+PM8_VIEW_DETAILS.update({'Rutinas Operativas': ('Ejecución diaria', 'Checklists, evidencias y seguimiento de apertura, operación y cierre.', 'operaciones'), 'Portal del Colaborador': ('Experiencia del colaborador', 'Tu jornada, documentos y tareas reunidos en un mismo espacio.', 'personal')})
 
 
 def premium_module_context(titulo):
@@ -6897,23 +7037,32 @@ elif choice == "Registrar Descuadre":
                     "observacion": obs,
                     "fecha_registro": f_reg
                 }
-                st.session_state.descuadres = pd.concat([pd.DataFrame([nuevo_row]), st.session_state.descuadres], ignore_index=True)
-                guardar_descuadre_gsheets(str(f_operacion), dni_actual, user_actual, tipo_final, monto_final, obs, f_reg)
-                st.toast("Descuadre registrado en la nube")
-                time.sleep(0.3)
-                st.rerun()
+                if guardar_descuadre_gsheets(str(f_operacion), dni_actual, user_actual, tipo_final, monto_final, obs, f_reg):
+                    st.session_state.descuadres = pd.concat(
+                        [pd.DataFrame([nuevo_row]), st.session_state.descuadres], ignore_index=True
+                    )
+                    st.toast("Descuadre registrado correctamente")
+                    st.rerun()
 
         if not _mio.empty:
-            st.markdown("<div class='tp-note-t' style='margin:22px 0 10px'>Tus últimos registros</div>", unsafe_allow_html=True)
+            st.markdown('<div class="pm-ds-list-head"><span>TUS ÚLTIMOS REGISTROS</span><small>Los cinco movimientos más recientes</small></div>', unsafe_allow_html=True)
             _MES_A = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
-            _filas_r = ""
+            _filas_r = '<div class="pm-ds-history">'
             for _, _r in _mio.sort_values("fecha_registro", ascending=False).head(5).iterrows():
-                _dt = pd.to_datetime(_r["fecha"], errors="coerce")
-                _mv = float(_r["monto_num"])
-                _filas_r += (f'<div class="tp-row"><div class="tp-row-time">{(str(_dt.day) + " " + _MES_A[_dt.month - 1]) if pd.notnull(_dt) else str(_r["fecha"])}</div>'
-                             f'<div class="tp-row-main"><b>{_html.escape(str(_r["tipo"]))}</b><span class="wrap">{_html.escape(str(_r["observacion"]).strip() or "Sin motivo registrado")}</span></div>'
-                             f'<div class="tp-chips">{ui_chip(("+" if _mv > 0 else "") + f"S/. {_mv:.2f}", "ok" if _mv >= 0 else "bad")}</div></div>')
-            st.markdown(_filas_r, unsafe_allow_html=True)
+                _dt = pd.to_datetime(_r.get("fecha"), errors="coerce")
+                _monto = float(_r["monto_num"])
+                _fecha = (f"{int(_dt.day):02d} {_MES_A[int(_dt.month)-1]}" if pd.notnull(_dt)
+                          else str(_r.get("fecha", ""))[:10])
+                _motivo = str(_r.get("observacion", "")).strip() or "Sin motivo registrado"
+                _positivo = _monto >= 0
+                _importe = f"{'+' if _positivo else '−'} S/ {abs(_monto):,.2f}"
+                _filas_r += (
+                    f'<div class="pm-ds-row"><div class="pm-ds-date">{_html.escape(_fecha)}</div>'
+                    f'<div class="pm-ds-main"><strong>{_html.escape(str(_r.get("tipo", "")))}</strong>'
+                    f'<span>{_html.escape(_motivo)}</span></div>'
+                    f'<div class="pm-ds-amount {"pos" if _positivo else "neg"}">{_html.escape(_importe)}</div></div>'
+                )
+            st.markdown(_filas_r + '</div>', unsafe_allow_html=True)
 
 elif choice == "Registrar Incidencia":
     premium_module_shell('Registrar Incidencia', 'CONTROL', 'Registra novedades e incidencias operativas.')
@@ -9950,171 +10099,279 @@ elif choice == "Auditoría y Configuración":
 
 
 elif choice == "Rutinas Operativas":
-    premium_module_shell('Rutinas Operativas', 'OPERACIÓN DIARIA', 'Checklists por turno para asegurar apertura, operación y cierre con seguimiento claro.')
-
+    premium_module_shell(
+        "Rutinas Operativas", "OPERACIÓN DIARIA",
+        "Apertura, atención y cierre: una operación consistente en cada turno.",
+    )
     with st.container(key="pm_v_rutinas_operativas"):
-        c_r1, c_r2, c_r3 = st.columns([1.1, 1.2, .9])
-        with c_r1:
-            fecha_rut = st.date_input("Fecha de operación", obtener_ahora_peru().date(), key="pm_rut_fecha")
-        with c_r2:
-            personas_rut = _pm_programados(fecha_rut)
-            filtro_rut = ["Todos"] + [p["nombre"] for p in personas_rut]
-            nombre_rut = st.selectbox("Colaborador", filtro_rut, key="pm_rut_colab")
-        with c_r3:
-            st.markdown("<div style='height:29px'></div>", unsafe_allow_html=True)
-            if st.button("Generar rutinas del día", key="pm_rut_gen", use_container_width=True, type="primary"):
-                n_tareas, n_personas = _pm_generar_rutinas_operativas(fecha_rut)
-                _error_rut = st.session_state.get("_pm_rut_last_error", "")
-                if _error_rut:
-                    st.error(_error_rut)
-                elif n_tareas:
-                    st.success(f"Se guardaron {n_tareas} tarea(s) en Google Sheets para {n_personas} colaborador(es).")
-                else:
-                    st.info("Las rutinas de ese día ya estaban creadas.")
-
+        with st.container(key="pm_rut_filter_bar"):
+            fcol, pcol, bcol = st.columns([1, 1.4, 1.15], vertical_alignment="bottom", gap="medium")
+            with fcol:
+                fecha_rut = st.date_input("Fecha operativa", obtener_ahora_peru().date(), key="pm_rut_fecha")
+            with pcol:
+                personas_rut = _pm_programados(fecha_rut)
+                filtro_rut = ["Todos"] + [p["nombre"] for p in personas_rut]
+                nombre_rut = st.selectbox("Colaborador", filtro_rut, key="pm_rut_colab")
+            with bcol:
+                if st.button("Generar rutinas del día", key="pm_rut_gen", type="primary", use_container_width=True,
+                             disabled=bool(st.session_state.get("ver_como"))):
+                    n_tareas, n_personas = _pm_generar_rutinas_operativas(fecha_rut)
+                    error_guardado = st.session_state.get("_pm_rut_last_error", "")
+                    if error_guardado:
+                        st.error(error_guardado)
+                    elif n_tareas:
+                        st.success(f"Se guardaron {n_tareas} tareas para {n_personas} colaboradores.")
+                    else:
+                        st.info("Ya hay rutinas asignadas para esta fecha.")
         df_rut = _pm_rutinas_df(fecha_rut)
         if df_rut.empty:
-            ui_callout("Todavía no hay rutinas generadas para esta fecha. Usa el botón superior para crear el checklist operativo del día.", "warn")
+            st.markdown(
+                '<div class="pm-up-empty pm-up-empty-page"><div class="pm-up-empty-icon">✓</div>'
+                '<strong>Prepara las rutinas del equipo</strong><p>Selecciona la fecha y pulsa «Generar rutinas del día». '
+                'Las actividades quedarán vinculadas al checklist de cada colaborador.</p></div>',
+                unsafe_allow_html=True,
+            )
         else:
             if nombre_rut != "Todos":
                 df_rut = df_rut[df_rut["nombre"].astype(str) == nombre_rut].copy()
-            total_rut = len(df_rut)
-            comp_rut = int((df_rut["estado"].astype(str) == "Completado").sum()) if total_rut else 0
-            pend_rut = total_rut - comp_rut
-            personas_work = int(df_rut["dni"].astype(str).nunique()) if total_rut else 0
-            pct_rut = int(round(comp_rut * 100 / total_rut)) if total_rut else 0
-            st.markdown('<div class="tp-gridk">' +
-                        ui_kpi_acc("Colaboradores con rutina", str(personas_work), "seguimiento del día", "info") +
-                        ui_kpi_acc("Tareas completadas", str(comp_rut), f"de {total_rut} registradas", "ok") +
-                        ui_kpi_acc("Pendientes", str(pend_rut), "por ejecutar", "warn" if pend_rut else "ok") +
-                        ui_kpi_acc("Cumplimiento", f"{pct_rut}%", "avance del checklist", "ok" if pct_rut >= 85 else "warn") +
-                        '</div>', unsafe_allow_html=True)
+            total_r = len(df_rut)
+            complete_r = int((df_rut["estado"].astype(str) == "Completado").sum()) if total_r else 0
+            pending_r = total_r - complete_r
+            people_r = df_rut["dni"].astype(str).nunique() if total_r else 0
+            percentage_r = round(complete_r * 100 / total_r) if total_r else 0
+            metrics_r = [
+                ("Colaboradores", people_r, "Con rutinas asignadas", "blue"),
+                ("Completadas", complete_r, f"De {total_r} actividades", "green"),
+                ("Pendientes", pending_r, "Por completar", "orange"),
+                ("Cumplimiento", f"{percentage_r}%", "Avance operativo", "rose"),
+            ]
+            _metric_cards = '<div class="pm-up-kpi-grid">'
+            for _name, _val, _hint, _tone in metrics_r:
+                _metric_cards += (f'<article class="pm-up-kpi"><div class="pm-up-kpi-top"><span>{_html.escape(str(_name))}</span>'
+                                  f'<i class="pm-up-dot {_tone}"></i></div><strong>{_html.escape(str(_val))}</strong>'
+                                  f'<small>{_html.escape(str(_hint))}</small></article>')
+            st.markdown(_metric_cards + '</div>', unsafe_allow_html=True)
 
-            resumen_persona = []
-            for nom, g in df_rut.groupby("nombre"):
-                total_g = len(g)
-                comp_g = int((g["estado"].astype(str) == "Completado").sum())
-                pct_g = int(round(comp_g * 100 / total_g)) if total_g else 0
-                dni_g = str(g.iloc[0].get("dni", ""))
-                resumen_persona.append((pct_g, nom, dni_g, total_g, comp_g))
-            resumen_persona = sorted(resumen_persona, key=lambda x: (x[0], x[1]), reverse=True)
-
-            col_res, col_det = st.columns([1, 1.35])
-            with col_res:
-                st.markdown('<div class="pm-section-card"><h3>Vista ejecutiva</h3><p>Revisa rápidamente quién va al día y quién necesita seguimiento.</p></div>', unsafe_allow_html=True)
-                for pct_g, nom, dni_g, total_g, comp_g in resumen_persona:
-                    uri = ui_foto_uri(dni_g)
-                    avatar = f'<img class="tp-avatar" src="{uri}" alt="{_html.escape(nom)}">' if uri else f'<div class="tp-avatar">{ui_iniciales(nom)}</div>'
+            rcol, dcol = st.columns([1, 1.18], gap="large")
+            with rcol:
+                with st.container(key="pm_rut_summary_card"):
                     st.markdown(
-                        f'<div class="pm-rut-row"><div style="display:flex;gap:12px;align-items:flex-start">{avatar}<div class="pm-rut-main"><b>{_html.escape(nom)}</b>'
-                        f'<span>{comp_g} de {total_g} tareas completadas</span><div class="pm-rut-progress"><i style="width:{pct_g}%"></i></div></div></div>'
-                        f'<span class="pm-rut-badge">{pct_g}%</span></div>', unsafe_allow_html=True)
-            with col_det:
-                st.markdown('<div class="pm-section-card"><h3>Detalle operativo</h3><p>Marca los avances y deja el módulo listo para el seguimiento diario.</p></div>', unsafe_allow_html=True)
-                if df_rut.empty:
-                    st.caption("Sin tareas para mostrar")
-                else:
-                    for nom, g in df_rut.groupby("nombre"):
-                        st.markdown(f"<div style='margin:6px 0 10px;font-weight:820;color:#23324a'>{_html.escape(nom)}</div>", unsafe_allow_html=True)
-                        for _, rr in g.iterrows():
-                            cols_item = st.columns([.16, .84])
-                            marcada = str(rr.get("estado", "")).strip() == "Completado"
-                            key_chk = f"pm_rut_{rr.get('id_item', '')}"
-                            if key_chk in st.session_state and bool(st.session_state[key_chk]) != marcada:
-                                st.session_state[key_chk] = marcada
-                            with cols_item[0]:
-                                st.checkbox("", value=marcada, key=key_chk, label_visibility="collapsed",
-                                            disabled=bool(st.session_state.get("ver_como")),
-                                            on_change=_pm_on_rutina_change,
-                                            args=(key_chk, rr.get("id_item", ""), marcada, nom))
-                            with cols_item[1]:
-                                tarea = str(rr.get("tarea", ""))
-                                meta = "Completada" if marcada else "Pendiente"
-                                st.markdown(f'<div class="pm-rut-row" style="padding:0 0 10px;border-bottom:none"><div class="pm-rut-main"><b>{_html.escape(tarea)}</b><span>{meta}</span></div>'
-                                            f'<span class="pm-rut-badge">{meta}</span></div>', unsafe_allow_html=True)
+                        '<div class="pm-up-card-heading"><div><span class="pm-up-overline">SEGUIMIENTO</span>'
+                        '<h3>Avance por colaborador</h3><p>Cumplimiento de las actividades asignadas.</p>'
+                        '</div></div>', unsafe_allow_html=True,
+                    )
+                    summary_html = '<div class="pm-up-staff-list">'
+                    for name_r, g in sorted(df_rut.groupby("nombre"), key=lambda x: str(x[0])):
+                        n_done = int((g["estado"].astype(str) == "Completado").sum())
+                        n_all = len(g)
+                        share = round(n_done * 100 / n_all) if n_all else 0
+                        dni_r = str(g.iloc[0].get("dni", ""))
+                        summary_html += (
+                            '<div class="pm-up-staff-row">'
+                            f'{ui_avatar(name_r, dni_r, "", 42)}'
+                            f'<div class="pm-up-staff-copy"><strong>{_html.escape(str(name_r))}</strong>'
+                            f'<span>{n_done} de {n_all} tareas</span>'
+                            f'<div class="pm-up-progress-track"><span style="width:{share}%"></span></div></div>'
+                            f'<em>{share}%</em></div>'
+                        )
+                    st.markdown(summary_html + '</div>', unsafe_allow_html=True)
+            with dcol:
+                with st.container(key="pm_rut_details_card"):
+                    st.markdown(
+                        '<div class="pm-up-card-heading"><div><span class="pm-up-overline">CHECKLIST</span>'
+                        '<h3>Detalle de actividades</h3><p>Marca el avance cuando una tarea esté terminada.</p>'
+                        '</div></div>', unsafe_allow_html=True,
+                    )
+                    if df_rut.empty:
+                        st.caption("No hay tareas con este filtro.")
+                    for name_r, g in df_rut.groupby("nombre"):
+                        st.markdown(f'<div class="pm-up-person-heading">{_html.escape(str(name_r))}</div>', unsafe_allow_html=True)
+                        for _, task in g.iterrows():
+                            task_id = str(task.get("id_item", ""))
+                            done = str(task.get("estado", "")) == "Completado"
+                            widget_key = f"pm_rut_{task_id}"
+                            if widget_key in st.session_state and bool(st.session_state[widget_key]) != done:
+                                st.session_state[widget_key] = done
+                            with st.container(key=f"pm_rut_task_{task_id}"):
+                                tick, body = st.columns([.12, .88], gap="small", vertical_alignment="center")
+                                with tick:
+                                    st.checkbox(
+                                        "", value=done, key=widget_key, label_visibility="collapsed",
+                                        disabled=bool(st.session_state.get("ver_como")),
+                                        on_change=_pm_on_rutina_change,
+                                        args=(widget_key, task_id, done, name_r),
+                                    )
+                                with body:
+                                    st.markdown(
+                                        f'<div class="pm-up-task-copy"><strong>{_html.escape(str(task.get("tarea", "")))}</strong>'
+                                        f'<span>{"Completada" if done else "Pendiente"}</span></div>',
+                                        unsafe_allow_html=True,
+                                    )
 
+elif choice == "Portal del Colaborador" and rol_actual != "admin":
+    premium_module_shell(
+        "Portal del Colaborador", "MI ESPACIO",
+        "Tu jornada, tus rutinas y tus documentos, en un solo lugar.",
+    )
 
-elif choice == "Portal del Colaborador 2.0":
-    premium_module_shell('Portal del Colaborador 2.0', 'EXPERIENCIA DEL COLABORADOR', 'Tu jornada, documentos, solicitudes y tareas reunidos en un solo espacio.')
-
-    with st.container(key="pm_v_portal_colaborador_20"):
-        # La apertura del portal no modifica datos. Las rutinas se generan desde Administración.
-        res_portal = _pm_resumen_colaborador(user_actual, dni_actual, obtener_ahora_peru().date())
+    with st.container(key="pm_v_portal_colaborador"):
+        _portal_fecha = obtener_ahora_peru().date()
+        # El portal está disponible únicamente bajo rol operativo. En una
+        # vista previa de administrador se usan los datos del colaborador
+        # seleccionado y la escritura permanece bloqueada por ver_como.
+        _portal_nombre, _portal_dni = user_actual, str(dni_actual)
+        _portal_data = _pm_resumen_colaborador(_portal_nombre, _portal_dni, _portal_fecha)
+        _portal_fecha_visible = _portal_fecha.strftime("%d/%m/%Y")
+        _portal_photo = ui_avatar(_portal_nombre, _portal_dni, "", 60)
+        _portal_estado = _portal_data["estado_asistencia"]
+        _portal_estado_class = "pm-up-ok" if _portal_estado == "Marcación al día" else (
+            "pm-up-warn" if "Tardanza" in _portal_estado else "pm-up-neutral")
+        # Una sola cadena HTML: garantiza que todo el hero permanezca dentro de su tarjeta.
         st.markdown(
-            '<section class="pm-portal-hero">'
-            '<div class="pm-portal-eyebrow">Premium Market · Portal del colaborador</div>'
-            f'<h2>Hola, {_html.escape(str(user_actual).split()[0])}. Todo tu día en un solo lugar.</h2>'
-            '<p>Este espacio reúne tu operación, tus documentos y tus tareas para que trabajes con mayor claridad y autonomía.</p>'
-            '<div class="pm-portal-meta">'
-            f'<span class="pm-portal-chip">Turno: {_html.escape(res_portal["turno"])}</span>'
-            f'<span class="pm-portal-chip">Horario: {_html.escape(res_portal["rango_turno"])}</span>'
-            f'<span class="pm-portal-chip">Asistencia: {_html.escape(res_portal["estado_asistencia"])}</span>'
-            '</div></section>', unsafe_allow_html=True)
+            '<section class="pm-up-hero">'
+            '<div class="pm-up-hero-text">'
+            '<span class="pm-up-eyebrow"><span class="pm-up-pulse"></span> PREMIUM MARKET · MI ESPACIO</span>'
+            '<div class="pm-up-welcome-row">'
+            f'{_portal_photo}<div><h2>Hola, {_html.escape(str(_portal_nombre).split()[0])}.</h2>'
+            '<p>Tu día de trabajo, más simple y organizado.</p></div></div>'
+            '<div class="pm-up-hero-meta">'
+            f'<span>Hoy · {_html.escape(_portal_fecha_visible)}</span>'
+            f'<span>Turno · {_html.escape(_portal_data["turno"])}</span>'
+            f'<span>Horario · {_html.escape(_portal_data["rango_turno"])}</span>'
+            '</div></div>'
+            '<div class="pm-up-hero-side"><span class="pm-up-side-kicker">ESTADO DE HOY</span>'
+            f'<span class="pm-up-status {_portal_estado_class}">{_html.escape(_portal_estado)}</span>'
+            f'<strong>{_html.escape(_portal_data["hora_ingreso"] if _portal_data["hora_ingreso"] != "-" else "—")}</strong>'
+            '<small>Hora de ingreso</small></div></section>',
+            unsafe_allow_html=True,
+        )
 
-        st.markdown('<div class="tp-gridk">' +
-                    ui_kpi_acc("Marcación de hoy", _html.escape(res_portal["hora_ingreso"]), res_portal["estado_asistencia"], "ok" if res_portal["hora_ingreso"] != "-" else "warn") +
-                    ui_kpi_acc("Solicitudes pendientes", str(res_portal["solicitudes_pendientes"]), "esperan respuesta", "warn" if res_portal["solicitudes_pendientes"] else "ok") +
-                    ui_kpi_acc("Mis boletas", str(res_portal["boletas"]), "documentos disponibles", "info") +
-                    ui_kpi_acc("Rutinas del día", f"{res_portal['rutinas_completadas']} / {res_portal['rutinas_total']}", "avance operativo", "ok" if res_portal['rutinas_pct'] >= 80 else "warn") +
-                    '</div>', unsafe_allow_html=True)
+        # Los KPI comparten el mismo grid HTML: no quedan tarjetas desplazadas.
+        _cards = [
+            ("Mi asistencia", _portal_data["hora_ingreso"] if _portal_data["hora_ingreso"] != "-" else "—",
+             _portal_data["estado_asistencia"], "clock", "green" if _portal_estado == "Marcación al día" else "orange"),
+            ("Rutinas de hoy", f'{_portal_data["rutinas_completadas"]} / {_portal_data["rutinas_total"]}',
+             "Tareas completadas", "checks", "rose"),
+            ("Solicitudes", str(_portal_data["solicitudes_pendientes"]), "Pendientes de revisión", "inbox", "blue"),
+            ("Mis boletas", str(_portal_data["boletas"]), "Documentos disponibles", "file", "purple"),
+        ]
+        _svg_icons = {
+            "clock": '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+            "checks": '<rect x="3" y="4" width="18" height="17" rx="3"/><path d="m7 12 2 2 4-4M15 9h3M15 14h3"/>',
+            "inbox": '<rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 13h5l2 3h4l2-3h5"/>',
+            "file": '<path d="M6 2h9l4 4v16H6zM15 2v5h4M9 12h7M9 16h7"/>',
+        }
+        _kp_html = '<div class="pm-up-kpi-grid">'
+        for _lbl, _val, _sub, _ico, _tone in _cards:
+            _kp_html += (
+                f'<article class="pm-up-kpi"><div class="pm-up-kpi-top"><span>{_html.escape(_lbl)}</span>'
+                f'<span class="pm-up-kpi-icon {_tone}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+                f'stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">{_svg_icons[_ico]}</svg></span></div>'
+                f'<strong>{_html.escape(str(_val))}</strong><small>{_html.escape(str(_sub))}</small></article>'
+            )
+        st.markdown(_kp_html + '</div>', unsafe_allow_html=True)
 
-        st.markdown('<div class="pm-mini-grid">', unsafe_allow_html=True)
-        col_p1, col_p2 = st.columns(2)
-        with col_p1:
-            st.markdown('<div class="pm-section-card"><h3>Mi jornada de hoy</h3><p>Resumen rápido de tu operación y prioridades del día.</p></div>', unsafe_allow_html=True)
-            st.markdown(f'<div class="pm-rut-row"><div class="pm-rut-main"><b>Estado de asistencia</b><span>{_html.escape(res_portal["estado_asistencia"])} · ingreso {res_portal["hora_ingreso"]}</span></div><span class="pm-rut-badge">{_html.escape(res_portal["rango_turno"])}</span></div>', unsafe_allow_html=True)
-            st.markdown(f'<div class="pm-rut-row"><div class="pm-rut-main"><b>Solicitudes</b><span>{res_portal["solicitudes_pendientes"]} pendiente(s) en revisión</span></div><span class="pm-rut-badge">Seguimiento</span></div>', unsafe_allow_html=True)
-            st.markdown(f'<div class="pm-rut-row"><div class="pm-rut-main"><b>Botellas fiadas</b><span>{res_portal["botellas_pendientes"]} registro(s) pendientes de devolución</span></div><span class="pm-rut-badge">Control</span></div>', unsafe_allow_html=True)
-            st.markdown('</div>', unsafe_allow_html=True)
+        left, right = st.columns([1, 1], gap="large")
+        with left:
+            with st.container(key="pm_portal_jornada_card"):
+                st.markdown(
+                    '<div class="pm-up-card-heading"><div><span class="pm-up-overline">JORNADA</span>'
+                    '<h3>Mi jornada de hoy</h3><p>La información importante de tu turno.</p></div>'
+                    '<span class="pm-up-heading-glyph">◷</span></div>', unsafe_allow_html=True,
+                )
+                _j_rows = [
+                    ("Horario programado", _portal_data["rango_turno"], "turno"),
+                    ("Estado de asistencia", _portal_data["estado_asistencia"], "asistencia"),
+                    ("Solicitudes por revisar", f'{_portal_data["solicitudes_pendientes"]} pendiente(s)', "solicitudes"),
+                    ("Botellas por devolver", f'{_portal_data["botellas_pendientes"]} registro(s)', "botellas"),
+                ]
+                _jr_html = '<div class="pm-up-detail-list">'
+                for _tit, _val, _cls in _j_rows:
+                    _jr_html += (f'<div class="pm-up-detail-row"><div><span>{_html.escape(_tit)}</span>'
+                                 f'<strong>{_html.escape(str(_val))}</strong></div>'
+                                 f'<span class="pm-up-detail-icon {_cls}" aria-hidden="true">●</span></div>')
+                st.markdown(_jr_html + '</div>', unsafe_allow_html=True)
 
-            st.markdown('<div style="height:14px"></div>', unsafe_allow_html=True)
-            st.markdown('<div class="pm-section-card pm-portal-shortcuts"><h3>Acciones rápidas</h3><p>Ve a tus módulos más usados sin perder tiempo.</p></div>', unsafe_allow_html=True)
-            s1, s2 = st.columns(2)
-            with s1:
-                st.button("Ver asistencias" if rol_actual == "admin" else "Marcar asistencia", key="pm_go_asistencia", use_container_width=True,
-                          on_click=_ir_a, args=("Historial de Asistencias" if rol_actual == "admin" else "Marcar Asistencia",),
-                          icon=":material/fingerprint:")
-                st.button("Mis boletas", key="pm_go_boletas", use_container_width=True, on_click=_ir_a, args=("Mis Boletas" if rol_actual != "admin" else "Boletas de Pago",), icon=":material/receipt_long:")
-            with s2:
-                st.button("Solicitudes", key="pm_go_sol", use_container_width=True, on_click=_ir_a, args=("Solicitar Permiso / Adelanto" if rol_actual != "admin" else "Solicitudes y Permisos",), icon=":material/inbox:")
-                st.button("Vacaciones", key="pm_go_vac", use_container_width=True, on_click=_ir_a, args=("Mis Vacaciones" if rol_actual != "admin" else "Gestión de Vacaciones",), icon=":material/beach_access:")
-            st.markdown('</div>', unsafe_allow_html=True)
+            with st.container(key="pm_portal_actions_card"):
+                st.markdown(
+                    '<div class="pm-up-card-heading"><div><span class="pm-up-overline">ACCESOS DIRECTOS</span>'
+                    '<h3>¿Qué necesitas hacer?</h3><p>Ve directamente a tus herramientas.</p></div></div>',
+                    unsafe_allow_html=True,
+                )
+                _links = [
+                    ("Marcar asistencia", "Marcar Asistencia", ":material/fingerprint:"),
+                    ("Solicitudes", "Solicitar Permiso / Adelanto", ":material/inbox:"),
+                    ("Mis boletas", "Mis Boletas", ":material/receipt_long:"),
+                    ("Vacaciones", "Mis Vacaciones", ":material/event_available:"),
+                ]
+                for _pair in range(0, len(_links), 2):
+                    _a, _b = st.columns(2, gap="small")
+                    for _column, (_label, _dest, _icon) in zip((_a, _b), _links[_pair:_pair+2]):
+                        with _column:
+                            st.button(_label, key=f"pm_up_link_{_dest}", use_container_width=True,
+                                      on_click=_ir_a, args=(_dest,), icon=_icon)
 
-        with col_p2:
-            st.markdown('<div class="pm-section-card"><h3>Mis rutinas de hoy</h3><p>Marca tu avance y mantén tu operación al día.</p></div>', unsafe_allow_html=True)
-            df_mis_rut = _pm_rutinas_df(obtener_ahora_peru().date(), dni_actual)
-            if df_mis_rut.empty:
-                ui_callout("No hay rutinas creadas todavía para hoy.")
-            else:
-                pct = int(round(res_portal['rutinas_pct'])) if res_portal['rutinas_total'] else 0
-                st.markdown(f'<div class="pm-rut-progress" style="margin-bottom:14px"><i style="width:{pct}%"></i></div>', unsafe_allow_html=True)
-                for _, rr in df_mis_rut.iterrows():
-                    marcada = str(rr.get("estado", "")).strip() == "Completado"
-                    c1, c2 = st.columns([.14, .86])
-                    key_portal = f"pm_portal_rut_{rr.get('id_item', '')}"
-                    if key_portal in st.session_state and bool(st.session_state[key_portal]) != marcada:
-                        st.session_state[key_portal] = marcada
-                    with c1:
-                        st.checkbox("", value=marcada, key=key_portal, label_visibility="collapsed",
+        with right:
+            with st.container(key="pm_portal_routines_card"):
+                _today_routines = _pm_rutinas_df(_portal_fecha, _portal_dni)
+                _done_n = int((_today_routines["estado"].astype(str) == "Completado").sum()) if not _today_routines.empty else 0
+                _total_n = len(_today_routines)
+                _percent_n = round(_done_n * 100 / _total_n) if _total_n else 0
+                st.markdown(
+                    '<div class="pm-up-card-heading"><div><span class="pm-up-overline">OPERACIÓN</span>'
+                    '<h3>Mis rutinas de hoy</h3><p>Un paso a la vez, todo bajo control.</p></div>'
+                    f'<span class="pm-up-progress-badge">{_done_n}/{_total_n}</span></div>'
+                    f'<div class="pm-up-progress-track"><span style="width:{_percent_n}%"></span></div>',
+                    unsafe_allow_html=True,
+                )
+                if _today_routines.empty:
+                    st.markdown(
+                        '<div class="pm-up-empty"><div class="pm-up-empty-icon">✓</div>'
+                        '<strong>Todo listo para empezar</strong>'
+                        '<p>Tu supervisor aún no asignó rutinas para hoy. Cuando estén disponibles, aparecerán aquí.</p>'
+                        '</div>', unsafe_allow_html=True,
+                    )
+                else:
+                    for _, _task in _today_routines.iterrows():
+                        _task_id = str(_task.get("id_item", ""))
+                        _marked = str(_task.get("estado", "")) == "Completado"
+                        _widget_key = f"pm_portal_rut_{_task_id}"
+                        if _widget_key in st.session_state and bool(st.session_state[_widget_key]) != _marked:
+                            st.session_state[_widget_key] = _marked
+                        with st.container(key=f"pm_up_task_{_task_id}"):
+                            tick, label = st.columns([.12, .88], gap="small", vertical_alignment="center")
+                            with tick:
+                                st.checkbox(
+                                    "", value=_marked, key=_widget_key,
+                                    label_visibility="collapsed",
                                     disabled=bool(st.session_state.get("ver_como")),
                                     on_change=_pm_on_rutina_change,
-                                    args=(key_portal, rr.get("id_item", ""), marcada, user_actual))
-                    with c2:
-                        estado_label = "Completada" if marcada else "Pendiente"
-                        st.markdown(f'<div class="pm-rut-row" style="padding:0 0 8px;border-bottom:none"><div class="pm-rut-main"><b>{_html.escape(str(rr.get("tarea", "")))}</b><span>{estado_label}</span></div><span class="pm-rut-badge">{estado_label}</span></div>', unsafe_allow_html=True)
+                                    args=(_widget_key, _task_id, _marked, _portal_nombre),
+                                )
+                            with label:
+                                st.markdown(
+                                    f'<div class="pm-up-task-copy"><strong>{_html.escape(str(_task.get("tarea", "")))}</strong>'
+                                    f'<span>{"Completada" if _marked else "Pendiente"}</span></div>',
+                                    unsafe_allow_html=True,
+                                )
 
-            st.markdown('</div>', unsafe_allow_html=True)
-
-            st.markdown('<div style="height:14px"></div>', unsafe_allow_html=True)
-            st.markdown('<div class="pm-section-card"><h3>Lo importante para ti</h3><p>Un panel breve para que no pierdas el foco.</p></div>', unsafe_allow_html=True)
-            _items_focus = [
-                ("Próximo paso", "Marca asistencia o completa tus rutinas del turno."),
-                ("Documentos", f"Tienes {res_portal['boletas']} boleta(s) disponible(s) en tu historial."),
-                ("Solicitudes", f"Actualmente tienes {res_portal['solicitudes_pendientes']} solicitud(es) pendiente(s)."),
-            ]
-            for tit, sub in _items_focus:
-                st.markdown(f'<div class="pm-rut-row"><div class="pm-rut-main"><b>{_html.escape(tit)}</b><span>{_html.escape(sub)}</span></div><span class="pm-rut-badge">Portal</span></div>', unsafe_allow_html=True)
-            st.markdown('</div>', unsafe_allow_html=True)
+            with st.container(key="pm_portal_notice_card"):
+                st.markdown(
+                    '<div class="pm-up-card-heading"><div><span class="pm-up-overline">MI TABLERO</span>'
+                    '<h3>Para tener en cuenta</h3><p>Lo siguiente que merece tu atención.</p></div></div>',
+                    unsafe_allow_html=True,
+                )
+                _next_steps = [
+                    ("Mi próximo paso", "Revisa tu jornada y completa las rutinas asignadas.", "Prioridad"),
+                    ("Mis documentos", f'{_portal_data["boletas"]} boleta(s) disponibles para consultar.', "Documentos"),
+                    ("Mis solicitudes", f'{_portal_data["solicitudes_pendientes"]} solicitud(es) en revisión.', "Seguimiento"),
+                ]
+                _nt = '<div class="pm-up-detail-list">'
+                for _t, _sub, _tag in _next_steps:
+                    _nt += (f'<div class="pm-up-next-row"><div><strong>{_html.escape(_t)}</strong>'
+                            f'<span>{_html.escape(_sub)}</span></div>'
+                            f'<em>{_html.escape(_tag)}</em></div>')
+                st.markdown(_nt + '</div>', unsafe_allow_html=True)
 
 # --- PIE DE PÁGINA (FOOTER ESTILO WEB/APP) ---
 st.markdown("""
