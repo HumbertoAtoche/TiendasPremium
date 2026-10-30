@@ -7250,6 +7250,217 @@ def _pm2_metrics(data, personal=False):
     st.markdown(html + "</div>", unsafe_allow_html=True)
 
 
+# PREMIUM MARKET 5.0 — Indicadores de rutinas reutilizables
+# Exclusivamente lectura de los datos reales; no altera hojas, permisos ni estados.
+def _pm5_routine_slice(df, *, dni=None, date_iso=None, month_iso=None):
+    if not isinstance(df, pd.DataFrame):
+        raise TypeError("La consulta de rutinas no contiene una tabla válida.")
+    required = {"dni", "fecha", "estado", "revision_estado"}
+    if not required.issubset(df.columns):
+        raise ValueError("Faltan columnas necesarias para calcular las rutinas.")
+    filtered = df
+    if dni is not None:
+        filtered = filtered.loc[filtered["dni"].astype(str).map(_pm2_dni) == _pm2_dni(dni)]
+    if date_iso is not None:
+        filtered = filtered.loc[filtered["fecha"].astype(str).str[:10] == str(date_iso)[:10]]
+    if month_iso is not None:
+        filtered = filtered.loc[filtered["fecha"].astype(str).str[:7] == str(month_iso)[:7]]
+    return filtered.copy()
+
+
+def _pm5_routine_stats(df):
+    """Cumplimiento = validadas / asignadas no canceladas.
+
+    Por validar no equivale a completada. Los registros observados son los
+    pendientes de corrección; se cuentan aparte y también en pendientes.
+    """
+    if not isinstance(df, pd.DataFrame):
+        raise TypeError("Se esperaba un DataFrame de rutinas.")
+    if df.empty:
+        return dict(total=0, done=0, pending=0, active=0, reviewing=0,
+                    observed=0, cancelled=0, pct=0, workers=0)
+    if not {"estado", "revision_estado", "dni"}.issubset(df.columns):
+        raise ValueError("Faltan campos de estado para las rutinas.")
+    state = df["estado"].fillna("").astype(str).str.strip()
+    revision = df["revision_estado"].fillna("").astype(str).str.strip()
+    cancelled = int(state.eq("Cancelada").sum())
+    total = len(df) - cancelled
+    done = int(state.eq("Completada").sum())
+    reviewing = int(state.eq("Por validar").sum())
+    active = int(state.eq("En curso").sum())
+    observed = int((revision.eq("Observada") & ~state.isin(("Completada", "Cancelada"))).sum())
+    return {
+        "total": total,
+        "done": done,
+        "pending": max(0, total - done),
+        "active": active,
+        "reviewing": reviewing,
+        "observed": observed,
+        "cancelled": cancelled,
+        "pct": round(done * 100 / total) if total else 0,
+        "workers": int(df.loc[~state.eq("Cancelada"), "dni"].astype(str).map(_pm2_dni).nunique()),
+    }
+
+
+def _pm5_routine_kpi_html(info, *, admin=False):
+    """KPI compacto: visual premium y 100% basado en estados reales."""
+    from html import escape as esc
+    pct = min(max(int(info["pct"]), 0), 100)
+    kpis = (
+        [("Asignadas hoy", info["total"], "Actividades activas", "slate"),
+         ("Validadas", info["done"], "Aprobadas por supervisión", "green"),
+         ("Por revisar", info["reviewing"], "Esperan tu validación", "gold"),
+         ("Por ejecutar", info["pending"] - info["reviewing"], "Sin aprobar ni en revisión", "rose")]
+        if admin else
+        [("Mis actividades", info["total"], "Asignadas en el mes", "slate"),
+         ("Validadas", info["done"], "Aprobadas por supervisión", "green"),
+         ("Por validar", info["reviewing"], "Pendientes del supervisor", "gold"),
+         ("Sin validar", info["pending"], "Incluye pendientes y en revisión", "rose")]
+    )
+    cards = "".join(
+        '<article class="pm5-kpi pm5-kpi--' + theme + '">'
+        '<span class="pm5-kpi-dot"></span><small>' + esc(str(label)) + '</small>'
+        '<strong>' + esc(str(max(0, int(val)))) + '</strong>'
+        '<span class="pm5-kpi-foot">' + esc(str(hint)) + '</span></article>'
+        for label, val, hint, theme in kpis
+    )
+    pct_label = f"{pct}%" if info["total"] else "—"
+    message = (
+        "Sin tareas programadas en este periodo" if not info["total"] else
+        "¡Excelente! Todas las tareas están validadas" if pct == 100 else
+        f'{info["done"]} de {info["total"]} actividades validadas'
+    )
+    extra = (f'<span class="pm5-extra-tag">{info["observed"]} observada(s)</span>'
+             if info["observed"] else "")
+    return (
+        '<section class="pm5-routine-overview">'
+        '<div class="pm5-overview-heading"><span class="pm5-overview-kicker">RENDIMIENTO OPERATIVO</span>'
+        '<div class="pm5-overview-title"><strong>Seguimiento de actividades</strong>'
+        '<span>Solo las aprobadas cuentan como completadas.</span></div></div>'
+        '<div class="pm5-kpi-grid">' + cards + '</div>'
+        '<div class="pm5-progress-panel"><div class="pm5-progress-copy">'
+        '<span>Cumplimiento de rutinas</span><strong>' + pct_label + '</strong></div>'
+        '<div class="pm5-progress-track"><i style="width:' + str(pct) + '%"></i></div>'
+        '<div class="pm5-progress-bottom"><small>' + esc(message) + '</small>' + extra + '</div>'
+        '</div></section>'
+    )
+
+
+def _pm5_routine_today_notice(df, dni, today):
+    """Solo rutinas propias y de hoy; no mezcla avisos de cumpleaños/botellas."""
+    tasks = _pm5_routine_slice(df, dni=dni, date_iso=today)
+    if tasks.empty:
+        return None
+    state = tasks["estado"].fillna("").astype(str).str.strip()
+    actionable = tasks.loc[state.isin(("Pendiente", "En curso"))]
+    observed = tasks.loc[~state.isin(("Cancelada", "Completada"))
+                         & tasks["revision_estado"].fillna("").astype(str).eq("Observada")]
+    if actionable.empty and observed.empty:
+        return None
+    return {"actionable": len(actionable), "observed": len(observed),
+            "next": str(actionable.sort_values(["hora_inicio", "titulo"]).iloc[0].get("titulo", "")) if not actionable.empty else ""}
+
+
+def _pm5_daily_worker_notice():
+    """Aviso pequeño y descartable; sin st.dialog ni st.toast para no colisionar
+    con los diálogos preexistentes de cumpleaños, botellas y motivación.
+    """
+    if rol_actual == "admin" or st.session_state.get("ver_como"):
+        return
+    today = obtener_ahora_peru().date().isoformat()
+    seen_flag = "_pm5_routine_notice_dismissed_" + _pm2_dni(dni_actual) + "_" + today
+    if st.session_state.get(seen_flag):
+        return
+    data, err = _pm2_load()
+    if err or data is None:
+        return  # Un error de conexión no equivale a cero actividades.
+    notice = _pm5_routine_today_notice(data, dni_actual, today)
+    if not notice:
+        return
+    from html import escape as esc
+    count = notice["actionable"]
+    observed = notice["observed"]
+    headline = (f"Tienes {count} actividad{'es' if count != 1 else ''} para hoy" if count
+                else f"Tienes {observed} actividad{'es' if observed != 1 else ''} por corregir")
+    details = ("Próxima: " + esc(notice["next"]) if count and notice["next"]
+               else "Revisa las observaciones de supervisión.")
+    with st.container(key="pm5_routine_notice"):
+        st.markdown(
+            '<div class="pm5-daily-note"><span class="pm5-daily-symbol">✓</span>'
+            '<div class="pm5-daily-body"><small>RECORDATORIO DE RUTINAS · HOY</small>'
+            '<strong>' + esc(headline) + '</strong><span>' + details + '</span>'
+            + (f'<em>{observed} actividad(es) observada(s)</em>' if observed else "")
+            + '</div></div>', unsafe_allow_html=True,
+        )
+        b_go, b_hide = st.columns([1.3, 1], gap="small")
+        with b_go:
+            if st.button("Ver mis rutinas", key="pm5_rutina_notice_open", use_container_width=True,
+                         icon=":material/fact_check:"):
+                st.session_state[seen_flag] = True
+                _ir_a("Mis Rutinas")
+                st.rerun()
+        with b_hide:
+            if st.button("Entendido", key="pm5_rutina_notice_dismiss", use_container_width=True):
+                st.session_state[seen_flag] = True
+                st.rerun()
+
+
+_PM5_ROUTINE_CSS = r"""
+<style>
+.pm5-routine-overview{border-radius:21px;padding:19px 20px 17px;margin:19px 0 22px;
+  background:linear-gradient(125deg,#fff 0%,#f8fbff 65%,#effaf5 115%);
+  border:1px solid #e1eaf0;box-shadow:0 12px 30px rgba(24,42,68,.055)}
+.pm5-overview-heading{display:flex;flex-direction:column;gap:5px;margin-bottom:17px}
+.pm5-overview-kicker{font-size:.64rem;color:#c12b49;font-weight:850;letter-spacing:.13em}
+.pm5-overview-title{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.pm5-overview-title strong{font-weight:850;font-size:1.15rem;color:#1b3048}
+.pm5-overview-title span{font-size:.74rem;color:#7c8aa1}
+.pm5-kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px}
+.pm5-kpi{border:1px solid #e5ebf2;border-radius:15px;padding:14px 14px 12px;background:#fff;
+  min-width:0;display:flex;flex-direction:column;gap:2px;position:relative;overflow:hidden}
+.pm5-kpi::before{content:"";position:absolute;top:0;left:0;height:3px;width:100%;background:#93a4ba}
+.pm5-kpi--green::before{background:#18b87a}.pm5-kpi--gold::before{background:#efb342}.pm5-kpi--rose::before{background:#e94f66}
+.pm5-kpi-dot{width:8px;height:8px;border-radius:50%;background:#93a4ba;margin-bottom:4px}
+.pm5-kpi--green .pm5-kpi-dot{background:#18b87a}.pm5-kpi--gold .pm5-kpi-dot{background:#efb342}
+.pm5-kpi--rose .pm5-kpi-dot{background:#e94f66}
+.pm5-kpi small{font-size:.72rem;font-weight:730;color:#738198;line-height:1.45}
+.pm5-kpi strong{font-size:clamp(1.5rem,3vw,2rem);font-weight:860;color:#1b3048;line-height:1.3;font-variant-numeric:tabular-nums}
+.pm5-kpi-foot{color:#8997a8;font-size:.68rem;line-height:1.45}
+.pm5-progress-panel{margin-top:14px;padding:13px 15px;background:#eef8f4;border:1px solid #d3ebe1;border-radius:14px}
+.pm5-progress-copy{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.pm5-progress-copy span{font-weight:790;color:#315a4a;font-size:.81rem}
+.pm5-progress-copy strong{font-size:1.05rem;color:#08764e;font-weight:850}
+.pm5-progress-track{height:9px;overflow:hidden;border-radius:12px;background:#d5e9df;margin:9px 0 8px}
+.pm5-progress-track i{display:block;height:100%;border-radius:12px;background:linear-gradient(90deg,#0da16b,#3cd69e);transition:width .35s ease}
+.pm5-progress-bottom{display:flex;align-items:center;gap:9px;justify-content:space-between;flex-wrap:wrap}
+.pm5-progress-bottom small{color:#517669;font-size:.71rem}
+.pm5-extra-tag{display:inline-flex;border-radius:20px;background:#fff4db;color:#94610a;padding:4px 8px;font-size:.67rem;font-weight:800}
+.pm5-daily-note{display:flex;gap:13px;align-items:center;background:linear-gradient(115deg,#eefcf5,#f7fbff);
+  border:1px solid #cbeadd;border-radius:17px;padding:13px 14px;margin-top:2px}
+.pm5-daily-symbol{height:39px;width:39px;flex:0 0 39px;display:grid;place-items:center;background:#0fa775;color:#fff;
+  border-radius:13px;font-size:1.22rem;font-weight:900;box-shadow:0 7px 15px rgba(15,167,117,.18)}
+.pm5-daily-body{min-width:0;display:flex;flex-direction:column;gap:2px}
+.pm5-daily-body small{font-size:.62rem;font-weight:850;letter-spacing:.09em;color:#13865e}
+.pm5-daily-body strong{font-size:.91rem;color:#20384d;font-weight:850;line-height:1.3}
+.pm5-daily-body span{font-size:.73rem;color:#678093;line-height:1.45;overflow-wrap:anywhere}
+.pm5-daily-body em{font-size:.69rem;color:#a46c10;font-style:normal;font-weight:750}
+.st-key-pm5_routine_notice{padding:0!important;margin:9px 0 16px!important}
+.st-key-pm5_routine_notice [data-testid="stHorizontalBlock"]{margin-top:7px!important}
+.st-key-pm5_routine_notice [data-testid="stButton"] button{min-height:39px!important;border-radius:11px!important;font-size:.77rem!important}
+@media(max-width:780px){
+.pm5-routine-overview{padding:13px;border-radius:17px;margin:12px 0 17px}
+.pm5-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.pm5-kpi{padding:12px 11px}.pm5-kpi strong{font-size:1.55rem}
+.pm5-overview-title{gap:4px}.pm5-overview-title strong{font-size:1.01rem}
+.pm5-daily-note{padding:11px;gap:10px}.pm5-daily-symbol{width:34px;height:34px;flex-basis:34px}
+.st-key-pm5_routine_notice [data-testid="stHorizontalBlock"]{flex-direction:row!important;flex-wrap:nowrap!important;gap:8px!important}
+.st-key-pm5_routine_notice [data-testid="stColumn"]{min-width:0!important;flex-basis:0!important;flex-grow:1!important;width:auto!important}
+}
+@media(prefers-reduced-motion:reduce){.pm5-progress-track i{transition:none!important}}
+</style>
+"""
+
+
 def _pm4_icon(name, size=20):
     """Iconos vectoriales autocontenidos; no dependen de fuentes externas."""
     paths = {
@@ -7402,7 +7613,7 @@ if rol_actual == "admin":
     # Estilo uniforme para paneles de operación: conserva lógica y menú original.
     menu = ["Dashboard General", "Centro de Alertas", "Rutinas Operativas", "Analítica (BI)", "Gestión Colaboradores", "Onboarding / Offboarding", "Gestión de Vacaciones", "Programación de Turnos", "Boletas de Pago", "Solicitudes y Permisos", "Historial de Descuadres", "Incidencias y Daños", "Botellas Fiadas", "Historial de Asistencias", "Auditoría y Configuración"]
 else:
-    menu = ["Mis Rutinas", "Marcar Asistencia", "Registrar Descuadre", "Registrar Incidencia", "Botellas Fiadas", "Mi Ficha Técnica", "Mis Vacaciones", "Mis Boletas", "Solicitar Permiso / Adelanto", "Mi Dashboard Mensual"]
+    menu = ["Marcar Asistencia", "Mis Rutinas", "Registrar Descuadre", "Registrar Incidencia", "Botellas Fiadas", "Mi Ficha Técnica", "Mis Vacaciones", "Mis Boletas", "Solicitar Permiso / Adelanto", "Mi Dashboard Mensual"]
 
 if rol_real == "admin":
     _opc_vc = ["Mi vista (admin)"] + sorted(n for n, d in USUARIOS.items() if d["rol"] != "admin")
@@ -8442,6 +8653,9 @@ def premium_section(text, *args, **kwargs):
                 _escmod.escape(str(text)) + '</span><span class="pm7-line"></span></div>',
                 unsafe_allow_html=True)
 
+# Estilos propios de indicadores y aviso diario (sin fuentes o imágenes remotas).
+st.markdown(_PM5_ROUTINE_CSS, unsafe_allow_html=True)
+
 # -------------------- MÓDULOS OPERATIVOS --------------------
 
 if _vc:
@@ -8634,6 +8848,10 @@ def _pm_mobile_notices():
 if choice == "Marcar Asistencia":
     premium_module_shell('Marcar Asistencia', 'MI JORNADA', 'Registra y consulta tus marcaciones.')
 
+    # Recordatorio breve al abrir la jornada: no compite con los diálogos
+    # existentes ni invade otras vistas. Se puede descartar durante el día.
+    _pm5_daily_worker_notice()
+
     # Panel específico para teléfonos; conserva el formulario existente y su lógica.
     _pm_mobile_home()
 
@@ -8737,13 +8955,8 @@ elif choice == "Mis Rutinas":
     premium_module_shell("Mis Rutinas", "MI OPERACIÓN", "Tus actividades asignadas con fecha, hora, lugar e instrucciones claras.")
     with st.container(key="pm_v_mis_rutinas"):
         _pm2_css()
-        first_name = _html.escape(str(user_actual).split()[0] if user_actual else "equipo")
-        st.markdown(
-            '<section class="pm2-hero"><div class="pm2-kicker">PREMIUM MARKET · MI JORNADA</div>'
-            f'<h2>{first_name}, tu trabajo organizado en un solo lugar.</h2>'
-            '<p>Consulta lo que tienes asignado, revisa el horario y la ubicación, y registra el progreso de cada actividad desde tu celular.</p>'
-            '</section>', unsafe_allow_html=True,
-        )
+        # El encabezado blanco ya ofrece el contexto de esta pantalla.
+        # Sin banner duplicado: las actividades comienzan directamente.
         data, err = _pm2_load()
         if err:
             st.error(err)
@@ -9347,6 +9560,28 @@ elif choice == "Mi Dashboard Mensual":
         k4.markdown(_kp("Balance de descuadres", f"S/. {monto_total:.2f}", "sobrantes menos faltantes", "ok" if monto_total >= 0 else "bad"), unsafe_allow_html=True)
         st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
 
+        # Rendimiento de rutinas del MISMO trabajador en el mes seleccionado.
+        # Se excluyen canceladas; no se muestra información de otros DNI.
+        _rut_monthly, _rut_monthly_err = _pm2_load()
+        if _rut_monthly_err or _rut_monthly is None:
+            st.warning("El seguimiento de rutinas no está disponible en este momento. Las demás métricas permanecen visibles.")
+        else:
+            _rut_month_period = f"{int(anio_dash_sel):04d}-{int(mes_dash_sel):02d}"
+            _rut_own_month = _pm5_routine_slice(_rut_monthly, dni=dni_actual,
+                                                month_iso=_rut_month_period)
+            _rut_month_stats = _pm5_routine_stats(_rut_own_month)
+            st.markdown(_pm5_routine_kpi_html(_rut_month_stats), unsafe_allow_html=True)
+            if _rut_month_stats["observed"]:
+                st.caption(f"Tienes {_rut_month_stats['observed']} actividad(es) observada(s) que requieren corrección.")
+            if _rut_month_stats["total"]:
+                st.markdown("**Últimas actividades del mes**")
+                _rut_recent = _rut_own_month.loc[
+                    _rut_own_month["estado"].astype(str) != "Cancelada",
+                    ["fecha", "titulo", "estado"]
+                ].sort_values("fecha", ascending=False).head(5)
+                _rut_recent = _rut_recent.rename(columns={"fecha": "Fecha", "titulo": "Actividad", "estado": "Estado"})
+                st.dataframe(_rut_recent, hide_index=True, use_container_width=True)
+
         if por_dia_dash:
             fechas_d = sorted(por_dia_dash)
             g1, g2 = st.columns([1.6, 1])
@@ -9386,6 +9621,27 @@ elif choice == "Dashboard General":
     with st.container(key="pm_v_dashboard_general"):
 
         pm_render_dashboard_kpis()
+        # Indicadores de Rutinas Operativas de toda la jornada, sin mezclar
+        # actividades de otros días y sin asumir cero ante un fallo de Sheets.
+        _rut_admin_data, _rut_admin_err = _pm2_load()
+        if _rut_admin_err or _rut_admin_data is None:
+            st.warning("No fue posible consultar el avance de Rutinas Operativas. Intenta actualizar más tarde.")
+        else:
+            _rut_admin_today = _pm5_routine_slice(
+                _rut_admin_data, date_iso=obtener_ahora_peru().date().isoformat())
+            _rut_admin_stats = _pm5_routine_stats(_rut_admin_today)
+            st.markdown(_pm5_routine_kpi_html(_rut_admin_stats, admin=True), unsafe_allow_html=True)
+            if _rut_admin_stats["total"]:
+                _rut_admin_l, _rut_admin_r = st.columns([2, 1], vertical_alignment="bottom")
+                with _rut_admin_l:
+                    st.caption(f"{_rut_admin_stats['workers']} colaborador(es) con rutinas hoy · "
+                               f"{_rut_admin_stats['active']} en curso · "
+                               f"{_rut_admin_stats['observed']} observadas.")
+                with _rut_admin_r:
+                    if st.button("Gestionar rutinas", key="pm5_admin_dashboard_routines",
+                                 use_container_width=True, icon=":material/fact_check:"):
+                        _ir_a("Rutinas Operativas")
+                        st.rerun()
         _tp_panel_operacion_hoy()
 
         col_f1, col_f2 = st.columns([1.5, 1])
