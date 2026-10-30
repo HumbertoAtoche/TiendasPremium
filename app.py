@@ -6728,9 +6728,13 @@ def _pm3_gallery(task_id, prefix="worker"):
     flag = f"pm3_gallery_{prefix}_{task_id}"
     shown = bool(st.session_state.get(flag))
     n = len(evidence)
-    label = f"Ocultar {n} fotografía(s)" if shown else f"Ver {n} fotografía(s) adjunta(s)"
-    if st.button(label, key="pm3_gallery_btn_" + prefix + "_" + str(task_id), use_container_width=True):
-        st.session_state[flag] = shown = not shown
+    label = f"Ocultar evidencias ({n})" if shown else f"Ver {n} fotografía(s) adjunta(s)"
+    with st.container(key="pm4_gallery_" + prefix + "_" + str(task_id)):
+        st.markdown('<div class="pm4-gallery-label">' + _pm4_icon("camera", 18)
+                    + '<span>Evidencia fotográfica</span>'
+                    + f'<small>{n} archivo(s) guardado(s) en Drive</small></div>', unsafe_allow_html=True)
+        if st.button(label, key="pm3_gallery_btn_" + prefix + "_" + str(task_id), use_container_width=True):
+            st.session_state[flag] = shown = not shown
     if not shown:
         return
     try:
@@ -7101,6 +7105,128 @@ def _pm2_css():
       .st-key-pm_v_rutinas_operativas [data-testid="stVerticalBlockBorderWrapper"]:has(>div[data-testid="stVerticalBlock"]){padding:13px!important}
     }
     @media(prefers-reduced-motion:reduce){.pm2-staff,.pm2-stat{transition:none!important}}
+
+    /* RUTINAS 4.0 — UI premium, aislada de la lógica y de otros módulos. */
+    .pm4-svg{display:block;flex-shrink:0}
+    .st-key-pm_v_rutinas_operativas .pm4-task,
+    .st-key-pm_v_mis_rutinas .pm4-task{font-family:inherit;color:#17283e;min-width:0;padding-bottom:4px}
+    .pm4-banner{position:relative;overflow:hidden;margin:-2px -2px 14px;padding:22px 20px 24px;
+      border-radius:19px;background:linear-gradient(118deg,#f0f7ff 0%,#ffffff 43%,#e9f9f2 100%);
+      border:1px solid rgba(204,223,238,.8)}
+    .pm4-banner::after{content:"";position:absolute;right:-32px;top:-90px;width:290px;height:230px;border-radius:50%;
+      background:radial-gradient(circle,rgba(60,203,146,.19),transparent 68%);pointer-events:none}
+    .pm4-task--active .pm4-banner{background:linear-gradient(112deg,#eff6ff,#fff 52%,#eaf3ff)}
+    .pm4-task--reviewing .pm4-banner{background:linear-gradient(115deg,#fff9ed,#fff 50%,#edf5ff)}
+    .pm4-task--pending .pm4-banner{background:linear-gradient(115deg,#f2f7ff,#fff 60%,#fff8e9)}
+    .pm4-task--urgent .pm4-banner{background:linear-gradient(110deg,#fff4f4,#fff 60%,#fff9e8)}
+    .pm4-task--cancelled .pm4-banner{background:linear-gradient(115deg,#f5f6f8,#fff 64%,#f5f7fa)}
+    .pm4-heading-row{display:flex;position:relative;z-index:1;align-items:center;gap:17px;min-width:0}
+    .pm4-task-glyph{width:64px;height:64px;flex:0 0 64px;display:flex;align-items:center;justify-content:center;
+      color:#265a9d;background:linear-gradient(145deg,#f7fbff,#dcecff);border:1px solid #d4e6fc;
+      border-radius:20px;box-shadow:0 7px 15px rgba(32,85,140,.07)}
+    .pm4-heading{flex:1;min-width:0}
+    .pm4-heading h3{color:#13253f!important;font-size:clamp(1.06rem,1.7vw,1.38rem)!important;
+      font-weight:850!important;line-height:1.27!important;letter-spacing:-.028em!important;margin:0!important;
+      overflow-wrap:anywhere}
+    .pm4-person{display:flex;align-items:center;gap:6px;color:#6e83a0;font-size:.80rem;font-weight:650;margin-top:8px}
+    .pm4-status-wrap{display:flex;align-items:flex-end;flex-direction:column;gap:6px;flex-shrink:0;position:relative;z-index:1}
+    .pm4-status-wrap small{color:#70839b;font-size:.69rem;font-weight:650;text-align:right;max-width:165px;line-height:1.3}
+    .pm4-status{display:inline-flex;gap:7px;align-items:center;padding:9px 13px;border-radius:999px;
+      background:linear-gradient(120deg,#1db878,#088b6c);color:white;border:1px solid rgba(255,255,255,.4);
+      font-size:.79rem;line-height:1.2;font-weight:800;white-space:nowrap;box-shadow:0 6px 15px rgba(6,151,104,.22)}
+    .pm4-task--active .pm4-status{background:linear-gradient(120deg,#337cc7,#2557a5);box-shadow:0 6px 15px rgba(25,91,156,.2)}
+    .pm4-task--reviewing .pm4-status,.pm4-task--pending .pm4-status{background:linear-gradient(120deg,#f2b64e,#d99521);box-shadow:0 6px 15px rgba(185,114,21,.14)}
+    .pm4-task--urgent .pm4-status{background:linear-gradient(120deg,#e65b67,#c12c46);box-shadow:0 6px 15px rgba(183,44,70,.16)}
+    .pm4-task--cancelled .pm4-status{background:linear-gradient(120deg,#8c99a9,#687588);box-shadow:none}
+    .pm4-facts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:13px}
+    .pm4-fact{display:flex;align-items:center;gap:10px;padding:12px 11px;min-width:0;border:1px solid #e6edf5;
+      border-radius:14px;background:linear-gradient(155deg,#fff,#fbfcff);box-shadow:0 5px 13px rgba(23,41,73,.025)}
+    .pm4-fact-icon{display:flex;align-items:center;justify-content:center;flex:0 0 35px;width:35px;height:35px;
+      border-radius:11px;background:#edf5ff;color:#3466a2}
+    .pm4-fact-content{min-width:0}.pm4-fact-content span{display:block;font-size:.68rem;font-weight:700;color:#8697ad;line-height:1.3}
+    .pm4-fact-content strong{display:block;font-size:.78rem;font-weight:800;color:#263b57;line-height:1.3;margin-top:3px;overflow-wrap:anywhere}
+    .pm4-flags{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
+    .pm4-priority,.pm4-photo-tag{display:inline-flex;align-items:center;gap:7px;border:1px solid #f7d8df;
+      background:linear-gradient(100deg,#fff0f1,#ffeaed);color:#c63f56;border-radius:10px;padding:8px 11px;
+      font-size:.73rem;font-weight:800;line-height:1.2}
+    .pm4-priority.normal{border-color:#e7edf4;background:#f6f8fb;color:#72839b}
+    .pm4-photo-tag{background:linear-gradient(100deg,#fff8eb,#fff3dc);border-color:#f7e4ba;color:#9a6617}
+    .pm4-detail{padding:13px 15px 14px;margin-bottom:13px;background:#f9fbff;border:1px solid #e9eef6;border-radius:13px}
+    .pm4-section-title{display:flex;align-items:center;gap:9px;font-size:.77rem;font-weight:850;color:#203b62;line-height:1.35}
+    .pm4-section-title>.pm4-svg{color:#386da5}
+    .pm4-detail-copy{margin-top:7px;font-size:.82rem;line-height:1.62;color:#647893;white-space:pre-wrap;overflow-wrap:anywhere}
+    .pm4-notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:10px;margin-bottom:13px}
+    .pm4-note{background:#f6f9fe;border:1px solid #e5ebf6;border-radius:13px;padding:12px 14px;min-width:0}
+    .pm4-note p{margin:9px 0 0!important;background:rgba(255,255,255,.7);padding:9px 11px;border-radius:9px;
+      color:#5e7190;font-size:.81rem;line-height:1.55;overflow-wrap:anywhere;white-space:pre-wrap}
+    .pm4-note-review{background:linear-gradient(125deg,#fff9ea,#fff4df);border-color:#ffe9bd}
+    .pm4-note-review .pm4-section-title{color:#955d18}
+    .pm4-note-review .pm4-section-title>.pm4-svg{color:#dc9d2a}
+    .pm4-note-review p{color:#885c21}
+    .pm4-completed{display:flex;align-items:center;gap:13px;padding:14px 16px;margin:5px 0 8px;
+      background:linear-gradient(105deg,#e6f9ed,#f1fff6 65%,#c8f4dd);border:1px solid #a4e8c3;
+      color:#126344;border-radius:15px;box-shadow:0 5px 12px rgba(20,150,100,.04)}
+    .pm4-completed-icon{display:flex;align-items:center;justify-content:center;width:42px;height:42px;flex:0 0 42px;
+      border-radius:50%;background:linear-gradient(135deg,#51d28b,#11a86b);color:#fff;box-shadow:0 6px 13px rgba(17,168,107,.19)}
+    .pm4-completed>div{min-width:0;flex:1}.pm4-completed strong{display:block;font-size:.84rem;font-weight:850;line-height:1.35}
+    .pm4-completed small{display:block;color:#548b72;font-size:.73rem;margin-top:4px}
+    .pm4-completed-spark{color:#46bf80;opacity:.6}
+    /* El botón de galería conserva el callback original; solo mejora su apariencia. */
+    .st-key-pm_v_rutinas_operativas [class*="st-key-pm4_gallery_"][data-testid="stVerticalBlock"],
+    .st-key-pm_v_mis_rutinas [class*="st-key-pm4_gallery_"][data-testid="stVerticalBlock"]{
+      background:linear-gradient(140deg,#fbfffd,#f0fbf5);border:1px solid #d9efe4;border-radius:15px;
+      padding:10px 12px 12px;margin-bottom:8px}
+    .pm4-gallery-label{display:flex;align-items:center;gap:9px;margin-bottom:8px;color:#187a58;font-weight:850;font-size:.8rem}
+    .pm4-gallery-label small{margin-left:auto;color:#688d79;font-size:.67rem;font-weight:650;text-align:right}
+    .st-key-pm_v_rutinas_operativas [class*="st-key-pm4_gallery_"] [data-testid="stButton"] button,
+    .st-key-pm_v_mis_rutinas [class*="st-key-pm4_gallery_"] [data-testid="stButton"] button{
+      background:linear-gradient(105deg,#1cbd7d,#087e65)!important;color:#fff!important;border:0!important;
+      border-radius:12px!important;min-height:45px!important;font-weight:850!important;
+      box-shadow:0 6px 13px rgba(5,128,85,.13)!important}
+    /* Avance por colaborador: panel más expresivo, sin datos ficticios. */
+    .pm4-staff-card{background:linear-gradient(165deg,#fff,#f9fbff);border:1px solid #e4edf6;
+      border-radius:20px;padding:17px;box-shadow:0 10px 24px rgba(25,50,87,.05);margin-bottom:13px}
+    .pm4-staff-head{display:flex;gap:11px;align-items:center;min-width:0}
+    .pm4-staff-head .tp-avatar,.pm4-staff-head img{flex-shrink:0}
+    .pm4-staff-identity{flex:1;min-width:0}.pm4-staff-identity strong{display:block;color:#243750;font-size:.85rem;font-weight:850;
+      line-height:1.35;overflow-wrap:anywhere}
+    .pm4-staff-identity span{display:block;color:#7f91a7;font-size:.73rem;margin-top:4px}
+    .pm4-staff-percent{font-size:.85rem;color:#0d8a62;font-weight:900;border-radius:999px;background:#e5f9ef;
+      border:1px solid #c8efdd;padding:6px 9px;flex-shrink:0}
+    .pm4-staff-track{width:100%;height:9px;border-radius:20px;background:#edf2f7;overflow:hidden;margin:15px 0}
+    .pm4-staff-track span{display:block;height:100%;border-radius:20px;background:linear-gradient(90deg,#049e72,#45d9a2)}
+    .pm4-staff-milestone{display:flex;align-items:center;gap:11px;padding:12px 11px;border-radius:13px;
+      background:linear-gradient(120deg,#e7f9ed,#effcf4);color:#196849;min-width:0}
+    .pm4-staff-milestone-icon{height:37px;width:37px;flex:0 0 37px;border-radius:12px;display:flex;
+      align-items:center;justify-content:center;background:#c8f0da;color:#088c60}
+    .pm4-staff-milestone strong{display:block;font-weight:850;font-size:.8rem;line-height:1.3}
+    .pm4-staff-milestone small{display:block;color:#5b8d76;font-size:.70rem;line-height:1.4;margin-top:3px}
+    /* Tarjetas reales de Streamlit, solo los contenedores con claves de tareas. */
+    .st-key-pm_v_rutinas_operativas [class*="st-key-pm2_admin_"],
+    .st-key-pm_v_mis_rutinas [class*="st-key-pm2_worker_task_"]{min-width:0}
+    .st-key-pm_v_rutinas_operativas [data-testid="stVerticalBlockBorderWrapper"]:has([class*="st-key-pm2_admin_"]),
+    .st-key-pm_v_mis_rutinas [data-testid="stVerticalBlockBorderWrapper"]:has([class*="st-key-pm2_worker_task_"]){
+      border-radius:22px!important;box-shadow:0 13px 30px rgba(25,43,72,.07)!important}
+    @media(max-width:1160px){.pm4-facts{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:780px){
+      .pm4-banner{padding:15px 13px 17px;margin:0 0 12px;border-radius:16px}
+      .pm4-heading-row{align-items:flex-start;gap:10px;flex-wrap:wrap}
+      .pm4-task-glyph{width:45px;height:45px;flex-basis:45px;border-radius:14px}
+      .pm4-task-glyph>.pm4-svg{width:23px;height:23px}
+      .pm4-heading{flex:1 1 calc(100% - 60px);min-width:0}
+      .pm4-heading h3{font-size:1.03rem!important;line-height:1.35!important}
+      .pm4-status-wrap{flex-direction:row;align-items:center;flex-wrap:wrap;width:100%;justify-content:flex-start;margin-top:0}
+      .pm4-status-wrap small{text-align:left;max-width:none}
+      .pm4-facts{gap:8px}.pm4-fact{padding:10px 9px;gap:7px;border-radius:12px}
+      .pm4-fact-icon{width:28px;height:28px;flex-basis:28px;border-radius:9px}
+      .pm4-fact-icon .pm4-svg{height:18px;width:18px}
+      .pm4-fact-content strong{font-size:.74rem}.pm4-fact-content span{font-size:.65rem}
+      .pm4-detail{padding:11px 12px}.pm4-note{padding:10px 11px}
+      .pm4-completed{padding:11px 12px}.pm4-completed-spark{display:none}
+      .pm4-gallery-label{flex-wrap:wrap}.pm4-gallery-label small{margin-left:0;width:100%}
+    }
+    @media(max-width:360px){.pm4-facts{grid-template-columns:1fr}.pm4-task-glyph{display:none}.pm4-heading{flex-basis:100%}}
+    @media(prefers-reduced-motion:reduce){.pm4-staff-card,.pm4-banner,.pm4-status{animation:none!important;transition:none!important}}
     </style>
     """, unsafe_allow_html=True)
 
@@ -7124,43 +7250,121 @@ def _pm2_metrics(data, personal=False):
     st.markdown(html + "</div>", unsafe_allow_html=True)
 
 
+def _pm4_icon(name, size=20):
+    """Iconos vectoriales autocontenidos; no dependen de fuentes externas."""
+    paths = {
+        "calendar": '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/>',
+        "clock": '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+        "store": '<path d="M3 10h18l-2-6H5l-2 6zM5 10v10h14V10M9 20v-7h6v7"/>',
+        "pin": '<path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0z"/><circle cx="12" cy="10" r="2.5"/>',
+        "camera": '<path d="M4 7h4l2-3h4l2 3h4a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z"/><circle cx="12" cy="13" r="4"/>',
+        "chat": '<path d="M20 11.5a8.5 8.5 0 0 1-8.5 8.5 10 10 0 0 1-4-.8L3 21l1.7-4.3A8.5 8.5 0 1 1 20 11.5z"/>',
+        "star": '<path d="m12 2 3 6 6.5 1-4.7 4.6 1.1 6.5L12 17l-5.9 3.1 1.1-6.5L2.5 9 9 8z"/>',
+        "check": '<path d="M4.5 12.5 10 18l9.5-11"/>',
+        "clipboard": '<rect x="5" y="5" width="14" height="17" rx="2"/><path d="M9 5V3h6v2M9 13l2 2 4-4"/>',
+        "snow": '<path d="M12 2v20M4 6l16 12M20 6 4 18M9 5l3 3 3-3M9 19l3-3 3 3"/>',
+        "spark": '<path d="M12 2 9 9 2 12l7 3 3 7 3-7 7-3-7-3-3-7z"/>',
+        "box": '<path d="M3 7 12 3l9 4-9 5-9-5zM3 7v10l9 5 9-5V7M12 12v10"/>',
+        "broom": '<path d="m6 21 11-17M3 17l6-6 6 6-6 5-6-5z"/>',
+        "alert": '<path d="M12 3 2 21h20L12 3zM12 9v5M12 18h.01"/>',
+        "user": '<circle cx="12" cy="8" r="4"/><path d="M4 21v-2c0-4 16-4 16 0v2"/>',
+    }
+    return (f'<svg class="pm4-svg" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" '
+            f'width="{int(size)}" height="{int(size)}" viewBox="0 0 24 24" fill="none" '
+            f'stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'
+            + paths.get(name, paths["clipboard"]) + '</svg>')
+
+
+def _pm4_task_type(title):
+    title = str(title).casefold()
+    if any(x in title for x in ("refrig", "congel", "frío", "frio", "temperatura")):
+        return "snow"
+    if any(x in title for x in ("limpieza", "limpiar", "aseo", "baño")):
+        return "broom"
+    if any(x in title for x in ("inventario", "mercadería", "productos", "almacén")):
+        return "box"
+    if any(x in title for x in ("caja", "cierre", "apertura")):
+        return "store"
+    return "clipboard"
+
+
 def _pm2_task_summary_html(row, show_worker=False):
-    """Tarjeta clara para teléfono y escritorio, con todas las instrucciones."""
+    """Rutinas 4.0: tarjeta visual responsiva, sin alterar estados ni operaciones."""
     esc = _html.escape
     status_label, tone = _pm2_state_visual(row)
-    title = esc(str(row.get("titulo", "")))
-    who = (f'<span class="pm2-task-assignee">{esc(str(row.get("nombre", "")))}</span>'
+    task_title = str(row.get("titulo", ""))
+    title = esc(task_title)
+    current = str(row.get("estado", "Pendiente"))
+    status_class = {"success":"done", "info":"active", "warning":"pending", "danger":"urgent"}.get(tone, "pending")
+    if current == "Por validar":
+        status_class = "reviewing"
+    elif current == "Cancelada":
+        status_class = "cancelled"
+    icon = _pm4_icon(_pm4_task_type(task_title), 29)
+    done = current == "Completada"
+    who = (f'<span class="pm4-person">{_pm4_icon("user", 14)} {esc(str(row.get("nombre", "")))}</span>'
            if show_worker else "")
-    head = (f'<div class="pm2-task-info"><div class="pm2-task-heading">'
-            f'<div class="pm2-task-title">{title}</div>{who}</div>'
-            f'<span class="pm2-pill {tone}">{esc(status_label)}</span></div>')
     day = str(row.get("fecha", ""))[:10]
     try:
         day = datetime.strptime(day, "%Y-%m-%d").strftime("%d/%m/%Y")
     except ValueError:
         pass
     time_range = " – ".join(v for v in (str(row.get("hora_inicio", "")).strip(),
-                                        str(row.get("hora_limite", "")).strip()) if v)
-    fields = [("Fecha", day), ("Horario", time_range),
-              ("Tienda", str(row.get("tienda", ""))), ("Ubicación", str(row.get("zona", "")))]
-    facts = '<div class="pm2-task-facts">' + ''.join(
-        f'<div class="pm2-task-fact"><small>{esc(label)}</small><strong>{esc(value)}</strong></div>'
-        for label, value in fields if value
+                                         str(row.get("hora_limite", "")).strip()) if v)
+    fields = [("calendar", "Fecha", day), ("clock", "Horario", time_range),
+              ("store", "Tienda", str(row.get("tienda", ""))),
+              ("pin", "Ubicación", str(row.get("zona", "")))]
+    facts = '<div class="pm4-facts">' + ''.join(
+        '<div class="pm4-fact"><div class="pm4-fact-icon">' + _pm4_icon(ic, 21) + '</div>'
+        f'<div class="pm4-fact-content"><span>{esc(label)}</span><strong>{esc(value)}</strong></div></div>'
+        for ic, label, value in fields if value
     ) + '</div>'
-    priority = esc(str(row.get("prioridad", "Normal")))
+    priority = str(row.get("prioridad", "Normal"))
     required = str(row.get("evidencia_obligatoria", "No")).lower() in ("sí", "si", "true", "1")
-    flags = ('<div class="pm2-task-flags"><span class="pm2-task-priority">Prioridad: ' + priority + '</span>' +
-             ('<span class="pm2-task-required">Fotografía obligatoria</span>' if required else
-              '<span class="pm2-task-optional">Fotografía opcional</span>') + '</div>')
+    priority_tone = "urgent" if priority in ("Urgente", "Alta") else "normal"
+    flags = ('<div class="pm4-flags"><span class="pm4-priority ' + priority_tone + '">'
+             + _pm4_icon("alert", 15) + 'Prioridad: ' + esc(priority) + '</span>'
+             + '<span class="pm4-photo-tag">' + _pm4_icon("camera", 15)
+             + ('Fotografía obligatoria' if required else 'Fotografía opcional') + '</span></div>')
     instructions = str(row.get("instrucciones", "")).strip()
-    note = (f'<div class="pm2-task-instructions">{esc(instructions)}</div>' if instructions else "")
+    howto = ('<div class="pm4-detail"><div class="pm4-section-title">' + _pm4_icon("clipboard", 17)
+             + ' Instrucciones de la actividad</div><div class="pm4-detail-copy">'
+             + esc(instructions) + '</div></div>') if instructions else ""
     comment = str(row.get("observacion", "")).strip()
-    comment_html = (f'<div class="pm2-task-comment"><strong>Comentario del colaborador:</strong> '
-                    f'{esc(comment)}</div>' if comment else "")
-    review_msg = str(row.get("comentario_revision", "")).strip()
-    review_html = (f'<div class="pm2-task-review"><strong>Observación del supervisor:</strong> '
-                   f'{esc(review_msg)}</div>' if review_msg else "")
-    return head + facts + flags + note + comment_html + review_html
+    review = str(row.get("comentario_revision", "")).strip()
+    note_cards = ""
+    if comment:
+        note_cards += ('<section class="pm4-note pm4-note-worker"><div class="pm4-section-title">'
+                       + _pm4_icon("chat", 18) + ' Comentario del colaborador</div>'
+                       f'<p>{esc(comment)}</p></section>')
+    if review:
+        note_cards += ('<section class="pm4-note pm4-note-review"><div class="pm4-section-title">'
+                       + _pm4_icon("star", 18) + ' Observación del supervisor</div>'
+                       f'<p>{esc(review)}</p></section>')
+    notes = f'<div class="pm4-notes">{note_cards}</div>' if note_cards else ""
+    # El estado y las marcas de tiempo son datos reales de la actividad, no ilustraciones.
+    approved_at = str(row.get("fecha_revision", "")).strip() or str(row.get("fecha_completado", "")).strip()
+    if done:
+        success = ('<div class="pm4-completed">'
+                   '<span class="pm4-completed-icon">' + _pm4_icon("check", 25) + '</span>'
+                   '<div><strong>¡Actividad validada por supervisión!</strong>'
+                   + (f'<small>{esc(approved_at[:19])}</small>' if approved_at else '<small>La revisión se completó correctamente.</small>')
+                   + '</div><span class="pm4-completed-spark">' + _pm4_icon("spark", 35) + '</span></div>')
+    else:
+        success = ""
+    status_sub = {"done":"Completada y aprobada", "reviewing":"Esperando revisión del supervisor",
+                  "active":"Actividad en desarrollo", "pending":"Lista para realizar",
+                  "urgent":"Requiere atención", "cancelled":"Actividad cancelada"}.get(status_class, "")
+    return (
+        f'<article class="pm4-task pm4-task--{status_class}">'
+        '<div class="pm4-banner"><div class="pm4-heading-row">'
+        f'<div class="pm4-task-glyph">{icon}</div>'
+        f'<div class="pm4-heading"><h3>{title}</h3>{who}</div>'
+        '<div class="pm4-status-wrap">'
+        f'<div class="pm4-status">{_pm4_icon("check" if done else "clock", 17)} {esc(status_label)}</div>'
+        f'<small>{esc(status_sub)}</small></div></div></div>'
+        + facts + flags + howto + notes + success + '</article>'
+    )
 
 
 def _pm2_legacy_count():
@@ -8615,8 +8819,8 @@ elif choice == "Mis Rutinas":
                         elif current_state == "Por validar":
                             st.info("Actividad enviada. Está esperando la revisión del supervisor.")
                         elif current_state == "Completada":
-                            finished = str(task.get("fecha_completado", ""))
-                            st.success("Actividad validada por supervisión" + (f" el {finished}" if finished else "."))
+                            # La tarjeta premium ya muestra el estado validado y su fecha.
+                            pass
                         else:
                             st.caption("Esta actividad fue cancelada por administración.")
 
@@ -11815,14 +12019,23 @@ elif choice == "Rutinas Operativas":
                             total_g = len(active_group)
                             pct = round(done_g * 100 / max(total_g, 1))
                             dni_g = _pm2_dni(group.iloc[0]["dni"])
+                            _milestone = ("¡Rutina completada!" if total_g and pct == 100 else
+                                          "¡Muy buen avance!" if pct >= 70 else
+                                          "En marcha" if pct else "Jornada por comenzar")
+                            _milestone_txt = ("Todas las actividades de esta selección están validadas." if total_g and pct == 100 else
+                                              "Sigue el progreso de esta persona durante la jornada.")
                             html = (
-                                '<div class="pm2-staff"><div class="pm2-staff-head">'
-                                f'{ui_avatar(str(worker_name), dni_g, "", 43)}'
-                                '<div style="flex:1;min-width:0">'
-                                f'<div class="pm2-staff-name">{_html.escape(str(worker_name))}</div>'
-                                f'<div class="pm2-staff-sub">{done_g} de {total_g} actividades</div></div>'
-                                f'<span class="pm2-pill">{pct}%</span></div>'
-                                f'<div class="pm2-track"><i style="width:{pct}%"></i></div></div>'
+                                '<article class="pm4-staff-card"><div class="pm4-staff-head">'
+                                f'{ui_avatar(str(worker_name), dni_g, "", 48)}'
+                                '<div class="pm4-staff-identity">'
+                                f'<strong>{_html.escape(str(worker_name))}</strong>'
+                                f'<span>{done_g} de {total_g} actividades validadas</span></div>'
+                                f'<span class="pm4-staff-percent">{pct}%</span></div>'
+                                f'<div class="pm4-staff-track"><span style="width:{pct}%"></span></div>'
+                                '<div class="pm4-staff-milestone"><span class="pm4-staff-milestone-icon">'
+                                + _pm4_icon("star" if total_g and pct == 100 else "clipboard", 24)
+                                + '</span><div><strong>' + _milestone + '</strong><small>'
+                                + _milestone_txt + '</small></div></div></article>'
                             )
                             st.markdown(html, unsafe_allow_html=True)
                     with c_list:
