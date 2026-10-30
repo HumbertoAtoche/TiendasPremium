@@ -1188,6 +1188,293 @@ section[data-testid="stSidebar"] button{pointer-events:auto!important;}
 .pm-exec-stat-detail{color:#97a2b1;font-size:.72rem;font-weight:600;line-height:1.4;}
 @media(max-width:1080px){.pm-exec-kpis{grid-template-columns:repeat(2,minmax(0,1fr));}}
 @media(max-width:570px){.pm-exec-kpis{gap:9px;margin-bottom:14px;}.pm-exec-stat{padding:13px 14px;border-radius:13px;}.pm-exec-stat-head{font-size:.66rem;}.pm-exec-stat-head .material-symbols-rounded{width:30px;height:30px;font-size:17px!important;}.pm-exec-stat-number{font-size:1.55rem;margin:8px 0 4px;}.pm-exec-stat-detail{font-size:.63rem;}}
+
+/* ──────────────────────────────────────────────────────────────
+   PREMIUM ELITE · VISTA REAL Y MÓVIL
+   Integrado al único PREMiUM_CSS; CSS moderno sin DOM/JS inyectado.
+   ────────────────────────────────────────────────────────────── */
+:root{--elite-navy:#151f35;--elite-red:#d02d43;--elite-rose:#fff0f2;--elite-border:#e8eaf0;--elite-shadow:0 18px 50px -34px rgba(15,23,42,.28)}
+.stApp{background:#f6f8fc!important;}
+.stApp,.tp-card,.pm-exec-stat,.pm-workspace-head,[data-testid="stExpander"]{scroll-margin-top:15px;}
+/* Actualización de cards y etiquetas: evitar elementos cortados y no invadir fotos. */
+.tp-avatar{border-radius:50%!important;object-fit:cover!important;object-position:center center!important;box-sizing:border-box!important;flex-shrink:0!important;border:2px solid #fff!important;box-shadow:0 0 0 2px #ed566b!important;vertical-align:middle!important;}
+.tp-card-head,.tp-op-head,.tp-row,.tp-notif,.tp-card{min-width:0;}
+.tp-card-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.tp-op-head{min-width:0;flex:1 1 190px;}
+.tp-op-head>div,.tp-row-main{min-width:0;}
+.tp-op-head .tp-avatar,.tp-row .tp-avatar{flex-shrink:0!important;}
+.tp-chips{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end;max-width:100%;}
+.tp-chip{border-radius:999px!important;display:inline-flex!important;align-items:center!important;gap:6px!important;white-space:normal!important;line-height:1.3!important;max-width:100%!important;padding:6px 10px!important;font-size:.73rem!important;overflow-wrap:anywhere;}
+.tp-chip::before{flex:0 0 6px;}
+.tp-card.flat{border:1px solid var(--elite-border)!important;border-radius:16px!important;padding:16px!important;}
+.tp-card.flat .tp-card-head{margin-bottom:7px;}
+/* Standalone alerts always anchored inside their cards, not over images. */
+.st-key-pm_v_centro_de_alertas .tp-card,.st-key-pm_v_centro_de_alertas .tp-row{overflow:visible!important;}
+.st-key-pm_v_centro_de_alertas .tp-card-head .tp-chips{margin-left:auto;}
+.st-key-pm_v_centro_de_alertas .tp-op-head{margin:0!important;border-bottom:0!important;padding-bottom:0!important;}
+.st-key-pm_v_centro_de_alertas .tp-chip.bad{background:#fff0f2!important;color:#c52f44!important;}
+[data-testid="stMain"] [data-testid="stAlert"]{border:1px solid #e9dfe4!important;box-shadow:0 8px 25px -20px rgba(15,23,42,.25)!important;border-radius:16px!important;}
+[data-testid="stToast"]{border:1px solid #e6eaf0!important;box-shadow:0 20px 50px -28px rgba(15,23,42,.35)!important;border-radius:16px!important;animation:pmToastIn .35s ease both;}
+@keyframes pmToastIn{from{transform:translateY(10px);opacity:0}to{transform:translateY(0);opacity:1}}
+/* Crisp layout instead of excessive white space above the sidebar brand. */
+section[data-testid="stSidebar"] [data-testid="stSidebarContent"]{padding:8px 13px 30px!important;overflow-x:hidden!important;}
+.pm-sidebar-logo{margin:0 auto 2px!important;text-align:center!important;padding:0!important;max-height:75px!important;}
+.pm-sidebar-logo img{max-width:155px!important;height:49px!important;object-fit:contain!important;}
+section[data-testid="stSidebar"] .tp-brand{padding:0 8px 10px!important;margin:0 0 10px!important;text-align:center;}
+section[data-testid="stSidebar"] .tp-brand-name{font-weight:800!important;font-size:.96rem!important;letter-spacing:-.035em!important;}
+section[data-testid="stSidebar"] .tp-brand-sub{font-size:.69rem!important;}
+section[data-testid="stSidebar"] [data-testid="stVerticalBlock"]{gap:.45rem!important;}
+section[data-testid="stSidebar"] [data-testid="stElementContainer"]:has(.pm-nav-kind-admin),
+section[data-testid="stSidebar"] [data-testid="stElementContainer"]:has(.pm-nav-kind-employee){display:none!important;}
+/* Native radio is still keyboard accessible and remains the controller. */
+section[data-testid="stSidebar"] [role="radiogroup"]{gap:3px!important;}
+section[data-testid="stSidebar"] [role="radiogroup"]>label{position:relative!important;display:flex!important;align-items:center!important;padding:10px 11px!important;gap:8px!important;margin:0!important;border-radius:12px!important;min-height:42px!important;border:1px solid transparent!important;cursor:pointer!important;}
+section[data-testid="stSidebar"] [role="radiogroup"]>label>div:first-child{width:0!important;height:0!important;opacity:0!important;overflow:hidden!important;position:absolute!important;}
+section[data-testid="stSidebar"] [role="radiogroup"]>label::before{content:"apps";font-family:'Material Symbols Rounded'!important;font-weight:normal!important;font-size:21px!important;line-height:1!important;font-variation-settings:'FILL' 0,'wght' 450,'GRAD' 0,'opsz' 24;color:#8190a2!important;width:23px!important;min-width:23px!important;display:inline-block!important;text-align:center!important;}
+section[data-testid="stSidebar"] [role="radiogroup"]>label p{font-size:.79rem!important;line-height:1.35!important;font-weight:680!important;color:#47556a!important;overflow-wrap:anywhere!important;}
+section[data-testid="stSidebar"] [role="radiogroup"]>label:hover{background:#f6f7fb!important;border-color:#f0f2f6!important;}
+section[data-testid="stSidebar"] [role="radiogroup"]>label:has(input:checked){background:linear-gradient(95deg,#fff0f2,#fff8f8)!important;border:1px solid #f6dce1!important;box-shadow:inset 3px 0 0 var(--elite-red)!important;}
+section[data-testid="stSidebar"] [role="radiogroup"]>label:has(input:checked)::before{color:#cc2c43!important;font-variation-settings:'FILL' 1!important;}
+section[data-testid="stSidebar"] [role="radiogroup"]>label:has(input:checked) p{color:#bd293d!important;font-weight:820!important;}
+section[data-testid="stSidebar"] [role="radiogroup"]>label:focus-within{outline:2px solid #f1a7b4!important;outline-offset:2px;}
+/* Manager sidebar icons, matching the exact order of the current 14 modules. */
+section[data-testid="stSidebar"]:has(.pm-nav-kind-admin) [role="radiogroup"]>label:nth-child(1)::before{content:"space_dashboard"}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-admin) [role="radiogroup"]>label:nth-child(2)::before{content:"notifications_active"}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-admin) [role="radiogroup"]>label:nth-child(3)::before{content:"monitoring"}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-admin) [role="radiogroup"]>label:nth-child(4)::before{content:"groups"}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-admin) [role="radiogroup"]>label:nth-child(5)::before{content:"person_add"}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-admin) [role="radiogroup"]>label:nth-child(6)::before{content:"beach_access"}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-admin) [role="radiogroup"]>label:nth-child(7)::before{content:"calendar_month"}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-admin) [role="radiogroup"]>label:nth-child(8)::before{content:"receipt_long"}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-admin) [role="radiogroup"]>label:nth-child(9)::before{content:"inbox"}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-admin) [role="radiogroup"]>label:nth-child(10)::before{content:"point_of_sale"}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-admin) [role="radiogroup"]>label:nth-child(11)::before{content:"report_problem"}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-admin) [role="radiogroup"]>label:nth-child(12)::before{content:"inventory_2"}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-admin) [role="radiogroup"]>label:nth-child(13)::before{content:"history"}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-admin) [role="radiogroup"]>label:nth-child(14)::before{content:"settings"}
+/* Employee sidebar icons, matching existing 9 modules. */
+section[data-testid="stSidebar"]:has(.pm-nav-kind-employee) [role="radiogroup"]>label:nth-child(1)::before{content:"fingerprint"}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-employee) [role="radiogroup"]>label:nth-child(2)::before{content:"payments"}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-employee) [role="radiogroup"]>label:nth-child(3)::before{content:"report"}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-employee) [role="radiogroup"]>label:nth-child(4)::before{content:"inventory_2"}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-employee) [role="radiogroup"]>label:nth-child(5)::before{content:"badge"}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-employee) [role="radiogroup"]>label:nth-child(6)::before{content:"beach_access"}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-employee) [role="radiogroup"]>label:nth-child(7)::before{content:"receipt_long"}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-employee) [role="radiogroup"]>label:nth-child(8)::before{content:"edit_note"}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-employee) [role="radiogroup"]>label:nth-child(9)::before{content:"calendar_month"}
+/* Navigation shortcuts for outstanding items must look clickable. */
+section[data-testid="stSidebar"] .st-key-tp_acc_bot button,
+section[data-testid="stSidebar"] .st-key-tp_acc_sol button{min-height:52px!important;border-radius:13px!important;display:flex!important;align-items:center!important;justify-content:flex-start!important;padding:10px 12px!important;box-shadow:none!important;transition:transform .17s ease,box-shadow .17s ease!important;}
+section[data-testid="stSidebar"] .st-key-tp_acc_bot button{background:linear-gradient(105deg,#fff0f1,#ffe5e9)!important;border:1px solid #f6cdd5!important;}
+section[data-testid="stSidebar"] .st-key-tp_acc_sol button{background:linear-gradient(105deg,#fff8e9,#fff3d8)!important;border:1px solid #f4dfb6!important;}
+section[data-testid="stSidebar"] .st-key-tp_acc_bot button:hover,
+section[data-testid="stSidebar"] .st-key-tp_acc_sol button:hover{transform:translateX(3px)!important;box-shadow:0 8px 20px -15px rgba(151,36,52,.55)!important;}
+section[data-testid="stSidebar"] .st-key-tp_acc_bot button *{color:#a72b3c!important;font-weight:800!important;}
+/* AI at upper-right, circular avatar and contextual popover */
+.st-key-tp_chat_fab{position:fixed!important;z-index:100002!important;top:17px!important;right:23px!important;bottom:auto!important;width:54px!important;height:54px!important;max-height:54px!important;}
+.st-key-tp_chat_fab button{width:54px!important;height:54px!important;min-height:54px!important;border-radius:50%!important;padding:0!important;border:3px solid #fff!important;box-shadow:0 0 0 1px #e9ccd4,0 10px 26px rgba(19,29,50,.22)!important;background-color:#cb2b42!important;background-size:cover!important;background-position:center center!important;overflow:hidden!important;transition:transform .2s ease,box-shadow .2s ease!important;}
+.st-key-tp_chat_fab button:hover{transform:scale(1.07)!important;box-shadow:0 0 0 3px #ffccd5,0 12px 30px rgba(19,29,50,.25)!important;}
+.st-key-tp_chat_panel{position:fixed!important;z-index:100001!important;top:82px!important;right:23px!important;bottom:auto!important;width:min(425px,calc(100vw - 32px))!important;max-height:calc(100dvh - 100px)!important;overflow-y:auto!important;border:1px solid #e3e8ee!important;border-radius:21px!important;background:#fff!important;box-shadow:0 28px 70px rgba(19,31,53,.23)!important;padding:20px!important;animation:pmChatOpen .24s cubic-bezier(.2,.7,.2,1) both!important;}
+@keyframes pmChatOpen{from{opacity:0;transform:translateY(-9px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+.st-key-tp_chat_panel [data-testid="stForm"]{border:0!important;box-shadow:none!important;padding:0!important;}
+.st-key-tp_chat_panel h3{font-size:1.11rem!important;}
+/* Redesigned 2-stage welcome portal */
+.stApp:has(.st-key-pm_auth_page){background:#f6f7fb!important;}
+.stApp:has(.st-key-pm_auth_page) [data-testid="stMain"] .block-container{max-width:1300px!important;padding:0 28px 10px!important;}
+.st-key-pm_auth_page{padding:0!important;}
+.pm-elite-nav{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:94px;margin:0 0 19px;}
+.pm-elite-navbrand{display:flex;gap:15px;align-items:center;min-width:0;}
+.pm-elite-navbrand img{width:116px!important;height:52px!important;object-fit:contain!important;background:#fff;border:1px solid #f0f0f1;border-radius:15px;padding:6px 11px!important;box-shadow:0 6px 30px -24px rgba(21,30,50,.45);}
+.pm-elite-navbrand span{display:flex;flex-direction:column;gap:4px;}
+.pm-elite-navbrand b{color:#28364d;font-size:.76rem;font-weight:850;letter-spacing:.11em;}
+.pm-elite-navbrand small{font-size:.73rem;color:#8793a5;}
+.pm-elite-navstatus{font-size:.75rem;font-weight:720;color:#657289;display:flex;align-items:center;gap:9px;}
+.pm-elite-navstatus i,.pm-elite-live-dot{background:#21a77c;border-radius:50%;height:8px;width:8px;display:inline-block;box-shadow:0 0 0 4px rgba(33,167,124,.13);}
+.st-key-pm_hero_wrapper [data-testid="stHorizontalBlock"]{align-items:stretch!important;gap:clamp(22px,3vw,44px)!important;}
+.st-key-pm_hero_wrapper [data-testid="stColumn"]{min-width:0!important;}
+.pm-elite-hero{position:relative;isolation:isolate;overflow:hidden;min-height:590px;height:100%;border-radius:26px;background:linear-gradient(135deg,#121d33 4%,#28243e 50%,#7b283c 100%);box-shadow:0 24px 55px -35px rgba(27,32,51,.65);}
+.pm-elite-hero::before{content:"";position:absolute;inset:0;z-index:-1;opacity:.2;background-image:linear-gradient(rgba(255,255,255,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.08) 1px,transparent 1px);background-size:42px 42px;mask-image:linear-gradient(30deg,transparent,#000);}
+.pm-elite-orb{position:absolute;border-radius:50%;pointer-events:none;filter:blur(1px);}
+.pm-elite-orb-one{width:360px;height:360px;background:radial-gradient(circle,rgba(247,73,96,.42),rgba(241,69,86,0) 68%);right:-125px;top:-100px;}
+.pm-elite-orb-two{width:330px;height:330px;background:radial-gradient(circle,rgba(72,99,159,.33),transparent 70%);left:-120px;bottom:-140px;}
+.pm-elite-hero-inner{position:relative;z-index:1;min-height:590px;padding:clamp(35px,5vw,62px);display:flex;flex-direction:column;align-items:flex-start;}
+.pm-elite-eyebrow{font-size:.67rem;font-weight:850;letter-spacing:.14em;color:#ffc0c8;display:flex;align-items:center;gap:9px;margin-bottom:29px;}
+.pm-elite-eyebrow i{background:#ff5b6f;width:7px;height:7px;border-radius:50%;box-shadow:0 0 0 4px rgba(255,91,111,.12);}
+.pm-elite-hero h1{font-size:clamp(2.15rem,3.6vw,3.55rem)!important;font-weight:850!important;letter-spacing:-.075em!important;line-height:1.13!important;color:#fff!important;margin:0 0 22px!important;}
+.pm-elite-hero h1 em{font-style:normal;color:#ff7c8e!important;}
+.pm-elite-hero p{font-size:clamp(.91rem,1.08vw,1.02rem);color:#d3d9e6!important;line-height:1.82;max-width:535px;margin:0 0 26px;}
+.pm-elite-chips{display:flex;flex-wrap:wrap;gap:9px 14px;margin-bottom:30px;}
+.pm-elite-chips span{font-size:.69rem;color:#ffe6e9;font-weight:700;white-space:nowrap;}
+.pm-elite-mini{width:100%;background:rgba(255,255,255,.095);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.17);border-radius:18px;padding:18px;display:flex;align-items:center;gap:14px;margin-top:auto;}
+.pm-elite-mini-icon{flex:none;width:47px;height:47px;border-radius:14px;background:rgba(255,95,113,.21);color:#ffdce1;display:grid;place-items:center;}
+.pm-elite-mini-icon span{font-size:25px!important;}
+.pm-elite-mini strong{display:block;color:#fff;font-size:.85rem;margin-bottom:4px;}
+.pm-elite-mini small{display:block;color:#d0d8e5;line-height:1.6;font-size:.71rem;}
+.pm-elite-mini-check{font-size:17px;margin-left:auto;background:#20a77c;color:white;width:24px;height:24px;border-radius:50%;text-align:center;flex:none;}
+.pm-elite-hero-footer{display:flex;align-items:center;gap:12px;color:#b6bed0;font-size:.7rem;font-weight:650;margin-top:25px;line-height:1.6;}
+.st-key-pm_login_panel{background:#fff!important;border:1px solid #e9ecf2!important;border-radius:26px!important;padding:clamp(25px,3vw,42px)!important;box-shadow:0 22px 64px -38px rgba(26,39,66,.32)!important;max-width:none!important;height:100%;display:flex;flex-direction:column;justify-content:center;}
+.pm-elite-welcome-icon{width:55px;height:55px;display:grid;place-items:center;background:#fff0f2;color:#c9293f;border-radius:17px;margin-bottom:23px;}
+.pm-elite-welcome-icon span{font-size:30px!important;}
+.pm-elite-kicker{font-size:.67rem;color:#c72e43;font-weight:850;letter-spacing:.125em;display:block;margin-bottom:13px;}
+.pm-elite-welcome h2,.pm-elite-login-head h2{font-size:clamp(1.63rem,2.5vw,2.2rem)!important;line-height:1.2!important;letter-spacing:-.058em!important;color:#1b2940!important;font-weight:850!important;margin:0 0 13px!important;}
+.pm-elite-welcome>p,.pm-elite-login-head>p{color:#728097;font-size:.85rem;line-height:1.75;margin:0 0 24px;}
+.pm-elite-feature{display:flex;align-items:center;gap:13px;padding:14px 0;border-top:1px solid #f0f2f6;}
+.pm-elite-feature>span{width:40px;height:40px;border-radius:12px;background:#fff3f4;color:#c62b40;display:grid;place-items:center;flex:none;font-size:22px!important;}
+.pm-elite-feature b{display:block;color:#26334a;font-size:.79rem;}
+.pm-elite-feature small{color:#8c99ab;display:block;line-height:1.45;font-size:.70rem;margin-top:3px;}
+.st-key-pm_login_panel .st-key-pm_show_login button,.st-key-pm_login_panel [data-testid="stFormSubmitButton"] button{background:linear-gradient(100deg,#d62f46,#bc273d)!important;color:#fff!important;min-height:51px!important;border:0!important;border-radius:12px!important;box-shadow:0 12px 24px -16px rgba(183,38,60,.65)!important;font-weight:800!important;}
+.st-key-pm_login_panel .st-key-pm_show_login button *,.st-key-pm_login_panel [data-testid="stFormSubmitButton"] button *{color:white!important;}
+.st-key-pm_login_panel .st-key-pm_show_login button:hover{background:#ac2336!important;}
+.st-key-pm_login_panel .stCaptionContainer{margin:0!important;}
+.st-key-pm_login_panel [data-testid="stWidgetLabel"] p{font-size:.81rem!important;font-weight:800!important;color:#38445a!important;}
+.st-key-pm_login_panel [data-baseweb="input"]{min-height:50px!important;border:1px solid #e1e6ed!important;background:#f8f9fc!important;border-radius:11px!important;}
+.st-key-pm_login_panel [data-baseweb="input"]:focus-within{box-shadow:0 0 0 3px rgba(207,46,67,.12)!important;border-color:#dc7484!important;}
+.st-key-pm_login_panel [data-testid="stForm"]{background:none!important;border:0!important;padding:0!important;box-shadow:none!important;}
+.pm-elite-identity{display:flex;align-items:center;gap:13px;border:1px solid #e9edf2;border-radius:15px;background:#f7f9fc;padding:10px 14px;margin:4px 0 16px;}
+.pm-elite-identity .tp-avatar{box-shadow:0 0 0 2px #e8b2bd!important;}
+.pm-elite-identity>div{flex:1;min-width:0;}
+.pm-elite-identity strong{display:block;color:#26344a;font-size:.82rem;white-space:normal;overflow-wrap:anywhere;}
+.pm-elite-identity small{display:block;color:#8190a1;font-size:.71rem;margin-top:4px;}
+.pm-elite-identity>span{color:#18a174;font-size:22px!important;}
+.pm-elite-login-head{margin-bottom:20px;}
+.pm-elite-secure{display:flex;justify-content:center;align-items:center;gap:7px;color:#92a0b2;font-size:.70rem;margin-top:14px;}
+.pm-elite-secure span{font-size:16px!important;}
+.st-key-pm_back_welcome button{border:0!important;background:transparent!important;box-shadow:none!important;color:#758196!important;font-size:.76rem!important;}
+.pm-elite-footer{text-align:center;color:#9aa5b5;margin:19px 0 12px;font-size:.72rem;}
+/* Notification dialog with real pending details */
+[data-testid="stDialog"] [role="dialog"]{border-radius:21px!important;border:1px solid #e9edf2!important;}
+.pm-notice-head{display:flex;gap:16px;align-items:center;min-width:0;padding:8px 0 20px;}
+.pm-notice-mark{flex:none;background:#fff0f2;color:#c92c40;border-radius:15px;display:grid;place-items:center;width:52px;height:52px;}
+.pm-notice-mark span{font-size:27px!important;}
+.pm-notice-kicker{font-size:.66rem;letter-spacing:.09em;font-weight:850;color:#d02d43;}
+.pm-notice-head h3{font-size:1.36rem!important;letter-spacing:-.045em!important;color:#1c293d!important;margin:5px 0!important;}
+.pm-notice-head p{font-size:.81rem;color:#7c889b;margin:0;line-height:1.55;}
+.pm-notice-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:18px;}
+.pm-notice-metrics>div{border:1px solid #e7eaf0;background:#fafbfe;border-radius:15px;padding:17px 19px;}
+.pm-notice-metrics b{display:block;font-size:1.68rem;line-height:1.2;color:#273249;}
+.pm-notice-metrics small{color:#7b8799;font-size:.75rem;display:block;margin-top:5px;}
+.pm-notice-list-title{font-size:.77rem;font-weight:850;color:#39465d;text-transform:uppercase;letter-spacing:.05em;margin:7px 0 10px;}
+.pm-notice-row{display:flex;align-items:center;gap:13px;padding:11px 0;border-top:1px solid #f0f2f6;}
+.pm-notice-row>span{flex:none;display:grid;place-items:center;color:#c93447;background:#fff1f2;width:35px;height:35px;border-radius:10px;}
+.pm-notice-row>div{flex:1;min-width:0;}
+.pm-notice-row strong{font-size:.83rem;color:#24334a;display:block;overflow-wrap:anywhere;}
+.pm-notice-row small{font-size:.72rem;color:#8a97a6;}
+.pm-notice-row>b{font-size:.74rem;color:#c32b40;background:#fff1f2;padding:6px 10px;border-radius:999px;white-space:nowrap;}
+/* Fine interaction polish */
+.pm-workspace-head{border-radius:20px!important;box-shadow:var(--elite-shadow)!important;}
+.pm-workspace-glyph{border-radius:14px!important;}
+[data-testid="stMain"] .stButton button{transition:background-color .18s ease,box-shadow .18s ease,transform .18s ease!important;}
+[data-testid="stMain"] [data-testid="stExpander"]:hover{border-color:#d7dce6!important;}
+@media(max-width:1000px){
+ .pm-elite-hero{min-height:540px;}
+ .pm-elite-hero-inner{min-height:540px;padding:32px;}
+ .pm-elite-hero h1{font-size:clamp(1.9rem,3.3vw,3rem)!important;}
+ .st-key-pm_login_panel{padding:26px!important;}
+}
+@media(max-width:740px){
+ .stApp:has(.st-key-pm_auth_page) [data-testid="stMain"] .block-container{padding:0 14px 16px!important;}
+ .pm-elite-nav{min-height:65px;margin:0 0 12px;}
+ .pm-elite-navbrand img{width:87px!important;height:44px!important;}
+ .pm-elite-navbrand b{font-size:.65rem;}
+ .pm-elite-navbrand small{font-size:.64rem;}
+ .pm-elite-navstatus{display:none;}
+ .st-key-pm_hero_wrapper [data-testid="stHorizontalBlock"]{gap:10px!important;}
+ .pm-elite-hero,.pm-elite-hero-inner{min-height:0!important;}
+ .pm-elite-hero{border-radius:19px!important;}
+ .pm-elite-hero-inner{padding:23px 22px 22px!important;}
+ .pm-elite-eyebrow{margin-bottom:9px!important;font-size:.58rem;}
+ .pm-elite-hero h1{font-size:1.67rem!important;margin-bottom:10px!important;}
+ .pm-elite-hero p{font-size:.79rem!important;line-height:1.5!important;margin-bottom:0!important;}
+ .pm-elite-mini,.pm-elite-chips,.pm-elite-hero-footer{display:none!important;}
+ .st-key-pm_login_panel{border-radius:19px!important;padding:24px!important;height:auto;}
+ .pm-elite-welcome-icon{width:41px;height:41px;margin-bottom:12px;}
+ .pm-elite-welcome h2,.pm-elite-login-head h2{font-size:1.49rem!important;}
+ .pm-elite-welcome>p,.pm-elite-login-head>p{font-size:.78rem!important;margin-bottom:11px;}
+ .pm-elite-feature{padding:10px 0;}
+ .pm-elite-feature>span{width:34px;height:34px;}
+ .pm-elite-feature small{font-size:.66rem;}
+ .st-key-tp_chat_fab{right:13px!important;top:10px!important;bottom:auto!important;width:47px!important;height:47px!important;}
+ .st-key-tp_chat_fab button{width:47px!important;min-height:47px!important;height:47px!important;}
+ .st-key-tp_chat_panel{top:65px!important;right:8px!important;bottom:auto!important;width:calc(100vw - 16px)!important;max-height:calc(100dvh - 79px)!important;padding:14px!important;}
+ .pm-workspace-head{padding:18px 19px!important;}
+ .pm-workspace-top{padding-right:44px!important;flex-wrap:wrap;}
+ .tp-card-head{align-items:flex-start;}
+ .tp-chips{justify-content:flex-start;}
+ .pm-notice-head{gap:10px;}
+ .pm-notice-metrics>div{padding:14px;}
+}
+@media(max-width:390px){.pm-elite-navbrand span{display:none;}.pm-elite-hero h1{font-size:1.52rem!important;}.pm-elite-hero-inner{padding:20px!important;}.st-key-pm_login_panel{padding:18px!important;}}
+@media(prefers-reduced-motion:reduce){.stApp *{animation:none!important;transition:none!important;scroll-behavior:auto!important;}}
+
+
+/* Priorities in the alert center: one clean component, no overlapping pieces. */
+.st-key-pm_v_centro_de_alertas [class*="st-key-tpc_al_"]{background:#fff!important;border:1px solid #e7ebf1!important;border-radius:19px!important;padding:16px 19px 12px!important;box-shadow:0 10px 29px -23px rgba(16,29,48,.32)!important;margin:0 0 14px!important;}
+.pm-alert-group{width:100%;min-width:0;}
+.pm-alert-heading{display:flex;align-items:center;gap:13px;border-bottom:1px solid #eef0f4;padding:3px 0 15px;min-width:0;}
+.pm-alert-glyph{flex:none;width:44px;height:44px;border-radius:13px;display:grid;place-items:center;background:#fff0f2;color:#cd2c43;box-shadow:inset 0 0 0 1px #ffe2e7;}
+.pm-alert-glyph svg{display:block!important;width:22px!important;height:22px!important;stroke:currentColor!important;}
+.pm-alert-group--warn .pm-alert-glyph{background:#fff8e6;color:#ad7413;box-shadow:inset 0 0 0 1px #faebc8;}
+.pm-alert-group--info .pm-alert-glyph{background:#eff5ff;color:#3475be;box-shadow:inset 0 0 0 1px #dce9fc;}
+.pm-alert-head-text{flex:1;min-width:0;}
+.pm-alert-head-text h3{font-size:.99rem!important;font-weight:830!important;letter-spacing:-.025em!important;color:#243149!important;margin:0 0 4px!important;line-height:1.33!important;}
+.pm-alert-head-text p{font-size:.74rem!important;color:#7a879a!important;margin:0!important;line-height:1.5!important;}
+.pm-alert-count{border:1px solid #f5d8dc!important;background:#fff0f2!important;color:#bf2b41!important;padding:7px 11px;border-radius:999px;white-space:nowrap;font-size:.71rem;font-weight:800;line-height:1.25;flex:none;}
+.pm-alert-group--warn .pm-alert-count{border-color:#f8e9c5!important;background:#fff7e5!important;color:#a66c09!important;}
+.pm-alert-group--info .pm-alert-count{border-color:#e3eaf9!important;background:#f0f5fd!important;color:#306eaf!important;}
+.pm-alert-people{padding:6px 0 0;}
+.pm-alert-people .tp-row{padding:12px 0!important;border:0!important;border-bottom:1px solid #eff1f5!important;box-shadow:none!important;border-radius:0!important;margin:0!important;display:flex;align-items:center;}
+.pm-alert-people .tp-row:last-child{border:0!important;}
+.pm-alert-people .tp-avatar{border:2px solid white!important;box-shadow:0 0 0 2px #f06b7c!important;}
+.pm-alert-people .tp-row-main b{color:#25334a!important;font-weight:800!important;}
+.pm-alert-people .tp-row-main span{font-size:.73rem!important;}
+.pm-alert-people .tp-chips{margin-left:auto;}
+.st-key-pm_v_centro_de_alertas .tp-banner{border-radius:17px!important;}
+.st-key-pm_v_centro_de_alertas .tp-kpi{padding:17px!important;overflow:visible!important;min-height:138px;}
+.st-key-pm_v_centro_de_alertas .tp-kpi-lbl{overflow-wrap:anywhere!important;}
+@media(max-width:620px){
+ .st-key-pm_v_centro_de_alertas [class*="st-key-tpc_al_"]{padding:12px 13px 10px!important;}
+ .pm-alert-heading{gap:9px;align-items:flex-start;}
+ .pm-alert-glyph{width:39px;height:39px;border-radius:11px;}
+ .pm-alert-count{font-size:.65rem;padding:6px 8px;}
+ .pm-alert-head-text h3{font-size:.87rem!important;}
+ .pm-alert-people .tp-row{align-items:flex-start;flex-wrap:wrap;}
+ .pm-alert-people .tp-row .tp-chips{margin-left:54px;}
+}
+
+/* SVG icons independent from external font loading. */
+.pm-elite-mini-icon svg,.pm-elite-feature>svg,.pm-elite-welcome-icon svg,.pm-elite-secure svg,.pm-elite-identity>svg,.pm-notice-mark svg,.pm-notice-row>svg{display:block;width:22px;height:22px;flex:none;stroke:currentColor;}
+.pm-elite-feature>svg{box-sizing:content-box;padding:9px;flex:none;width:21px;height:21px;border-radius:12px;background:#fff3f4;color:#c62b40;}
+.pm-elite-welcome-icon svg{width:27px;height:27px;}
+.pm-elite-secure svg{width:15px;height:15px;}
+.pm-elite-identity>svg{color:#18a174;}
+.pm-notice-mark svg{width:26px;height:26px;}
+.pm-notice-row>svg{width:20px;height:20px;background:#fff1f2;color:#c93447;border-radius:10px;box-sizing:content-box;padding:8px;}
+/* Sidebar icons: masked inline SVG avoids raw material ligature names. */
+section[data-testid="stSidebar"] [role="radiogroup"]>label::before{content:""!important;background-color:#8190a2!important;mask-image:var(--pm-icon,none)!important;-webkit-mask-image:var(--pm-icon,none)!important;mask-size:contain!important;-webkit-mask-size:contain!important;mask-repeat:no-repeat!important;-webkit-mask-repeat:no-repeat!important;mask-position:center!important;-webkit-mask-position:center!important;}
+section[data-testid="stSidebar"] [role="radiogroup"]>label:has(input:checked)::before{background-color:#cc2c43!important;}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-admin) [role="radiogroup"]>label:nth-child(1){--pm-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Crect%20x%3D%223%22%20y%3D%223%22%20width%3D%227%22%20height%3D%227%22%20rx%3D%221%22%2F%3E%3Crect%20x%3D%2214%22%20y%3D%223%22%20width%3D%227%22%20height%3D%227%22%20rx%3D%221%22%2F%3E%3Crect%20x%3D%223%22%20y%3D%2214%22%20width%3D%227%22%20height%3D%227%22%20rx%3D%221%22%2F%3E%3Crect%20x%3D%2214%22%20y%3D%2214%22%20width%3D%227%22%20height%3D%227%22%20rx%3D%221%22%2F%3E%3C%2Fsvg%3E");}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-admin) [role="radiogroup"]>label:nth-child(2){--pm-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M18%208a6%206%200%200%200-12%200c0%207-3%207-3%209h18c0-2-3-2-3-9%22%2F%3E%3Cpath%20d%3D%22M10%2021h4%22%2F%3E%3C%2Fsvg%3E");}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-admin) [role="radiogroup"]>label:nth-child(3){--pm-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M4%2020V10M10%2020V4M16%2020v-7M22%2020v-9%22%2F%3E%3Cpath%20d%3D%22M2%2020h22%22%2F%3E%3C%2Fsvg%3E");}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-admin) [role="radiogroup"]>label:nth-child(4){--pm-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Ccircle%20cx%3D%229%22%20cy%3D%227%22%20r%3D%223%22%2F%3E%3Cpath%20d%3D%22M3%2020v-2a6%206%200%200%201%2012%200v2M17%204a3%203%200%200%201%200%206M19%2020v-2a6%206%200%200%200-3-5%22%2F%3E%3C%2Fsvg%3E");}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-admin) [role="radiogroup"]>label:nth-child(5){--pm-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Ccircle%20cx%3D%228%22%20cy%3D%227%22%20r%3D%223%22%2F%3E%3Cpath%20d%3D%22M2%2021v-2a6%206%200%200%201%2012%200v2M19%208v8M15%2012h8%22%2F%3E%3C%2Fsvg%3E");}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-admin) [role="radiogroup"]>label:nth-child(6){--pm-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M3%2012a9%209%200%200%201%2018%200H3M12%2012v7a2%202%200%200%201-4%200%22%2F%3E%3C%2Fsvg%3E");}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-admin) [role="radiogroup"]>label:nth-child(7){--pm-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Crect%20x%3D%223%22%20y%3D%225%22%20width%3D%2218%22%20height%3D%2217%22%20rx%3D%222%22%2F%3E%3Cpath%20d%3D%22M7%202v6M17%202v6M3%2011h18%22%2F%3E%3C%2Fsvg%3E");}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-admin) [role="radiogroup"]>label:nth-child(8){--pm-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M5%202h9l5%205v15H5z%22%2F%3E%3Cpath%20d%3D%22M14%202v6h5M8%2013h8M8%2017h7%22%2F%3E%3C%2Fsvg%3E");}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-admin) [role="radiogroup"]>label:nth-child(9){--pm-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Crect%20x%3D%223%22%20y%3D%225%22%20width%3D%2218%22%20height%3D%2215%22%20rx%3D%222%22%2F%3E%3Cpath%20d%3D%22M3%2014h5l2%203h4l2-3h5%22%2F%3E%3C%2Fsvg%3E");}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-admin) [role="radiogroup"]>label:nth-child(10){--pm-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Crect%20x%3D%222%22%20y%3D%225%22%20width%3D%2220%22%20height%3D%2214%22%20rx%3D%222%22%2F%3E%3Ccircle%20cx%3D%2212%22%20cy%3D%2212%22%20r%3D%223%22%2F%3E%3Cpath%20d%3D%22M5%209h1M18%2015h1%22%2F%3E%3C%2Fsvg%3E");}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-admin) [role="radiogroup"]>label:nth-child(11){--pm-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M12%203%202%2021h20L12%203Z%22%2F%3E%3Cpath%20d%3D%22M12%209v5M12%2018h.01%22%2F%3E%3C%2Fsvg%3E");}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-admin) [role="radiogroup"]>label:nth-child(12){--pm-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Crect%20x%3D%223%22%20y%3D%224%22%20width%3D%2218%22%20height%3D%2217%22%20rx%3D%222%22%2F%3E%3Cpath%20d%3D%22M3%209h18M9%2013h6%22%2F%3E%3C%2Fsvg%3E");}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-admin) [role="radiogroup"]>label:nth-child(13){--pm-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M4%2011a8%208%200%201%201%202%206M4%204v7h7M12%207v5l4%203%22%2F%3E%3C%2Fsvg%3E");}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-admin) [role="radiogroup"]>label:nth-child(14){--pm-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Ccircle%20cx%3D%2212%22%20cy%3D%2212%22%20r%3D%223%22%2F%3E%3Cpath%20d%3D%22M12%202v3M12%2019v3M2%2012h3M19%2012h3M5%205l2%202M17%2017l2%202M19%205l-2%202M7%2017l-2%202%22%2F%3E%3C%2Fsvg%3E");}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-employee) [role="radiogroup"]>label:nth-child(1){--pm-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M3%2015v-3a9%209%200%200%201%2018%200v4M6%2020c2-3%201-6%201-8a5%205%200%200%201%2010%200v3M10%2022c2-3%202-7%202-10M16%2020c1-2%202-5%201-8%22%2F%3E%3C%2Fsvg%3E");}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-employee) [role="radiogroup"]>label:nth-child(2){--pm-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Crect%20x%3D%222%22%20y%3D%225%22%20width%3D%2220%22%20height%3D%2214%22%20rx%3D%222%22%2F%3E%3Ccircle%20cx%3D%2212%22%20cy%3D%2212%22%20r%3D%223%22%2F%3E%3Cpath%20d%3D%22M5%209h1M18%2015h1%22%2F%3E%3C%2Fsvg%3E");}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-employee) [role="radiogroup"]>label:nth-child(3){--pm-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M12%203%202%2021h20L12%203Z%22%2F%3E%3Cpath%20d%3D%22M12%209v5M12%2018h.01%22%2F%3E%3C%2Fsvg%3E");}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-employee) [role="radiogroup"]>label:nth-child(4){--pm-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Crect%20x%3D%223%22%20y%3D%224%22%20width%3D%2218%22%20height%3D%2217%22%20rx%3D%222%22%2F%3E%3Cpath%20d%3D%22M3%209h18M9%2013h6%22%2F%3E%3C%2Fsvg%3E");}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-employee) [role="radiogroup"]>label:nth-child(5){--pm-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Crect%20x%3D%223%22%20y%3D%224%22%20width%3D%2218%22%20height%3D%2216%22%20rx%3D%222%22%2F%3E%3Ccircle%20cx%3D%229%22%20cy%3D%2210%22%20r%3D%222%22%2F%3E%3Cpath%20d%3D%22M6%2016a3%203%200%200%201%206%200M15%209h4M15%2013h4%22%2F%3E%3C%2Fsvg%3E");}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-employee) [role="radiogroup"]>label:nth-child(6){--pm-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M3%2012a9%209%200%200%201%2018%200H3M12%2012v7a2%202%200%200%201-4%200%22%2F%3E%3C%2Fsvg%3E");}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-employee) [role="radiogroup"]>label:nth-child(7){--pm-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M5%202h9l5%205v15H5z%22%2F%3E%3Cpath%20d%3D%22M14%202v6h5M8%2013h8M8%2017h7%22%2F%3E%3C%2Fsvg%3E");}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-employee) [role="radiogroup"]>label:nth-child(8){--pm-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M4%2020h16M5%2016l10-10%203%203-10%2010-4%201%201-4ZM14%207l3%203%22%2F%3E%3C%2Fsvg%3E");}
+section[data-testid="stSidebar"]:has(.pm-nav-kind-employee) [role="radiogroup"]>label:nth-child(9){--pm-icon:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.8%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Crect%20x%3D%223%22%20y%3D%225%22%20width%3D%2218%22%20height%3D%2217%22%20rx%3D%222%22%2F%3E%3Cpath%20d%3D%22M7%202v6M17%202v6M3%2011h18%22%2F%3E%3C%2Fsvg%3E");}
 </style>"""
 
 # El ícono opcional del asistente se incluye en el mismo bloque CSS.
@@ -3254,7 +3541,7 @@ def ui_avatar(nombre, dni="", foto="", size=46):
     uri = ui_foto_uri(str(dni), str(foto)) if dni else ""
     dim = f"width:{size}px;height:{size}px;"
     if uri:
-        return f'<img class="tp-avatar" src="{uri}" alt="{nombre}" style="{dim}">'
+        return f'<img class="tp-avatar" src="{uri}" alt="{_html.escape(str(nombre), quote=True)}" style="{dim}">'
     return f'<span class="tp-avatar" style="{dim}">{ui_iniciales(nombre)}</span>'
 
 def ui_chip(texto, tipo="neutral"):
@@ -3708,101 +3995,131 @@ _AC_USER = {"autocomplete": "username"} if _AC_OK else {}
 _AC_PASS = {"autocomplete": "current-password"} if _AC_OK else {}
 
 if not st.session_state.usuario_login:
-    # Portal de acceso independiente: controles nativos seguros dentro de un formulario.
-    # El envío ocurre SOLO al pulsar Acceder (o Enter); escribir nunca autentica.
+    # Portada y acceso progresivo. No solicita información de empleados hasta que
+    # el propio colaborador selecciona "Iniciar sesión". Nunca autentica al teclear.
+    if "pm_acceso_visible" not in st.session_state:
+        st.session_state["pm_acceso_visible"] = False
     _ahora_lg = obtener_ahora_peru()
     _saludo_h = "Buenos días" if _ahora_lg.hour < 12 else ("Buenas tardes" if _ahora_lg.hour < 19 else "Buenas noches")
     with st.container(key="pm_auth_page"):
-        with st.container(key="pm_auth_brandbar"):
-            st.markdown(
-                '<div class="pm-auth-navbar"><div class="pm-auth-navlogo">'
-                + logo_tag_app39(44)
-                + '</div><div class="pm-auth-navlabel"><b>PREMIUM MARKET</b><span>Portal de operaciones</span></div>'
-                '<div class="pm-auth-navright"><span class="pm-auth-online"></span> Plataforma interna</div></div>',
-                unsafe_allow_html=True,
-            )
-        col_hero, col_form = st.columns([1.2, 1], gap="large", vertical_alignment="center")
-        with col_hero:
-            st.markdown("""<div class="pm-auth-hero">
-              <div class="pm-auth-eyebrow"><span class="pm-auth-dot"></span> TECNOLOGÍA PARA TU EQUIPO</div>
-              <h1>Todo tu equipo.<br><span>Una sola plataforma.</span></h1>
-              <p class="pm-auth-description">Tu centro de trabajo para gestionar asistencias, colaboradores, turnos, solicitudes y documentos desde un mismo lugar.</p>
-              <div class="pm-auth-preview" aria-label="Funciones de la plataforma">
-                <div class="pm-auth-preview-top"><span class="pm-auth-preview-app"><i></i> Premium Workspace</span><span class="pm-auth-preview-live">ESPACIO DE TRABAJO</span></div>
-                <div class="pm-auth-preview-row"><div class="pm-auth-symbol"><svg viewBox="0 0 24 24"><path d="M5 3v3M19 3v3M4 9h16M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z"/><path d="m9 15 2 2 4-4"/></svg></div><div><b>Asistencia y horarios</b><span>Marcaciones y programación del equipo</span></div><i class="pm-auth-arrow">↗</i></div>
-                <div class="pm-auth-preview-row"><div class="pm-auth-symbol"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M2 20v-2a7 7 0 0 1 14 0v2M17 8h5M19.5 5.5v5"/></svg></div><div><b>Gestión de colaboradores</b><span>Información y procesos centralizados</span></div><i class="pm-auth-arrow">↗</i></div>
-                <div class="pm-auth-preview-row"><div class="pm-auth-symbol"><svg viewBox="0 0 24 24"><path d="M8 3h8l4 4v14H4V3h4ZM15 3v5h5M8 13h8M8 17h6"/></svg></div><div><b>Solicitudes y documentos</b><span>Seguimiento sin perder el contexto</span></div><i class="pm-auth-arrow">↗</i></div>
-              </div>
-              <div class="pm-auth-hero-foot"><span class="pm-auth-foot-icon">✦</span> Diseñado para que tu trabajo sea más simple, cada día.</div>
-            </div>""", unsafe_allow_html=True)
-        with col_form:
-            with st.container(key="pm_login_panel"):
-                st.markdown(
-                    '<div class="pm-auth-formhead"><div class="pm-auth-signin-icon">'
-                    '<svg viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>'
-                    '</div><div class="pm-auth-formk">ACCESO AL SISTEMA</div>'
-                    '<h2>Bienvenido de nuevo</h2><p>Ingresa tus credenciales para continuar.</p></div>',
-                    unsafe_allow_html=True,
-                )
-                with st.form("pm_login_form", clear_on_submit=False):
-                    dni_input = st.text_input("DNI", placeholder="Ingresa tu documento", max_chars=12, key="login_dni", **_AC_USER)
-                    clave_input = st.text_input("Contraseña", type="password", placeholder="Ingresa tu contraseña", key="login_clave", **_AC_PASS)
-                    _clic = st.form_submit_button("Ingresar a Premium", use_container_width=True, type="primary")
-                if _clic:
-                    if not dni_input.strip() or not clave_input:
-                        st.warning("Ingresa tu DNI y contraseña para continuar.")
+        st.markdown(
+            '<div class="pm-elite-nav"><div class="pm-elite-navbrand">'
+            + logo_tag_app39(48)
+            + '<span><b>PREMIUM MARKET</b><small>Tu espacio de trabajo</small></span></div>'
+            '<div class="pm-elite-navstatus"><i></i> Plataforma de gestión interna</div></div>',
+            unsafe_allow_html=True,
+        )
+        with st.container(key="pm_hero_wrapper"):
+            _portada_col, _acceso_col = st.columns([1.18, 1], gap="large", vertical_alignment="center")
+            with _portada_col:
+                st.markdown('''<section class="pm-elite-hero">
+                  <div class="pm-elite-orb pm-elite-orb-one"></div><div class="pm-elite-orb pm-elite-orb-two"></div>
+                  <div class="pm-elite-hero-inner">
+                   <div class="pm-elite-eyebrow"><i></i> PREMIUM WORKSPACE · EDICIÓN 2026</div>
+                   <h1>Tu equipo conectado.<br><em>Todo bajo control.</em></h1>
+                   <p>Un espacio para las personas que hacen crecer Premium Market. Todo lo importante de tu jornada, en un solo lugar.</p>
+                   <div class="pm-elite-chips"><span>● Asistencia en tiempo real</span><span>● Turnos y permisos</span><span>● Tu portal personal</span></div>
+                   <div class="pm-elite-mini">
+                    <div class="pm-elite-mini-icon"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></div>
+                    <div><strong>Un día más simple</strong><small>Revisa tu jornada, tus documentos y tus pendientes desde cualquier dispositivo.</small></div>
+                    <span class="pm-elite-mini-check">✓</span>
+                   </div>
+                   <div class="pm-elite-hero-footer"><span class="pm-elite-live-dot"></span> Diseñado para el equipo que mueve nuestras tiendas.</div>
+                  </div></section>''', unsafe_allow_html=True)
+            with _acceso_col:
+                with st.container(key="pm_login_panel"):
+                    if not st.session_state["pm_acceso_visible"]:
+                        st.markdown('''<div class="pm-elite-welcome">
+                           <div class="pm-elite-welcome-icon"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 1.9 6.1L20 10l-6.1 1.9L12 18l-1.9-6.1L4 10l6.1-1.9L12 2ZM19 16l.7 2.3L22 19l-2.3.7L19 22l-.7-2.3L16 19l2.3-.7L19 16Z"/></svg></div>
+                           <span class="pm-elite-kicker">TU PORTAL DE TRABAJO</span>
+                           <h2>Bienvenido a tu espacio Premium.</h2>
+                           <p>Ingresa para gestionar tu jornada de forma sencilla, segura y desde cualquier lugar.</p>
+                           <div class="pm-elite-feature"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M6 16a3 3 0 0 1 6 0M15 9h4M15 13h4"/></svg><div><b>Portal del colaborador</b><small>Tu información y documentos, siempre a mano.</small></div></div>
+                           <div class="pm-elite-feature"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="17" rx="2"/><path d="M7 2v6M17 2v6M3 11h18"/></svg><div><b>Turnos y asistencia</b><small>Tu programación y tus marcaciones.</small></div></div>
+                           <div class="pm-elite-feature"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 13 4 4L19 7"/></svg><div><b>Gestión segura</b><small>Datos protegidos y acceso personalizado.</small></div></div>
+                         </div>''', unsafe_allow_html=True)
+                        if st.button("Iniciar sesión", key="pm_show_login", type="primary", use_container_width=True, icon=":material/arrow_forward:"):
+                            st.session_state["pm_acceso_visible"] = True
+                            st.rerun()
+                        st.caption("Acceso exclusivo para colaboradores de Premium Market")
                     else:
-                        _dni_k = dni_input.strip()
-                        _g = _login_guard()
-                        _ahora_l = time.time()
-                        with _g["lock"]:
-                            _hasta = _g["locked_until"].get(_dni_k, 0)
-                        if _hasta > _ahora_l:
-                            st.error(f"Demasiados intentos fallidos. Por seguridad, espera {int((_hasta - _ahora_l) // 60) + 1} minuto(s) e inténtalo de nuevo.")
-                        else:
-                            usuario_sel = next((n for n, d in USUARIOS.items() if str(d["dni"]).strip() == _dni_k), None)
-                            if usuario_sel and _verificar_clave(clave_input, USUARIOS[usuario_sel]["clave"]):
-                                with _g["lock"]:
-                                    _g["fails"].pop(_dni_k, None)
-                                _almacenada = USUARIOS[usuario_sel]["clave"]
-                                if not _clave_protegida(_almacenada):      # migración automática de contraseñas antiguas
-                                    _h_nuevo = _hash_clave(clave_input)
-                                    if _guardar_clave_protegida_gsheets(_dni_k, _almacenada, _h_nuevo):
-                                        _emp_m = st.session_state.empleados
-                                        _mask = (_emp_m["dni"].astype(str).str.strip() == _dni_k) & (_emp_m["clave"].astype(str) == _almacenada)
-                                        st.session_state.empleados.loc[_mask, "clave"] = _h_nuevo
-                                st.session_state.usuario_login = usuario_sel
-                                st.session_state.pop("_tp_botellas_aviso_login", None)
-                                st.session_state.pop("_tp_cumple_dialogo_abierto", None)
-                                st.session_state["ver_como"] = None
-                                st.session_state["ver_como_sel"] = "Mi vista (admin)"
-                                st.session_state.login_timestamp = time.time()
-                                st.session_state.ultima_actividad = time.time()
-                                st.success("Acceso concedido")
-                                st.rerun()
+                        st.markdown('''<div class="pm-elite-login-head"><span class="pm-elite-kicker">ACCESO SEGURO</span><h2>¡Qué bueno verte!</h2><p>Escribe tu DNI para identificar tu perfil y continúa con tu contraseña.</p></div>''', unsafe_allow_html=True)
+                        # DNI fuera de st.form: Streamlit hace rerun al confirmar o salir del
+                        # campo y permite presentar la fotografía antes de enviar la clave.
+                        dni_input = st.text_input("DNI del colaborador", placeholder="Ingresa tu DNI", max_chars=12, key="login_dni", **_AC_USER)
+                        _dni_v = str(dni_input).strip()
+                        if LOGIN_MOSTRAR_FOTO and _dni_v.isdigit() and len(_dni_v) == 8:
+                            _usuario_preview = next((n for n, d in USUARIOS.items() if str(d.get("dni", "")).strip() == _dni_v), None)
+                            if _usuario_preview:
+                                _foto_preview = ui_dni_foto(_usuario_preview)[1]
+                                st.markdown(
+                                    '<div class="pm-elite-identity">'
+                                    + ui_avatar(_usuario_preview, _dni_v, _foto_preview, 56)
+                                    + '<div><strong>' + _html.escape(str(_usuario_preview))
+                                    + '</strong><small>Perfil Premium identificado</small></div>'
+                                    '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 13 4 4L19 7"/></svg></div>',
+                                    unsafe_allow_html=True,
+                                )
+                        with st.form("pm_login_form", clear_on_submit=False):
+                            clave_input = st.text_input("Contraseña", type="password", placeholder="Ingresa tu contraseña", key="login_clave", **_AC_PASS)
+                            _clic = st.form_submit_button("Entrar a mi espacio", use_container_width=True, type="primary")
+                        if _clic:
+                            if not dni_input.strip() or not clave_input:
+                                st.warning("Ingresa tu DNI y contraseña para continuar.")
                             else:
-                                _bloqueado = False
-                                if st.session_state.get("login_ult_intento") != (_dni_k, clave_input):   # solo cuenta intentos distintos
-                                    st.session_state["login_ult_intento"] = (_dni_k, clave_input)
-                                    with _g["lock"]:
-                                        _lista = [t for t in _g["fails"].get(_dni_k, []) if _ahora_l - t < LOGIN_VENTANA_SEG] + [_ahora_l]
-                                        if len(_lista) >= LOGIN_MAX_INTENTOS:
-                                            _g["locked_until"][_dni_k] = _ahora_l + LOGIN_BLOQUEO_SEG
-                                            _g["fails"][_dni_k] = []
-                                            _bloqueado = True
-                                        else:
-                                            _g["fails"][_dni_k] = _lista
-                                    if _bloqueado:
-                                        registrar_auditoria("Bloqueo temporal de acceso", "Usuarios", f"DNI {_dni_k}: {LOGIN_MAX_INTENTOS} intentos fallidos. Bloqueado {LOGIN_BLOQUEO_SEG // 60} min.")
-                                if _bloqueado:
-                                    st.error(f"Demasiados intentos fallidos. Por seguridad, espera {LOGIN_BLOQUEO_SEG // 60} minutos e inténtalo de nuevo.")
+                                _dni_k = dni_input.strip()
+                                _g = _login_guard()
+                                _ahora_l = time.time()
+                                with _g["lock"]:
+                                    _hasta = _g["locked_until"].get(_dni_k, 0)
+                                if _hasta > _ahora_l:
+                                    st.error(f"Demasiados intentos fallidos. Por seguridad, espera {int((_hasta - _ahora_l) // 60) + 1} minuto(s) e inténtalo de nuevo.")
                                 else:
-                                    with _g["lock"]:
-                                        _quedan = max(0, LOGIN_MAX_INTENTOS - len([t for t in _g["fails"].get(_dni_k, []) if _ahora_l - t < LOGIN_VENTANA_SEG]))
-                                    st.error(f"DNI o contraseña incorrectos. Te quedan {_quedan} intento(s) antes de un bloqueo temporal.")
-                st.markdown('<div class="pm-auth-secure"><svg viewBox="0 0 24 24"><path d="M12 22c6-2 9-6 9-12V5l-9-3-9 3v5c0 6 3 10 9 12Z"/><path d="m9 12 2 2 4-4"/></svg><span>Acceso privado · Sesión protegida</span></div>', unsafe_allow_html=True)
-                ui_guia_instalar(st)
-        st.markdown('<div class="pm-auth-copyright">© Premium Market · Plataforma de gestión interna</div>', unsafe_allow_html=True)
+                                    usuario_sel = next((n for n, d in USUARIOS.items() if str(d["dni"]).strip() == _dni_k), None)
+                                    if usuario_sel and _verificar_clave(clave_input, USUARIOS[usuario_sel]["clave"]):
+                                        with _g["lock"]:
+                                            _g["fails"].pop(_dni_k, None)
+                                        _almacenada = USUARIOS[usuario_sel]["clave"]
+                                        if not _clave_protegida(_almacenada):      # migración automática de contraseñas antiguas
+                                            _h_nuevo = _hash_clave(clave_input)
+                                            if _guardar_clave_protegida_gsheets(_dni_k, _almacenada, _h_nuevo):
+                                                _emp_m = st.session_state.empleados
+                                                _mask = (_emp_m["dni"].astype(str).str.strip() == _dni_k) & (_emp_m["clave"].astype(str) == _almacenada)
+                                                st.session_state.empleados.loc[_mask, "clave"] = _h_nuevo
+                                        st.session_state.usuario_login = usuario_sel
+                                        st.session_state.pop("_tp_botellas_aviso_login", None)
+                                        st.session_state.pop("_tp_cumple_dialogo_abierto", None)
+                                        st.session_state["ver_como"] = None
+                                        st.session_state["ver_como_sel"] = "Mi vista (admin)"
+                                        st.session_state.login_timestamp = time.time()
+                                        st.session_state.ultima_actividad = time.time()
+                                        st.success("Acceso concedido")
+                                        st.rerun()
+                                    else:
+                                        _bloqueado = False
+                                        if st.session_state.get("login_ult_intento") != (_dni_k, clave_input):   # solo cuenta intentos distintos
+                                            st.session_state["login_ult_intento"] = (_dni_k, clave_input)
+                                            with _g["lock"]:
+                                                _lista = [t for t in _g["fails"].get(_dni_k, []) if _ahora_l - t < LOGIN_VENTANA_SEG] + [_ahora_l]
+                                                if len(_lista) >= LOGIN_MAX_INTENTOS:
+                                                    _g["locked_until"][_dni_k] = _ahora_l + LOGIN_BLOQUEO_SEG
+                                                    _g["fails"][_dni_k] = []
+                                                    _bloqueado = True
+                                                else:
+                                                    _g["fails"][_dni_k] = _lista
+                                            if _bloqueado:
+                                                registrar_auditoria("Bloqueo temporal de acceso", "Usuarios", f"DNI {_dni_k}: {LOGIN_MAX_INTENTOS} intentos fallidos. Bloqueado {LOGIN_BLOQUEO_SEG // 60} min.")
+                                        if _bloqueado:
+                                            st.error(f"Demasiados intentos fallidos. Por seguridad, espera {LOGIN_BLOQUEO_SEG // 60} minutos e inténtalo de nuevo.")
+                                        else:
+                                            with _g["lock"]:
+                                                _quedan = max(0, LOGIN_MAX_INTENTOS - len([t for t in _g["fails"].get(_dni_k, []) if _ahora_l - t < LOGIN_VENTANA_SEG]))
+                                            st.error(f"DNI o contraseña incorrectos. Te quedan {_quedan} intento(s) antes de un bloqueo temporal.")
+                        st.markdown('<div class="pm-elite-secure"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10" width="14" height="12" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg> Sesión segura · Protegemos tu información</div>', unsafe_allow_html=True)
+                        if st.button("← Volver a la portada", key="pm_back_welcome", use_container_width=True):
+                            st.session_state["pm_acceso_visible"] = False
+                            st.rerun()
+        st.markdown('<div class="pm-elite-footer">© Premium Market · Portal interno para colaboradores</div>', unsafe_allow_html=True)
     st.stop()
 
 # --- NUEVO: CONTROL DE EXPIRACIÓN DE SESIÓN ---
@@ -4762,8 +5079,8 @@ def renderizar_calendario_colaborador(nombre_colab, anio, mes):
 # =============================================================
 
 # --- SIDEBAR ---
-st.sidebar.markdown(f'<div style="text-align:center; padding: 8px 0 14px 0;">{logo_tag_app39(58)}</div>', unsafe_allow_html=True)
-st.sidebar.markdown('<div class="tp-brand"><div class="tp-brand-name">Tiendas <span>Premium</span></div><div class="tp-brand-sub">Sistema de control interno</div></div>', unsafe_allow_html=True)
+st.sidebar.markdown(f'<div class="pm-sidebar-logo">{logo_tag_app39(51)}</div>', unsafe_allow_html=True)
+st.sidebar.markdown('<div class="tp-brand"><div class="tp-brand-name">Premium <span>Workspace</span></div><div class="tp-brand-sub">Panel de operaciones</div></div>', unsafe_allow_html=True)
 
 _dni_real = USUARIOS[user_real]["dni"]
 _foto_real = ui_dni_foto(user_real)[1]
@@ -4992,7 +5309,9 @@ if _sol_pend_n:
 if _bf_total_pendientes:
     _btn_pendiente(f"Botellas por devolver · {_bf_total_pendientes}", "tp_acc_bot", "Botellas Fiadas", ":material/liquor:")
 
-# Menú original: lista completa sin agrupaciones ni resúmenes.
+# Semántica de menú para iconos por CSS, sin cambiar los valores de navegación.
+st.sidebar.markdown('<div class="pm-nav-kind-' + ('admin' if rol_actual == 'admin' else 'employee') + '"></div>', unsafe_allow_html=True)
+# Menú original, conserva los mismos nombres para no romper los módulos.
 choice = st.sidebar.radio("Navegación", menu, key="nav_radio", on_change=_limpiar_busqueda, format_func=_tp_nav_label)
 
 if rol_actual == "admin":
@@ -5044,6 +5363,7 @@ def _pm_cerrar_sesion():
         st.session_state.pop("login_clave", None)
         st.session_state.pop("login_dni", None)
         st.session_state.pop("login_ult_intento", None)
+        st.session_state["pm_acceso_visible"] = False
         st.session_state.pop("nav_radio", None)
         st.session_state.pop("gs_q", None)
 
@@ -5054,20 +5374,38 @@ st.sidebar.markdown('</div>', unsafe_allow_html=True)
 
 # Notificación de botellas: se abre una sola vez por inicio de sesión.
 # Debe invocarse en el cuerpo principal, nunca dentro de st.sidebar ni st.columns.
-@st.dialog("🍾 Botellas pendientes de devolución", width="large")
+@st.dialog("Centro de notificaciones", width="large")
 def _tp_aviso_botellas_inicio(total):
-    st.warning(
-        f"Hay **{total} registro{'s' if total != 1 else ''} pendiente{'s' if total != 1 else ''} "
-        "de devolución**. Puedes revisar los detalles o cerrar este aviso."
+    # Contenido y cifras reales. Es un resumen; la edición ocurre en Botellas Fiadas.
+    _reg = _bf_pendientes_aviso
+    _botellas = 0
+    if isinstance(_reg, pd.DataFrame) and "cantidad_botellas" in _reg.columns:
+        _botellas = int(pd.to_numeric(_reg["cantidad_botellas"], errors="coerce").fillna(0).sum())
+    st.markdown(
+        '<div class="pm-notice-head"><div class="pm-notice-mark"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M9 13h6"/></svg></div>'
+        '<div><span class="pm-notice-kicker">SEGUIMIENTO DE PENDIENTES</span><h3>Botellas por devolver</h3>'
+        '<p>Revisa lo que queda pendiente entre los turnos de tus tiendas.</p></div></div>'
+        '<div class="pm-notice-metrics"><div><b>' + str(total) + '</b><small>Registros abiertos</small></div>'
+        '<div><b>' + str(_botellas) + '</b><small>Botellas pendientes</small></div></div>',
+        unsafe_allow_html=True,
     )
+    if isinstance(_reg, pd.DataFrame) and not _reg.empty:
+        st.markdown('<div class="pm-notice-list-title">Últimos registros sin devolver</div>', unsafe_allow_html=True)
+        for _, _r in _reg.head(3).iterrows():
+            _nombre_n = _html.escape(str(_r.get("cliente_nombre", "Cliente")))
+            _cant_n = _html.escape(str(_r.get("cantidad_botellas", "—")))
+            _tipo_n = _html.escape(str(_r.get("tipo_botella", "")))
+            st.markdown('<div class="pm-notice-row"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M9 13h6"/></svg>'
+                        '<div><strong>' + _nombre_n + '</strong><small>' + _tipo_n + '</small></div>'
+                        '<b>' + _cant_n + ' bot.</b></div>', unsafe_allow_html=True)
     col_detalle, col_cerrar = st.columns(2)
     with col_detalle:
-        if st.button("Ver botellas pendientes", key="tp_bf_modal_ver", use_container_width=True, type="primary"):
+        if st.button("Revisar devoluciones", key="tp_bf_modal_ver", use_container_width=True, type="primary"):
             st.session_state["nav_radio"] = "Botellas Fiadas"
             st.session_state["gs_q"] = ""
             st.rerun()
     with col_cerrar:
-        if st.button("Entendido, cerrar", key="tp_bf_modal_cerrar", use_container_width=True):
+        if st.button("Ahora no", key="tp_bf_modal_cerrar", use_container_width=True):
             st.rerun()
 
 # El contador del perfil sigue disponible en todas las vistas, pero el diálogo
@@ -5301,7 +5639,7 @@ if "chat_flotante_abierto" not in st.session_state:
 if "chat_datos_historial" not in st.session_state:
     st.session_state.chat_datos_historial = []
 with st.container(key="tp_chat_fab"):
-    if st.button("✦", key="abrir_chat_flotante", help="Abrir asistente Premium IA"):
+    if st.button("✦", key="abrir_chat_flotante", help="Abrir Premium IA", use_container_width=True):
         st.session_state.chat_flotante_abierto = not st.session_state.chat_flotante_abierto
         st.rerun()
 
@@ -5309,7 +5647,7 @@ if st.session_state.chat_flotante_abierto:
     with st.container(key="tp_chat_panel"):
         _cp1, _cp2 = st.columns([5, 1])
         with _cp1:
-            st.markdown("### ✨ Premium IA")
+            st.markdown("### Premium IA")
             _api_key, _api_model = _tp_ia_config()
             st.caption("🟢 Conversación inteligente" if _api_key else "🟡 Asistente local · activa IA en Secrets")
         with _cp2:
@@ -8006,7 +8344,17 @@ elif choice == "Centro de Alertas":
         orden = {"bad": 0, "warn": 1, "info": 2}
         for g in sorted([x for x in grupos if x["n"]], key=lambda x: orden[x["tono"]]):
             with ui_card_container(f"al_{g['k']}"):
-                st.markdown(f'<div class="tp-card flat"><div class="tp-card-head"><div class="tp-op-head" style="margin:0"><span class="tp-al-ico {g["tono"]}">{_IC[g["k"]]}</span><div><div class="tp-card-title">{g["t"]}</div><div class="tp-card-sub">{g["s"]}</div></div></div>{ui_chip(str(g["n"]), g["tono"])}</div></div><div style="height:10px"></div>' + "".join(g["f"]), unsafe_allow_html=True)
+                # Una sola tarjeta real por grupo: icono, chip y fotografías se
+                # mantienen dentro de la misma superficie visual, sin bordes flotantes.
+                st.markdown(
+                    f'<section class="pm-alert-group pm-alert-group--{g["tono"]}">'
+                    f'<div class="pm-alert-heading">'
+                    f'<span class="pm-alert-glyph">{_IC[g["k"]]}</span>'
+                    f'<div class="pm-alert-head-text"><h3>{e_(g["t"])}</h3><p>{e_(g["s"])}</p></div>'
+                    f'<span class="pm-alert-count">{int(g["n"])} pendiente{"s" if g["n"] != 1 else ""}</span>'
+                    f'</div><div class="pm-alert-people">' + "".join(g["f"]) + '</div></section>',
+                    unsafe_allow_html=True,
+                )
                 if g["dest"]:
                     _b1, _b2 = st.columns([3, 1.3])
                     _b2.button(g["btn"], key=f"al_btn_{g['k']}", on_click=_gs_ir, args=(g["dest"],), use_container_width=True)
