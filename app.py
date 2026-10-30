@@ -6474,7 +6474,7 @@ _PM3_EVIDENCE_COLS = [
     "id_evidencia", "id_rutina", "dni", "drive_file_id", "nombre_archivo",
     "tipo_archivo", "tamano_bytes", "sha256", "subido_por", "fecha_subida",
 ]
-_PM3_MAX_UPLOAD_BYTES = 6 * 1024 * 1024
+_PM3_MAX_UPLOAD_BYTES = 25 * 1024 * 1024
 _PM3_MAX_EVIDENCES = 3
 
 
@@ -6613,7 +6613,7 @@ def _pm3_prepare_image(file_obj):
     if file_obj is None:
         raise ValueError("Selecciona una fotografía.")
     if int(getattr(file_obj, "size", _PM3_MAX_UPLOAD_BYTES + 1)) > _PM3_MAX_UPLOAD_BYTES:
-        raise ValueError("La fotografía supera 6 MB. Selecciona otra más pequeña.")
+        raise ValueError("La imagen supera 25 MB. Reduce su tamaño en Fotos o selecciona otra.")
     raw = file_obj.getvalue() if hasattr(file_obj, "getvalue") else file_obj.read()
     if len(raw) > _PM3_MAX_UPLOAD_BYTES:
         raise ValueError("El archivo es demasiado grande.")
@@ -6621,8 +6621,11 @@ def _pm3_prepare_image(file_obj):
         with PILImage.open(BytesIO(raw)) as image:
             if image.format not in ("JPEG", "PNG", "WEBP", "HEIF", "HEIC"):
                 raise ValueError("Formato no permitido. Utiliza JPEG, PNG, WebP o HEIC.")
-            if image.width * image.height > 28_000_000:
-                raise ValueError("La imagen supera las dimensiones seguras.")
+            if image.width * image.height > 65_000_000:
+                raise ValueError("La fotografía supera 65 megapíxeles. Reduce su resolución antes de enviarla.")
+            # JPEG de iPhone de hasta 48 MP: decodificar a menor resolución cuando el códec lo permite.
+            if image.format == "JPEG":
+                image.draft("RGB", (2560, 2560))
             normalized = ImageOps.exif_transpose(image).convert("RGB")
             normalized.thumbnail((1280, 1280))
             for quality in (82, 74, 64, 53):
@@ -6633,8 +6636,8 @@ def _pm3_prepare_image(file_obj):
             if buf.tell() > 900_000:
                 raise ValueError("No se pudo comprimir la imagen adecuadamente.")
             return buf.getvalue()
-    except (UnidentifiedImageError, OSError, PILImage.DecompressionBombError) as exc:
-        raise ValueError("El archivo no es una fotografía válida.") from exc
+    except (UnidentifiedImageError, OSError, PILImage.DecompressionBombError, MemoryError) as exc:
+        raise ValueError("No se pudo procesar esta imagen. Intenta con una foto más pequeña o en formato JPEG.") from exc
 
 
 def _pm3_upload_evidence(task_id, file_obj):
@@ -6715,23 +6718,27 @@ def _pm3_download_evidence(task_id, file_id):
 
 
 def _pm3_gallery(task_id, prefix="worker"):
-    """Ver imágenes solo bajo petición. Sin predescarga al abrir el módulo."""
+    """Miniaturas privadas bajo demanda; nunca imágenes a ancho completo por defecto."""
+    try:
+        evidence = _pm3_evidences_for(task_id)
+    except Exception:
+        evidence = []
+    if not evidence:
+        return
     flag = f"pm3_gallery_{prefix}_{task_id}"
     shown = bool(st.session_state.get(flag))
-    if st.button("Ocultar fotografías" if shown else "Ver evidencias fotográficas",
-                 key="pm3_gallery_btn_" + prefix + "_" + str(task_id), use_container_width=True):
+    n = len(evidence)
+    label = f"Ocultar {n} fotografía(s)" if shown else f"Ver {n} fotografía(s) adjunta(s)"
+    if st.button(label, key="pm3_gallery_btn_" + prefix + "_" + str(task_id), use_container_width=True):
         st.session_state[flag] = shown = not shown
     if not shown:
         return
     try:
         _pm3_authorized(task_id, modify=False)
-        evidence = _pm3_evidences_for(task_id)
-        if not evidence:
-            st.caption("Aún no se han cargado fotografías para esta actividad.")
         for item in evidence:
             try:
                 photo = _pm3_download_evidence(task_id, item["drive_file_id"])
-                st.image(photo, caption="Evidencia · " + str(item.get("fecha_subida", ""))[:16], use_container_width=True)
+                st.image(photo, caption="Evidencia · " + str(item.get("fecha_subida", ""))[:16], width=290)
             except Exception as exc:
                 st.warning("No se pudo mostrar la fotografía: " + str(exc)[:120])
     except Exception as exc:
@@ -6741,18 +6748,34 @@ def _pm3_gallery(task_id, prefix="worker"):
 def _pm3_worker_upload_ui(task_id):
     if st.session_state.get("ver_como"):
         return
-    with st.expander("Añadir fotografía de evidencia", expanded=False):
-        st.caption("Foto o galería del celular (incluye HEIC de iPhone). Se comprime y guarda en Drive privado. Máximo 6 MB.")
+    try:
+        saved = _pm3_evidences_for(task_id)
+        count = len(saved)
+    except Exception:
+        count = 0
+    if count:
+        st.caption(f"Fotografías confirmadas: {count} de {_PM3_MAX_EVIDENCES}.")
+    if count >= _PM3_MAX_EVIDENCES:
+        return
+    with st.expander("Adjuntar fotografía de evidencia", expanded=False):
+        st.caption("Foto o galería del celular (JPEG, PNG y HEIC de iPhone). Hasta 25 MB por archivo; "
+                   "se comprime automáticamente antes de guardarse en Drive privado.")
+        nonce = st.session_state.get("_pm3_file_nonce_" + str(task_id), 0)
         image = st.file_uploader("Fotografía", type=["jpg", "jpeg", "png", "webp", "heic", "heif"],
-                                 key="pm3_file_" + str(task_id), accept_multiple_files=False)
-        if st.button("Guardar evidencia", key="pm3_upload_" + str(task_id),
+                                 key=f"pm3_file_{task_id}_{nonce}", accept_multiple_files=False)
+        if image is not None:
+            st.caption("Se procesará la imagen para reducir su peso. No cierres la página durante el guardado.")
+        if st.button("Guardar fotografía", key="pm3_upload_" + str(task_id),
                      disabled=image is None, use_container_width=True, type="primary"):
-            with st.spinner("Guardando evidencia de forma segura…"):
+            with st.spinner("Comprimiendo y guardando la fotografía…"):
                 ok, message = _pm3_upload_evidence(task_id, image)
-            _pm2_notice(ok, message)
             if ok:
+                st.session_state["_pm3_file_nonce_" + str(task_id)] = nonce + 1
+                _pm3_flash("worker", task_id, True,
+                           "Fotografía guardada correctamente. Ya puedes enviar la actividad para validación.")
                 st.rerun()
-
+            else:
+                st.error(message)
 
 def _pm3_evidence_setup_ui():
     with st.expander("Configuración de evidencias y conexión", expanded=False):
@@ -6765,7 +6788,9 @@ def _pm3_evidence_setup_ui():
                 _pm3_validate_private_folder(drive, folder)
                 _pm3_evidence_ws(create=True)
                 _pm2_ws(create=True)
-                st.success("Drive, Sheets y estructuras de rutinas disponibles para la cuenta de servicio.")
+                modo = str(st.secrets.get("pm_evidencias", {}).get("mode", "shared_drive"))
+                metodo = "OAuth de Gmail personal" if modo == "personal_oauth" else "cuenta de servicio de Workspace"
+                st.success("Drive y Google Sheets disponibles mediante " + metodo + ".")
         except Exception as exc:
             st.warning(str(exc)[:230])
             st.caption("Secrets: [pm_evidencias] mode='shared_drive' o 'personal_oauth'; "
@@ -6795,7 +6820,10 @@ def _pm2_update_progress(task_id, new_state, note=""):
             valid = ((current == "Pendiente" and new_state == "En curso") or
                      (current == "En curso" and new_state == "Por validar"))
             if not valid:
-                return False, "La actividad ya cambió de estado. Actualiza la pantalla."
+                _pm2_clear_cache()
+                if current == new_state:
+                    return True, "El cambio ya estaba registrado; la actividad está actualizada."
+                return False, "La actividad fue modificada en otra sesión. Estamos actualizando la información."
             if new_state == "Por validar" and str(record.get("evidencia_obligatoria", "No")).strip().lower() in ("sí", "si", "true", "1"):
                 photos = _pm3_evidences_for(task_id, fresh=True)
                 if not photos:
@@ -6839,7 +6867,8 @@ def _pm3_review(task_id, accept, comment=""):
     try:
         ws, row, record = _pm2_remote_row(task_id, writable=True)
         if str(record.get("estado")) != "Por validar":
-            return False, "La actividad cambió de estado; vuelve a actualizar la página."
+            _pm2_clear_cache()
+            return False, "La actividad fue revisada en otra sesión. Estamos actualizando la información."
         if accept and str(record.get("evidencia_obligatoria", "No")).lower() in ("sí", "si", "true", "1"):
             if not _pm3_evidences_for(task_id, fresh=True):
                 return False, "No se puede aprobar una actividad sin su fotografía obligatoria."
@@ -6968,6 +6997,19 @@ def _pm2_notice(ok, msg):
     (st.success if ok else st.error)(msg)
 
 
+def _pm3_flash(scope, task_id, ok, msg):
+    """Persistir una única confirmación entre reruns de Streamlit."""
+    st.session_state[f"_pm3_flash_{scope}_{task_id}"] = (bool(ok), str(msg)[:280])
+
+
+def _pm3_show_flash(scope, task_id):
+    notice = st.session_state.pop(f"_pm3_flash_{scope}_{task_id}", None)
+    if isinstance(notice, (tuple, list)) and len(notice) == 2:
+        (st.success if notice[0] else st.warning)(notice[1])
+        if notice[0]:
+            st.toast(notice[1])
+
+
 def _pm2_css():
     st.markdown("""
     <style>
@@ -7029,6 +7071,35 @@ def _pm2_css():
       .st-key-pm_v_marcar_asistencia .tp-row-time{flex-basis:57px!important;min-width:57px!important;padding:0 3px!important;font-size:.86rem}
       .st-key-pm_v_marcar_asistencia .tp-row .tp-chips{max-width:36%}
     }
+    /* RUTINAS 3.1: hechos claros, bordes suaves y sin etiquetas gigantes. */
+    .pm2-task-info{align-items:flex-start;gap:10px;margin:0 0 12px}
+    .pm2-task-heading{flex:1 1 200px;min-width:0}
+    .pm2-task-title{font-size:1.04rem;font-weight:840;line-height:1.38;color:#192b44;letter-spacing:-.022em}
+    .pm2-task-assignee{display:block;color:#7a8ba1;font-size:.75rem;margin-top:4px}
+    .pm2-task-info>.pm2-pill{flex:none;white-space:nowrap;font-size:.7rem;padding:6px 9px}
+    .pm2-task-facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:0 0 12px}
+    .pm2-task-fact{min-width:0;border-radius:11px;background:#f6f8fb;border:1px solid #e9edf4;padding:9px 11px}
+    .pm2-task-fact small{display:block;color:#8793a5;font-size:.66rem;font-weight:730;margin:0 0 4px;line-height:1.2}
+    .pm2-task-fact strong{display:block;color:#33445d;font-size:.79rem;font-weight:760;line-height:1.33;overflow-wrap:anywhere}
+    .pm2-task-flags{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin:0 0 12px}
+    .pm2-task-priority,.pm2-task-required,.pm2-task-optional{display:inline-flex;align-items:center;gap:5px;padding:5px 9px;font-size:.69rem;line-height:1.25;font-weight:770;border-radius:8px;background:#f5f7fa;color:#64748b;border:1px solid #e7ecf3}
+    .pm2-task-required{background:#fff7e8;color:#966415;border-color:#f3e1b5}
+    .pm2-task-instructions{font-size:.84rem;color:#596b83;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;margin:0 0 13px}
+    .pm2-task-comment,.pm2-task-review{background:#f7f9fc;border-left:3px solid #cdd9eb;border-radius:8px;padding:9px 11px;font-size:.79rem;line-height:1.52;color:#5f7189;margin-bottom:10px;overflow-wrap:anywhere}
+    .pm2-task-review{background:#fff8e9;border-color:#e3ad45;color:#835f23}
+    .st-key-pm_v_rutinas_operativas [data-testid="stVerticalBlockBorderWrapper"]:has(>div[data-testid="stVerticalBlock"]),
+    .st-key-pm_v_mis_rutinas [data-testid="stVerticalBlockBorderWrapper"]:has(>div[data-testid="stVerticalBlock"]){background:#fff!important;border:1px solid #e6ecf3!important;border-radius:17px!important;box-shadow:0 8px 20px rgba(19,35,58,.035)!important}
+    .st-key-pm_v_rutinas_operativas [data-testid="stImage"] img,
+    .st-key-pm_v_mis_rutinas [data-testid="stImage"] img{height:auto!important;max-height:285px!important;object-fit:contain!important;border-radius:11px!important}
+    @media(max-width:780px){
+      .st-key-pm_v_mis_rutinas .pm2-task-info,.st-key-pm_v_rutinas_operativas .pm2-task-info{flex-wrap:wrap!important}
+      .st-key-pm_v_mis_rutinas .pm2-task-title,.st-key-pm_v_rutinas_operativas .pm2-task-title{font-size:1.01rem!important}
+      .pm2-task-facts{gap:7px}.pm2-task-fact{padding:8px 9px}
+      .pm2-task-fact strong{font-size:.80rem}.pm2-task-instructions{font-size:.84rem;line-height:1.52}
+      .st-key-pm_v_mis_rutinas [data-testid="stForm"],.st-key-pm_v_rutinas_operativas [data-testid="stForm"]{padding:12px!important}
+      .st-key-pm_v_mis_rutinas [data-testid="stVerticalBlockBorderWrapper"]:has(>div[data-testid="stVerticalBlock"]),
+      .st-key-pm_v_rutinas_operativas [data-testid="stVerticalBlockBorderWrapper"]:has(>div[data-testid="stVerticalBlock"]){padding:13px!important}
+    }
     @media(prefers-reduced-motion:reduce){.pm2-staff,.pm2-stat{transition:none!important}}
     </style>
     """, unsafe_allow_html=True)
@@ -7054,31 +7125,42 @@ def _pm2_metrics(data, personal=False):
 
 
 def _pm2_task_summary_html(row, show_worker=False):
+    """Tarjeta clara para teléfono y escritorio, con todas las instrucciones."""
     esc = _html.escape
     status_label, tone = _pm2_state_visual(row)
-    meta = (
-        ("Fecha", str(row.get("fecha", ""))),
-        ("Horario", (str(row.get("hora_inicio", "")) + " – " + str(row.get("hora_limite", "")))
-         if str(row.get("hora_inicio", "")) and str(row.get("hora_limite", "")) else "Por definir"),
-        ("Tienda", str(row.get("tienda", ""))),
-        ("Lugar", str(row.get("zona", ""))),
-        ("Prioridad", str(row.get("prioridad", "Normal"))),
-    )
-    head = f'<div class="pm2-task-info"><div><div class="pm2-task-title">{esc(str(row.get("titulo", "")))}</div>'
-    if show_worker:
-        head += f'<div style="font-size:.77rem;color:#7b8aa0;margin-top:3px">Asignada a {esc(str(row.get("nombre", "")))}</div>'
-    head += f'</div><span class="pm2-pill {tone}">{esc(status_label)}</span></div>'
-    tags = '<div class="pm2-task-meta">' + ''.join(
-        f'<span class="pm2-pill">{esc(label)}: {esc(value)}</span>' for label, value in meta
+    title = esc(str(row.get("titulo", "")))
+    who = (f'<span class="pm2-task-assignee">{esc(str(row.get("nombre", "")))}</span>'
+           if show_worker else "")
+    head = (f'<div class="pm2-task-info"><div class="pm2-task-heading">'
+            f'<div class="pm2-task-title">{title}</div>{who}</div>'
+            f'<span class="pm2-pill {tone}">{esc(status_label)}</span></div>')
+    day = str(row.get("fecha", ""))[:10]
+    try:
+        day = datetime.strptime(day, "%Y-%m-%d").strftime("%d/%m/%Y")
+    except ValueError:
+        pass
+    time_range = " – ".join(v for v in (str(row.get("hora_inicio", "")).strip(),
+                                        str(row.get("hora_limite", "")).strip()) if v)
+    fields = [("Fecha", day), ("Horario", time_range),
+              ("Tienda", str(row.get("tienda", ""))), ("Ubicación", str(row.get("zona", "")))]
+    facts = '<div class="pm2-task-facts">' + ''.join(
+        f'<div class="pm2-task-fact"><small>{esc(label)}</small><strong>{esc(value)}</strong></div>'
+        for label, value in fields if value
     ) + '</div>'
-    note = f'<p class="pm2-task-detail">{esc(str(row.get("instrucciones", "")))}</p>'
-    comment = (f'<p class="pm2-task-detail"><b>Comentario:</b> {esc(str(row.get("observacion", "")))}</p>'
-               if str(row.get("observacion", "")).strip() else "")
+    priority = esc(str(row.get("prioridad", "Normal")))
     required = str(row.get("evidencia_obligatoria", "No")).lower() in ("sí", "si", "true", "1")
-    evidence_tag = ('<span class="pm2-pill warning">Foto obligatoria</span>' if required else '<span class="pm2-pill">Foto opcional</span>')
+    flags = ('<div class="pm2-task-flags"><span class="pm2-task-priority">Prioridad: ' + priority + '</span>' +
+             ('<span class="pm2-task-required">Fotografía obligatoria</span>' if required else
+              '<span class="pm2-task-optional">Fotografía opcional</span>') + '</div>')
+    instructions = str(row.get("instrucciones", "")).strip()
+    note = (f'<div class="pm2-task-instructions">{esc(instructions)}</div>' if instructions else "")
+    comment = str(row.get("observacion", "")).strip()
+    comment_html = (f'<div class="pm2-task-comment"><strong>Comentario del colaborador:</strong> '
+                    f'{esc(comment)}</div>' if comment else "")
     review_msg = str(row.get("comentario_revision", "")).strip()
-    review = (f'<p class="pm2-task-detail"><b>Nota del supervisor:</b> {esc(review_msg)}</p>' if review_msg else "")
-    return head + tags + evidence_tag + note + comment + review
+    review_html = (f'<div class="pm2-task-review"><strong>Observación del supervisor:</strong> '
+                   f'{esc(review_msg)}</div>' if review_msg else "")
+    return head + facts + flags + note + comment_html + review_html
 
 
 def _pm2_legacy_count():
@@ -7264,6 +7346,8 @@ def _pm_cerrar_sesion():
         st.session_state["chat_flotante_abierto"] = False
         st.session_state["chat_datos_historial"] = []
         st.session_state.pop("_pm3_evidence_cache", None)
+        st.session_state.pop("_pm3_review_seen", None)
+        st.session_state.pop("_pm3_worker_last_states", None)
         st.session_state.pop("tp_pregunta_sugerida", None)
         st.session_state.pop("_tp_botellas_aviso_login", None)
         st.session_state.pop("_tp_cumple_dialogo_abierto", None)
@@ -7534,6 +7618,92 @@ st.markdown('<style>@media(max-width:780px){'
             '.stApp:not(:has(.st-key-pm_auth_page)) .st-key-tp_bottomnav [data-testid="stIconMaterial"]'
             '{display:none!important;}' + ''.join(_pm_mobile_icon_rules) + '}</style>',
             unsafe_allow_html=True)
+
+# PREMIUM MARKET · AVISOS DE RUTINAS SIN PUSH EXTERNO
+# st.fragment actualiza este pequeño centro cada 45 s mientras la sesión esté abierta.
+# No expone tareas de otro DNI a colaboradores ni relee fotografías en el sondeo.
+def _pm3_live_hub_once():
+    is_admin = _pm2_is_admin()
+    df, err = _pm2_load(force=True)
+    if err or df is None:
+        return  # No interpretamos un fallo de Sheets como cero pendientes.
+    if not is_admin:
+        df = df[df["dni"].astype(str).map(_pm2_dni) == _pm2_dni(dni_actual)].copy()
+    if is_admin:
+        waiting = df[df["estado"].astype(str) == "Por validar"].copy()
+        now_ids = set(waiting["id_rutina"].astype(str).tolist())
+        old = st.session_state.get("_pm3_review_seen")
+        if old is not None:
+            new_ids = now_ids - set(old)
+            if new_ids:
+                st.toast(f"Hay {len(new_ids)} actividad(es) nueva(s) por validar en Rutinas Operativas.")
+        st.session_state["_pm3_review_seen"] = tuple(sorted(now_ids))
+        if waiting.empty:
+            return
+        names = ", ".join(dict.fromkeys(waiting["nombre"].astype(str).tolist()[:3]))
+        with st.container(key="pm3_live_hub"):
+            st.markdown(
+                '<div class="pm3-live-card"><div class="pm3-live-dot"></div><div>'
+                '<strong>' + str(len(waiting)) + ' actividad(es) por validar</strong>'
+                '<span>' + _html.escape(names) + ' · El contador se actualiza cada 45 segundos.</span>'
+                '</div></div>', unsafe_allow_html=True)
+            if st.button("Revisar pendientes", key="pm3_live_admin_go", use_container_width=True):
+                _pm2_clear_cache()
+                _ir_a("Rutinas Operativas")
+                # Muestra la fecha más reciente con actividades pendientes.
+                try:
+                    day = sorted(waiting["fecha"].astype(str).tolist(), reverse=True)[0][:10]
+                    st.session_state["pm2_monitor_date"] = datetime.strptime(day, "%Y-%m-%d").date()
+                    st.session_state["pm2_monitor_status"] = "Por validar"
+                    st.session_state["pm2_monitor_worker"] = "Todos"
+                except (ValueError, KeyError):
+                    pass
+                st.rerun(scope="app")
+    else:
+        key_states = tuple(sorted((str(r.get("id_rutina", "")), str(r.get("estado", "")),
+                                   str(r.get("revision_estado", ""))) for _, r in df.iterrows()))
+        old = st.session_state.get("_pm3_worker_last_states")
+        if old is not None:
+            previous = {r[0]: (r[1], r[2]) for r in old}
+            changed = [(a, b, c) for a, b, c in key_states
+                       if a in previous and previous[a] != (b, c)]
+            if any(b == "Completada" for _, b, _ in changed):
+                st.toast("Tu supervisor aprobó una actividad. Revisa Mis Rutinas.")
+            elif any(c == "Observada" for _, _, c in changed):
+                st.toast("Tienes una actividad observada por supervisión.")
+        st.session_state["_pm3_worker_last_states"] = key_states
+        observed = df[df["revision_estado"].astype(str) == "Observada"]
+        if not observed.empty:
+            with st.container(key="pm3_live_hub"):
+                st.warning(f"Tienes {len(observed)} actividad(es) con observaciones de supervisión.")
+                if st.button("Revisar mis correcciones", key="pm3_live_worker_go", use_container_width=True):
+                    _pm2_clear_cache()
+                    _ir_a("Mis Rutinas")
+                    st.rerun(scope="app")
+
+
+# Con Streamlit reciente la consulta se repite automáticamente. En versiones
+# antiguas seguimos mostrando el indicador al renderizar la aplicación.
+_pm3_fragment = getattr(st, "fragment", None)
+if callable(_pm3_fragment):
+    _pm3_live_hub = _pm3_fragment(run_every="45s")(_pm3_live_hub_once)
+else:
+    _pm3_live_hub = _pm3_live_hub_once
+
+if st.session_state.get("usuario_login"):
+    _pm3_live_hub()
+
+st.markdown('''<style>
+.pm3-live-card{display:flex;gap:10px;align-items:flex-start;background:#fff;border:1px solid #f2d5db;
+  box-shadow:0 8px 26px rgba(45,30,50,.025);border-radius:14px;padding:12px 14px;margin:6px 0 8px}
+.pm3-live-dot{width:9px;height:9px;background:#d72d48;border-radius:100%;flex:none;margin:6px 0 0}
+.pm3-live-card strong{font-size:.87rem;display:block;color:#26344b;font-weight:850;line-height:1.4}
+.pm3-live-card span{font-size:.73rem;color:#8390a2;display:block;line-height:1.5;margin-top:3px}
+.st-key-pm3_live_hub{margin-bottom:12px!important}
+.st-key-pm3_live_hub [data-testid="stButton"] button{min-height:39px!important;border-radius:11px!important;
+  background:#fff!important;border:1px solid #e9bec8!important;color:#ba2941!important;font-size:.8rem!important}
+@media(max-width:780px){.pm3-live-card{padding:10px 12px}.pm3-live-card strong{font-size:.81rem}}
+</style>''', unsafe_allow_html=True)
 
 # Notificación de botellas: se abre una sola vez por inicio de sesión.
 # Debe invocarse en el cuerpo principal, nunca dentro de st.sidebar ni st.columns.
@@ -8407,6 +8577,7 @@ elif choice == "Mis Rutinas":
                     current_state = str(task.get("estado", "Pendiente"))
                     with st.container(border=True, key="pm2_worker_task_" + task_id):
                         st.markdown(_pm2_task_summary_html(task), unsafe_allow_html=True)
+                        _pm3_show_flash("worker", task_id)
                         _pm3_gallery(task_id, "worker")
                         if current_state in ("Pendiente", "En curso"):
                             if not st.session_state.get("ver_como"):
@@ -8417,18 +8588,30 @@ elif choice == "Mis Rutinas":
                                 if current_state == "Pendiente":
                                     if st.button("Comenzar actividad", key="pm2_start_task_" + task_id, use_container_width=True):
                                         ok, msg = _pm2_update_progress(task_id, "En curso", str(task.get("observacion", "")))
-                                        _pm2_notice(ok, msg)
                                         if ok:
+                                            _pm3_flash("worker", task_id, True, msg)
                                             st.rerun()
+                                        elif "actualizando" in msg.lower():
+                                            _pm3_flash("worker", task_id, False, msg)
+                                            _pm2_clear_cache()
+                                            st.rerun()
+                                        else:
+                                            st.error(msg)
                                 with st.form("pm2_complete_" + task_id):
                                     note = st.text_area("Comentario o novedad", value=str(task.get("observacion", "")), max_chars=800,
                                                         placeholder="Si encontraste alguna incidencia, escríbela aquí.", key="pm2_note_" + task_id)
                                     clicked = st.form_submit_button("Enviar para validación", type="primary", use_container_width=True)
                                 if clicked:
                                     ok, msg = _pm2_update_progress(task_id, "Por validar", note)
-                                    _pm2_notice(ok, msg)
                                     if ok:
+                                        _pm3_flash("worker", task_id, True, "Actividad enviada a supervisión. Te avisaremos aquí cuando sea revisada.")
                                         st.rerun()
+                                    elif "actualizando" in msg.lower():
+                                        _pm3_flash("worker", task_id, False, msg)
+                                        _pm2_clear_cache()
+                                        st.rerun()
+                                    else:
+                                        st.error(msg)
                         elif current_state == "Por validar":
                             st.info("Actividad enviada. Está esperando la revisión del supervisor.")
                         elif current_state == "Completada":
@@ -10797,6 +10980,7 @@ elif choice == "Centro de Alertas":
             "contratos": _svg("<rect x='4' y='5' width='16' height='15' rx='2'/><path d='M8 3v4M16 3v4M4 10h16'/>"),
             "tardanzas": _svg("<circle cx='12' cy='12' r='9'/><path d='M12 7v5l3 2'/>"),
             "solicitudes": _svg("<path d='M4 13l2-8h12l2 8v6H4z'/><path d='M4 13h5l1 2h4l1-2h5'/>"),
+            "rutinas": _svg("<rect x='4' y='4' width='16' height='17' rx='2'/><path d='M8 11l2 2 4-4M8 17h8'/>"),
             "permisos": _svg("<rect x='4' y='4' width='16' height='16' rx='3'/><path d='M12 8v8M8 12h8'/>"),
             "ok": _svg("<path d='M5 12l4 4 10-10'/>"),
             "boletas": _svg("<path d='M7 3h7l4 4v14H7z'/><path d='M14 3v4h4M9.5 13h5M9.5 17h5'/>"),
@@ -10822,10 +11006,26 @@ elif choice == "Centro de Alertas":
         _bhx = st.session_state.boletas_historial
         _obs_bol = _bhx[_bhx["estado"].astype(str) == "Observado"] if not _bhx.empty else _bhx
         g_bol = [_fila(r["nombre"], f"{r['mes']} {r['anio']} · “{_html.escape(str(r['observacion_colaborador'])[:90])}”", ui_chip("Observada", "warn")) for _, r in _obs_bol.iterrows()]
+        # Rutinas que requieren la intervención de administración, con origen Sheets.
+        _rut_df, _rut_err = _pm2_load()
+        _rut_pend = (_rut_df[_rut_df["estado"].astype(str) == "Por validar"].copy()
+                     if _rut_err is None and _rut_df is not None and not _rut_df.empty
+                     else pd.DataFrame())
+        _rut_filas = [
+            _fila(str(r.get("nombre", "Colaborador")),
+                  e_(str(r.get("titulo", "Actividad"))) + " · " + e_(str(r.get("fecha", ""))[:10]),
+                  ui_chip("Por validar", "warn"))
+            for _, r in _rut_pend.head(6).iterrows()
+        ]
+        if len(_rut_pend) > 6:
+            _rut_filas.append(f'<div class="tp-card-sub">Y {len(_rut_pend)-6} actividades adicionales.</div>')
+        if _rut_err:
+            st.warning("Las alertas de Rutinas no se pudieron actualizar desde Google Sheets.")
         grupos = [
             {"k": "contratos", "t": "Contratos por vencer", "s": "Próximos 15 días", "n": len(contratos_por_vencer), "tono": "bad" if any(d <= 5 for _, _, d in contratos_por_vencer) else "warn", "f": g_contr, "dest": "Gestión Colaboradores", "btn": "Ir a Colaboradores"},
             {"k": "tardanzas", "t": "Tardanzas recurrentes", "s": "3 o más en el mes actual", "n": len(tardanzas_recurrentes), "tono": "bad", "f": g_tard, "dest": "Historial de Asistencias", "btn": "Ver asistencias"},
             {"k": "solicitudes", "t": "Solicitudes pendientes", "s": "Esperan tu respuesta", "n": len(sol_pend_df), "tono": "warn", "f": g_sol, "dest": "Solicitudes y Permisos", "btn": "Revisar solicitudes"},
+            {"k": "rutinas", "t": "Rutinas por validar", "s": "Actividades enviadas por el equipo", "n": len(_rut_pend), "tono": "warn", "f": _rut_filas, "dest": "Rutinas Operativas", "btn": "Validar actividades"},
             {"k": "boletas", "t": "Boletas observadas", "s": "El colaborador pide una revisión", "n": len(_obs_bol), "tono": "warn", "f": g_bol, "dest": "Boletas de Pago", "btn": "Revisar boletas"},
             {"k": "permisos", "t": "Permisos de salud sin recuperar", "s": "Horas por recuperar", "n": len(perm_df), "tono": "warn", "f": g_perm, "dest": "Gestión de Vacaciones", "btn": "Ir a Vacaciones"},
             {"k": "cumples", "t": "Cumpleaños de la semana", "s": "Próximos 7 días", "n": len(cumples_prox), "tono": "info", "f": g_cum, "dest": None, "btn": ""},
@@ -10838,9 +11038,11 @@ elif choice == "Centro de Alertas":
             st.markdown(f'<div class="tp-banner {"bad" if any(g["tono"] == "bad" and g["n"] for g in grupos) else "warn"}"><div><b>Tienes {urgentes} alerta(s) que requieren atención</b><span class="s" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">{resumen}</span></div></div>', unsafe_allow_html=True)
         st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
 
-        for col_k, g in zip(st.columns(len(grupos)), grupos):
-            tono_k = g["tono"] if g["n"] else "ok"
-            col_k.markdown(f'<div class="tp-kpi al-{tono_k}"><div class="tp-kpi-lbl">{g["t"]}</div><div class="tp-kpi-val">{g["n"]}</div><div class="tp-kpi-sub">{"Requiere atención" if g["n"] and g["k"] != "cumples" else ("Para saludar" if g["n"] else "Sin novedades")}</div></div>', unsafe_allow_html=True)
+        # Cuatro KPI por fila para no comprimir el texto ni en escritorio ni en móvil.
+        for group_start in range(0, len(grupos), 4):
+            for col_k, g in zip(st.columns(min(4, len(grupos) - group_start)), grupos[group_start:group_start+4]):
+                tono_k = g["tono"] if g["n"] else "ok"
+                col_k.markdown(f'<div class="tp-kpi al-{tono_k}"><div class="tp-kpi-lbl">{g["t"]}</div><div class="tp-kpi-val">{g["n"]}</div><div class="tp-kpi-sub">{"Requiere atención" if g["n"] and g["k"] != "cumples" else ("Para saludar" if g["n"] else "Sin novedades")}</div></div>', unsafe_allow_html=True)
         st.markdown("<div style='height:18px'></div>", unsafe_allow_html=True)
 
         orden = {"bad": 0, "warn": 1, "info": 2}
@@ -11569,6 +11771,7 @@ elif choice == "Rutinas Operativas":
         t_monitor, t_create, t_library = st.tabs(["Seguimiento", "Asignar actividades", "Biblioteca e historial"])
 
         with t_monitor:
+            _pm3_show_flash("admin", "review")
             st.markdown('<div class="pm2-split-title">Control diario</div>', unsafe_allow_html=True)
             cf, cp, cs, cr = st.columns([1.1, 1.4, 1.05, .8], vertical_alignment="bottom", gap="small")
             with cf:
@@ -11641,9 +11844,15 @@ elif choice == "Rutinas Operativas":
                                         rejected = r_b.form_submit_button("Solicitar corrección", use_container_width=True)
                                     if approved or rejected:
                                         ok, msg = _pm3_review(task_id, approved, review_note)
-                                        _pm2_notice(ok, msg)
                                         if ok:
+                                            _pm3_flash("admin", "review", True, msg)
                                             st.rerun()
+                                        elif "actualizando" in msg.lower():
+                                            _pm3_flash("admin", "review", False, msg)
+                                            _pm2_clear_cache()
+                                            st.rerun()
+                                        else:
+                                            st.error(msg)
                                 if current not in ("Cancelada", "Completada", "Por validar"):
                                     with st.expander("Editar horario, ubicación o instrucciones", expanded=False):
                                         with st.form("pm2_edit_form_" + task_id):
