@@ -1993,10 +1993,33 @@ import copy
 
 @st.cache_resource
 def _cache_sheets():
-    """Caché compartida entre todas las sesiones: evita superar el límite de lecturas de Google Sheets."""
-    return {"lock": threading.Lock(), "ws": {}, "datos": {}, "stats": {"hit": 0, "miss": 0, "seg": 0.0}}
+    """Caché compartida y versionada; la invalidación en una sesión afecta a las demás.
 
-TTL_LECTURA_SEG = 90
+    Los datos son de uso interno: NUNCA se exponen sin comprobar el rol/DNI.
+    """
+    return {"lock": threading.Lock(), "ws": {}, "datos": {}, "revision": {},
+            "read_locks": {}, "stats": {"hit": 0, "miss": 0, "seg": 0.0}}
+
+# Operaciones del día: ventana corta. Documentos e históricos: ventana amplia.
+# La sesión solo recarga los conjuntos que utiliza; Sheets limita lecturas.
+TTL_LECTURA_SEG = 120
+_TTL_POR_HOJA = {
+    "Colaboradores": 90, "Asistencia": 45, "Solicitudes": 45,
+    "BotellasFiadas": 45, "Programacion": 75, "Horarios": 180,
+    "Descuadres": 90, "Incidencias": 90, "Vacaciones": 120,
+    "Boletas_Historial": 180, "Checklist": 180, "Auditoria": 180,
+    "Feriados": 3600,
+}
+
+
+def _ttl_hoja(nombre):
+    return _TTL_POR_HOJA.get(nombre, TTL_LECTURA_SEG)
+
+
+def _revision_hoja(nombre):
+    c = _cache_sheets()
+    with c["lock"]:
+        return c.setdefault("revision", {}).get(nombre, 0)
 _LEC = {"get_all_records", "get_all_values", "get_values", "col_values", "row_values", "get"}
 _ESC = {"append_row", "append_rows", "update", "update_cell", "update_cells", "batch_update", "clear", "delete_rows", "delete_row",
         "insert_row", "insert_rows", "resize", "format", "batch_clear", "add_rows", "sort"}
@@ -2020,37 +2043,50 @@ class _HojaProxy:
         with c["lock"]:
             for k in [k for k in c["datos"] if k[0] == self._n]:
                 c["datos"].pop(k, None)
+            c.setdefault("revision", {})[self._n] = c.setdefault("revision", {}).get(self._n, 0) + 1
 
     def _leer(self, attr, real, a, k):
         c = _cache_sheets()
         key = (self._n, attr, repr(a), repr(sorted(k.items())))
+        # Lecturas simultáneas idénticas se agrupan, no saturan la cuota Sheets.
         with c["lock"]:
-            hit = c["datos"].get(key)
-            if hit and time.time() - hit[0] < TTL_LECTURA_SEG:
-                c.setdefault("stats", {"hit": 0, "miss": 0, "seg": 0.0})["hit"] += 1
+            read_lock = c.setdefault("read_locks", {}).setdefault(key, threading.RLock())
+        with read_lock:
+            for _ronda in range(2):
+                with c["lock"]:
+                    hit = c["datos"].get(key)
+                    revision_inicio = c.setdefault("revision", {}).get(self._n, 0)
+                    if hit and time.time() - hit[0] < _ttl_hoja(self._n):
+                        c.setdefault("stats", {"hit": 0, "miss": 0, "seg": 0.0})["hit"] += 1
+                        _marcar_ok(self._n)
+                        return copy.deepcopy(hit[1])
+                _t_ini = time.perf_counter()
+                for intento in range(4):
+                    try:
+                        val = real(*a, **k)
+                        break
+                    except gspread.exceptions.APIError as e:
+                        if "429" in str(e) and intento < 3:
+                            time.sleep(2 * (intento + 1))
+                            continue
+                        _marcar_fallo(self._n)
+                        raise
+                    except Exception:
+                        _marcar_fallo(self._n)
+                        raise
+                with c["lock"]:
+                    # Otra sesión escribió mientras la API respondía; no guardar
+                    # una lectura anterior a esa escritura como si fuera reciente.
+                    if c.setdefault("revision", {}).get(self._n, 0) != revision_inicio:
+                        continue
+                    c["datos"][key] = (time.time(), copy.deepcopy(val))
+                    _st = c.setdefault("stats", {"hit": 0, "miss": 0, "seg": 0.0})
+                    _st["miss"] += 1
+                    _st["seg"] += time.perf_counter() - _t_ini
                 _marcar_ok(self._n)
-                return copy.deepcopy(hit[1])
-        _t_ini = time.perf_counter()
-        for intento in range(4):
-            try:
-                val = real(*a, **k)
-                break
-            except gspread.exceptions.APIError as e:
-                if "429" in str(e) and intento < 3:
-                    time.sleep(2 * (intento + 1))
-                    continue
-                _marcar_fallo(self._n)
-                raise
-            except Exception:
-                _marcar_fallo(self._n)
-                raise
-        with c["lock"]:
-            c["datos"][key] = (time.time(), copy.deepcopy(val))
-            _st = c.setdefault("stats", {"hit": 0, "miss": 0, "seg": 0.0})
-            _st["miss"] += 1
-            _st["seg"] += time.perf_counter() - _t_ini
-        _marcar_ok(self._n)
-        return val
+                return val
+        _marcar_fallo(self._n)
+        raise RuntimeError("La hoja cambió durante la lectura. Vuelve a intentarlo.")
 
     def __getattr__(self, attr):
         real = getattr(self._ws, attr)
@@ -3951,51 +3987,103 @@ def ui_kpi(etiqueta, valor, detalle=""):
     return f'<div class="tp-kpi"><div class="tp-kpi-lbl">{etiqueta}</div><div class="tp-kpi-val">{valor}</div>{sub}</div>'
 
 
-# --- PRECALENTAMIENTO EN PARALELO ---
-# Al abrir una sesión nueva, si la caché compartida no tiene las hojas, se leen todas a la vez
-# (en vez de una tras otra). Si algo falla, no pasa nada: el código de abajo las lee como siempre.
-_HOJAS_INICIO = ["Colaboradores", "Asistencia", "Descuadres", "Solicitudes", "Feriados", "Vacaciones", "Auditoria",
-                 "Checklist", "Boletas_Historial", "Horarios", "Programacion", "Incidencias", "BotellasFiadas"]
+# --- CARGA DE DATOS BAJO DEMANDA · PREMIUM MARKET 6.0 ---
+# Antes se leían 13 hojas en paralelo incluso ANTES del login. Ahora la portada
+# solo consulta Colaboradores, para conservar la identificación con nombre/foto.
+# Las demás hojas se consultan al autenticarse y al abrir sus vistas.
+# No se crean threads: se evitan ejecuciones que sobrevivan a la sesión.
+_PM_NUCLEO_AUTENTICADO = frozenset({
+    "asistencia", "solicitudes", "botellas_fiadas", "horarios", "programacion",
+})
+_PM_DATOS_POR_VISTA = {
+    "Dashboard General": {"descuadres"},
+    "Centro de Alertas": {"vacaciones", "boletas_historial"},
+    "Analítica (BI)": {"boletas_historial"},
+    "Gestión Colaboradores": set(),
+    "Onboarding / Offboarding": {"checklist"},
+    "Gestión de Vacaciones": {"vacaciones"},
+    "Programación de Turnos": set(),
+    "Boletas de Pago": {"descuadres", "vacaciones", "boletas_historial", "incidencias", "feriados"},
+    "Solicitudes y Permisos": set(),
+    "Historial de Descuadres": {"descuadres"},
+    "Incidencias y Daños": {"incidencias"},
+    "Botellas Fiadas": set(),
+    "Historial de Asistencias": set(),
+    "Auditoría y Configuración": {"auditoria"},
+    "Rutinas Operativas": {"checklist"},
+    "Marcar Asistencia": set(),
+    "Mis Rutinas": set(),
+    "Registrar Descuadre": {"descuadres"},
+    "Registrar Incidencia": {"incidencias"},
+    "Mi Ficha Técnica": set(),
+    "Mis Vacaciones": {"vacaciones"},
+    "Mis Boletas": {"boletas_historial"},
+    "Solicitar Permiso / Adelanto": set(),
+    "Mi Dashboard Mensual": {"descuadres"},
+}
+_PM_HOJA_DE_DATO = {
+    "empleados": "Colaboradores", "asistencia": "Asistencia",
+    "descuadres": "Descuadres", "solicitudes": "Solicitudes",
+    "feriados": "Feriados", "vacaciones": "Vacaciones",
+    "auditoria": "Auditoria", "checklist": "Checklist",
+    "boletas_historial": "Boletas_Historial", "horarios": "Horarios",
+    "programacion": "Programacion", "incidencias": "Incidencias",
+    "botellas_fiadas": "BotellasFiadas",
+}
 
-def _precalentar_hojas():
-    if not doc_sheets:
-        return
-    try:
-        from streamlit.runtime.scriptrunner import add_script_run_ctx, get_script_run_ctx
-        ctx = get_script_run_ctx()
-        c = _cache_sheets()
-        pendientes = []
-        for n in _HOJAS_INICIO:
-            key = (n, "get_all_records", repr(()), repr(sorted({}.items())))
-            with c["lock"]:
-                hit = c["datos"].get(key)
-            if not (hit and time.time() - hit[0] < TTL_LECTURA_SEG):
-                pendientes.append(n)
-        if len(pendientes) < 2:
-            return
-        def _leer_una(nombre):
-            try:
-                doc_sheets.worksheet(nombre).get_all_records()
-            except Exception:
-                pass
-        hilos = [threading.Thread(target=_leer_una, args=(n,), daemon=True) for n in pendientes]
-        for h in hilos:
-            add_script_run_ctx(h, ctx)
-            h.start()
-        for h in hilos:
-            h.join(timeout=30)
-    except Exception:
-        pass
 
-if "empleados" not in st.session_state:
-    _precalentar_hojas()
+def _pm_datos_requeridos():
+    if not st.session_state.get("usuario_login"):
+        return frozenset()  # El formulario de DNI necesita solo empleados.
+    nombre = str(st.session_state.get("usuario_login"))
+    emp = st.session_state.get("empleados")
+    is_admin = False
+    if isinstance(emp, pd.DataFrame) and {"nombre", "rol"} <= set(emp.columns):
+        found = emp[emp["nombre"].astype(str) == nombre]
+        is_admin = not found.empty and str(found.iloc[0].get("rol", "")).lower() == "admin"
+    preview = st.session_state.get("ver_como")
+    viewing_admin = is_admin and not preview
+    default_view = "Dashboard General" if viewing_admin else "Marcar Asistencia"
+    selected = st.session_state.get("nav_radio")
+    valid = ("Dashboard General", "Centro de Alertas", "Analítica (BI)",
+             "Gestión Colaboradores", "Onboarding / Offboarding", "Gestión de Vacaciones",
+             "Programación de Turnos", "Boletas de Pago", "Solicitudes y Permisos",
+             "Historial de Descuadres", "Incidencias y Daños", "Botellas Fiadas",
+             "Historial de Asistencias", "Auditoría y Configuración", "Rutinas Operativas") if viewing_admin else (
+             "Marcar Asistencia", "Mis Rutinas", "Registrar Descuadre", "Registrar Incidencia",
+             "Botellas Fiadas", "Mi Ficha Técnica", "Mis Vacaciones", "Mis Boletas",
+             "Solicitar Permiso / Adelanto", "Mi Dashboard Mensual")
+    if selected not in valid:
+        selected = default_view
+    return _PM_NUCLEO_AUTENTICADO | _PM_DATOS_POR_VISTA.get(selected, set())
+
+
+def _pm_necesita_datos(nombre):
+    if nombre != "empleados" and nombre not in _pm_datos_requeridos():
+        return False
+    if nombre not in st.session_state:
+        return True
+    hoja = _PM_HOJA_DE_DATO[nombre]
+    meta = st.session_state.get("_pm_datos_vigencia", {}).get(nombre)
+    if not meta:
+        return True  # Adaptación transparente para sesiones de la versión anterior.
+    fecha, rev = meta
+    return (time.time() - fecha >= _ttl_hoja(hoja) or rev != _revision_hoja(hoja))
+
+
+def _pm_datos_cargados(nombre):
+    hoja = _PM_HOJA_DE_DATO[nombre]
+    st.session_state.setdefault("_pm_datos_vigencia", {})[nombre] = (
+        time.time(), _revision_hoja(hoja)
+    )
 
 # --- INICIALIZACIÓN DE SESSION STATE ---
 if "usuario_login" not in st.session_state:
     st.session_state.usuario_login = None
 
-if "empleados" not in st.session_state:
+if _pm_necesita_datos("empleados"):
     st.session_state.empleados = obtener_colaboradores_gsheets()
+    _pm_datos_cargados("empleados")
 
 for col in ["fecha_inicio", "fecha_cese"]:
     if col not in st.session_state.empleados.columns:
@@ -4006,7 +4094,7 @@ if "en_planilla" not in st.session_state.empleados.columns:
 else:
     st.session_state.empleados["en_planilla"] = st.session_state.empleados["en_planilla"].replace("", "Sí").fillna("Sí")
 
-if "asistencia" not in st.session_state:
+if _pm_necesita_datos("asistencia"):
     if doc_sheets:
         try:
             data_asist = doc_sheets.worksheet("Asistencia").get_all_records()
@@ -4015,12 +4103,14 @@ if "asistencia" not in st.session_state:
             st.session_state.asistencia = pd.DataFrame(columns=["dni", "nombre", "tipo", "fecha_hora", "fecha", "observacion", "es_extra"])
     else:
         st.session_state.asistencia = pd.DataFrame(columns=["dni", "nombre", "tipo", "fecha_hora", "fecha", "observacion", "es_extra"])
+    _pm_datos_cargados("asistencia")
 
-for col in ["observacion", "es_extra"]:
-    if col not in st.session_state.asistencia.columns:
-        st.session_state.asistencia[col] = "NO" if col == "es_extra" else ""
+if "asistencia" in st.session_state:
+    for col in ["observacion", "es_extra"]:
+        if col not in st.session_state.asistencia.columns:
+            st.session_state.asistencia[col] = "NO" if col == "es_extra" else ""
 
-if "descuadres" not in st.session_state:
+if _pm_necesita_datos("descuadres"):
     if doc_sheets:
         try:
             data_desc = doc_sheets.worksheet("Descuadres").get_all_records()
@@ -4029,8 +4119,9 @@ if "descuadres" not in st.session_state:
             st.session_state.descuadres = pd.DataFrame(columns=["fecha", "dni", "nombre", "tipo", "monto", "observacion", "fecha_registro"])
     else:
         st.session_state.descuadres = pd.DataFrame(columns=["fecha", "dni", "nombre", "tipo", "monto", "observacion", "fecha_registro"])
+    _pm_datos_cargados("descuadres")
 
-if "solicitudes" not in st.session_state:
+if _pm_necesita_datos("solicitudes"):
     columnas_solicitudes = [
         "id_solicitud", "fecha_registro", "dni", "nombre", "tipo_solicitud",
         "fecha_permiso", "monto_adelanto", "motivo", "estado", "respuesta_admin",
@@ -4048,8 +4139,9 @@ if "solicitudes" not in st.session_state:
     for col_sol in columnas_solicitudes:
         if col_sol not in st.session_state.solicitudes.columns:
             st.session_state.solicitudes[col_sol] = ""
+    _pm_datos_cargados("solicitudes")
 
-if "feriados" not in st.session_state:
+if _pm_necesita_datos("feriados"):
     if doc_sheets:
         try:
             data_fer = doc_sheets.worksheet("Feriados").get_all_records()
@@ -4088,30 +4180,41 @@ if "feriados" not in st.session_state:
             {"fecha": "2026-12-09", "descripcion": "Batalla de Ayacucho"},
             {"fecha": "2026-12-25", "descripcion": "Navidad"}
         ])
+    _pm_datos_cargados("feriados")
 
 # --- NUEVO: ESTADO DE SESIÓN PARA EL MÓDULO DE VACACIONES ---
-if "vacaciones" not in st.session_state:
+if _pm_necesita_datos("vacaciones"):
     st.session_state.vacaciones = obtener_vacaciones_gsheets()
+    _pm_datos_cargados("vacaciones")
 
 # --- NUEVO: ESTADO DE SESIÓN PARA AUDITORÍA Y CONFIGURACIÓN ---
-if "auditoria" not in st.session_state:
+if _pm_necesita_datos("auditoria"):
     st.session_state.auditoria = obtener_auditoria_gsheets()
+    _pm_datos_cargados("auditoria")
 
-if "checklist" not in st.session_state:
+if _pm_necesita_datos("checklist"):
     st.session_state.checklist = obtener_checklist_gsheets()
+    _pm_datos_cargados("checklist")
 
-if "boletas_historial" not in st.session_state:
+if _pm_necesita_datos("boletas_historial"):
     st.session_state.boletas_historial = obtener_boletas_historial_gsheets()
-if "horarios" not in st.session_state:
+    _pm_datos_cargados("boletas_historial")
+
+if _pm_necesita_datos("horarios"):
     st.session_state.horarios = obtener_horarios_gsheets()
-if "programacion" not in st.session_state:
+    _pm_datos_cargados("horarios")
+
+if _pm_necesita_datos("programacion"):
     st.session_state.programacion = obtener_programacion_gsheets()
+    _pm_datos_cargados("programacion")
 
-if "incidencias" not in st.session_state:
+if _pm_necesita_datos("incidencias"):
     st.session_state.incidencias = obtener_incidencias_gsheets()
+    _pm_datos_cargados("incidencias")
 
-if "botellas_fiadas" not in st.session_state:
+if _pm_necesita_datos("botellas_fiadas"):
     st.session_state.botellas_fiadas = obtener_botellas_fiadas_gsheets()
+    _pm_datos_cargados("botellas_fiadas")
 
 if st.session_state.get("_hojas_fallidas"):
     for _k in ["empleados", "asistencia", "descuadres", "solicitudes", "feriados", "vacaciones", "auditoria", "checklist", "boletas_historial", "incidencias", "botellas_fiadas", "horarios", "programacion"]:
@@ -4165,6 +4268,7 @@ def _cambiar_preview():
     st.session_state["ver_como"] = nuevo
     for k in _DATOS_SESION:                         # descarta cualquier cambio en memoria y recarga desde Sheets
         st.session_state.pop(k, None)
+    st.session_state.pop("_pm_datos_vigencia", None)
     st.session_state["nav_radio"] = None
     st.session_state["gs_q"] = ""
 
@@ -6354,13 +6458,34 @@ def _pm2_fresh(ws):
     return df[_PM2_COLS].fillna("")
 
 
+@st.cache_resource(show_spinner=False)
+def _pm2_shared_snapshot():
+    """Una sola lectura de Rutinas para varios usuarios de la misma instancia."""
+    return {"lock": threading.RLock(), "data": None, "at": 0.0, "version": 0}
+
+
+_PM2_SNAPSHOT_TTL = 12  # Cambios entre instancias se detectan pronto, sin sondear en cada clic.
+
+
 def _pm2_load(force=False):
-    cache = st.session_state.get("_pm2_cache")
-    if not force and isinstance(cache, dict) and time.time() - cache.get("at", 0) < 35:
-        return cache["data"].copy(), None
+    shared = _pm2_shared_snapshot()
+    now = time.monotonic()
+    local = st.session_state.get("_pm2_cache")
+    # Mantener copia por sesión: nunca devolver el DataFrame mutable del caché común.
+    if (not force and isinstance(local, dict)
+            and local.get("version") == shared["version"]
+            and now - local.get("at", 0.0) < _PM2_SNAPSHOT_TTL):
+        return local["data"].copy(deep=True), None
     try:
-        df = _pm2_fresh(_pm2_ws(create=False))
-        st.session_state["_pm2_cache"] = {"data": df.copy(), "at": time.time()}
+        with shared["lock"]:
+            if force or shared["data"] is None or time.monotonic() - shared["at"] >= _PM2_SNAPSHOT_TTL:
+                df = _pm2_fresh(_pm2_ws(create=False))
+                shared["data"] = df.copy(deep=True)
+                shared["at"] = time.monotonic()
+            else:
+                df = shared["data"].copy(deep=True)
+            version = shared["version"]
+        st.session_state["_pm2_cache"] = {"data": df.copy(deep=True), "at": time.monotonic(), "version": version}
         return df, None
     except Exception as exc:
         print("Premium Market: lectura de rutinas:", type(exc).__name__)
@@ -6370,6 +6495,12 @@ def _pm2_load(force=False):
 
 def _pm2_clear_cache():
     st.session_state.pop("_pm2_cache", None)
+    # Las modificaciones confirmadas invalidan todas las sesiones de la instancia.
+    shared = _pm2_shared_snapshot()
+    with shared["lock"]:
+        shared["version"] += 1
+        shared["at"] = 0.0
+        shared["data"] = None
 
 
 def _pm2_is_admin():
@@ -6801,6 +6932,78 @@ def _pm3_evidence_setup_ui():
             st.warning(str(exc)[:230])
             st.caption("Secrets: [pm_evidencias] mode='shared_drive' o 'personal_oauth'; "
                        "drive_folder_id='ID_CARPETA'. Instala google-api-python-client, Pillow y pillow-heif.")
+
+# -----------------------------------------------------------------------------
+# PREMIUM MARKET · VINCULACIÓN DE TELEGRAM (solo admin real)
+# El envío de notificaciones corre por Apps Script, independiente de Streamlit.
+# Las únicas escrituras nuevas son en Telegram_Vinculos.
+# -----------------------------------------------------------------------------
+def _pmt_telegram_admin_ui():
+    if not _pm2_is_admin():
+        return
+    with st.expander("Notificaciones externas · Telegram", expanded=False):
+        st.caption("Los avisos se envían desde Google Apps Script, incluso si Premium Market está cerrado. "
+                   "El colaborador debe iniciar el bot y vincularse con un código de un solo uso.")
+        try:
+            if not doc_sheets:
+                st.warning("Google Sheets no está conectado.")
+                return
+            _ws = doc_sheets.worksheet("Telegram_Vinculos")
+            _ws_real = _ws._ws if isinstance(_ws, _HojaProxy) else _ws
+            _cols = ["dni", "nombre", "chat_id", "estado", "codigo_hash", "codigo_expira", "fecha_vinculacion", "telegram_usuario"]
+            _head = [str(x).strip() for x in _ws_real.row_values(1)]
+            if _head[:len(_cols)] != _cols:
+                st.error("La pestaña Telegram_Vinculos tiene un esquema distinto. No se modificó nada.")
+                return
+            _rows = _ws_real.get_all_records()
+        except gspread.exceptions.WorksheetNotFound:
+            st.info("Primero instala el script de Telegram en Google Sheets. "
+                    "Al ejecutar instalarTelegram() se creará Telegram_Vinculos.")
+            return
+        except Exception:
+            st.warning("No se pudo consultar la vinculación de Telegram. Comprueba Google Sheets.")
+            return
+        _people = _pm2_people()
+        if not _people:
+            st.info("No hay colaboradores activos disponibles para vincular.")
+            return
+        _on = [r for r in _rows if str(r.get("estado", "")).strip().upper() == "ACTIVO" and str(r.get("chat_id", "")).strip()]
+        st.caption(f"Cuentas vinculadas y activas: {len(_on)}. Los empleados pueden pausar o desvincular su bot en Telegram.")
+        _options = {p["nombre"] + " · " + p["dni"][-4:]: p for p in _people}
+        _sel = st.selectbox("Generar código para colaborador", list(_options), key="pmt_tg_emp")
+        if st.button("Crear código privado (30 minutos)", key="pmt_tg_make_code", use_container_width=True):
+            import secrets as _pmt_secrets
+            import hashlib as _pmt_hashlib
+            from datetime import timezone as _pmt_timezone
+            _record = _options[_sel]
+            _dni = _pm2_dni(_record["dni"])
+            _code = _pmt_secrets.token_hex(8).upper()
+            _digest = _pmt_hashlib.sha256(_code.encode("utf-8")).hexdigest()
+            _exp = (datetime.now(_pmt_timezone.utc) + timedelta(minutes=30)).isoformat(timespec="seconds")
+            try:
+                # Leer nuevamente antes de actualizar: no confiar en caché de sesión.
+                _fresh = _ws_real.get_all_records()
+                _match = next(((i + 2, r) for i, r in enumerate(_fresh)
+                               if _pm2_dni(r.get("dni")) == _dni), None)
+                _old = _match[1] if _match else {}
+                _values = [[_dni, _record["nombre"], str(_old.get("chat_id", "")),
+                            str(_old.get("estado", "PENDIENTE")), _digest, _exp,
+                            str(_old.get("fecha_vinculacion", "")), str(_old.get("telegram_usuario", ""))]]
+                if _match:
+                    _ws_real.update(range_name=f"A{_match[0]}:H{_match[0]}", values=_values, value_input_option="RAW")
+                else:
+                    _ws_real.append_row(_values[0], value_input_option="RAW")
+                st.session_state["pmt_tg_code"] = (_dni, _code, time.time())
+            except Exception:
+                st.error("No se confirmó el registro del código en Sheets. Inténtalo nuevamente.")
+        _latest = st.session_state.get("pmt_tg_code")
+        if _latest and _latest[0] == _pm2_dni(_options[_sel]["dni"]) and time.time() - _latest[2] < 30 * 60:
+            st.success("Código generado. Compártelo únicamente con el colaborador verificado, por un canal privado.")
+            st.code("/vincular " + _latest[1], language="text")
+            st.caption("Se muestra en esta sesión durante 30 minutos. Se guarda su hash en Sheets, no el código completo.")
+        st.caption("El trabajador abre el bot, pulsa Iniciar y envía el comando. "
+                   "Al quedar vinculado, Apps Script enviará únicamente sus propios avisos.")
+
 
 def _pm2_update_progress(task_id, new_state, note=""):
     """Transiciones limitadas por rol, con revisión supervisora posterior.
@@ -8041,7 +8244,7 @@ st.markdown('<style>@media(max-width:780px){'
 # No expone tareas de otro DNI a colaboradores ni relee fotografías en el sondeo.
 def _pm3_live_hub_once():
     is_admin = _pm2_is_admin()
-    df, err = _pm2_load(force=True)
+    df, err = _pm2_load()
     if err or df is None:
         return  # No interpretamos un fallo de Sheets como cero pendientes.
     if not is_admin:
@@ -12245,6 +12448,7 @@ elif choice == "Rutinas Operativas":
     with st.container(key="pm_v_rutinas_operativas"):
         _pm2_css()
         _pm3_evidence_setup_ui()
+        _pmt_telegram_admin_ui()
         t_monitor, t_create, t_library = st.tabs(["Seguimiento", "Asignar actividades", "Biblioteca e historial"])
 
         with t_monitor:
