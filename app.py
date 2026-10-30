@@ -3400,21 +3400,23 @@ div[role="dialog"]{border-radius:20px!important;}
 [data-testid="stExpander"] summary:hover{background:#F8FAFC;}
 ::placeholder{color:#9AA6BB!important;opacity:1!important;}
 /* --- Panel "Atención de hoy" (Dashboard) --- */
-.tp-focus{position:relative;overflow:hidden;border-radius:22px;padding:26px 28px;color:#fff;margin:0 0 16px;
-  background:radial-gradient(120% 150% at 100% 0%,rgba(236,50,55,.38),transparent 55%),linear-gradient(135deg,#0F172A,#1E293B);
-  box-shadow:var(--tp-sh-2);display:flex;gap:28px;align-items:center;justify-content:space-between;flex-wrap:wrap;}
-.tp-focus-k{font-size:.72rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#FDA4A8;}
-.tp-focus-h{font-size:1.7rem;font-weight:800;letter-spacing:-.02em;line-height:1.2;margin:6px 0 6px;color:#fff;}
-.tp-focus-s{font-size:.92rem;color:#CBD5E1;line-height:1.5;}
-.tp-focus-bar{margin-top:18px;max-width:430px;}
-.tp-focus-bar .t{display:flex;justify-content:space-between;font-size:.8rem;color:#CBD5E1;margin-bottom:7px;font-weight:600;}
-.tp-focus-bar .r{height:8px;border-radius:99px;background:rgba(255,255,255,.14);overflow:hidden;}
-.tp-focus-bar .r i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#34D399,#10B981);}
-.tp-focus-stats{display:grid;grid-template-columns:repeat(2,minmax(112px,1fr));gap:10px;}
-.tp-fs{padding:13px 16px;border-radius:16px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);}
-.tp-fs b{display:block;font-size:1.65rem;font-weight:800;line-height:1;color:#fff;font-variant-numeric:tabular-nums;}
-.tp-fs span{display:block;margin-top:5px;font-size:.78rem;color:#CBD5E1;font-weight:600;}
-.tp-fs.bad b{color:#FCA5A5;} .tp-fs.warn b{color:#FCD34D;} .tp-fs.ok b{color:#6EE7B7;}
+.tp-focus{display:flex;gap:24px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:0 0 16px;
+  padding:22px 26px;border-radius:20px;border:1px solid var(--tp-line);box-shadow:var(--tp-sh-1);}
+.tp-focus.ok{background:linear-gradient(120deg,#E3F6EC,#F4FBF7);border-color:#BFE8D2;}
+.tp-focus.warn{background:linear-gradient(120deg,#FEF3C7,#FFFBEB);border-color:#F8DE95;}
+.tp-focus.bad{background:linear-gradient(120deg,#FEE4E2,#FFF5F4);border-color:#F9C4C0;}
+.tp-focus-main{display:flex;gap:16px;align-items:center;min-width:0;flex:1 1 360px;}
+.tp-focus-k{font-size:.72rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--tp-mute);}
+.tp-focus-h{font-size:1.35rem;font-weight:700;letter-spacing:-.01em;line-height:1.25;margin:4px 0 4px;color:var(--tp-ink);}
+.tp-focus-s{font-size:.88rem;color:var(--tp-ink-2);line-height:1.5;}
+.tp-att{flex:0 0 auto;min-width:250px;padding:14px 18px;border-radius:16px;background:rgba(255,255,255,.78);border:1px solid rgba(15,23,42,.08);}
+.tp-att .l{font-size:.78rem;font-weight:700;color:var(--tp-mute);}
+.tp-att .v{display:flex;align-items:baseline;gap:8px;margin-top:2px;}
+.tp-att .v b{font-size:1.7rem;font-weight:800;color:var(--tp-ink);font-variant-numeric:tabular-nums;line-height:1.1;}
+.tp-att .v span{font-size:.8rem;color:var(--tp-mute);font-weight:600;}
+.tp-att .r{height:7px;border-radius:99px;background:#E5E9F0;overflow:hidden;margin-top:9px;}
+.tp-att .r i{display:block;height:100%;border-radius:99px;background:var(--tp-ok);}
+.tp-att.none .v span{font-size:.84rem;}
 .tp-tile{display:flex;gap:14px;align-items:flex-start;min-height:108px;padding:16px 18px;background:var(--tp-surface);
   border:1px solid var(--tp-line);border-radius:18px;box-shadow:var(--tp-sh-1);}
 .tp-tile.bad{border-left:4px solid var(--tp-bad);} .tp-tile.warn{border-left:4px solid #F59E0B;} .tp-tile.info{border-left:4px solid var(--tp-info);}
@@ -3425,7 +3427,7 @@ div[role="dialog"]{border-radius:20px!important;}
 .tp-tile .s{font-size:.8rem;color:var(--tp-mute);margin-top:3px;line-height:1.4;}
 .tp-okline{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:4px 0 6px;}
 .tp-okline>span.k{font-size:.8rem;font-weight:700;color:var(--tp-mute);margin-right:2px;}
-@media(max-width:650px){.tp-focus{padding:20px;}.tp-focus-h{font-size:1.4rem;}.tp-focus-stats{width:100%;}}
+@media(max-width:650px){.tp-focus{padding:18px;}.tp-focus-h{font-size:1.2rem;}.tp-att{width:100%;min-width:0;}}
 @media (prefers-reduced-motion:reduce){
   .stApp [data-stale="true"]{transition:none!important;}
   html{scroll-behavior:auto;}
@@ -3558,7 +3560,7 @@ def _tp_panel_atencion_hoy():
             {"k": "tarde", "n": len(tardes), "t": "Tardanzas de hoy", "tono": "warn", "dest": "Historial de Asistencias", "btn": "Ver asistencias",
              "s": f"{_nombres(tardes)}" if tardes else ""},
             {"k": "sol", "n": len(sol_p), "t": "Solicitudes pendientes", "tono": "bad" if sol_dias >= 3 else "warn", "dest": "Solicitudes y Permisos", "btn": "Revisar solicitudes",
-             "s": f"La más antigua espera hace {sol_dias} día(s)" if len(sol_p) else ""},
+             "s": ("Recibida hoy" if sol_dias == 0 else f"La más antigua espera hace {sol_dias} día{'s' if sol_dias != 1 else ''}") if len(sol_p) else ""},
             {"k": "bol", "n": len(bol_o), "t": "Boletas observadas", "tono": "warn", "dest": "Boletas de Pago", "btn": "Revisar boletas",
              "s": "El colaborador pide una revisión" if len(bol_o) else ""},
             {"k": "bot", "n": len(bf_p), "t": "Botellas por devolver", "tono": "warn", "dest": "Botellas Fiadas", "btn": "Ver botellas",
@@ -3572,28 +3574,28 @@ def _tp_panel_atencion_hoy():
         al_dia = [t["t"] for t in tiles if not t["n"]]
         urgentes = sum(t["n"] for t in activos_t)
 
-        # ---- Hero ----
+        # ---- Cabecera: estado del día + asistencia (lo único que no se repite abajo) ----
         hora = ahora.hour
         saludo = "Buenos días" if hora < 12 else ("Buenas tardes" if hora < 19 else "Buenas noches")
+        hay_rojo = any(t["tono"] == "bad" for t in activos_t)
+        tono_h = "ok" if urgentes == 0 else ("bad" if hay_rojo else "warn")
         if urgentes == 0:
             titulo, sub = f"{saludo}. Todo en orden", "No hay asuntos pendientes que requieran tu atención ahora mismo."
         else:
             titulo = f"{saludo}. {urgentes} asunto{'s' if urgentes != 1 else ''} requiere{'n' if urgentes != 1 else ''} tu atención"
             sub = "Lo más urgente aparece primero. Cada tarjeta te lleva directo al módulo correspondiente."
+        ico_h = _svg("<path d='M5 12l4 4 10-10'/>") if urgentes == 0 else _svg("<path d='M12 4l9 16H3z'/><path d='M12 10v4M12 17h.01'/>")
         if programados:
             pct = int(round(marcaron * 100 / programados))
-            barra = (f'<div class="tp-focus-bar"><div class="t"><span>Asistencia de hoy</span><span>{marcaron} de {programados} programados · {pct}%</span></div>'
-                     f'<div class="r"><i style="width:{pct}%"></i></div></div>')
+            att = (f'<div class="tp-att"><div class="l">Asistencia de hoy</div><div class="v"><b>{marcaron} / {programados}</b>'
+                   f'<span>programados ya marcaron</span></div><div class="r"><i style="width:{pct}%"></i></div></div>')
         else:
-            barra = '<div class="tp-focus-bar"><div class="t"><span>No hay turnos programados para hoy</span></div></div>'
-        stats = (f'<div class="tp-fs"><b>{programados}</b><span>Programados</span></div>'
-                 f'<div class="tp-fs ok"><b>{en_turno}</b><span>En turno ahora</span></div>'
-                 f'<div class="tp-fs {"bad" if sin_marcar else "ok"}"><b>{len(sin_marcar)}</b><span>Sin marcar</span></div>'
-                 f'<div class="tp-fs {"warn" if tardes else "ok"}"><b>{len(tardes)}</b><span>Tardanzas hoy</span></div>')
+            att = '<div class="tp-att none"><div class="l">Asistencia de hoy</div><div class="v"><span>No hay turnos programados</span></div></div>'
         st.markdown(
-            f'<div class="tp-focus"><div><div class="tp-focus-k">Atención de hoy · {_tp_fecha_larga(ahora)}</div>'
-            f'<div class="tp-focus-h">{e_(titulo)}</div><div class="tp-focus-s">{e_(sub)}</div>{barra}</div>'
-            f'<div class="tp-focus-stats">{stats}</div></div>', unsafe_allow_html=True)
+            f'<div class="tp-focus {tono_h}"><div class="tp-focus-main"><span class="tp-al-ico {tono_h}">{ico_h}</span>'
+            f'<div><div class="tp-focus-k">Atención de hoy · {_tp_fecha_larga(ahora)}</div>'
+            f'<div class="tp-focus-h">{e_(titulo)}</div><div class="tp-focus-s">{e_(sub)}</div></div></div>{att}</div>',
+            unsafe_allow_html=True)
 
         # ---- Tarjetas de acción (3 por fila) ----
         for i in range(0, len(activos_t), 3):
