@@ -3399,7 +3399,7 @@ div[role="dialog"]{border-radius:20px!important;}
 [data-testid="stExpander"] summary{transition:background-color .15s ease;}
 [data-testid="stExpander"] summary:hover{background:#F8FAFC;}
 ::placeholder{color:#9AA6BB!important;opacity:1!important;}
-/* --- Panel "Atención de hoy" (Dashboard) --- */
+/* --- Panel "Operación de hoy" (Dashboard) --- */
 .tp-focus{display:flex;gap:24px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:0 0 16px;
   padding:22px 26px;border-radius:20px;border:1px solid var(--tp-line);box-shadow:var(--tp-sh-1);}
 .tp-focus.ok{background:linear-gradient(120deg,#E3F6EC,#F4FBF7);border-color:#BFE8D2;}
@@ -3417,16 +3417,7 @@ div[role="dialog"]{border-radius:20px!important;}
 .tp-att .r{height:7px;border-radius:99px;background:#E5E9F0;overflow:hidden;margin-top:9px;}
 .tp-att .r i{display:block;height:100%;border-radius:99px;background:var(--tp-ok);}
 .tp-att.none .v span{font-size:.84rem;}
-.tp-tile{display:flex;gap:14px;align-items:flex-start;min-height:108px;padding:16px 18px;background:var(--tp-surface);
   border:1px solid var(--tp-line);border-radius:18px;box-shadow:var(--tp-sh-1);}
-.tp-tile.bad{border-left:4px solid var(--tp-bad);} .tp-tile.warn{border-left:4px solid #F59E0B;} .tp-tile.info{border-left:4px solid var(--tp-info);}
-.tp-tile .ic{flex:0 0 auto;width:42px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;}
-.tp-tile.bad .ic{background:var(--tp-bad-soft);color:var(--tp-bad);} .tp-tile.warn .ic{background:var(--tp-warn-soft);color:var(--tp-warn);} .tp-tile.info .ic{background:var(--tp-info-soft);color:var(--tp-info);}
-.tp-tile .n{font-size:1.85rem;font-weight:800;line-height:1;color:var(--tp-ink);font-variant-numeric:tabular-nums;}
-.tp-tile .l{font-size:.88rem;font-weight:700;color:var(--tp-ink);margin-top:5px;}
-.tp-tile .s{font-size:.8rem;color:var(--tp-mute);margin-top:3px;line-height:1.4;}
-.tp-okline{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:4px 0 6px;}
-.tp-okline>span.k{font-size:.8rem;font-weight:700;color:var(--tp-mute);margin-right:2px;}
 @media(max-width:650px){.tp-focus{padding:18px;}.tp-focus-h{font-size:1.2rem;}.tp-att{width:100%;min-width:0;}}
 @media (prefers-reduced-motion:reduce){
   .stApp [data-stale="true"]{transition:none!important;}
@@ -3466,8 +3457,9 @@ _TP_MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "ag
 def _tp_fecha_larga(dt):
     return f"{_TP_DIAS[dt.weekday()].capitalize()} {dt.day} de {_TP_MESES[dt.month - 1]}"
 
-def _tp_panel_atencion_hoy():
-    """Panel 'Atención de hoy' del Dashboard: qué requiere acción ahora. Solo lectura; los botones navegan al módulo."""
+def _tp_panel_operacion_hoy():
+    """Panel 'Operación de hoy' del Dashboard: asistencia en vivo (quién no marcó, quién llegó tarde).
+    Los pendientes administrativos (solicitudes, boletas, contratos...) viven en el Centro de Alertas."""
     try:
         e_ = _html.escape
         ahora = obtener_ahora_peru()
@@ -3476,9 +3468,9 @@ def _tp_panel_atencion_hoy():
         ahora_min = ahora.hour * 60 + ahora.minute
         ops = obtener_solo_colaboradores(fecha_eval=hoy_d)
 
-        # ---- Asistencia de hoy: en turno, tardanzas, programados que no marcaron ----
+        # ---- Asistencia de hoy ----
         asis = st.session_state.get("asistencia", pd.DataFrame())
-        dnis_ingreso, en_turno, tardes = [], 0, []
+        dnis_ingreso, tardes = [], []
         if isinstance(asis, pd.DataFrame) and not asis.empty:
             a_hoy = asis[asis["fecha"].astype(str) == hoy_iso].copy()
             if not a_hoy.empty:
@@ -3488,14 +3480,13 @@ def _tp_panel_atencion_hoy():
                 for nom, g in a_hoy.groupby("nombre"):
                     if nom not in ops:
                         continue
-                    if g.iloc[-1]["tipo"] == "INGRESO":
-                        en_turno += 1
                     ing = g[(g["tipo"] == "INGRESO") & (g["es_extra"].astype(str) != "SI")]
                     if not ing.empty:
-                        mins_t, es_t, _ = calcular_tardanza_ingreso(ing.iloc[0]["fecha_hora"])
+                        mins_t, es_t, turno_p = calcular_tardanza_ingreso(ing.iloc[0]["fecha_hora"])
                         if es_t:
-                            tardes.append((nom, mins_t))
+                            tardes.append((nom, mins_t, ing.iloc[0]["_dt"].strftime("%H:%M"), turno_p))
 
+        # ---- Programados de hoy que aún no marcan ----
         sin_marcar, programados, marcaron = [], 0, 0
         prog = st.session_state.get("programacion", pd.DataFrame())
         if isinstance(prog, pd.DataFrame) and not prog.empty and {"dni", "fecha", "turno", "nombre"} <= set(prog.columns):
@@ -3516,75 +3507,23 @@ def _tp_panel_atencion_hoy():
                 if retraso >= 15:          # 15 min de gracia antes de avisar
                     sin_marcar.append((nom, inf, retraso))
 
-        # ---- Pendientes administrativos ----
-        sol = st.session_state.get("solicitudes", pd.DataFrame())
-        sol_p = sol[sol["estado"] == "Pendiente"] if isinstance(sol, pd.DataFrame) and not sol.empty else pd.DataFrame()
-        sol_dias = 0
-        if not sol_p.empty:
-            f_min = pd.to_datetime(sol_p["fecha_registro"].astype(str).str[:10], errors="coerce").min()
-            sol_dias = max(0, (hoy_d - f_min.date()).days) if pd.notna(f_min) else 0
-
-        bol = st.session_state.get("boletas_historial", pd.DataFrame())
-        bol_o = bol[bol["estado"].astype(str) == "Observado"] if isinstance(bol, pd.DataFrame) and not bol.empty else pd.DataFrame()
-
-        bf = st.session_state.get("botellas_fiadas", pd.DataFrame())
-        bf_p = bf[~bf["estado"].fillna("").astype(str).str.strip().str.casefold().eq("devuelta")] if isinstance(bf, pd.DataFrame) and not bf.empty else pd.DataFrame()
-        bf_cant = int(pd.to_numeric(bf_p["cantidad_botellas"], errors="coerce").fillna(0).sum()) if not bf_p.empty else 0
-
-        emp = st.session_state.empleados
-        activos = emp[emp["estado"].astype(str).str.lower() == "activo"]
-        contratos = []
-        for _, r in activos.iterrows():
-            f_cese = _parsear_fecha_nac_cumple(r.get("fecha_cese", ""))
-            if f_cese and 0 <= (f_cese - hoy_d).days <= 15:
-                contratos.append((r["nombre"], (f_cese - hoy_d).days))
-        contratos.sort(key=lambda x: x[1])
-
-        vac = st.session_state.get("vacaciones", pd.DataFrame())
-        perm = vac[(vac["tipo"] == "Permiso de Salud (a recuperar)") & (vac["estado_recuperacion"] != "Recuperado")] if isinstance(vac, pd.DataFrame) and not vac.empty else pd.DataFrame()
-
+        # ---- Cabecera ----
         _svg = lambda d: f"<svg width='22' height='22' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'>{d}</svg>"
-        IC = {
-            "marcar": _svg("<circle cx='12' cy='8' r='4'/><path d='M4 21c0-4 4-6 8-6s8 2 8 6'/><path d='M17 4l3 3M20 4l-3 3'/>"),
-            "tarde": _svg("<circle cx='12' cy='12' r='9'/><path d='M12 7v5l3 2'/>"),
-            "sol": _svg("<path d='M4 13l2-8h12l2 8v6H4z'/><path d='M4 13h5l1 2h4l1-2h5'/>"),
-            "bol": _svg("<path d='M7 3h7l4 4v14H7z'/><path d='M14 3v4h4M9.5 13h5M9.5 17h5'/>"),
-            "bot": _svg("<path d='M10 2h4v4l2 3v11a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2V9l2-3z'/><path d='M8 13h8'/>"),
-            "con": _svg("<rect x='4' y='5' width='16' height='15' rx='2'/><path d='M8 3v4M16 3v4M4 10h16'/>"),
-            "per": _svg("<rect x='4' y='4' width='16' height='16' rx='3'/><path d='M12 8v8M8 12h8'/>"),
-        }
-        _nombres = lambda lst: ", ".join(str(x[0]).split()[0] for x in lst[:3]) + ("…" if len(lst) > 3 else "")
-        tiles = [
-            {"k": "marcar", "n": len(sin_marcar), "t": "Sin marcar ingreso", "tono": "bad", "dest": "Historial de Asistencias", "btn": "Ver asistencias",
-             "s": f"Debían entrar y no registran: {_nombres(sin_marcar)}" if sin_marcar else ""},
-            {"k": "tarde", "n": len(tardes), "t": "Tardanzas de hoy", "tono": "warn", "dest": "Historial de Asistencias", "btn": "Ver asistencias",
-             "s": f"{_nombres(tardes)}" if tardes else ""},
-            {"k": "sol", "n": len(sol_p), "t": "Solicitudes pendientes", "tono": "bad" if sol_dias >= 3 else "warn", "dest": "Solicitudes y Permisos", "btn": "Revisar solicitudes",
-             "s": ("Recibida hoy" if sol_dias == 0 else f"La más antigua espera hace {sol_dias} día{'s' if sol_dias != 1 else ''}") if len(sol_p) else ""},
-            {"k": "bol", "n": len(bol_o), "t": "Boletas observadas", "tono": "warn", "dest": "Boletas de Pago", "btn": "Revisar boletas",
-             "s": "El colaborador pide una revisión" if len(bol_o) else ""},
-            {"k": "bot", "n": len(bf_p), "t": "Botellas por devolver", "tono": "warn", "dest": "Botellas Fiadas", "btn": "Ver botellas",
-             "s": f"{bf_cant} botella(s) fuera del local" if len(bf_p) else ""},
-            {"k": "con", "n": len(contratos), "t": "Contratos por vencer", "tono": "bad" if any(d <= 5 for _, d in contratos) else "warn", "dest": "Gestión Colaboradores", "btn": "Ir a colaboradores",
-             "s": (f"{_nombres(contratos)} · el más cercano en {contratos[0][1]} día(s)") if contratos else ""},
-            {"k": "per", "n": len(perm), "t": "Permisos sin recuperar", "tono": "warn", "dest": "Gestión de Vacaciones", "btn": "Ir a vacaciones",
-             "s": "Horas de salud pendientes de recuperar" if len(perm) else ""},
-        ]
-        activos_t = sorted([t for t in tiles if t["n"]], key=lambda t: 0 if t["tono"] == "bad" else 1)
-        al_dia = [t["t"] for t in tiles if not t["n"]]
-        urgentes = sum(t["n"] for t in activos_t)
-
-        # ---- Cabecera: estado del día + asistencia (lo único que no se repite abajo) ----
         hora = ahora.hour
         saludo = "Buenos días" if hora < 12 else ("Buenas tardes" if hora < 19 else "Buenas noches")
-        hay_rojo = any(t["tono"] == "bad" for t in activos_t)
-        tono_h = "ok" if urgentes == 0 else ("bad" if hay_rojo else "warn")
-        if urgentes == 0:
-            titulo, sub = f"{saludo}. Todo en orden", "No hay asuntos pendientes que requieran tu atención ahora mismo."
+        partes = []
+        if sin_marcar:
+            partes.append(f"{len(sin_marcar)} persona{'s' if len(sin_marcar) != 1 else ''} sin marcar ingreso")
+        if tardes:
+            partes.append(f"{len(tardes)} tardanza{'s' if len(tardes) != 1 else ''}")
+        tono_h = "bad" if sin_marcar else ("warn" if tardes else "ok")
+        if partes:
+            titulo = f"{saludo}. Hoy hay " + " y ".join(partes)
+            sub = "El detalle está abajo. Los pendientes administrativos están en el Centro de Alertas."
         else:
-            titulo = f"{saludo}. {urgentes} asunto{'s' if urgentes != 1 else ''} requiere{'n' if urgentes != 1 else ''} tu atención"
-            sub = "Lo más urgente aparece primero. Cada tarjeta te lleva directo al módulo correspondiente."
-        ico_h = _svg("<path d='M5 12l4 4 10-10'/>") if urgentes == 0 else _svg("<path d='M12 4l9 16H3z'/><path d='M12 10v4M12 17h.01'/>")
+            titulo = f"{saludo}. La operación de hoy va en orden"
+            sub = "Todos los programados marcaron a tiempo." if programados else "No hay turnos programados para hoy."
+        ico_h = _svg("<path d='M5 12l4 4 10-10'/>") if tono_h == "ok" else _svg("<path d='M12 4l9 16H3z'/><path d='M12 10v4M12 17h.01'/>")
         if programados:
             pct = int(round(marcaron * 100 / programados))
             att = (f'<div class="tp-att"><div class="l">Asistencia de hoy</div><div class="v"><b>{marcaron} / {programados}</b>'
@@ -3593,35 +3532,27 @@ def _tp_panel_atencion_hoy():
             att = '<div class="tp-att none"><div class="l">Asistencia de hoy</div><div class="v"><span>No hay turnos programados</span></div></div>'
         st.markdown(
             f'<div class="tp-focus {tono_h}"><div class="tp-focus-main"><span class="tp-al-ico {tono_h}">{ico_h}</span>'
-            f'<div><div class="tp-focus-k">Atención de hoy · {_tp_fecha_larga(ahora)}</div>'
+            f'<div><div class="tp-focus-k">Operación de hoy · {_tp_fecha_larga(ahora)}</div>'
             f'<div class="tp-focus-h">{e_(titulo)}</div><div class="tp-focus-s">{e_(sub)}</div></div></div>{att}</div>',
             unsafe_allow_html=True)
 
-        # ---- Tarjetas de acción (3 por fila) ----
-        for i in range(0, len(activos_t), 3):
-            fila = activos_t[i:i + 3]
-            for col, t in zip(st.columns(3), fila):
-                col.markdown(
-                    f'<div class="tp-tile {t["tono"]}"><span class="ic">{IC[t["k"]]}</span><div><div class="n">{t["n"]}</div>'
-                    f'<div class="l">{t["t"]}</div><div class="s">{e_(t["s"])}</div></div></div>', unsafe_allow_html=True)
-                col.button(f'{t["btn"]}  →', key=f'foco_{t["k"]}', on_click=_gs_ir, args=(t["dest"],), use_container_width=True)
-
-        if al_dia:
-            st.markdown('<div class="tp-okline"><span class="k">Al día</span>' + "".join(ui_chip(x, "ok") for x in al_dia) + '</div>', unsafe_allow_html=True)
-
-        # ---- Detalle: quién no marcó ----
+        # ---- Detalle accionable ----
+        def _fila(nom, sub_txt, chip):
+            d_, f_ = ui_dni_foto(nom)
+            return (f'<div class="tp-row">{ui_avatar(nom, d_, f_, 42)}<div class="tp-row-main"><b>{e_(str(nom))}</b>'
+                    f'<span class="wrap">{sub_txt}</span></div><div class="tp-chips">{chip}</div></div>')
         if sin_marcar:
-            filas = ""
-            for nom, inf, retraso in sorted(sin_marcar, key=lambda x: -x[2])[:6]:
-                d_, f_ = ui_dni_foto(nom)
-                filas += (f'<div class="tp-row">{ui_avatar(nom, d_, f_, 42)}<div class="tp-row-main"><b>{e_(str(nom))}</b>'
-                          f'<span class="wrap">{e_(str(inf["nombre"]))} · debía ingresar a las {e_(str(inf["entrada"]))}</span></div>'
-                          f'<div class="tp-chips">{ui_chip(f"{retraso} min sin marcar", "bad")}</div></div>')
+            filas = "".join(_fila(n, f'{e_(str(i["nombre"]))} · debía ingresar a las {e_(str(i["entrada"]))}', ui_chip(f"{r} min sin marcar", "bad"))
+                            for n, i, r in sorted(sin_marcar, key=lambda x: -x[2])[:6])
             st.markdown('<div class="tp-card"><div class="tp-note-t">Sin marcar ingreso · requieren seguimiento ahora</div>' + filas + '</div>', unsafe_allow_html=True)
+        if tardes:
+            filas = "".join(_fila(n, f'Ingresó a las {h} · turno {e_(str(t))}', ui_chip(f"{m} min tarde", "warn"))
+                            for n, m, h, t in sorted(tardes, key=lambda x: -x[1])[:6])
+            st.markdown('<div class="tp-card"><div class="tp-note-t">Tardanzas de hoy</div>' + filas + '</div>', unsafe_allow_html=True)
         st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
     except Exception as _err:
         # El panel es un extra de lectura: si algo falla, el Dashboard sigue funcionando.
-        st.caption(f"No se pudo calcular el panel de atención ({type(_err).__name__}).")
+        st.caption(f"No se pudo calcular el panel de operación ({type(_err).__name__}).")
 
 # --- LOGIN EJECUTIVO ---
 # Si prefieres NO mostrar nombre/foto al escribir un DNI (antes de autenticar), pon False.
@@ -6016,7 +5947,7 @@ elif choice == "Dashboard General":
         </div>
     """, unsafe_allow_html=True)
 
-    _tp_panel_atencion_hoy()
+    _tp_panel_operacion_hoy()
 
     col_f1, col_f2 = st.columns([1.5, 1])
     with col_f1:
