@@ -8634,12 +8634,24 @@ def pm_render_dashboard_kpis():
         ("Solicitudes pendientes", pendientes, "Por revisar", "inbox", "solicitudes"),
         ("Fiados pendientes", fiados, "Sin devolución confirmada", "inventory_2", "fiados"),
     ]
+    # Los KPI no dependen de Material Symbols descargado: en móviles con conexión
+    # limitada los nombres de iconos (ej. inventory_2) antes podían desbordar.
+    _icon_paths = {
+        "groups": '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
+        "how_to_reg": '<circle cx="9" cy="7" r="4"/><path d="M2 21v-2a7 7 0 0 1 7-7h2M16 17l2 2 4-5"/>',
+        "inbox": '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 13h5l2 3h4l2-3h5"/>',
+        "inventory_2": '<rect x="3" y="3" width="18" height="5" rx="1"/><path d="M5 8v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"/>',
+    }
     cajas = []
     for titulo, valor, detalle, icono, tono in kpis:
+        _svg_kpi = ('<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" '
+                    'viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+                    'stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" '
+                    'aria-hidden="true">' + _icon_paths[icono] + '</svg>')
         cajas.append(
             '<div class="pm-exec-stat pm-exec-' + tono + '">'
             '<div class="pm-exec-stat-head"><span>' + esc(titulo) + '</span>'
-            '<span class="material-symbols-rounded" aria-hidden="true">' + icono + '</span></div>'
+            '<span class="material-symbols-rounded" aria-hidden="true">' + _svg_kpi + '</span></div>'
             '<div class="pm-exec-stat-number">' + str(valor) + '</div>'
             '<div class="pm-exec-stat-detail">' + esc(detalle) + '</div></div>'
         )
