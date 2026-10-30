@@ -70,6 +70,980 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+
+# ================= PREMIUM MARKET · DISEÑO ÚNICO =================
+PREMIUM_CSS = r"""<style>
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Material+Symbols+Rounded&display=swap');
+:root{
+  --pm-font: 'Plus Jakarta Sans',system-ui,-apple-system,sans-serif;
+  --pm4-border: #e5eaf0;
+  --pm4-dark: #8d1725;
+  --pm4-muted: #64748b;
+  --pm4-red: #dc2735;
+  --pm4-shadow: 0 14px 34px -22px rgba(20,31,50,.26);
+  --pm4-text: #172033;
+  --pm5-accent: #cf2635;
+  --pm5-line: #e6eaf0;
+  --pm5-shadow: 0 12px 30px -22px rgba(15,23,42,.28);
+  --pm5-sub: #64748b;
+  --pm5-text: #172033;
+  --pm6-accent: #ca2b40;
+  --pm6-accent-dark: #942037;
+  --pm6-ink: #172235;
+  --pm6-line: #e5eaf0;
+  --pm6-muted: #64748b;
+  --pm6-radius: 18px;
+  --pm6-shadow: 0 14px 35px -25px rgba(15,23,42,.28);
+  --pm6-soft: #f8fafc;
+  --pm6-surface: #fff;
+  --pm7-border: #e5eaf1;
+  --pm7-card: #fff;
+  --pm7-deep: #6e1424;
+  --pm7-ink: #172337;
+  --pm7-muted: #66758b;
+  --pm7-red: #be2638;
+  --pm7-shadow: 0 14px 34px -24px rgba(24,35,56,.25);
+  --pm7-soft: #f8fafc;
+  --pm7-text: #182338;
+  --pm8-brand: #ca2b40;
+  --pm8-brand-dark: #942037;
+  --pm8-focus: rgba(202,43,64,.20);
+  --pm8-ink: #172337;
+  --pm8-line: #e4eaf1;
+  --pm8-radius: 18px;
+  --pm8-sub: #627086;
+  --tp-bad: #c53045;
+  --tp-bad-soft: #FEE4E2;
+  --tp-bg: #f6f8fb;
+  --tp-info: #1D4ED8;
+  --tp-info-soft: #E0EAFF;
+  --tp-ink: #172337;
+  --tp-ink-2: #334155;
+  --tp-line: #e4eaf1;
+  --tp-mute: #627086;
+  --tp-ok: #13855d;
+  --tp-ok-soft: #E3F6EC;
+  --tp-r-lg: 24px;
+  --tp-r-md: 16px;
+  --tp-r-sm: 12px;
+  --tp-red: #ca2b40;
+  --tp-red-dk: #992036;
+  --tp-red-soft: #fff0f2;
+  --tp-sh-1: 0 12px 30px -22px rgba(15,23,42,.3);
+  --tp-sh-2: 0 20px 46px -24px rgba(15,23,42,.28);
+  --tp-surface: #ffffff;
+  --tp-up-green: #00a959;
+  --tp-up-ink: #182338;
+  --tp-up-red: #ec3237;
+  --tp-warn: #d18917;
+  --tp-warn-soft: #FEF3C7;
+}
+.info-label{color:#6B7280;font-size:0.7rem;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;}
+.btn-ingreso > button:hover{background-color:#008847!important;}
+.btn-salida > button:hover{background-color:#D02429!important;}
+.btn-logout > button{background-color:transparent!important;border:1px solid #374151!important;color:#9CA3AF!important;}
+.btn-logout > button:hover{background-color:#1F2937!important;color:#FFFFFF!important;}
+.cal-title{font-size:0.85rem;font-weight:600;color:#1f2937;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+.cal-table{width:100%;border-collapse:separate;border-spacing:3px;font-size:0.75rem;}
+.cal-table th{background-color:#f8fafc;color:#64748b;font-weight:600;padding:6px 2px;text-align:center;border-radius:4px;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.5px;}
+.cal-table td{height:36px;text-align:center;vertical-align:middle;border-radius:6px;font-weight:600;color:#334155;background-color:#ffffff;border:1px solid #f1f5f9;transition:all 0.15s ease;}
+.cal-day-num{font-size:0.82rem;line-height:1;}
+.cal-sub{font-size:0.6rem;font-weight:500;margin-top:2px;display:block;opacity:0.9;}
+.bg-asistio{background-color:#dcfce7!important;color:#15803d!important;border:1px solid #bbf7d0!important;}
+.bg-falta{background-color:#fee2e2!important;color:#b91c1c!important;border:1px solid #fca5a5!important;}
+.bg-permiso{background-color:#ede9fe!important;color:#6d28d9!important;border:1px solid #c4b5fd!important;}
+.bg-permiso-pendiente{background-color:#fef3c7!important;color:#92400e!important;border:1px solid #fcd34d!important;}
+.bg-recuperacion{background-color:#cffafe!important;color:#0e7490!important;border:1px solid #67e8f9!important;}
+.bg-extra{background-color:#fef9c3!important;color:#a16207!important;border:1px solid #fef08a!important;}
+.bg-descanso{background-color:#f3f4f6!important;color:#6b7280!important;border:1px solid #e5e7eb!important;}
+.bg-inicio{background-color:#e0f2fe!important;color:#0369a1!important;border:1px solid #bae6fd!important;}
+.bg-cese{background-color:#f3e8ff!important;color:#6b21a8!important;border:1px solid #e9d5ff!important;}
+.bg-vacio{background-color:transparent!important;border:none!important;}
+.bg-futuro{background-color:#ffffff!important;color:#94a3b8!important;border:1px dashed #e2e8f0!important;}
+.bg-permiso-salud{background-color:#fce7f3!important;color:#be185d!important;border:1px solid #f9a8d4!important;}
+.bg-recuperacion-salud{background-color:#e0e7ff!important;color:#4338ca!important;border:1px solid #c7d2fe!important;}
+.bg-domingo-voluntario{background-color:#ccfbf1!important;color:#0f766e!important;border:1px solid #5eead4!important;}
+.app-footer strong{color:#111827;}
+.boleta-header-title{text-align:center;font-size:1.2rem;font-weight:800;letter-spacing:1px;border-bottom:2px solid #111827;padding-bottom:8px;margin-bottom:15px;}
+.boleta-table{width:100%;border-collapse:collapse;margin-bottom:12px;font-size:0.82rem;}
+.boleta-table td{border:1px solid #000;padding:6px 8px;text-align:left;}
+.boleta-table th{border:1px solid #000;padding:6px 8px;text-align:left;background-color:#f3f4f6;font-weight:700;}
+.info-value{color:#111827;font-size:1.4rem;font-weight:700;margin-top:4px;font-variant-numeric:tabular-nums;}
+.btn-salida>button{min-height:64px!important;font-size:1.05rem!important;border-radius:var(--tp-r-md)!important;}
+.btn-ingreso>button{min-height:64px!important;font-size:1.05rem!important;border-radius:var(--tp-r-md)!important;background:var(--tp-ok)!important;}
+.btn-ingreso>button:hover{background:#087548!important;}
+.tp-chip{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:.74rem;font-weight:650;line-height:1.5;}
+.tp-chip::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;}
+.tp-chip.ok{background:var(--tp-ok-soft);color:var(--tp-ok);}
+.tp-chip.warn{background:var(--tp-warn-soft);color:var(--tp-warn);}
+.tp-chip.bad{background:var(--tp-bad-soft);color:var(--tp-bad);}
+.tp-chip.info{background:var(--tp-info-soft);color:var(--tp-info);}
+.tp-chip.neutral{background:#EEF1F5;color:var(--tp-ink-2);}
+.app-footer{margin-top:40px;padding:22px 0;border-top:1px solid var(--tp-line);color:var(--tp-mute);font-size:.78rem;line-height:1.7;text-align:center;}
+@media (max-width:900px){
+.market-header{padding:18px 18px 16px;border-radius:var(--tp-r-md);margin-bottom:16px;}
+.market-header::before{left:18px;}
+.market-header h1{font-size:1.2rem!important;}
+}
+@media (max-width:640px){
+.btn-ingreso>button{min-height:70px!important;}
+.btn-salida>button{min-height:70px!important;}
+.tp-kpi{padding:14px 16px;}
+.cal-card{overflow-x:auto;-webkit-overflow-scrolling:touch;padding:14px!important;}
+.cal-table{min-width:540px;}
+.boleta-container{padding:16px!important;overflow-x:auto;}
+}
+.tp-user{display:flex;align-items:center;gap:12px;padding:12px;border-radius:14px;margin-bottom:18px;background:#F6F7FA;border:1px solid var(--tp-line);}
+.tp-user b{display:block;font-size:.84rem;line-height:1.25;color:var(--tp-ink)!important;}
+.tp-user span{font-size:.7rem;color:var(--tp-mute)!important;}
+[data-testid="stSidebar"] .tp-avatar{color:#fff!important;}
+.tp-avatar{flex:0 0 auto;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:var(--tp-red);color:#fff!important;font-weight:700;font-size:.85rem;letter-spacing:.02em;width:46px;height:46px;object-fit:cover;box-shadow:0 0 0 2px #fff,0 0 0 4px var(--tp-red);}
+.tp-brand{padding:2px 2px 16px;}
+.tp-brand-name{font-weight:800;font-size:1rem;letter-spacing:-.01em;}
+[data-testid="stSidebar"] .tp-brand-name span{color:var(--tp-red)!important;}
+.tp-brand-sub{font-size:.72rem;color:var(--tp-mute)!important;}
+.btn-logout>button{border-radius:12px!important;box-shadow:none!important;background:#fff!important;border:1px solid var(--tp-line)!important;}
+.btn-logout>button:hover{background:var(--tp-red-soft)!important;border-color:var(--tp-red)!important;}
+.tp-hero-top{display:flex;gap:14px;align-items:center;margin-bottom:16px;}
+.tp-hero-hi{font-weight:700;font-size:1.08rem;margin-bottom:5px;}
+.tp-prog-lbl{display:flex;justify-content:space-between;font-size:.76rem;color:var(--tp-mute);font-weight:600;margin-bottom:6px;}
+.tp-prog{height:8px;background:#EEF1F5;border-radius:999px;overflow:hidden;}
+.tp-prog i{display:block;height:100%;background:linear-gradient(90deg,var(--tp-red),#F26B6F);border-radius:999px;}
+.tp-row-main b{display:block;font-size:.9rem;}
+.tp-row-main span{display:block;font-size:.78rem;color:var(--tp-mute);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.tp-chips{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;}
+.st-key-tp_bottomnav{display:none;}
+@media (max-width:900px){
+.st-key-tp_bottomnav{display:block;position:fixed;left:0;right:0;bottom:0;z-index:999;background:rgba(255,255,255,.96);backdrop-filter:blur(10px);border-top:1px solid var(--tp-line);padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px));box-shadow:0 -8px 24px -12px rgba(15,23,42,.25);}
+.st-key-tp_bottomnav [data-testid="stHorizontalBlock"]{flex-wrap:nowrap!important;gap:4px!important;}
+.st-key-tp_bottomnav [data-testid="stColumn"]{min-width:0!important;flex:1 1 0!important;width:auto!important;}
+.st-key-tp_bottomnav [data-testid="column"]{min-width:0!important;flex:1 1 0!important;width:auto!important;}
+.st-key-tp_bottomnav button{background:transparent!important;color:var(--tp-mute)!important;box-shadow:none!important;border:none!important;min-height:56px!important;padding:4px 2px!important;border-radius:12px!important;}
+.st-key-tp_bottomnav button>div{display:flex;flex-direction:column;align-items:center;gap:2px;}
+.st-key-tp_bottomnav button p{font-size:.68rem!important;font-weight:650!important;margin:0;color:inherit!important;}
+.st-key-tp_bottomnav button[kind="primary"]{background:var(--tp-red-soft)!important;color:var(--tp-red-dk)!important;}
+.st-key-tp_bottomnav [data-testid="stBaseButton-primary"]{background:var(--tp-red-soft)!important;color:var(--tp-red-dk)!important;}
+.st-key-tp_bottomnav button:hover{transform:none!important;}
+.tp-row{padding:10px 12px;}
+}
+.tp-card-body{font-size:.86rem;color:var(--tp-ink-2);margin:10px 0 14px;line-height:1.55;}
+.tp-resp{background:#F6F7FA;border-left:3px solid var(--tp-red);border-radius:8px;padding:10px 12px;font-size:.82rem;margin-top:12px;color:var(--tp-ink-2);}
+.tp-tl{display:flex;}
+.tp-tl-step{flex:1;position:relative;text-align:center;font-size:.7rem;font-weight:600;color:var(--tp-mute);}
+.tp-tl-step::before{content:"";position:relative;z-index:1;display:block;width:14px;height:14px;margin:0 auto 6px;border-radius:50%;background:#fff;border:2px solid #CBD2DC;}
+.tp-tl-step::after{content:"";position:absolute;top:6px;left:-50%;width:100%;height:2px;background:#CBD2DC;}
+.tp-tl-step:first-child::after{display:none;}
+.tp-tl-step.done{color:var(--tp-ink-2);}
+.tp-tl-step.done::before{background:var(--tp-ok);border-color:var(--tp-ok);}
+.tp-tl-step.done::after{background:var(--tp-ok);}
+.tp-tl-step.now{color:var(--tp-warn);}
+.tp-tl-step.now::before{background:#F59E0B;border-color:#F59E0B;box-shadow:0 0 0 4px rgba(245,158,11,.2);}
+.tp-tl-step.now::after{background:var(--tp-ok);}
+.tp-tl-step.bad{color:var(--tp-bad);}
+.tp-tl-step.bad::before{background:var(--tp-bad);border-color:var(--tp-bad);}
+.tp-tl-step.bad::after{background:var(--tp-bad);}
+.tp-notif{display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--tp-warn-soft);border-radius:12px;padding:9px 12px;margin:-6px 0 14px;font-size:.78rem;font-weight:650;}
+[data-testid="stSidebar"] .tp-notif{color:var(--tp-warn)!important;}
+[data-testid="stSidebar"] .tp-notif *{color:var(--tp-warn)!important;}
+.st-key-vista_tarjetas{display:none;}
+@media (max-width:900px){
+.st-key-vista_tabla{display:none;}
+.st-key-vista_tarjetas{display:block;}
+}
+.tp-card.flat{border:none;box-shadow:none;padding:0;margin:0 0 8px;}
+[class*="st-key-ap_"] button{background:var(--tp-ok)!important;color:#fff!important;border:none!important;}
+[class*="st-key-ap_"] button:hover{background:#087548!important;}
+[class*="st-key-rec_"] button{background:#fff!important;border:1.5px solid var(--tp-red)!important;}
+[class*="st-key-rec_"] button *{color:var(--tp-red)!important;}
+[class*="st-key-rec_"] button:hover{background:var(--tp-red-soft)!important;}
+[class*="st-key-ap_"] button *{color:#fff!important;}
+.tp-op-head .tp-chip{margin-left:auto;}
+.tp-mgrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:14px;}
+.tp-m{background:#F6F7FA;border-radius:12px;padding:12px 14px;}
+.tp-m-l{font-size:.66rem;font-weight:700;color:var(--tp-mute);text-transform:uppercase;letter-spacing:.07em;}
+.tp-m-v{font-size:1.05rem;font-weight:700;margin-top:5px;color:var(--tp-ink);font-variant-numeric:tabular-nums;}
+.tp-m-v.pos{color:var(--tp-ok);}
+.tp-m .tp-prog{margin-top:9px;height:6px;}
+.tp-ngrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px;}
+.tp-note-t{font-size:.66rem;font-weight:700;color:var(--tp-mute);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;}
+.tp-note ul{margin:0;padding-left:16px;font-size:.84rem;color:var(--tp-ink-2);line-height:1.8;}
+.tp-note li.mute{color:var(--tp-mute);list-style:none;margin-left:-16px;}
+@media (max-width:900px){
+.tp-mgrid{grid-template-columns:repeat(2,minmax(0,1fr));}
+}
+.tp-id{background:var(--tp-surface);border:1px solid var(--tp-line);border-radius:20px;box-shadow:var(--tp-sh-1);overflow:hidden;margin-bottom:16px;}
+.tp-id-band{height:76px;background:linear-gradient(120deg,#0F172A 0%,#1E293B 58%,#EC3237 190%);}
+.tp-id.off .tp-id-band{background:linear-gradient(120deg,#475569,#94A3B8);}
+.tp-id-head{display:flex;gap:16px;align-items:flex-start;padding:0 20px;}
+.tp-id-photo{flex:0 0 auto;width:96px;height:96px;margin-top:-44px;border-radius:20px;object-fit:cover;object-position:center top;border:4px solid #fff;box-shadow:var(--tp-sh-2);background:#EEF1F5;}
+.tp-id-photo.ph{display:flex;align-items:center;justify-content:center;font-size:1.9rem;font-weight:700;color:#fff;background:var(--tp-red);}
+.tp-id.off .tp-id-photo{filter:grayscale(1);}
+.tp-id-who{padding-top:12px;min-width:0;}
+.tp-id-name{font-size:1.1rem;font-weight:700;color:var(--tp-ink);line-height:1.25;}
+.tp-id-role{font-size:.82rem;color:var(--tp-mute);margin-top:2px;}
+.tp-id-chips{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
+.tp-id-body{padding:18px 20px 20px;}
+.tp-id-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 18px;}
+.tp-f.wide{grid-column:1/-1;}
+.tp-f-l{font-size:.64rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--tp-mute);}
+.tp-f-v{font-size:.9rem;font-weight:600;color:var(--tp-ink);margin-top:3px;word-break:break-word;}
+.tp-f-v.bad{color:var(--tp-bad);}
+.tp-id-sos{margin-top:16px;background:#F6F7FA;border-radius:12px;padding:11px 14px;}
+a.tp-link{color:var(--tp-red);font-weight:700;text-decoration:none;}
+a.tp-link:hover{text-decoration:underline;}
+.tp-row-main span.wrap{white-space:normal;}
+@media (max-width:640px){
+.tp-id-grid{grid-template-columns:1fr;}
+.tp-id-photo{width:84px;height:84px;}
+}
+.tp-grid2{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;margin-bottom:8px;}
+.tp-grid2 .tp-card{margin-bottom:0;}
+.tp-saldo-n{font-size:2.1rem;font-weight:800;line-height:1.1;margin:14px 0 10px;color:var(--tp-ink);font-variant-numeric:tabular-nums;}
+.tp-saldo-n span{font-size:.88rem;font-weight:600;color:var(--tp-mute);margin-left:6px;}
+.tp-card.hero{padding:22px 24px;}
+.tp-card.hero .tp-saldo-n{font-size:2.8rem;}
+.tp-prog.ok i{background:var(--tp-ok);}
+.tp-prog.warn i{background:#F59E0B;}
+.tp-prog.bad i{background:var(--tp-bad);}
+[class*="st-key-recup_btn_"] button{background:var(--tp-ok)!important;border:none!important;}
+[class*="st-key-recup_btn_"] button *{color:#fff!important;}
+[class*="st-key-recup_btn_"] button:hover{background:#087548!important;}
+[class*="st-key-tpc_"]{background:var(--tp-surface);border:1px solid var(--tp-line);border-radius:16px;padding:16px 18px;box-shadow:var(--tp-sh-1);margin-bottom:12px;}
+.tp-cols{display:flex;align-items:flex-end;gap:10px;height:var(--h,220px);overflow-x:auto;padding-bottom:2px;}
+.tp-col{flex:1;min-width:46px;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;}
+.tp-bars{display:flex;align-items:flex-end;justify-content:center;gap:4px;width:100%;height:calc(100% - 24px);padding-top:22px;box-sizing:border-box;border-bottom:1px solid var(--tp-line);}
+.tp-bar{position:relative;flex:1;max-width:40px;border-radius:9px 9px 0 0;}
+.tp-bar em{position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-style:normal;font-size:.68rem;font-weight:700;color:var(--tp-ink-2);white-space:nowrap;}
+.tp-col>span{font-size:.7rem;color:var(--tp-mute);margin-top:7px;white-space:nowrap;}
+.tp-legs{display:flex;gap:16px;margin-top:12px;font-size:.76rem;color:var(--tp-ink-2);font-weight:600;}
+.tp-leg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;}
+.tp-hb{display:grid;grid-template-columns:minmax(80px,160px) 1fr auto;gap:12px;align-items:center;margin:11px 0;}
+.tp-hb-l{font-size:.84rem;font-weight:600;color:var(--tp-ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.tp-hb-t{height:10px;background:#EEF1F5;border-radius:999px;overflow:hidden;}
+.tp-hb-t i{display:block;height:100%;border-radius:999px;}
+.tp-hb-v{font-size:.82rem;font-weight:700;color:var(--tp-ink-2);font-variant-numeric:tabular-nums;}
+.tp-rk{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid #F0F2F6;}
+.tp-rk:last-child{border-bottom:none;}
+.tp-rk-main{flex:1;min-width:0;}
+.tp-rk-main b{font-size:.88rem;}
+.tp-rk-main .tp-prog{margin-top:7px;height:6px;}
+.tp-rk-pct{font-weight:800;min-width:58px;text-align:right;font-variant-numeric:tabular-nums;}
+@media (max-width:640px){
+.tp-hb{grid-template-columns:1fr auto;}
+.tp-hb-t{grid-column:1/-1;order:3;}
+.tp-rk .tp-chips{display:none;}
+}
+.tp-steps{margin:2px 0 14px;padding:0;list-style:none;counter-reset:paso;}
+.tp-steps li{counter-increment:paso;position:relative;padding:5px 0 5px 34px;font-size:.84rem;line-height:1.45;color:var(--tp-ink-2);}
+.tp-steps li::before{content:counter(paso);position:absolute;left:0;top:4px;width:23px;height:23px;border-radius:50%;background:var(--tp-red-soft);color:var(--tp-red-dk);font-weight:700;font-size:.74rem;display:flex;align-items:center;justify-content:center;}
+.tp-steps-t{font-size:.7rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--tp-mute);margin:8px 0 4px;display:flex;gap:8px;align-items:center;}
+.tp-kpi.al-bad{border-left:4px solid var(--tp-bad);}
+.tp-kpi.al-warn{border-left:4px solid #F59E0B;}
+.tp-kpi.al-info{border-left:4px solid var(--tp-info);}
+.tp-kpi.al-ok{border-left:4px solid var(--tp-ok);}
+.tp-banner{display:flex;align-items:center;gap:16px;border-radius:20px;padding:20px 24px;border:1px solid var(--tp-line);box-shadow:var(--tp-sh-1);}
+.tp-banner.ok{background:linear-gradient(120deg,#E3F6EC,#F4FBF7);border-color:#BFE8D2;}
+.tp-banner.warn{background:linear-gradient(120deg,#FEF3C7,#FFFBEB);border-color:#F8DE95;}
+.tp-banner.bad{background:linear-gradient(120deg,#FEE4E2,#FFF5F4);border-color:#F9C4C0;}
+.tp-banner b{font-size:1.1rem;color:var(--tp-ink);display:block;}
+.tp-banner span.s{font-size:.84rem;color:var(--tp-ink-2);}
+.tp-al-ico{flex:0 0 auto;width:42px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;}
+.tp-al-ico.bad{background:var(--tp-bad-soft);color:var(--tp-bad);}
+.tp-al-ico.warn{background:var(--tp-warn-soft);color:var(--tp-warn);}
+.tp-al-ico.info{background:var(--tp-info-soft);color:var(--tp-info);}
+.tp-al-ico.ok{background:var(--tp-ok-soft);color:var(--tp-ok);}
+.tp-bd{position:relative;overflow:hidden;border-radius:22px;border:1px solid var(--tp-line);background:#fff;}
+.tp-bd-top{position:relative;height:150px;background:linear-gradient(135deg,#EC3237 0%,#A3202A 55%,#0F172A 135%);}
+.tp-bd-conf{position:absolute;inset:0;overflow:hidden;}
+.tp-bd-top i{position:absolute;top:-16px;width:9px;height:15px;border-radius:2px;opacity:.95;animation:tpFall 3.4s linear infinite;}
+@keyframes tpFall{to{transform:translateY(200px) rotate(320deg);opacity:0;}}
+.tp-bd-photo{position:absolute;left:50%;top:94px;transform:translateX(-50%);z-index:2;}
+.tp-bd-photo .tp-avatar{box-shadow:0 0 0 5px #fff,0 18px 34px -12px rgba(15,23,42,.5);}
+.tp-bd-body{padding:68px 26px 22px;text-align:center;}
+.tp-bd-k{font-size:.7rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--tp-red);}
+.tp-bd-h{font-size:1.65rem;font-weight:800;color:var(--tp-ink);letter-spacing:-.02em;margin:6px 0 10px;line-height:1.2;}
+.tp-bd-msg{font-size:.92rem;line-height:1.65;color:var(--tp-ink-2);max-width:420px;margin:14px auto 0;}
+.tp-bd-big{font-size:1rem;font-weight:700;color:var(--tp-ink);margin:14px 0 0;}
+.tp-bd-sign{margin-top:16px;padding-top:14px;border-top:1px solid var(--tp-line);font-size:.8rem;color:var(--tp-mute);}
+.st-key-tipo_sol_radio{width:100%!important;}
+.st-key-tipo_sol_radio [data-testid="stRadio"]{width:100%;display:flex;flex-direction:column;align-items:center;}
+.st-key-tipo_sol_radio [role="radiogroup"]{gap:10px;flex-wrap:wrap;justify-content:center;width:100%;}
+.st-key-tipo_sol_radio [data-testid="stWidgetLabel"]{width:100%;justify-content:center;margin-bottom:6px;}
+.st-key-tipo_sol_radio [data-testid="stWidgetLabel"] p{font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--tp-mute);text-align:center;}
+.st-key-tipo_sol_radio [role="radiogroup"] label{border:1.5px solid var(--tp-line);background:#fff;border-radius:14px;padding:12px 18px;cursor:pointer;transition:all .12s ease;box-shadow:var(--tp-sh-1);}
+.st-key-tipo_sol_radio [role="radiogroup"] label>*:not(input):not([data-testid="stMarkdownContainer"]):not(:has([data-testid="stMarkdownContainer"])){display:none!important;}
+.st-key-tipo_sol_radio [role="radiogroup"] label p{font-weight:650;font-size:.9rem;color:var(--tp-ink-2);margin:0;}
+.st-key-tipo_sol_radio [role="radiogroup"] label:hover{border-color:#CBD2DC;}
+.st-key-tipo_sol_radio [role="radiogroup"] label:has(input:checked){border-color:var(--tp-red);background:var(--tp-red-soft);}
+.st-key-tipo_sol_radio [role="radiogroup"] label:has(input:checked) p{color:var(--tp-red-dk);}
+[class*="st-key-form_nuevo_"] button{background:linear-gradient(135deg,#EC3237,#C9262B)!important;border:none!important;box-shadow:0 14px 26px -12px rgba(236,50,55,.6);}
+[class*="st-key-form_domingo"] button{background:linear-gradient(135deg,#EC3237,#C9262B)!important;border:none!important;box-shadow:0 14px 26px -12px rgba(236,50,55,.6);}
+[class*="st-key-form_nuevo_"] button *{color:#fff!important;font-weight:700;}
+[class*="st-key-form_domingo"] button *{color:#fff!important;font-weight:700;}
+.tp-callout{display:flex;gap:12px;align-items:flex-start;border-radius:14px;padding:14px 16px;margin:6px 0 14px;font-size:.88rem;line-height:1.55;color:var(--tp-ink-2);border:1px solid var(--tp-line);}
+.tp-callout.info{background:var(--tp-info-soft);border-color:#C7D8FB;}
+.tp-callout.ok{background:var(--tp-ok-soft);border-color:#BFE8D2;}
+.tp-callout.warn{background:var(--tp-warn-soft);border-color:#F8DE95;}
+.tp-callout i{flex:0 0 auto;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-style:normal;font-weight:800;font-size:.8rem;background:#fff;}
+.tp-callout.info i{color:var(--tp-info);}
+.tp-callout.ok i{color:var(--tp-ok);}
+.tp-callout.warn i{color:var(--tp-warn);}
+[class*="st-key-seg_"]{width:100%!important;}
+[class*="st-key-seg_"] [data-testid="stRadio"]{width:100%;display:flex;flex-direction:column;align-items:center;}
+[class*="st-key-seg_"] [data-testid="stWidgetLabel"]{width:100%;justify-content:center;margin-bottom:6px;}
+[class*="st-key-seg_"] [data-testid="stWidgetLabel"] p{font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--tp-mute);text-align:center;}
+[class*="st-key-seg_"] [role="radiogroup"]{gap:10px;flex-wrap:wrap;justify-content:center;width:100%;}
+[class*="st-key-seg_"] [role="radiogroup"] label{border:1.5px solid var(--tp-line);background:#fff;border-radius:14px;padding:12px 18px;cursor:pointer;transition:all .12s ease;box-shadow:var(--tp-sh-1);}
+[class*="st-key-seg_"] [role="radiogroup"] label>*:not(input):not([data-testid="stMarkdownContainer"]):not(:has([data-testid="stMarkdownContainer"])){display:none!important;}
+[class*="st-key-seg_"] [role="radiogroup"] label p{font-weight:650;font-size:.9rem;color:var(--tp-ink-2);margin:0;}
+[class*="st-key-seg_"] [role="radiogroup"] label:hover{border-color:#CBD2DC;}
+[class*="st-key-seg_"] [role="radiogroup"] label:has(input:checked){border-color:var(--tp-red);background:var(--tp-red-soft);}
+[class*="st-key-seg_"] [role="radiogroup"] label:has(input:checked) p{color:var(--tp-red-dk);}
+[class*="st-key-bf_dev_"] button{background:var(--tp-ok)!important;border:none!important;}
+[class*="st-key-bf_dev_"] button *{color:#fff!important;font-weight:700;}
+[class*="st-key-bf_dev_"] button:hover{background:#087548!important;}
+.tp-gridk .tp-kpi{min-height:118px;}
+.tp-grp::before{content:"";width:10px;height:10px;border-radius:50%;background:currentColor;}
+.tp-grp.ok{color:var(--tp-ok);}
+.tp-grp.bad{color:var(--tp-bad);}
+.tp-grp.info{color:var(--tp-info);}
+[class*="st-key-inc_res_"] button{background:var(--tp-ok)!important;border:none!important;}
+[class*="st-key-inc_res_"] button *{color:#fff!important;font-weight:700;}
+@keyframes tpToastIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+@keyframes tpPgA{from{opacity:.5;transform:translateY(12px);}to{opacity:1;transform:none;}}
+@keyframes tpPgB{from{opacity:.5;transform:translateY(12px);}to{opacity:1;transform:none;}}
+.stApp:has(.tp-pg-a) .block-container{animation:tpPgA .45s cubic-bezier(.2,.7,.2,1);}
+.stApp:has(.tp-pg-b) .block-container{animation:tpPgB .45s cubic-bezier(.2,.7,.2,1);}
+[data-testid="stElementContainer"]:has(.tp-pg-a){display:none!important;}
+[data-testid="stElementContainer"]:has(.tp-pg-b){display:none!important;}
+.element-container:has(.tp-pg-a){display:none!important;}
+.element-container:has(.tp-pg-b){display:none!important;}
+.btn-ingreso > button{background-color:#00A959!important;background:#00A959!important;color:#fff!important;border-color:#00A959!important;}
+.btn-ingreso button{background:#00A959!important;color:#fff!important;border-color:#00A959!important;}
+.btn-salida > button{background-color:#EC3237!important;background:#EC3237!important;color:#fff!important;border-color:#EC3237!important;}
+.btn-salida button{background:#EC3237!important;color:#fff!important;border-color:#EC3237!important;}
+.st-key-tp_chat_fab button{border-radius:50%!important;background-color:#EC3237!important;}
+.st-key-tp_bottomnav button:not([kind="primary"]){background:transparent!important;border:none!important;box-shadow:none!important;}
+[data-testid="stSidebar"] a.tp-negosy{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;margin:6px 0 12px;text-decoration:none;background:linear-gradient(120deg,#EC3237 0%,#D52C32 100%)!important;border:1px solid #C9272D!important;border-radius:12px!important;box-shadow:0 4px 12px rgba(236,50,55,.18)!important;transition:transform .15s ease,box-shadow .15s ease!important;}
+[data-testid="stSidebar"] a.tp-negosy:hover{transform:translateY(-2px)!important;box-shadow:0 7px 17px rgba(236,50,55,.26)!important;}
+[data-testid="stSidebar"] a.tp-negosy .tp-negosy-t{display:block;font-weight:800;font-size:.95rem;letter-spacing:.01em;color:#FFFFFF!important;}
+[data-testid="stSidebar"] a.tp-negosy .tp-negosy-s{display:block;font-size:.7rem;margin-top:1px;color:#FFE5E6!important;}
+[data-testid="stSidebar"] a.tp-negosy svg{flex:0 0 auto;color:#FFFFFF!important;stroke:#FFFFFF!important;}
+.tp-cal-shell{background:#fff;border:1px solid #E1E6ED;border-radius:18px;padding:20px 20px 16px;box-shadow:0 3px 12px rgba(22,34,56,.04);margin:12px 0 18px;}
+.tp-cal-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;flex-wrap:wrap;}
+.tp-cal-head h3{font-size:1.15rem;color:#172238;font-weight:750;margin:0 0 4px;}
+.tp-cal-head p{color:#728099;font-size:.82rem;margin:0;}
+.tp-cal-week{background:#FFF0F0;color:#D92E33;padding:7px 12px;border-radius:20px;font-size:.78rem;font-weight:700;}
+.tp-cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;}
+.tp-cal-day{min-height:143px;border:1px solid #E5E9F0;border-radius:12px;background:#F8FAFC;overflow:hidden;min-width:0;}
+.tp-cal-date{display:flex;justify-content:space-between;align-items:center;padding:10px 10px 8px;border-bottom:1px solid rgba(0,0,0,.05);color:#64748B;font-size:.75rem;}
+.tp-cal-date strong{font-size:.76rem;color:#344256;}
+.tp-cal-body{padding:12px 10px;display:flex;flex-direction:column;gap:7px;overflow-wrap:anywhere;}
+.tp-cal-body b{font-size:.79rem;color:#263347;line-height:1.3;}
+.tp-cal-body span{font-size:.76rem;color:#516179;line-height:1.35;}
+.tp-cal-body small{font-size:.69rem;color:#64748B;}
+.tp-cal-day.trabajo{background:#F0F7FF;border-color:#D8E7FF;}
+.tp-cal-day.trabajo .tp-cal-body b{color:#1558A2;}
+.tp-cal-day.voluntario{background:#ECFAF3;border-color:#C5EBD6;}
+.tp-cal-day.voluntario .tp-cal-body b{color:#087B47;}
+.tp-cal-day.pendiente{background:#FFF8E7;border-color:#F4DE9E;}
+.tp-cal-day.pendiente .tp-cal-body b{color:#956300;}
+.tp-cal-day.ausencia{background:#FFF1F1;border-color:#FFDADA;}
+.tp-cal-day.hoy{outline:2px solid #EC3237;outline-offset:-2px;}
+.tp-cal-legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:15px;color:#66768C;font-size:.7rem;}
+.tp-cal-legend span:nth-child(1){color:#1558A2;}
+.tp-cal-legend span:nth-child(2){color:#087B47;}
+.tp-cal-legend span:nth-child(3){color:#956300;}
+@media (max-width:1050px){
+.tp-cal-grid{grid-template-columns:repeat(4,minmax(0,1fr));}
+}
+@media (max-width:650px){
+.tp-cal-shell{padding:14px;}
+.tp-cal-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+.tp-cal-day{min-height:125px;}
+}
+.st-key-tpc_login_form [data-testid="stButton"] button{background:#EC3237!important;border:1px solid #EC3237!important;color:#111827!important;opacity:1!important;box-shadow:none!important;}
+.st-key-login_btn button{background:#EC3237!important;border:1px solid #EC3237!important;color:#111827!important;opacity:1!important;box-shadow:none!important;}
+.st-key-login_btn button[kind="secondary"]{background:#EC3237!important;border:1px solid #EC3237!important;color:#111827!important;opacity:1!important;box-shadow:none!important;}
+.st-key-tpc_login_form [data-testid="stButton"] button *{color:#111827!important;opacity:1!important;}
+.st-key-login_btn button *{color:#111827!important;opacity:1!important;}
+.st-key-tpc_login_form [data-testid="stButton"] button:disabled{background:#EEF0F4!important;border:1px solid #D8DEE7!important;color:#253044!important;opacity:1!important;}
+.st-key-login_btn button:disabled{background:#EEF0F4!important;border:1px solid #D8DEE7!important;color:#253044!important;opacity:1!important;}
+.st-key-tpc_login_form [data-testid="stButton"] button:disabled *{color:#253044!important;opacity:1!important;}
+.st-key-login_btn button:disabled *{color:#253044!important;opacity:1!important;}
+.tp-shift-detail-wrap{display:block;width:100%;max-width:100%;overflow-x:auto;overflow-y:visible;background:#fff;border:1px solid #D9E0E9;border-radius:0!important;padding:0;box-shadow:none;box-sizing:border-box;}
+table.tp-shift-detail{display:table!important;width:100%!important;min-width:1000px!important;height:auto!important;max-height:none!important;overflow:visible!important;border-collapse:collapse!important;border-spacing:0!important;border-radius:0!important;table-layout:fixed;font-size:.76rem;line-height:1.4;background:#fff;}
+table.tp-shift-detail th{border:1px solid #DDE3EB!important;border-radius:0!important;box-shadow:none!important;vertical-align:middle;text-align:center;padding:11px 7px;white-space:normal;overflow-wrap:break-word;}
+table.tp-shift-detail thead th{background:#F3F6FA;color:#52647E;font-size:.72rem;font-weight:700;}
+table.tp-shift-detail th.n{width:235px;min-width:235px;text-align:left!important;padding:11px 12px!important;color:#172238;font-size:.78rem;font-weight:700;background:#F7F9FC;}
+table.tp-shift-detail td{border:1px solid #DDE3EB!important;border-radius:0!important;box-shadow:none!important;vertical-align:middle;text-align:center;padding:11px 7px;white-space:normal;overflow-wrap:break-word;width:108px;min-width:108px;}
+table.tp-shift-detail td:last-child{width:128px;min-width:128px;}
+table.tp-shift-detail td span{display:block;font-style:normal;color:#52647E;}
+table.tp-shift-detail td em{display:block;font-style:normal;color:#52647E;}
+table.tp-shift-detail td.trab{background:#EFF4FF;color:#172238;}
+table.tp-shift-detail td.trab b{display:block;color:#172238;}
+table.tp-shift-detail td.trab em{color:#2156D8;font-weight:650;}
+table.tp-shift-detail td.desc{background:#F5F7FA;color:#65748B;font-weight:600;}
+table.tp-shift-detail td.aus{background:#FFF5DF;color:#9B6700;font-weight:600;}
+table.tp-shift-detail td.vacio{background:#fff;color:#B7C1CE;}
+table.tp-shift-detail td.tot{background:#F7F9FC;font-weight:650;}
+table.tp-shift-detail td.cob{background:#FBFCFD;}
+table.tp-shift-detail td.cob span.cero{color:#C62828;font-weight:700;}
+@media screen and (max-width: 900px){
+.tp-up-calendar{max-width:100%!important;overflow-x:auto!important;-webkit-overflow-scrolling:touch;}
+.tp-up-calendar table{min-width:850px!important;}
+.tp-shift-detail-wrap{max-width:100%!important;overflow-x:auto!important;-webkit-overflow-scrolling:touch;}
+.tp-cal-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;}
+.tp-mgrid{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
+}
+@media screen and (max-width: 640px){
+.market-header{padding:16px!important;margin-bottom:12px!important;}
+.market-header h1{font-size:1.18rem!important;line-height:1.3!important;}
+.tp-kpi{max-width:100%;box-sizing:border-box;}
+.cal-card{max-width:100%;box-sizing:border-box;}
+.boleta-container{max-width:100%;box-sizing:border-box;}
+.tp-kpi-val{font-size:1.4rem!important;}
+.tp-cal-shell{padding:12px!important;margin:8px 0 12px!important;}
+.tp-cal-head{align-items:flex-start!important;gap:8px!important;}
+.tp-cal-head h3{font-size:1rem!important;}
+.tp-cal-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px!important;}
+.tp-cal-day{min-height:112px!important;border-radius:10px!important;}
+.tp-cal-date{padding:8px!important;}
+.tp-cal-body{padding:9px 8px!important;gap:5px!important;}
+.tp-cal-body b{font-size:.78rem!important;}
+.tp-cal-body span{font-size:.73rem!important;}
+.tp-cal-legend{gap:8px!important;}
+.tp-up-calendar{width:100%!important;overflow-x:auto!important;border-radius:10px!important;}
+.tp-up-calendar table{min-width:820px!important;}
+.tp-up-calendar th.tp-up-person{min-width:145px!important;width:145px!important;position:sticky;left:0;z-index:2;background:#fff;box-shadow:2px 0 5px rgba(0,0,0,.05);}
+.tp-up-calendar thead th:first-child{width:145px!important;position:sticky;left:0;box-shadow:2px 0 5px rgba(0,0,0,.05);background:#f8fafc;z-index:3;}
+.tp-shift-detail-wrap{width:100%!important;overflow-x:auto!important;border-radius:0!important;}
+table.tp-shift-detail{min-width:950px!important;border-radius:0!important;}
+.tp-mgrid{grid-template-columns:1fr!important;}
+.tp-id-grid{grid-template-columns:1fr!important;}
+.tp-hb{display:flex!important;flex-wrap:wrap!important;gap:8px!important;}
+.tp-hb-t{flex-basis:100%!important;}
+.tp-lg-hero{padding:16px!important;min-height:0!important;border-radius:16px!important;}
+.tp-lg-h{font-size:1.32rem!important;line-height:1.25!important;}
+.tp-lg-p{font-size:.88rem!important;line-height:1.5!important;}
+.tp-lg-quote{margin-top:12px!important;padding:12px!important;}
+.tp-lg-quote p{font-size:.86rem!important;}
+.tp-lg-who .tp-avatar{width:64px!important;height:64px!important;}
+.tp-lg-t{font-size:1.2rem!important;}
+.tp-lg-note{font-size:.71rem!important;line-height:1.4!important;}
+.st-key-tp_chat_fab{right:10px!important;top:60px!important;}
+.st-key-tp_chat_panel{right:8px!important;top:125px!important;width:calc(100vw - 16px)!important;max-height:65dvh!important;}
+}
+@media screen and (max-width:380px){
+.tp-cal-grid{grid-template-columns:1fr!important;}
+.tp-cal-day{min-height:0!important;}
+.tp-cal-body{gap:3px!important;}
+.tp-cal-legend{font-size:.65rem!important;}
+}
+@media (max-width: 767px){
+.btn-ingreso button{min-height:60px!important;font-size:1rem!important;}
+.btn-salida button{min-height:60px!important;font-size:1rem!important;}
+.tp-hero{max-width:100%!important;min-width:0!important;box-sizing:border-box!important;overflow-wrap:anywhere;}
+.tp-card{max-width:100%!important;min-width:0!important;box-sizing:border-box!important;overflow-wrap:anywhere;}
+.tp-kpi{max-width:100%!important;min-width:0!important;box-sizing:border-box!important;overflow-wrap:anywhere;}
+.market-header{max-width:100%!important;min-width:0!important;box-sizing:border-box!important;overflow-wrap:anywhere;}
+.tp-hero-top{flex-wrap:wrap;}
+.tp-hero-hi{overflow-wrap:anywhere;}
+.tp-kpi-val{overflow-wrap:anywhere;font-size:clamp(1.25rem,6vw,1.7rem)!important;}
+.tp-mgrid{grid-template-columns:minmax(0,1fr)!important;}
+.tp-gridk{grid-template-columns:minmax(0,1fr)!important;}
+.tp-id-grid{grid-template-columns:minmax(0,1fr)!important;}
+.tp-cal-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
+.tp-up-calendar{max-width:100%!important;overflow-x:auto!important;-webkit-overflow-scrolling:touch;}
+.tp-shift-detail-wrap{max-width:100%!important;overflow-x:auto!important;-webkit-overflow-scrolling:touch;}
+.cal-card{min-width:0!important;box-sizing:border-box!important;overflow-wrap:anywhere;max-width:100%!important;overflow-x:auto!important;-webkit-overflow-scrolling:touch;}
+.boleta-container{min-width:0!important;box-sizing:border-box!important;overflow-wrap:anywhere;max-width:100%!important;overflow-x:auto!important;-webkit-overflow-scrolling:touch;}
+.st-key-tp_chat_fab{right:12px!important;top:70px!important;}
+.st-key-tp_chat_panel{right:8px!important;top:135px!important;width:calc(100vw - 16px)!important;max-width:calc(100vw - 16px)!important;max-height:calc(100dvh - 150px)!important;overflow-y:auto!important;}
+}
+@media (max-width: 390px){
+.tp-cal-grid{grid-template-columns:minmax(0,1fr)!important;}
+.tp-cal-day{min-height:0!important;}
+}
+@media (orientation: landscape) and (max-height: 480px){
+.st-key-tp_chat_panel{top:65px!important;max-height:calc(100dvh - 75px)!important;}
+}
+.market-header::before{background:var(--tp-red);content:""!important;position:absolute!important;inset:0!important;width:auto!important;height:auto!important;left:0!important;top:0!important;border-radius:0!important;pointer-events:none;background-image:linear-gradient(rgba(255,255,255,.055) 1px,transparent 1px),
+   linear-gradient(90deg,rgba(255,255,255,.055) 1px,transparent 1px)!important;background-size:42px 42px!important;opacity:.7!important;}
+.market-header h1 *{position:relative;color:#fff!important;font-size:clamp(1.5rem,2.8vw,2.35rem)!important;font-weight:800!important;line-height:1.2!important;letter-spacing:-.04em!important;}
+.market-header p{margin:4px 0 0 0;position:relative;color:#ffe4e6!important;font-size:.97rem!important;font-weight:500!important;}
+.market-header p *{position:relative;color:#ffe4e6!important;font-size:.97rem!important;font-weight:500!important;}
+.info-card{background-color:#FFFFFF;padding:18px 20px;margin-bottom:15px;background:#fff!important;border:1px solid #e2e8f0!important;border-radius:22px!important;box-shadow:0 12px 30px -18px rgba(15,23,42,.17)!important;transition:transform .35s cubic-bezier(.16,1,.3,1),box-shadow .35s,border-color .35s;}
+.info-card:hover{transform:translateY(-3px);border-color:#f0b4b7!important;box-shadow:0 24px 42px -22px rgba(121,27,40,.23)!important;}
+@media (max-width:767px){
+.market-header{padding:24px 20px!important;border-radius:21px!important;margin:8px 0 18px!important;}
+.market-header h1{font-size:1.48rem!important;}
+.market-header h1 *{font-size:1.48rem!important;}
+.market-header p{font-size:.88rem!important;}
+.tp-card{border-radius:17px!important;}
+.tp-kpi{border-radius:17px!important;}
+.info-card{border-radius:17px!important;}
+}
+@media (prefers-reduced-motion:reduce){
+.info-card{transition:none!important;}
+}
+.tp-up-section{margin:22px 0 12px;}
+.tp-up-section h3{margin:4px 0 4px;font-size:1.22rem;font-weight:750;color:#182338;}
+.tp-up-section p{margin:0;color:#738096;font-size:.86rem;}
+.tp-up-eyebrow{font-size:.68rem;letter-spacing:.09em;font-weight:750;color:#8b96a8;}
+.tp-up-calendar thead th{background:#f8fafc;color:#64748b;font-size:.75rem;text-align:center;padding:14px 8px;}
+.tp-up-calendar thead th:first-child{width:205px;text-align:left;padding-left:16px;}
+.tp-up-calendar th.tp-up-person{width:205px;background:#fff;font-size:.77rem;text-align:left;color:#1e293b;padding:17px 12px;font-weight:700;}
+.tp-up-person small{display:block;color:#94a3b8;font-size:.68rem;margin-top:5px;font-weight:400;}
+.tp-up-shift b{display:block;font-size:.72rem;}
+.tp-up-shift span{display:block;font-size:.68rem;margin-top:3px;}
+.tp-up-shift small{display:block;font-size:.68rem;margin-top:3px;}
+.tp-up-shift.mor{background:#eef4ff;border-color:#2563eb;color:#1d4ed8;}
+.tp-up-shift.tar{background:#edfbff;border-color:#0891b2;color:#0e7490;}
+.tp-up-shift.vol{background:#ecfdf3;border-color:#00a959;color:#047857;}
+.tp-up-shift.adm{background:#f4f6f9;border-color:#94a3b8;color:#475569;min-height:0;margin-bottom:5px;}
+.tp-up-off{color:#9aa5b5;font-size:.73rem;padding:18px 3px;text-align:center;}
+.tp-up-empty{color:#cbd5e1;text-align:center;padding-top:20px;}
+.tp-pill{display:inline-flex;align-items:center;gap:7px;background:var(--tp-surface);border:1px solid var(--tp-line);border-radius:999px;padding:5px 12px;font-size:.74rem;font-weight:650;color:var(--tp-ink-2);box-shadow:var(--tp-sh-1);white-space:nowrap;}
+.tp-pill i{width:7px;height:7px;border-radius:50%;background:var(--tp-ok);display:inline-block;}
+.tp-focus.ok{background:linear-gradient(120deg,#E3F6EC,#F4FBF7);border-color:#BFE8D2;}
+.tp-focus.warn{background:linear-gradient(120deg,#FEF3C7,#FFFBEB);border-color:#F8DE95;}
+.tp-focus.bad{background:linear-gradient(120deg,#FEE4E2,#FFF5F4);border-color:#F9C4C0;}
+.tp-focus-main{display:flex;gap:16px;align-items:center;min-width:0;flex:1 1 360px;}
+.tp-focus-k{font-size:.72rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--tp-mute);}
+.tp-focus-h{font-size:1.35rem;font-weight:700;letter-spacing:-.01em;line-height:1.25;margin:4px 0 4px;color:var(--tp-ink);}
+.tp-focus-s{font-size:.88rem;color:var(--tp-ink-2);line-height:1.5;}
+.tp-att .l{font-size:.78rem;font-weight:700;color:var(--tp-mute);}
+.tp-att .v{display:flex;align-items:baseline;gap:8px;margin-top:2px;}
+.tp-att .v b{font-size:1.7rem;font-weight:800;color:var(--tp-ink);font-variant-numeric:tabular-nums;line-height:1.1;}
+.tp-att .v span{font-size:.8rem;color:var(--tp-mute);font-weight:600;}
+.tp-att .r{height:7px;border-radius:99px;background:#E5E9F0;overflow:hidden;margin-top:9px;}
+.tp-att .r i{display:block;height:100%;border-radius:99px;background:var(--tp-ok);}
+.tp-att.none .v span{font-size:.84rem;}
+section[data-testid="stSidebar"] div.st-key-tp_acc_bot button{background:#FEE2E2!important;border:1px solid #FECACA!important;}
+section[data-testid="stSidebar"] div.st-key-tp_acc_bot button *{color:#991B1B!important;font-weight:700!important;}
+section[data-testid="stSidebar"] div.st-key-tp_acc_sol button{background:#FEF3C7!important;border:1px solid #F8DE95!important;}
+section[data-testid="stSidebar"] div.st-key-tp_acc_sol button *{color:#92400E!important;font-weight:700!important;}
+.stApp:has(.tp-lg-hero){background:radial-gradient(1100px 560px at 8% -10%,#FDECEC 0%,transparent 60%),radial-gradient(900px 520px at 100% 110%,#E4EBF8 0%,transparent 58%),var(--tp-bg);}
+.stApp:has(.tp-lg-hero) .block-container{padding-top:1.6rem;max-width:1180px;}
+.tp-lg-hero{position:relative;overflow:hidden;border-radius:28px;padding:36px 38px;min-height:640px;color:#fff;display:flex;flex-direction:column;justify-content:space-between;background:linear-gradient(150deg,#0B1220 0%,#111C33 55%,#1B2A4A 100%);box-shadow:0 30px 60px -30px rgba(15,23,42,.6);}
+.tp-lg-hero::before{content:"";position:absolute;width:540px;height:540px;right:-190px;top:-170px;border-radius:50%;background:radial-gradient(circle,rgba(236,50,55,.55),rgba(236,50,55,0) 68%);}
+.tp-lg-hero::after{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px);background-size:44px 44px;-webkit-mask-image:linear-gradient(180deg,#000,transparent 88%);mask-image:linear-gradient(180deg,#000,transparent 88%);}
+.tp-lg-hero>*{position:relative;z-index:1;}
+.tp-lg-logo{display:inline-flex;background:#fff;border-radius:16px;padding:10px 18px;box-shadow:0 12px 30px -12px rgba(0,0,0,.6);}
+.tp-lg-k{font-size:.72rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#FF8A8E;margin:34px 0 10px;}
+.tp-lg-h{font-size:2.2rem;font-weight:800;line-height:1.14;letter-spacing:-.02em;margin:0 0 14px;color:#fff;}
+.tp-lg-h em{font-style:normal;color:#FF6B70;}
+.tp-lg-p{color:#B7C2D9;font-size:.98rem;line-height:1.65;max-width:440px;margin:0;}
+.tp-lg-feat{display:grid;gap:10px;margin-top:26px;max-width:460px;}
+.tp-lg-feat div{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:12px 14px;font-size:.87rem;font-weight:600;color:#E6ECF8;}
+.tp-lg-feat i{flex:0 0 auto;width:32px;height:32px;border-radius:10px;background:rgba(236,50,55,.2);color:#FF8A8E;display:flex;align-items:center;justify-content:center;}
+.tp-lg-quote{position:relative;margin-top:26px;padding:18px 20px 18px 24px;border-radius:16px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);}
+.tp-lg-quote::before{content:"";position:absolute;left:0;top:16px;bottom:16px;width:4px;border-radius:4px;background:#EC3237;}
+.tp-lg-quote small{display:block;font-size:.68rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#FF8A8E;margin-bottom:8px;}
+.tp-lg-quote p{margin:0;font-size:1.1rem;font-weight:600;line-height:1.5;color:#fff;}
+.tp-lg-spacer{height:64px;}
+.tp-lg-who{display:flex;flex-direction:column;align-items:center;text-align:center;margin-bottom:10px;animation:tpPop .4s ease;}
+.tp-lg-who .tp-avatar{box-shadow:0 0 0 3px #fff,0 0 0 6px var(--tp-red),0 14px 30px -10px rgba(236,50,55,.55);}
+.tp-lg-t{font-size:1.45rem;font-weight:800;color:var(--tp-ink);margin-top:16px;letter-spacing:-.01em;}
+.tp-lg-s{font-size:.86rem;color:var(--tp-mute);margin-top:4px;}
+.tp-lg-lock{width:58px;height:58px;border-radius:18px;background:var(--tp-red-soft);color:var(--tp-red);display:flex;align-items:center;justify-content:center;}
+@keyframes tpPop{from{opacity:0;transform:translateY(8px) scale(.97);}to{opacity:1;transform:none;}}
+.st-key-tpc_login_form{padding:32px 30px 26px!important;border-radius:26px!important;box-shadow:var(--tp-sh-2)!important;}
+.st-key-tpc_login_form [data-baseweb="input"]{min-height:50px;background:#F6F7FA!important;}
+.st-key-tpc_login_form .stButton>button *{color:#111827!important;font-weight:700;}
+.st-key-tpc_login_form .stButton>button{opacity:1!important;box-shadow:none!important;min-height:52px;border:none!important;background:linear-gradient(135deg,#EC3237,#C9262B)!important;color:#111827!important;}
+.tp-lg-note{display:flex;gap:8px;align-items:center;justify-content:center;font-size:.76rem;color:var(--tp-mute);margin-top:14px;}
+@media (max-width:900px){
+.tp-lg-hero{min-height:0;padding:22px;border-radius:22px;}
+.tp-lg-k{margin-top:20px;}
+.tp-lg-h{font-size:1.5rem;}
+.tp-lg-feat{display:none;}
+.tp-lg-spacer{display:none;}
+.tp-lg-quote{margin-top:16px;padding:14px 16px 14px 20px;}
+.tp-lg-quote p{font-size:.95rem;}
+}
+[data-testid="stSidebar"] .tp-brand{margin-bottom:12px!important;}
+.market-header::after{width:280px;height:280px;right:-65px;top:-125px;border-radius:50%;background:rgba(255,132,139,.19);filter:blur(30px);content:"";position:absolute;inset:0;pointer-events:none;opacity:.2;background-image:linear-gradient(rgba(255,255,255,.12) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.12) 1px,transparent 1px);background-size:44px 44px;}
+.market-header *{color:#fff!important;position:relative;z-index:1;}
+.tp-kpi:hover{border-color:#f0b4b7!important;transform:translateY(-2px);box-shadow:var(--tp-sh-2)!important;}
+.cal-card:hover{transform:translateY(-2px);box-shadow:var(--tp-sh-2)!important;}
+.tp-kpi-sub{font-size:.78rem;margin-top:2px;color:var(--tp-mute)!important;}
+section[data-testid="stSidebar"] .tp-brand{margin-bottom:14px!important;}
+@media (max-width:800px){
+.market-header{padding:26px 22px!important;border-radius:20px!important;}
+.tp-card{border-radius:16px!important;}
+.tp-kpi{border-radius:16px!important;}
+.tp-hero{border-radius:16px!important;}
+}
+.tp-up-section-compact h3{font-size:19px!important;margin:3px 0 4px!important;}
+.pm7-view{margin:0 0 23px;position:relative;}
+.pm7-topline{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 13px;}
+.pm7-breadcrumb{display:flex;align-items:center;gap:8px;font-size:.77rem;color:#64748b;font-weight:700;letter-spacing:.01em;}
+.pm7-breadcrumb strong{color:#a41e30;}
+.pm7-breadcrumb .pm7-chevron{color:#b7c0ce;}
+.pm7-category{border:1px solid #f0d2d8;background:#fff7f8;color:#9b2133;border-radius:999px;padding:6px 12px;font-size:.7rem;font-weight:800;letter-spacing:.065em;}
+.pm7-banner{position:relative;isolation:isolate;overflow:hidden;border-radius:25px;padding:33px 37px 32px;background:linear-gradient(112deg,#651426 0%,#a71f35 54%,#d33b4d 100%);box-shadow:0 24px 46px -29px rgba(94,19,37,.65);display:flex;align-items:center;justify-content:space-between;gap:22px;}
+.pm7-banner:before{content:"";position:absolute;inset:0;z-index:-1;background:radial-gradient(circle at 85% 20%,rgba(255,255,255,.16),transparent 33%),linear-gradient(90deg,transparent 0%,rgba(255,255,255,.045) 100%);}
+.pm7-kicker{font-size:.72rem;letter-spacing:.13em;font-weight:800;color:#ffced6;margin-bottom:9px;}
+.pm7-banner h1{font-size:clamp(1.7rem,2.6vw,2.4rem)!important;font-weight:800!important;line-height:1.16!important;letter-spacing:-.04em!important;color:white!important;margin:0 0 10px!important;}
+.pm7-banner p{font-size:.94rem;color:#ffe4e9!important;max-width:730px;margin:0!important;line-height:1.65;}
+.pm7-emblem{width:84px;height:84px;border-radius:24px;background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.22);display:flex;align-items:center;justify-content:center;flex:0 0 auto;backdrop-filter:blur(8px);}
+.pm7-emblem .material-symbols-rounded{font-family:"Material Symbols Rounded"!important;color:white;font-size:42px;font-feature-settings:"liga" 1;}
+.pm7-divider{display:flex;align-items:center;gap:12px;margin:22px 0 14px;}
+.pm7-divider .pm7-line{height:1px;background:var(--pm7-border);flex:1;}
+.pm7-divider .pm7-text{font-size:.72rem;color:#8a96a7;font-weight:800;letter-spacing:.1em;text-transform:uppercase;}
+@media (max-width:800px){
+.pm7-banner{padding:25px 24px;border-radius:19px;}
+.pm7-emblem{width:60px;height:60px;border-radius:17px;}
+.pm7-emblem .material-symbols-rounded{font-size:31px;}
+}
+@media (max-width:540px){
+.pm7-topline{margin-bottom:9px;}
+.pm7-banner{padding:23px 20px;}
+.pm7-banner h1{font-size:1.55rem!important;}
+.pm7-emblem{display:none;}
+.pm7-category{font-size:.65rem;}
+.pm7-breadcrumb{font-size:.7rem;}
+}
+.tp-card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;border-bottom:1px solid var(--pm5-line)!important;padding-bottom:12px!important;}
+.tp-row-main{flex:1;min-width:0;color:var(--pm5-text)!important;font-weight:750!important;}
+.tp-row{display:flex;align-items:center;gap:12px;background:var(--tp-surface);border:1px solid var(--tp-line);border-radius:14px;margin-bottom:8px;border-bottom:1px solid #f1f3f7!important;padding:11px 0!important;}
+.tp-row:last-child{border-bottom:0!important;}
+.tp-gridk{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));margin:6px 0 18px;gap:12px!important;}
+.tp-kpi-lbl{font-size:.82rem!important;font-weight:650!important;color:var(--pm5-sub)!important;}
+.legend-item{background:#F6F7FA;border-radius:999px;padding:5px 12px 5px 8px;display:inline-flex!important;align-items:center!important;gap:7px!important;font-size:.79rem!important;color:#475569!important;font-weight:650!important;}
+.legend-badge{display:inline-block;width:12px!important;height:12px!important;border-radius:4px!important;flex-shrink:0!important;}
+@media (max-width:780px){
+.tp-sec{align-items:flex-start;flex-direction:column;gap:3px;}
+.tp-gridk{gap:8px!important;}
+.legend-container{padding:11px!important;}
+}
+@media (prefers-reduced-motion:reduce){
+.tp-card{transition:none!important;transform:none!important;}
+.tp-kpi{transition:none!important;transform:none!important;}
+}
+.tp-hero{box-sizing:border-box;min-height:132px;background:var(--tp-surface);border:1px solid var(--tp-line);padding:18px 20px;border-color:var(--tp-line)!important;border-radius:24px!important;box-shadow:0 25px 55px -32px rgba(118,14,32,.55)!important;}
+.market-header{background-color:#FFFFFF;isolation:isolate;color:#fff!important;overflow:hidden!important;position:relative!important;margin-bottom:18px!important;background:#fff!important;border:1px solid var(--pm6-line)!important;border-left:4px solid var(--pm6-accent)!important;border-radius:18px!important;padding:22px 25px!important;box-shadow:var(--pm6-shadow)!important;margin:12px 0 20px!important;}
+.market-header h1{margin:0;margin-top:6px!important;position:relative;line-height:1.15!important;font-size:26px!important;color:var(--pm6-ink)!important;font-weight:800!important;letter-spacing:-.03em!important;}
+.market-header h2{font-size:clamp(1.6rem,2.6vw,2.5rem)!important;line-height:1.15!important;color:var(--pm6-ink)!important;font-weight:800!important;letter-spacing:-.03em!important;}
+.tp-grp{display:flex;align-items:center;gap:10px;margin:22px 0 10px;font-size:.78rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;overflow:hidden;background:var(--pm6-surface)!important;border:1px solid var(--pm6-line)!important;border-radius:var(--pm6-radius)!important;box-shadow:var(--pm6-shadow)!important;}
+.tp-att{flex:0 0 auto;min-width:250px;padding:14px 18px;border-color:var(--tp-line)!important;overflow:hidden;background:var(--pm6-surface)!important;border:1px solid var(--pm6-line)!important;border-radius:var(--pm6-radius)!important;box-shadow:var(--pm6-shadow)!important;}
+.cal-card{padding:14px;margin-bottom:20px;border-color:var(--tp-line)!important;transition:transform .22s ease,box-shadow .22s ease!important;overflow:hidden;background:var(--pm6-surface)!important;border:1px solid var(--pm6-line)!important;border-radius:var(--pm6-radius)!important;box-shadow:var(--pm6-shadow)!important;}
+.boleta-container{background-color:#ffffff;padding:24px;max-width:850px;margin:0 auto 20px auto;color:#111827;font-family:"Montserrat", sans-serif;border-color:var(--tp-line)!important;transition:transform .22s ease,box-shadow .22s ease!important;overflow:hidden;background:var(--pm6-surface)!important;border:1px solid var(--pm6-line)!important;border-radius:var(--pm6-radius)!important;box-shadow:var(--pm6-shadow)!important;}
+.login-card{border-color:var(--tp-line)!important;overflow:hidden;background:var(--pm6-surface)!important;border:1px solid var(--pm6-line)!important;border-radius:var(--pm6-radius)!important;box-shadow:var(--pm6-shadow)!important;}
+.tp-op-card{background:var(--pm6-surface)!important;border:1px solid var(--pm6-line)!important;border-radius:var(--pm6-radius)!important;box-shadow:var(--pm6-shadow)!important;}
+.tp-panel{background:var(--pm6-surface)!important;border:1px solid var(--pm6-line)!important;border-radius:var(--pm6-radius)!important;box-shadow:var(--pm6-shadow)!important;}
+.tp-card{padding:16px 18px;margin-bottom:12px;border-color:var(--tp-line)!important;overflow:hidden;background:var(--pm6-surface)!important;border:1px solid var(--pm6-line)!important;border-radius:var(--pm6-radius)!important;box-shadow:var(--pm6-shadow)!important;transition:box-shadow .2s ease,transform .2s ease!important;}
+.tp-kpi{min-height:128px;border-color:var(--tp-line)!important;padding:15px 18px!important;background:var(--pm6-surface)!important;border:1px solid var(--pm6-line)!important;border-radius:var(--pm6-radius)!important;box-shadow:var(--pm6-shadow)!important;transition:box-shadow .2s ease,transform .2s ease!important;}
+.tp-focus{display:flex;gap:24px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:0 0 16px;padding:22px 26px;border-color:var(--tp-line)!important;overflow:hidden;background:var(--pm6-surface)!important;border:1px solid var(--pm6-line)!important;border-radius:var(--pm6-radius)!important;box-shadow:var(--pm6-shadow)!important;transition:box-shadow .2s ease,transform .2s ease!important;}
+.tp-card:hover{border-color:#f0b4b7!important;transform:translateY(-2px);box-shadow:0 18px 38px -23px rgba(110,22,37,.24)!important;}
+.tp-focus:hover{box-shadow:0 18px 38px -23px rgba(110,22,37,.24)!important;}
+.tp-sec{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:0 0 11px;margin:22px 0 13px!important;padding-bottom:10px!important;border-bottom:1px solid var(--pm6-line)!important;}
+.tp-up-section-compact{margin:22px 0 13px!important;padding-bottom:10px!important;border-bottom:1px solid var(--pm6-line)!important;}
+.tp-sec-title{font-family:var(--pm-font)!important;font-size:1.14rem!important;font-weight:800!important;letter-spacing:-.02em!important;color:var(--pm6-ink)!important;}
+.tp-card-title{font-size:.95rem;font-weight:800!important;letter-spacing:-.02em!important;color:var(--pm6-ink)!important;}
+.tp-op-head{display:flex;align-items:center;gap:12px;margin-bottom:16px;border-bottom:1px solid var(--pm5-line)!important;padding-bottom:12px!important;font-weight:800!important;letter-spacing:-.02em!important;color:var(--pm6-ink)!important;}
+.tp-card-sub{font-size:.76rem;margin-top:2px;color:var(--pm6-muted)!important;}
+.tp-note{border:1px solid var(--tp-line);border-radius:12px;padding:12px 14px;color:var(--pm6-muted)!important;}
+.tp-row-time{font-weight:700;font-variant-numeric:tabular-nums;min-width:56px;color:var(--pm6-muted)!important;}
+.tp-sec-sub{font-size:.86rem!important;line-height:1.55!important;color:var(--pm6-muted)!important;}
+.tp-kpi-val{font-variant-numeric:tabular-nums;margin-top:2px;letter-spacing:-.045em!important;color:var(--pm5-text)!important;font-size:clamp(1.5rem,2.4vw,2.1rem)!important;font-weight:800!important;line-height:1.2!important;}
+.tp-up-calendar{width:100%;background:var(--pm6-surface)!important;border:1px solid var(--pm6-line)!important;border-radius:var(--pm6-radius)!important;box-shadow:var(--pm6-shadow)!important;overflow-x:auto!important;max-width:100%!important;}
+.tp-up-calendar table{width:100%;table-layout:fixed;min-width:780px!important;border-collapse:separate!important;border-spacing:0!important;}
+.tp-up-calendar td{border-right:1px solid #edf0f5;border-bottom:1px solid #edf0f5;vertical-align:top;height:88px;background:#fff;padding:9px!important;border-color:#edf1f5!important;}
+.tp-up-calendar th{border-right:1px solid #edf0f5;border-bottom:1px solid #edf0f5;vertical-align:top;padding:9px!important;border-color:#edf1f5!important;}
+.tp-up-shift{border-left:3px solid;line-height:1.45;padding:8px!important;border-radius:10px!important;min-height:66px!important;}
+.legend-container{margin-bottom:16px;box-shadow:var(--tp-sh-1);margin:14px 0!important;display:flex!important;flex-wrap:wrap!important;gap:9px!important;background:#fff!important;border:1px solid var(--pm6-line)!important;border-radius:14px!important;padding:13px 16px!important;}
+@media (max-width:900px){
+.tp-up-calendar table{min-width:700px!important;}
+}
+@media (max-width:620px){
+.market-header{padding:17px!important;}
+.tp-card{border-radius:15px!important;}
+.tp-kpi{border-radius:15px!important;}
+}
+[data-testid="stMain"] .tp-crumbbar{display:none!important;}
+[data-testid="stMain"] .pm7-view{margin-bottom:12px!important;}
+[data-testid="stMain"] .pm7-banner{border-radius:24px!important;}
+.pm8-context{display:flex;align-items:center;gap:13px;background:#fff;border:1px solid var(--pm8-line);border-radius:15px;padding:14px 18px;margin:0 0 24px;box-shadow:0 9px 26px -23px rgba(25,35,55,.32);}
+.pm8-context-mark{width:5px;min-width:5px;align-self:stretch;border-radius:10px;background:#b4233b;}
+.pm8-context-content{display:flex;flex-direction:column;gap:4px;min-width:0;}
+.pm8-context-title{font-size:.87rem;font-weight:800;color:var(--pm8-ink);line-height:1.35;}
+.pm8-context-description{font-size:.81rem;font-weight:500;color:var(--pm8-sub);line-height:1.5;}
+.pm8-context--finanzas .pm8-context-mark{background:#2563eb;}
+.pm8-context--personal .pm8-context-mark{background:#0f9868;}
+.pm8-context--control .pm8-context-mark{background:#d97706;}
+.pm8-context--analitica .pm8-context-mark{background:#7c3aed;}
+.pm8-context--operaciones .pm8-context-mark{background:#b4233b;}
+[data-testid="stMain"] .tp-sec-title{font-weight:800!important;letter-spacing:-.025em!important;}
+[data-testid="stMain"] .tp-up-calendar{overflow-x:auto!important;max-width:100%!important;scrollbar-width:thin;}
+[data-testid="stMain"] .tp-calendar{overflow-x:auto!important;max-width:100%!important;scrollbar-width:thin;}
+[data-testid="stMain"] .tp-table-wrap{overflow-x:auto!important;max-width:100%!important;scrollbar-width:thin;}
+[data-testid="stMain"] .legend-container{align-items:center!important;row-gap:9px!important;}
+@media (max-width:780px){
+.pm8-context{padding:12px 14px;margin-bottom:18px;}
+.pm7-banner{padding:25px 22px!important;}
+}
+@media (max-width:480px){
+.pm7-banner{padding:22px 18px!important;}
+.pm7-banner h1{font-size:1.45rem!important;}
+.pm8-context-description{font-size:.78rem;}
+}
+
+/* PREMIUM MARKET · UI 9.0 — HOJA ÚNICA DE DISEÑO
+   Las funciones que leen/escriben datos y sus validaciones se conservan.
+   Streamlit 1.40+; todos los widgets nativos mantienen navegación/teclado. */
+
+:root {
+  --pm-brand: #ca2b40;
+  --pm-brand-strong: #942037;
+  --pm-brand-soft: #fff0f2;
+  --pm-ink: #172337;
+  --pm-text: #334155;
+  --pm-muted: #627086;
+  --pm-bg: #f6f8fb;
+  --pm-line: #e4eaf1;
+  --pm-surface: #ffffff;
+  --pm-radius: 18px;
+  --pm-shadow: 0 12px 32px -23px rgba(15,23,42,.29);
+  --pm-shadow-hover: 0 22px 45px -25px rgba(15,23,42,.27);
+  --pm-font: 'Plus Jakarta Sans',system-ui,-apple-system,sans-serif;
+}
+html {scroll-behavior:smooth;}
+body,.stApp,[data-testid="stMarkdownContainer"],button,input,textarea,select,
+[data-testid="stWidgetLabel"]{font-family:var(--pm-font)!important;}
+/* CRÍTICO: no sobrescribir la fuente de iconos con la fuente de texto. */
+.material-icons,.material-symbols-outlined,.material-symbols-rounded,
+[data-testid="stIconMaterial"], [data-testid="stIconMaterial"] * {
+  font-family:'Material Symbols Rounded','Material Symbols Outlined','Material Icons'!important;
+  font-style:normal!important; font-weight:normal!important; font-feature-settings:'liga' 1!important;
+  letter-spacing:normal!important;white-space:nowrap!important;text-transform:none!important;
+}
+.stApp,[data-testid="stAppViewContainer"],section[data-testid="stMain"]{background:var(--pm-bg)!important;}
+[data-testid="stMain"] .block-container { max-width:1320px!important; padding:1.35rem 2.05rem 3.4rem!important; }
+[data-testid="stMain"] [data-testid="stVerticalBlock"] { row-gap:.76rem; }
+[data-testid="stMain"] .stMarkdown p{line-height:1.62;}
+[data-testid="stMain"] h1,[data-testid="stMain"] h2,[data-testid="stMain"] h3,
+[data-testid="stMain"] h4 { color:var(--pm-ink);letter-spacing:-.03em;font-weight:800; }
+[data-testid="stMain"] h2{font-size:1.38rem;}
+[data-testid="stMain"] h3{font-size:1.13rem;}
+/* La hoja central no debe añadir un espacio en blanco arriba. */
+[data-testid="stElementContainer"]:has(> [data-testid="stMarkdown"] style),
+[data-testid="stElementContainer"]:has(> .stMarkdown style){display:none!important;}
+/* Encabezado propio de cada uno de los 22 módulos. */
+.pm7-view { margin:0 0 12px; }
+.pm7-topline { display:flex;justify-content:space-between;align-items:center;gap:12px;margin:0 2px 11px;flex-wrap:wrap; }
+.pm7-breadcrumb{font-size:.79rem;color:var(--pm-muted);font-weight:650;}
+.pm7-breadcrumb strong{color:var(--pm-ink);font-weight:800;}
+.pm7-chevron{padding:0 10px;color:#9ca8b8;}
+.pm7-category {font-weight:800;font-size:.69rem;letter-spacing:.105em;text-transform:uppercase;color:#a52e41;background:#ffe9ed;border:1px solid #ffd4dc;border-radius:999px;padding:7px 11px;}
+.pm7-banner,.market-header { position:relative;isolation:isolate;overflow:hidden;border:0!important;
+  border-radius:25px!important;padding:35px 39px!important;margin:0 0 19px!important;
+  background:linear-gradient(117deg,#752337 0%,#a7243a 48%,#dc3b4e 100%)!important;
+  box-shadow:0 25px 55px -32px rgba(120,28,46,.65)!important;color:#fff!important; }
+.pm7-banner:before,.market-header:before {content:'';position:absolute;inset:0;pointer-events:none;opacity:.28;
+  background-image:linear-gradient(rgba(255,255,255,.12) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.12) 1px,transparent 1px);background-size:45px 45px;mask-image:linear-gradient(90deg,transparent,black);}
+.pm7-banner:after,.market-header:after { content:'';pointer-events:none;position:absolute;border-radius:50%;width:290px;height:290px;right:-90px;top:-130px;background:rgba(255,255,255,.12);filter:blur(25px); }
+.pm7-banner h1,.market-header h1 {position:relative!important;z-index:1!important;margin:7px 0 10px!important;color:#fff!important;
+  font-size:clamp(1.62rem,2.7vw,2.35rem)!important;font-weight:800!important;line-height:1.2!important;letter-spacing:-.045em!important;}
+.pm7-banner p,.market-header p{position:relative!important;z-index:1!important;color:#ffe6ea!important;line-height:1.58!important;font-size:.93rem!important;max-width:740px!important;margin:0!important;}
+.pm7-kicker {position:relative;z-index:1;color:#ffdee4!important;font-size:.69rem;font-weight:800;letter-spacing:.13em;}
+.pm7-emblem{position:absolute;right:33px;top:50%;transform:translateY(-50%);width:100px;height:100px;border:1px solid rgba(255,255,255,.24);border-radius:25px;background:rgba(255,255,255,.10);display:grid;place-items:center;pointer-events:none;}
+.pm7-emblem .material-symbols-rounded{font-size:53px!important;color:#fff!important;}
+.pm8-context {display:flex;gap:14px;align-items:stretch;border:1px solid var(--pm-line);background:#fff;border-radius:15px;padding:14px 18px;margin:0 0 23px;box-shadow:var(--pm-shadow);}
+.pm8-context-mark{width:5px;flex:0 0 5px;border-radius:10px;background:var(--pm-brand);}
+.pm8-context-content{display:flex;flex-direction:column;justify-content:center;gap:3px;min-width:0;}
+.pm8-context-title{font-size:.88rem;font-weight:800;color:var(--pm-ink);}
+.pm8-context-description{font-size:.81rem;font-weight:500;line-height:1.56;color:var(--pm-muted);}
+.pm8-context--finanzas .pm8-context-mark{background:#2b69b6;}
+.pm8-context--personal .pm8-context-mark{background:#16956d;}
+.pm8-context--control .pm8-context-mark{background:#d28b16;}
+.pm8-context--analitica .pm8-context-mark{background:#8352b7;}
+.pm7-divider { display:flex;align-items:center;gap:14px;margin:27px 0 15px; }
+.pm7-text {font-size:1.1rem;letter-spacing:-.025em;font-weight:800;color:var(--pm-ink);}
+.pm7-line {height:1px;flex:1;background:var(--pm-line);}
+/* Tarjetas y métricas personalizadas */
+.tp-card,.tp-kpi,.tp-focus,.tp-att,.tp-op-card,.cal-card,.info-card,.boleta-container,.login-card,
+[data-testid="stMain"] [data-testid="stMetric"] {
+  background:#fff!important;border:1px solid var(--pm-line)!important;border-radius:18px!important;
+  box-shadow:var(--pm-shadow)!important;min-width:0;
+}
+.tp-card,.tp-kpi,.tp-focus,.tp-att,.info-card,.cal-card {
+  transition:box-shadow .2s ease,transform .2s ease,border-color .2s ease;
+}
+.tp-card:hover,.tp-kpi:hover,.info-card:hover {box-shadow:var(--pm-shadow-hover)!important;transform:translateY(-2px);border-color:#d5dce7!important;}
+[data-testid="stMain"] [data-testid="stMetric"]{padding:18px 20px!important;}
+[data-testid="stMain"] [data-testid="stMetricLabel"] p {color:var(--pm-muted)!important;font-size:.83rem!important;font-weight:750!important;}
+[data-testid="stMain"] [data-testid="stMetricValue"] {font-size:clamp(1.5rem,2.5vw,2.13rem)!important;font-weight:800!important;letter-spacing:-.045em!important;color:var(--pm-ink)!important;overflow-wrap:anywhere;}
+[data-testid="stMain"] [data-testid="stMetricDelta"]{font-weight:700!important;}
+.tp-sec { display:flex;align-items:flex-end;justify-content:space-between;gap:14px;margin:25px 0 15px;padding:0 0 12px;border-bottom:1px solid var(--pm-line); }
+.tp-sec-title {color:var(--pm-ink)!important;font-size:1.14rem!important;font-weight:800!important;letter-spacing:-.035em!important;}
+.tp-sec-sub {color:var(--pm-muted)!important;font-size:.84rem!important;line-height:1.55!important;}
+/* Todos los formularios y campos reutilizan las mismas reglas. */
+[data-testid="stMain"] [data-testid="stForm"]{padding:21px 23px!important;border:1px solid var(--pm-line)!important;border-radius:19px!important;background:#fff!important;box-shadow:var(--pm-shadow)!important;}
+[data-testid="stMain"] [data-testid="stWidgetLabel"] p {font-size:.86rem!important;font-weight:750!important;color:#344155!important;}
+[data-testid="stMain"] [data-baseweb="input"], [data-testid="stMain"] [data-baseweb="select"],
+[data-testid="stMain"] [data-baseweb="textarea"], [data-testid="stMain"] input, [data-testid="stMain"] textarea {border-radius:12px!important;font-size:.94rem!important;}
+[data-testid="stMain"] [data-baseweb="input"], [data-testid="stMain"] [data-baseweb="select"]{min-height:43px!important;background:#fff!important;}
+[data-testid="stMain"] [data-baseweb="input"]:focus-within, [data-testid="stMain"] [data-baseweb="select"]:focus-within, [data-testid="stMain"] [data-baseweb="textarea"]:focus-within {box-shadow:0 0 0 3px rgba(202,43,64,.12)!important;}
+.stButton > button,.stDownloadButton > button,[data-testid="stFormSubmitButton"] button{
+  border-radius:12px!important;font-family:var(--pm-font)!important;font-weight:750!important;
+  min-height:43px!important;transition:transform .16s ease,box-shadow .16s ease!important;
+}
+[data-testid="stMain"] button[kind="primary"],[data-testid="stMain"] button[data-testid="stBaseButton-primary"]{
+  background:linear-gradient(120deg,var(--pm-brand-strong),var(--pm-brand))!important;
+  border:1px solid transparent!important;color:#fff!important;box-shadow:0 10px 22px -14px rgba(130,25,47,.8)!important;
+}
+.stButton > button:hover:not(:disabled),[data-testid="stFormSubmitButton"] button:hover:not(:disabled){transform:translateY(-1px);}
+button:disabled{opacity:.52!important;cursor:not-allowed!important;transform:none!important;}
+/* Dataframes, pestañas, expandibles y alertas */
+[data-testid="stMain"] [data-testid="stDataFrame"], [data-testid="stMain"] [data-testid="stDataEditor"],
+[data-testid="stMain"] [data-testid="stTable"] {border:1px solid var(--pm-line)!important;border-radius:16px!important;overflow:hidden!important;max-width:100%!important;box-shadow:var(--pm-shadow)!important;}
+[data-testid="stMain"] [data-testid="stExpander"]{border:1px solid var(--pm-line)!important;border-radius:16px!important;overflow:hidden!important;background:#fff!important;box-shadow:var(--pm-shadow)!important;}
+[data-testid="stMain"] [data-testid="stExpander"] summary{padding:13px 17px!important;font-weight:750!important;}
+[data-testid="stMain"] [data-baseweb="tab-list"]{gap:7px!important;overflow-x:auto!important;scrollbar-width:thin!important;border-bottom:1px solid var(--pm-line)!important;}
+[data-testid="stMain"] [data-baseweb="tab"]{font-weight:750!important;padding:12px 16px!important;white-space:nowrap!important;border-radius:10px 10px 0 0!important;}
+[data-testid="stMain"] [data-baseweb="tab"][aria-selected="true"]{color:var(--pm-brand-strong)!important;}
+[data-testid="stMain"] [data-baseweb="tab-highlight"]{background:var(--pm-brand)!important;}
+[data-testid="stAlert"], [data-testid="stToast"]{border-radius:13px!important;}
+/* Menú lateral: etiquetas limpias, sin iconos de ligadura literales. */
+section[data-testid="stSidebar"]{background:#fff!important;border-right:1px solid var(--pm-line)!important;}
+section[data-testid="stSidebar"] [data-testid="stSidebarContent"]{overflow-x:hidden!important;}
+section[data-testid="stSidebar"] [role="radiogroup"]{gap:5px!important;}
+section[data-testid="stSidebar"] [role="radiogroup"]>label{display:flex;align-items:center;min-height:44px!important;padding:10px 13px!important;margin:0 4px!important;border-radius:12px!important;border:1px solid transparent!important;transition:background .18s ease!important;}
+section[data-testid="stSidebar"] [role="radiogroup"]>label:hover {background:#f5f7fa!important;}
+section[data-testid="stSidebar"] [role="radiogroup"]>label:has(input:checked){background:var(--pm-brand-soft)!important;border-color:#f7d5dc!important;}
+section[data-testid="stSidebar"] [role="radiogroup"]>label p{font-size:.88rem!important;font-weight:700!important;line-height:1.45!important;color:var(--pm-text)!important;overflow-wrap:anywhere!important;white-space:normal!important;margin:0!important;}
+section[data-testid="stSidebar"] [role="radiogroup"]>label:has(input:checked) p{color:var(--pm-brand-strong)!important;font-weight:800!important;}
+section[data-testid="stSidebar"] [role="radiogroup"]>label [data-testid="stIconMaterial"]{display:none!important;}
+section[data-testid="stSidebar"] .tp-brand {margin-bottom:12px;}
+[data-testid="stSidebarCollapseButton"] [data-testid="stIconMaterial"],
+[data-testid="stSidebarCollapsedControl"] [data-testid="stIconMaterial"] {display:inline-flex!important;font-size:20px!important;}
+/* Tablas y calendarios particulares: nunca recortar registros */
+.tp-calendar-scroll,.tp-up-calendar,.tp-cal-shell,.tp-table-wrap,.table-wrap,.tp-shift-detail-wrap {max-width:100%;overflow-x:auto;scrollbar-width:thin;}
+.cal-table{width:100%;border-collapse:separate;border-spacing:4px;table-layout:fixed;}
+.cal-table th{font-weight:800;font-size:.7rem;text-align:center;color:var(--pm-muted);padding:7px 2px;}
+.cal-table td {height:67px;border-radius:10px;vertical-align:top;padding:8px 5px;border:1px solid rgba(15,23,42,.04);}
+.cal-table td .cal-day-num{display:block;font-weight:800;font-size:.85rem;line-height:1.1;}
+.cal-table td .cal-sub{display:block;font-size:.67rem;line-height:1.35;margin-top:5px;overflow-wrap:anywhere;}
+.tp-calendar-scroll{outline-offset:3px;}
+.legend-container{display:flex;flex-wrap:wrap;gap:9px;align-items:center;background:#fff;border:1px solid var(--pm-line);border-radius:16px;padding:14px 16px;}
+.legend-item{display:inline-flex;align-items:center;gap:7px;font-size:.78rem;font-weight:650;color:var(--pm-text);}
+.legend-badge{display:inline-block;flex:0 0 12px;width:12px;height:12px;border-radius:4px;}
+/* Foco y dispositivos táctiles */
+:where(button,input,textarea,select,[role="tab"],[role="radio"],a):focus-visible{outline:3px solid rgba(202,43,64,.28)!important;outline-offset:2px!important;}
+.stApp ::-webkit-scrollbar{height:8px;width:8px;}
+.stApp ::-webkit-scrollbar-thumb{background:#c9d2de;border-radius:99px;}
+.stApp ::-webkit-scrollbar-track{background:transparent;}
+@media(max-width:1000px){
+ [data-testid="stMain"] .block-container{padding:1rem 1.15rem 2.8rem!important;}
+ .pm7-emblem{width:78px;height:78px;right:22px;}
+ .pm7-emblem .material-symbols-rounded{font-size:40px!important;}
+}
+@media(max-width:680px){
+ [data-testid="stMain"] .block-container{padding:.8rem .8rem 2.5rem!important;}
+ .pm7-banner,.market-header{padding:23px 20px!important;border-radius:19px!important;}
+ .pm7-banner h1,.market-header h1{font-size:1.52rem!important;max-width:100%!important;}
+ .pm7-banner p,.market-header p{font-size:.87rem!important;}
+ .pm7-emblem{display:none!important;}
+ .pm8-context{padding:12px 13px;margin-bottom:17px;}
+ .pm8-context-description{font-size:.8rem;}
+ .tp-sec{align-items:flex-start;flex-direction:column;gap:5px;}
+ [data-testid="stMain"] [data-testid="stForm"]{padding:15px!important;}
+ [data-testid="stMain"] [data-testid="stMetric"]{padding:14px 15px!important;}
+ .cal-card{padding:10px!important;}
+ .cal-table{min-width:420px;}
+ .cal-table td{height:62px;padding:7px 3px;}
+ .cal-table td .cal-sub{font-size:.62rem;}
+ .legend-container{padding:11px 12px;}
+}
+@media(prefers-reduced-motion:reduce){
+ *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important;}
+}
+
+.st-key-tp_chat_fab{position:fixed!important;right:22px!important;top:72px!important;z-index:100000!important;width:64px!important;height:64px!important;}
+.st-key-tp_chat_fab button{width:62px!important;height:62px!important;min-height:62px!important;border-radius:50%!important;border:3px solid #fff!important;background-color:#ca2b40!important;background-size:cover!important;background-position:center!important;background-repeat:no-repeat!important;box-shadow:0 8px 24px rgba(15,23,42,.24)!important;color:transparent!important;padding:0!important;transition:transform .2s ease!important;}
+.st-key-tp_chat_fab button:hover{transform:translateY(-3px) scale(1.06)!important;}
+.st-key-tp_chat_panel{position:fixed!important;right:22px!important;top:145px!important;width:min(440px,calc(100vw - 28px))!important;max-height:calc(100dvh - 166px)!important;overflow-y:auto!important;z-index:99999!important;background:#fff!important;border:1px solid #e7eaf0!important;border-radius:22px!important;padding:16px!important;box-shadow:0 18px 55px rgba(15,23,42,.2)!important;}
+.st-key-tp_chat_panel [data-testid="stChatMessage"]{padding:9px!important;border-radius:12px!important;}
+.st-key-tp_chat_panel [data-testid="stDataFrame"]{max-height:200px!important;}
+.st-key-tp_chat_panel [data-testid="stForm"]{padding:0!important;border:0!important;box-shadow:none!important;}
+@media(max-width:600px){.st-key-tp_chat_fab{right:12px!important;top:66px!important;}.st-key-tp_chat_panel{right:8px!important;top:136px!important;width:calc(100vw - 16px)!important;max-height:calc(100dvh - 150px)!important;padding:12px!important;}}
+
+
+/* 22 ESPACIOS DE TRABAJO — reconstrucción de la estructura interior */
+[class*="st-key-pm_v_"] {min-width:0;}
+[class*="st-key-pm_v_"] [data-testid="stHorizontalBlock"] {row-gap:.95rem;}
+[class*="st-key-pm_v_"] .tp-card,[class*="st-key-pm_v_"] .tp-kpi{margin-bottom:12px;}
+/* 01 Asistencia */
+.st-key-pm_v_marcar_asistencia [data-testid="stButton"] button{min-height:48px!important;}
+.st-key-pm_v_marcar_asistencia .tp-focus{border-left:4px solid #148a65!important;}
+/* 02 Caja */
+.st-key-pm_v_registrar_descuadre .tp-card,.st-key-pm_v_historial_de_descuadres .tp-card{border-top:3px solid #3671bd!important;}
+/* 03 Incidencias */
+.st-key-pm_v_registrar_incidencia .tp-callout,.st-key-pm_v_incidencias_y_danos .tp-callout{border-radius:14px!important;}
+/* 04/05/06 Perfiles, solicitudes y boletas personales */
+.st-key-pm_v_mi_ficha_tecnica .tp-id,.st-key-pm_v_gestion_colaboradores .tp-id{border-radius:20px!important;overflow:hidden!important;}
+.st-key-pm_v_solicitar_permiso_adelanto [data-testid="stForm"]{border-top:3px solid #c12f43!important;}
+.st-key-pm_v_mis_boletas .tp-card,.st-key-pm_v_boletas_de_pago .boleta-container{border-left:4px solid #c12f43!important;}
+/* 07/08 Dashboard */
+.st-key-pm_v_mi_dashboard_mensual .tp-gridk,.st-key-pm_v_dashboard_general .tp-gridk{gap:12px!important;}
+.st-key-pm_v_dashboard_general .cal-card{padding:16px!important;}
+.st-key-pm_v_dashboard_general .tp-op-card{border-left:3px solid #13855d!important;}
+/* 09 Colaboradores */
+.st-key-pm_v_gestion_colaboradores .tp-id-head{min-height:100px;}
+.st-key-pm_v_gestion_colaboradores .tp-row{border-bottom:1px solid var(--pm-line);}
+/* 10 Nómina */
+.st-key-pm_v_boletas_de_pago .boleta-table{width:100%;}
+/* 11 Programación */
+.st-key-pm_v_programacion_de_turnos .tp-up-calendar,.st-key-pm_v_programacion_de_turnos .tp-cal-shell{overflow-x:auto!important;max-width:100%!important;}
+.st-key-pm_v_programacion_de_turnos .tp-up-shift{min-height:66px;}
+/* 12 Solicitudes */
+.st-key-pm_v_solicitudes_y_permisos .tp-card{border-left:3px solid #d18b20!important;}
+/* 13 Histórico de caja */
+.st-key-pm_v_historial_de_descuadres [data-testid="stDataFrame"]{max-width:100%!important;}
+/* 14 Incidencias y daños */
+.st-key-pm_v_incidencias_y_danos .tp-inc-card{border-radius:16px!important;}
+/* 15 Fiados */
+.st-key-pm_v_botellas_fiadas .tp-card{border-left:3px solid #2b69b6!important;}
+/* 16 Historial de asistencia */
+.st-key-pm_v_historial_de_asistencias .cal-card{margin-bottom:16px!important;}
+/* 17 Alertas */
+.st-key-pm_v_centro_de_alertas .tp-notif{border-left-width:4px!important;}
+/* 18/19 Vacaciones */
+.st-key-pm_v_gestion_de_vacaciones .tp-vac-card,.st-key-pm_v_mis_vacaciones .tp-vac-card{border-radius:17px!important;}
+/* 20 Analítica */
+.st-key-pm_v_analitica_bi [data-testid="stPlotlyChart"],.st-key-pm_v_analitica_bi .tp-panel{max-width:100%!important;}
+/* 21 Altas y bajas */
+.st-key-pm_v_onboarding_offboarding .tp-card{border-left:3px solid #148a65!important;}
+/* 22 Configuración */
+.st-key-pm_v_auditoria_y_configuracion [data-testid="stExpander"]{margin-bottom:10px!important;}
+@media(max-width:700px){
+ [class*="st-key-pm_v_"] [data-testid="stForm"]{padding:14px!important;}
+ .st-key-pm_v_dashboard_general .cal-card{padding:10px!important;}
+ .cal-title::after{content:'Desliza para ver todos los días →';display:block;color:#64748b;font-size:.68rem;font-weight:650;margin-left:auto;}
+}
+</style>"""
+
+# El ícono opcional del asistente se incluye en el mismo bloque CSS.
+BOT_PATH = os.path.join(BASE_DIR, "assets", "bot.png")
+BOT_DISPONIBLE = os.path.isfile(BOT_PATH)
+BOT_MIME = mimetypes.guess_type(BOT_PATH)[0] or "image/png"
+try:
+    with open(BOT_PATH, "rb") as _fb:
+        _bot_b64 = base64.b64encode(_fb.read()).decode("ascii")
+except OSError:
+    _bot_b64 = ""
+if _bot_b64:
+    PREMIUM_CSS = PREMIUM_CSS.replace("</style>", ".st-key-tp_chat_fab button{background-image:url(\"data:" + BOT_MIME + ";base64," + _bot_b64 + "\")!important;}\n</style>")
+if hasattr(st, "html"):
+    st.html(PREMIUM_CSS)
+else:
+    st.markdown(PREMIUM_CSS, unsafe_allow_html=True)
+# ===========================================================
+
+
 # --- CONFIGURACIÓN DE ZONA HORARIA (PERÚ) ---
 LIMA_TZ = zoneinfo.ZoneInfo("America/Lima")
 
@@ -890,534 +1864,13 @@ def actualizar_hoja_completa(nombre_hoja, df):
             st.error(f"Error al actualizar {nombre_hoja}: {e}")
 
 # --- CSS MINIMALISTA Y ESTILOS ---
-st.markdown("""
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap');
-
-    html, body, [class*="css"], .stMarkdown, div, button, input, select, textarea {
-        font-family: 'Montserrat', sans-serif !important;
-    }
-
-    .stApp {
-        background-color: #FAFAFA;
-    }
-
-    header[data-testid="stHeader"] {
-        background-color: transparent !important;
-        z-index: 100;
-    }
-
-    header[data-testid="stHeader"] button {
-        color: #111827 !important;
-    }
-
-    .market-header {
-        background-color: #FFFFFF;
-        padding: 20px 24px;
-        border-radius: 8px;
-        border: 1px solid #E5E7EB;
-        border-left: 4px solid #EC3237;
-        margin-bottom: 24px;
-    }
-    .market-header h1 {
-        color: #111827 !important;
-        margin: 0;
-        font-size: 1.3rem !important;
-        font-weight: 600 !important;
-        letter-spacing: -0.3px;
-    }
-    .market-header p {
-        color: #6B7280;
-        margin: 4px 0 0 0;
-        font-size: 0.85rem;
-        font-weight: 400;
-    }
-
-    .info-card {
-        background-color: #FFFFFF;
-        padding: 18px 20px;
-        border-radius: 8px;
-        border: 1px solid #E5E7EB;
-        margin-bottom: 15px;
-    }
-    .info-label {
-        color: #6B7280;
-        font-size: 0.7rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.8px;
-    }
-    .info-value {
-        color: #111827;
-        font-size: 1.4rem;
-        font-weight: 700;
-        margin-top: 4px;
-    }
-
-    .stButton>button {
-        background-color: #111827 !important;
-        color: #FFFFFF !important;
-        border-radius: 6px !important;
-        border: none !important;
-        font-weight: 500 !important;
-        font-size: 0.82rem !important;
-        height: 2.8em !important;
-        transition: all 0.2s ease !important;
-        letter-spacing: 0.3px;
-    }
-    .stButton>button:hover {
-        background-color: #374151 !important;
-    }
-
-    .btn-ingreso > button {
-        background-color: #00A959 !important;
-    }
-    .btn-ingreso > button:hover {
-        background-color: #008847 !important;
-    }
-
-    .btn-salida > button {
-        background-color: #EC3237 !important;
-    }
-    .btn-salida > button:hover {
-        background-color: #D02429 !important;
-    }
-
-    [data-testid="stSidebar"] {
-        background-color: #111827 !important;
-        border-right: 1px solid #1F2937;
-    }
-    [data-testid="stSidebar"] * {
-        color: #E5E7EB !important;
-    }
-    
-    .btn-logout > button {
-        background-color: transparent !important;
-        border: 1px solid #374151 !important;
-        color: #9CA3AF !important;
-    }
-    .btn-logout > button:hover {
-        background-color: #1F2937 !important;
-        color: #FFFFFF !important;
-    }
-
-    div[data-testid="stForm"], div[data-testid="stExpander"] {
-        border-radius: 8px !important;
-        border: 1px solid #E5E7EB !important;
-        background-color: #FFFFFF !important;
-        padding: 20px !important;
-        box-shadow: none !important;
-    }
-
-    .cal-card {
-        background: #ffffff;
-        border: 1px solid #e5e7eb;
-        border-radius: 10px;
-        padding: 14px;
-        margin-bottom: 20px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.02);
-    }
-    .cal-title {
-        font-size: 0.85rem;
-        font-weight: 600;
-        color: #1f2937;
-        margin-bottom: 10px;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-    }
-    .cal-table {
-        width: 100%;
-        border-collapse: separate;
-        border-spacing: 3px;
-        font-size: 0.75rem;
-    }
-    .cal-table th {
-        background-color: #f8fafc;
-        color: #64748b;
-        font-weight: 600;
-        padding: 6px 2px;
-        text-align: center;
-        border-radius: 4px;
-        font-size: 0.7rem;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-    .cal-table td {
-        height: 36px;
-        text-align: center;
-        vertical-align: middle;
-        border-radius: 6px;
-        font-weight: 600;
-        color: #334155;
-        background-color: #ffffff;
-        border: 1px solid #f1f5f9;
-        transition: all 0.15s ease;
-    }
-    
-    .cal-day-num {
-        font-size: 0.82rem;
-        line-height: 1;
-    }
-    .cal-sub {
-        font-size: 0.6rem;
-        font-weight: 500;
-        margin-top: 2px;
-        display: block;
-        opacity: 0.9;
-    }
-
-    .bg-asistio {
-        background-color: #dcfce7 !important;
-        color: #15803d !important;
-        border: 1px solid #bbf7d0 !important;
-    }
-    .bg-falta {
-        background-color: #fee2e2 !important;
-        color: #b91c1c !important;
-        border: 1px solid #fca5a5 !important;
-    }
-    .bg-permiso {
-        background-color: #ede9fe !important;
-        color: #6d28d9 !important;
-        border: 1px solid #c4b5fd !important;
-    }
-    .bg-permiso-pendiente {
-        background-color: #fef3c7 !important;
-        color: #92400e !important;
-        border: 1px solid #fcd34d !important;
-    }
-    .bg-recuperacion {
-        background-color: #cffafe !important;
-        color: #0e7490 !important;
-        border: 1px solid #67e8f9 !important;
-    }
-    .bg-extra {
-        background-color: #fef9c3 !important;
-        color: #a16207 !important;
-        border: 1px solid #fef08a !important;
-    }
-    .bg-descanso {
-        background-color: #f3f4f6 !important;
-        color: #6b7280 !important;
-        border: 1px solid #e5e7eb !important;
-    }
-    .bg-inicio {
-        background-color: #e0f2fe !important;
-        color: #0369a1 !important;
-        border: 1px solid #bae6fd !important;
-    }
-    .bg-cese {
-        background-color: #f3e8ff !important;
-        color: #6b21a8 !important;
-        border: 1px solid #e9d5ff !important;
-    }
-    .bg-vacio {
-        background-color: transparent !important;
-        border: none !important;
-    }
-    .bg-futuro {
-        background-color: #ffffff !important;
-        color: #94a3b8 !important;
-        border: 1px dashed #e2e8f0 !important;
-    }
-    .bg-permiso-salud {
-        background-color: #fce7f3 !important;
-        color: #be185d !important;
-        border: 1px solid #f9a8d4 !important;
-    }
-    .bg-recuperacion-salud {
-        background-color: #e0e7ff !important;
-        color: #4338ca !important;
-        border: 1px solid #c7d2fe !important;
-    }
-    .bg-domingo-voluntario {
-        background-color: #ccfbf1 !important;
-        color: #0f766e !important;
-        border: 1px solid #5eead4 !important;
-    }
-
-    .legend-container {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 12px;
-        margin-bottom: 16px;
-        background: #ffffff;
-        padding: 10px 14px;
-        border-radius: 8px;
-        border: 1px solid #e5e7eb;
-    }
-    .legend-item {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        font-size: 0.78rem;
-        font-weight: 500;
-        color: #4b5563;
-    }
-    .legend-badge {
-        width: 12px;
-        height: 12px;
-        border-radius: 3px;
-        display: inline-block;
-    }
-
-    .profile-name {
-        font-weight: 700;
-        font-size: 1.05rem;
-        color: #111827;
-    }
-    .profile-role {
-        font-size: 0.82rem;
-        color: #4B5563;
-        margin-bottom: 6px;
-    }
-    .profile-field {
-        font-size: 0.68rem;
-        font-weight: 700;
-        color: #6B7280;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        margin-top: 6px;
-    }
-    .profile-val {
-        font-size: 0.85rem;
-        font-weight: 500;
-        color: #111827;
-    }
-
-    .app-footer {
-        text-align: center;
-        padding: 24px 10px 12px 10px;
-        margin-top: 40px;
-        border-top: 1px solid #E5E7EB;
-        color: #6B7280;
-        font-size: 0.8rem;
-        line-height: 1.5;
-    }
-    .app-footer strong {
-        color: #111827;
-    }
-    /* ESTILOS DE BOLETA DE PAGO EN HTML */
-    .boleta-container {
-        background-color: #ffffff;
-        border: 2px solid #111827;
-        padding: 24px;
-        border-radius: 6px;
-        max-width: 850px;
-        margin: 0 auto 20px auto;
-        color: #111827;
-        font-family: 'Montserrat', sans-serif;
-    }
-    .boleta-header-title {
-        text-align: center;
-        font-size: 1.2rem;
-        font-weight: 800;
-        letter-spacing: 1px;
-        border-bottom: 2px solid #111827;
-        padding-bottom: 8px;
-        margin-bottom: 15px;
-    }
-    .boleta-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-bottom: 12px;
-        font-size: 0.82rem;
-    }
-    .boleta-table th, .boleta-table td {
-        border: 1px solid #000;
-        padding: 6px 8px;
-        text-align: left;
-    }
-    .boleta-table th {
-        background-color: #f3f4f6;
-        font-weight: 700;
-    }
-</style>
-""", unsafe_allow_html=True)
 
 # =========================================================
 # SISTEMA DE DISEÑO TIENDAS PREMIUM — FASE 1
 # Capa visual que se superpone al CSS anterior. No altera lógica.
 # =========================================================
-st.markdown("""
-<style>
-:root{
-  --tp-red:#EC3237; --tp-red-dk:#C9262B; --tp-red-soft:#FDECEC;
-  --tp-ink:#0F172A; --tp-ink-2:#334155; --tp-mute:#64748B;
-  --tp-bg:#F3F4F7; --tp-surface:#FFFFFF; --tp-line:#E3E6EC;
-  --tp-ok:#0B8F57; --tp-ok-soft:#E3F6EC; --tp-warn:#B45309; --tp-warn-soft:#FEF3C7;
-  --tp-bad:#B42318; --tp-bad-soft:#FEE4E2; --tp-info:#1D4ED8; --tp-info-soft:#E0EAFF;
-  --tp-r-sm:10px; --tp-r-md:14px; --tp-r-lg:20px;
-  --tp-sh-1:0 1px 2px rgba(15,23,42,.05),0 1px 3px rgba(15,23,42,.04);
-  --tp-sh-2:0 8px 24px -8px rgba(15,23,42,.14);
-}
-.stApp{background:var(--tp-bg);}
-.block-container{max-width:1240px;padding-top:4.2rem;padding-bottom:3rem;}
-#MainMenu,footer,[data-testid="stDecoration"],[data-testid="stAppDeployButton"],[data-testid="stMainMenu"],.stDeployButton{visibility:hidden;display:none;}
-header[data-testid="stHeader"]{background:transparent!important;}
-[data-testid="stToolbar"]{visibility:visible!important;display:flex!important;}
-/* Botón para abrir el menú de vistas (siempre visible) */
-[data-testid="stExpandSidebarButton"],[data-testid="stSidebarCollapsedControl"],[data-testid="collapsedControl"]{
-  display:flex!important;visibility:visible!important;opacity:1!important;z-index:1000;
-  position:fixed;top:12px;left:12px;width:46px;height:46px;align-items:center;justify-content:center;
-  background:var(--tp-ink)!important;border-radius:14px;box-shadow:var(--tp-sh-2);}
-[data-testid="stExpandSidebarButton"] *,[data-testid="stSidebarCollapsedControl"] *,[data-testid="collapsedControl"] *{color:#fff!important;fill:#fff!important;}
-[data-testid="stExpandSidebarButton"]:hover,[data-testid="stSidebarCollapsedControl"]:hover{background:var(--tp-red)!important;}
-[data-testid="stSidebarCollapseButton"] button,[data-testid="stSidebarCollapseButton"] *{color:#AEB8CC!important;}
-h1,h2,h3,h4,h5{color:var(--tp-ink);letter-spacing:-.01em;}
-h5{font-size:1.02rem!important;font-weight:650!important;margin:.4rem 0 .6rem!important;}
-[data-testid="stMetricValue"],.info-value,.tp-kpi-val{font-variant-numeric:tabular-nums;}
-:focus-visible{outline:3px solid rgba(236,50,55,.35)!important;outline-offset:2px;border-radius:8px;}
-
-/* Encabezado de página */
-.market-header{position:relative;background:var(--tp-surface);border:1px solid var(--tp-line);border-left:1px solid var(--tp-line);
-  border-radius:var(--tp-r-lg);padding:22px 26px 20px;margin-bottom:22px;box-shadow:var(--tp-sh-1);}
-.market-header::before{content:"";position:absolute;left:26px;top:0;width:36px;height:4px;background:var(--tp-red);border-radius:0 0 4px 4px;}
-.market-header h1{font-size:1.45rem!important;font-weight:700!important;margin-top:6px!important;color:var(--tp-ink)!important;}
-.market-header p{font-size:.9rem;color:var(--tp-mute);}
-
-/* Tarjetas y contenedores */
-[data-testid="stVerticalBlockBorderWrapper"]:has(> div > [data-testid="stVerticalBlock"]){border-radius:var(--tp-r-md);}
-div[data-testid="stVerticalBlockBorderWrapper"]{border-color:var(--tp-line)!important;background:var(--tp-surface);box-shadow:var(--tp-sh-1);}
-.info-card,.cal-card{border-radius:var(--tp-r-md)!important;border:1px solid var(--tp-line)!important;box-shadow:var(--tp-sh-1);}
-div[data-testid="stForm"],div[data-testid="stExpander"]{border-radius:var(--tp-r-md)!important;border:1px solid var(--tp-line)!important;box-shadow:var(--tp-sh-1)!important;}
-[data-testid="stMetric"]{background:var(--tp-surface);border:1px solid var(--tp-line);border-radius:var(--tp-r-md);padding:16px 18px;box-shadow:var(--tp-sh-1);}
-[data-testid="stMetricLabel"] p{font-size:.78rem!important;font-weight:600;color:var(--tp-mute)!important;}
-[data-testid="stMetricValue"]{font-weight:700;color:var(--tp-ink);}
-
-/* Botones */
-.stButton>button,.stDownloadButton>button,.stFormSubmitButton>button{min-height:46px;border-radius:var(--tp-r-sm)!important;font-weight:600!important;font-size:.9rem!important;
-  box-shadow:var(--tp-sh-1);transition:transform .12s ease,box-shadow .12s ease,background-color .12s ease!important;}
-.stButton>button:hover{transform:translateY(-1px);box-shadow:var(--tp-sh-2);}
-.stButton>button:active{transform:translateY(0) scale(.98);}
-.stDownloadButton>button{background:var(--tp-surface)!important;color:var(--tp-ink)!important;border:1px solid var(--tp-line)!important;}
-.stDownloadButton>button:hover{border-color:var(--tp-ink)!important;background:#F8FAFC!important;}
-.btn-ingreso>button,.btn-salida>button{min-height:64px!important;font-size:1.05rem!important;border-radius:var(--tp-r-md)!important;}
-.btn-ingreso>button{background:var(--tp-ok)!important;}
-.btn-ingreso>button:hover{background:#087548!important;}
-
-/* Campos */
-[data-baseweb="input"],[data-baseweb="select"]>div,[data-baseweb="textarea"],.stDateInput>div>div,.stNumberInput>div>div{border-radius:var(--tp-r-sm)!important;}
-[data-baseweb="input"],[data-baseweb="textarea"],[data-baseweb="select"]>div{border:1px solid var(--tp-line)!important;background:var(--tp-surface)!important;}
-[data-baseweb="input"]:focus-within,[data-baseweb="textarea"]:focus-within,[data-baseweb="select"]>div:focus-within{border-color:var(--tp-red)!important;box-shadow:0 0 0 3px rgba(236,50,55,.15)!important;}
-[data-testid="stWidgetLabel"] p{font-size:.82rem;font-weight:600;color:var(--tp-ink-2);}
-
-/* Pestañas */
-.stTabs [data-baseweb="tab-list"]{gap:6px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--tp-line);}
-.stTabs [data-baseweb="tab-list"]::-webkit-scrollbar{display:none;}
-.stTabs [data-baseweb="tab"]{height:46px;padding:0 14px;font-weight:600;color:var(--tp-mute);white-space:nowrap;}
-.stTabs [aria-selected="true"]{color:var(--tp-ink)!important;}
-.stTabs [data-baseweb="tab-highlight"]{background:var(--tp-red)!important;height:3px;border-radius:3px;}
-
-/* Tablas, alertas, progreso */
-[data-testid="stDataFrame"]{border:1px solid var(--tp-line);border-radius:var(--tp-r-md);overflow:hidden;box-shadow:var(--tp-sh-1);}
-[data-testid="stAlert"]{border-radius:var(--tp-r-md);border:1px solid var(--tp-line);}
-.stProgress>div>div>div>div{background:var(--tp-red)!important;border-radius:999px;}
-.stProgress>div>div>div{border-radius:999px;}
-
-/* Barra lateral como navegación */
-[data-testid="stSidebar"]{background:linear-gradient(180deg,#0F172A 0%,#111C33 100%)!important;border-right:none;}
-[data-testid="stSidebar"] [data-testid="stWidgetLabel"]{display:none;}
-[data-testid="stSidebar"] [role="radiogroup"]{gap:2px;}
-[data-testid="stSidebar"] [role="radiogroup"] label{position:relative;padding:10px 14px 10px 16px;border-radius:12px;cursor:pointer;transition:background .12s ease;}
-[data-testid="stSidebar"] [role="radiogroup"] label>div:first-child{display:none;}
-[data-testid="stSidebar"] [role="radiogroup"] label p{font-size:.88rem;font-weight:500;color:#AEB8CC!important;}
-[data-testid="stSidebar"] [role="radiogroup"] label:hover{background:rgba(255,255,255,.06);}
-[data-testid="stSidebar"] [role="radiogroup"] label:has(input:checked){background:rgba(236,50,55,.16);}
-[data-testid="stSidebar"] [role="radiogroup"] label:has(input:checked)::before{content:"";position:absolute;left:0;top:10px;bottom:10px;width:3px;border-radius:3px;background:var(--tp-red);}
-[data-testid="stSidebar"] [role="radiogroup"] label:has(input:checked) p{color:#FFFFFF!important;font-weight:650;}
-.tp-user{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);padding:12px;border-radius:14px;margin-bottom:18px;}
-.tp-user b{display:block;font-size:.84rem;color:#fff!important;line-height:1.25;}
-.tp-user span{font-size:.7rem;color:#8EA0BE!important;}
-.btn-logout>button{border-radius:12px!important;border:1px solid rgba(255,255,255,.18)!important;box-shadow:none!important;}
-
-/* Componentes reutilizables */
-.tp-avatar{flex:0 0 auto;width:40px;height:40px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;
-  background:var(--tp-red);color:#fff!important;font-weight:700;font-size:.85rem;letter-spacing:.02em;}
-.tp-chip{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:.74rem;font-weight:650;line-height:1.5;}
-.tp-chip::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;}
-.tp-chip.ok{background:var(--tp-ok-soft);color:var(--tp-ok);} .tp-chip.warn{background:var(--tp-warn-soft);color:var(--tp-warn);}
-.tp-chip.bad{background:var(--tp-bad-soft);color:var(--tp-bad);} .tp-chip.info{background:var(--tp-info-soft);color:var(--tp-info);}
-.tp-chip.neutral{background:#EEF1F5;color:var(--tp-ink-2);}
-.tp-kpi{background:var(--tp-surface);border:1px solid var(--tp-line);border-radius:var(--tp-r-md);padding:16px 18px;box-shadow:var(--tp-sh-1);}
-.tp-kpi-lbl{font-size:.78rem;font-weight:600;color:var(--tp-mute);}
-.tp-kpi-val{font-size:1.7rem;font-weight:700;color:var(--tp-ink);margin-top:2px;}
-.tp-kpi-sub{font-size:.78rem;color:var(--tp-mute);margin-top:2px;}
-.app-footer{margin-top:40px;padding:22px 0;border-top:1px solid var(--tp-line);color:var(--tp-mute);font-size:.78rem;line-height:1.7;text-align:center;}
-
-/* Pantallas medianas y celulares */
-@media (max-width:900px){
-  .block-container{padding:4.2rem .9rem 5rem;}
-  .market-header{padding:18px 18px 16px;border-radius:var(--tp-r-md);margin-bottom:16px;}
-  .market-header::before{left:18px;}
-  .market-header h1{font-size:1.2rem!important;}
-}
-@media (max-width:640px){
-  html,body,input,select,textarea{font-size:16px;}
-  [data-testid="stHorizontalBlock"]{gap:.75rem!important;}
-  .stButton>button,.stDownloadButton>button{min-height:50px;width:100%;}
-  .btn-ingreso>button,.btn-salida>button{min-height:70px!important;}
-  [data-testid="stMetric"],.tp-kpi{padding:14px 16px;}
-  .cal-card{overflow-x:auto;-webkit-overflow-scrolling:touch;padding:14px!important;}
-  .cal-table{min-width:540px;}
-  .boleta-container{padding:16px!important;overflow-x:auto;}
-  [data-testid="stDataFrame"]{overflow-x:auto;}
-  .stTabs [data-baseweb="tab"]{padding:0 10px;font-size:.84rem;}
-}
-@supports (padding:max(0px)){.block-container{padding-bottom:max(3rem,env(safe-area-inset-bottom));}}
-@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important;}}
-</style>
-""", unsafe_allow_html=True)
 
 import streamlit.components.v1 as components
-st.markdown("""
-<style>
-/* Barra lateral clara */
-[data-testid="stSidebar"]{background:#FFFFFF!important;border-right:1px solid var(--tp-line)!important;}
-[data-testid="stSidebar"] *{color:var(--tp-ink)!important;}
-[data-testid="stSidebar"] [role="radiogroup"] label>div:not(:has([data-testid="stMarkdownContainer"])){display:none!important;}
-[data-testid="stSidebar"] [role="radiogroup"] label p{color:var(--tp-ink-2)!important;font-weight:550;}
-[data-testid="stSidebar"] [role="radiogroup"] label:hover{background:#F3F4F7;}
-[data-testid="stSidebar"] [role="radiogroup"] label:has(input:checked){background:var(--tp-red-soft);}
-[data-testid="stSidebar"] [role="radiogroup"] label:has(input:checked) p{color:var(--tp-red-dk)!important;font-weight:700;}
-[data-testid="stSidebarCollapseButton"] *{color:var(--tp-mute)!important;}
-.tp-user{background:#F6F7FA;border:1px solid var(--tp-line);}
-.tp-user b{color:var(--tp-ink)!important;} .tp-user span{color:var(--tp-mute)!important;}
-[data-testid="stSidebar"] .tp-avatar{color:#fff!important;}
-.tp-avatar{width:46px;height:46px;object-fit:cover;box-shadow:0 0 0 2px #fff,0 0 0 4px var(--tp-red);}
-.tp-brand{padding:2px 2px 16px;} .tp-brand-name{font-weight:800;font-size:1rem;letter-spacing:-.01em;}
-[data-testid="stSidebar"] .tp-brand-name span{color:var(--tp-red)!important;} .tp-brand-sub{font-size:.72rem;color:var(--tp-mute)!important;}
-.btn-logout>button{background:#fff!important;border:1px solid var(--tp-line)!important;}
-.btn-logout>button:hover{background:var(--tp-red-soft)!important;border-color:var(--tp-red)!important;}
-/* Marcación: tarjeta de estado y lista */
-.tp-hero{box-sizing:border-box;min-height:132px;background:var(--tp-surface);border:1px solid var(--tp-line);border-radius:var(--tp-r-lg);padding:18px 20px;box-shadow:var(--tp-sh-1);}
-.tp-hero-top{display:flex;gap:14px;align-items:center;margin-bottom:16px;}
-.tp-hero-hi{font-weight:700;font-size:1.08rem;margin-bottom:5px;}
-.tp-prog-lbl{display:flex;justify-content:space-between;font-size:.76rem;color:var(--tp-mute);font-weight:600;margin-bottom:6px;}
-.tp-prog{height:8px;background:#EEF1F5;border-radius:999px;overflow:hidden;}
-.tp-prog i{display:block;height:100%;background:linear-gradient(90deg,var(--tp-red),#F26B6F);border-radius:999px;}
-.tp-row{display:flex;align-items:center;gap:12px;background:var(--tp-surface);border:1px solid var(--tp-line);border-radius:14px;padding:12px 14px;margin-bottom:8px;}
-.tp-row-time{font-weight:700;font-variant-numeric:tabular-nums;min-width:48px;}
-.tp-row-main{flex:1;min-width:0;} .tp-row-main b{display:block;font-size:.9rem;}
-.tp-row-main span{display:block;font-size:.78rem;color:var(--tp-mute);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.tp-chips{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;}
-/* Barra inferior (celular) */
-.st-key-tp_bottomnav{display:none;}
-@media (max-width:900px){
-  .st-key-tp_bottomnav{display:block;position:fixed;left:0;right:0;bottom:0;z-index:999;background:rgba(255,255,255,.96);backdrop-filter:blur(10px);
-    border-top:1px solid var(--tp-line);padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px));box-shadow:0 -8px 24px -12px rgba(15,23,42,.25);}
-  .st-key-tp_bottomnav [data-testid="stHorizontalBlock"]{flex-wrap:nowrap!important;gap:4px!important;}
-  .st-key-tp_bottomnav [data-testid="stColumn"],.st-key-tp_bottomnav [data-testid="column"]{min-width:0!important;flex:1 1 0!important;width:auto!important;}
-  .st-key-tp_bottomnav button{background:transparent!important;color:var(--tp-mute)!important;box-shadow:none!important;border:none!important;min-height:56px!important;padding:4px 2px!important;border-radius:12px!important;}
-  .st-key-tp_bottomnav button>div{display:flex;flex-direction:column;align-items:center;gap:2px;}
-  .st-key-tp_bottomnav button p{font-size:.68rem!important;font-weight:650!important;margin:0;color:inherit!important;}
-  .st-key-tp_bottomnav button[kind="primary"],.st-key-tp_bottomnav [data-testid="stBaseButton-primary"]{background:var(--tp-red-soft)!important;color:var(--tp-red-dk)!important;}
-  .st-key-tp_bottomnav button:hover{transform:none!important;}
-  .tp-row{padding:10px 12px;}
-}
-</style>
-""", unsafe_allow_html=True)
 
 @st.cache_data(show_spinner=False, ttl=300)
 def ui_foto_uri(dni, foto_nom=""):
@@ -1439,41 +1892,6 @@ def ui_foto_uri(dni, foto_nom=""):
     return ""
 
 import html as _html
-st.markdown("""
-<style>
-/* Ajustes finales: botón de menú, cerrar sesión y opciones */
-[data-testid="stSidebar"] [role="radiogroup"] label>*:not(input):not([data-testid="stMarkdownContainer"]):not(:has([data-testid="stMarkdownContainer"])){display:none!important;}
-[data-testid="stSidebar"] .stButton>button{background:#fff!important;border:1.5px solid var(--tp-red)!important;box-shadow:none!important;}
-[data-testid="stSidebar"] .stButton>button *{color:#111827!important;font-weight:650;}
-[data-testid="stSidebar"] .stButton>button:hover{background:var(--tp-red)!important;}
-[data-testid="stSidebar"] .stButton>button:hover *{color:#111827!important;}
-[data-testid="stSidebar"] .stButton>button{color:#111827!important;}
-[data-testid="stExpandSidebarButton"],[data-testid="stSidebarCollapsedControl"],[data-testid="collapsedControl"]{background:#fff!important;border:1.5px solid var(--tp-red)!important;}
-[data-testid="stExpandSidebarButton"] *,[data-testid="stSidebarCollapsedControl"] *,[data-testid="collapsedControl"] *{color:var(--tp-red)!important;fill:var(--tp-red)!important;}
-[data-testid="stExpandSidebarButton"] button,[data-testid="stSidebarCollapsedControl"] button{background:transparent!important;}
-[data-testid="stExpandSidebarButton"]:hover,[data-testid="stSidebarCollapsedControl"]:hover,[data-testid="collapsedControl"]:hover{background:var(--tp-red)!important;}
-[data-testid="stExpandSidebarButton"]:hover *,[data-testid="stSidebarCollapsedControl"]:hover *,[data-testid="collapsedControl"]:hover *{color:#fff!important;fill:#fff!important;}
-/* Tarjetas de solicitud + línea de tiempo */
-.tp-card{background:var(--tp-surface);border:1px solid var(--tp-line);border-radius:16px;padding:16px 18px;margin-bottom:12px;box-shadow:var(--tp-sh-1);}
-.tp-card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
-.tp-card-title{font-weight:700;font-size:.95rem;} .tp-card-sub{font-size:.76rem;color:var(--tp-mute);margin-top:2px;}
-.tp-card-body{font-size:.86rem;color:var(--tp-ink-2);margin:10px 0 14px;line-height:1.55;}
-.tp-resp{background:#F6F7FA;border-left:3px solid var(--tp-red);border-radius:8px;padding:10px 12px;font-size:.82rem;margin-top:12px;color:var(--tp-ink-2);}
-.tp-tl{display:flex;}
-.tp-tl-step{flex:1;position:relative;text-align:center;font-size:.7rem;font-weight:600;color:var(--tp-mute);}
-.tp-tl-step::before{content:"";position:relative;z-index:1;display:block;width:14px;height:14px;margin:0 auto 6px;border-radius:50%;background:#fff;border:2px solid #CBD2DC;}
-.tp-tl-step::after{content:"";position:absolute;top:6px;left:-50%;width:100%;height:2px;background:#CBD2DC;}
-.tp-tl-step:first-child::after{display:none;}
-.tp-tl-step.done{color:var(--tp-ink-2);} .tp-tl-step.done::before{background:var(--tp-ok);border-color:var(--tp-ok);} .tp-tl-step.done::after{background:var(--tp-ok);}
-.tp-tl-step.now{color:var(--tp-warn);} .tp-tl-step.now::before{background:#F59E0B;border-color:#F59E0B;box-shadow:0 0 0 4px rgba(245,158,11,.2);} .tp-tl-step.now::after{background:var(--tp-ok);}
-.tp-tl-step.bad{color:var(--tp-bad);} .tp-tl-step.bad::before{background:var(--tp-bad);border-color:var(--tp-bad);} .tp-tl-step.bad::after{background:var(--tp-bad);}
-.tp-notif{display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--tp-warn-soft);border-radius:12px;padding:9px 12px;margin:-6px 0 14px;font-size:.78rem;font-weight:650;}
-[data-testid="stSidebar"] .tp-notif,[data-testid="stSidebar"] .tp-notif *{color:var(--tp-warn)!important;}
-/* Tabla en PC, tarjetas en celular */
-.st-key-vista_tarjetas{display:none;}
-@media (max-width:900px){.st-key-vista_tabla{display:none;}.st-key-vista_tarjetas{display:block;}}
-</style>
-""", unsafe_allow_html=True)
 
 def ui_timeline(estado):
     e = str(estado).strip().lower()
@@ -1504,30 +1922,6 @@ def ui_solicitud_card(r, admin=False):
     return (f'<div class="tp-card{" flat" if admin else ""}"><div class="tp-card-head">{quien}{ui_chip(est, chip)}</div>'
             f'<div class="tp-card-body">{det}<br>{_html.escape(str(r["motivo"]))}</div>{ui_timeline(est)}{resp_html}</div>')
 
-st.markdown("""
-<style>
-.tp-card.flat{border:none;box-shadow:none;padding:0;margin:0 0 8px;}
-[class*="st-key-ap_"] button{background:var(--tp-ok)!important;color:#fff!important;border:none!important;}
-[class*="st-key-ap_"] button:hover{background:#087548!important;}
-[class*="st-key-rec_"] button{background:#fff!important;border:1.5px solid var(--tp-red)!important;}
-[class*="st-key-rec_"] button *{color:var(--tp-red)!important;}
-[class*="st-key-rec_"] button:hover{background:var(--tp-red-soft)!important;}
-[class*="st-key-ap_"] button *{color:#fff!important;}
-.tp-sec{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:6px 0 16px;}
-.tp-sec-title{font-size:1.12rem;font-weight:700;color:var(--tp-ink);} .tp-sec-sub{font-size:.8rem;color:var(--tp-mute);}
-.tp-op-head{display:flex;align-items:center;gap:12px;margin-bottom:16px;} .tp-op-head .tp-chip{margin-left:auto;}
-.tp-mgrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:14px;}
-.tp-m{background:#F6F7FA;border-radius:12px;padding:12px 14px;}
-.tp-m-l{font-size:.66rem;font-weight:700;color:var(--tp-mute);text-transform:uppercase;letter-spacing:.07em;}
-.tp-m-v{font-size:1.05rem;font-weight:700;margin-top:5px;color:var(--tp-ink);font-variant-numeric:tabular-nums;} .tp-m-v.pos{color:var(--tp-ok);}
-.tp-m .tp-prog{margin-top:9px;height:6px;}
-.tp-ngrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px;}
-.tp-note{border:1px solid var(--tp-line);border-radius:12px;padding:12px 14px;}
-.tp-note-t{font-size:.66rem;font-weight:700;color:var(--tp-mute);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;}
-.tp-note ul{margin:0;padding-left:16px;font-size:.84rem;color:var(--tp-ink-2);line-height:1.8;} .tp-note li.mute{color:var(--tp-mute);list-style:none;margin-left:-16px;}
-@media (max-width:900px){.tp-mgrid{grid-template-columns:repeat(2,minmax(0,1fr));}}
-</style>
-""", unsafe_allow_html=True)
 
 def ui_op_card(nombre, d, dni="", foto=""):
     e = _html.escape
@@ -1555,26 +1949,6 @@ def ui_op_card(nombre, d, dni="", foto=""):
             f'<div class="tp-card-sub">Total trabajado: {e(str(d["tiempo_total_str"]))}</div></div>{ui_chip(est_txt, ch)}</div>'
             f'<div class="tp-mgrid">{kpis}</div><div class="tp-ngrid">{notas}</div></div>')
 
-st.markdown("""
-<style>
-.tp-id{background:var(--tp-surface);border:1px solid var(--tp-line);border-radius:20px;box-shadow:var(--tp-sh-1);overflow:hidden;margin-bottom:16px;}
-.tp-id-band{height:76px;background:linear-gradient(120deg,#0F172A 0%,#1E293B 58%,#EC3237 190%);}
-.tp-id.off .tp-id-band{background:linear-gradient(120deg,#475569,#94A3B8);}
-.tp-id-head{display:flex;gap:16px;align-items:flex-start;padding:0 20px;}
-.tp-id-photo{flex:0 0 auto;width:96px;height:96px;margin-top:-44px;border-radius:20px;object-fit:cover;object-position:center top;border:4px solid #fff;box-shadow:var(--tp-sh-2);background:#EEF1F5;}
-.tp-id-photo.ph{display:flex;align-items:center;justify-content:center;font-size:1.9rem;font-weight:700;color:#fff;background:var(--tp-red);}
-.tp-id.off .tp-id-photo{filter:grayscale(1);}
-.tp-id-who{padding-top:12px;min-width:0;} .tp-id-name{font-size:1.1rem;font-weight:700;color:var(--tp-ink);line-height:1.25;}
-.tp-id-role{font-size:.82rem;color:var(--tp-mute);margin-top:2px;} .tp-id-chips{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
-.tp-id-body{padding:18px 20px 20px;} .tp-id-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 18px;}
-.tp-f.wide{grid-column:1/-1;} .tp-f-l{font-size:.64rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--tp-mute);}
-.tp-f-v{font-size:.9rem;font-weight:600;color:var(--tp-ink);margin-top:3px;word-break:break-word;} .tp-f-v.bad{color:var(--tp-bad);}
-.tp-id-sos{margin-top:16px;background:#F6F7FA;border-radius:12px;padding:11px 14px;}
-a.tp-link{color:var(--tp-red);font-weight:700;text-decoration:none;} a.tp-link:hover{text-decoration:underline;}
-.tp-row-main span.wrap{white-space:normal;} .tp-row-time{min-width:56px;}
-@media (max-width:640px){.tp-id-grid{grid-template-columns:1fr;}.tp-id-photo{width:84px;height:84px;}}
-</style>
-""", unsafe_allow_html=True)
 
 def ui_dni_foto(nombre):
     emp = st.session_state.empleados
@@ -1603,18 +1977,6 @@ def ui_rank_rows(df_r, tipo):
                 f'<div class="tp-chips">{ui_chip(("+" if v > 0 else "") + f"S/. {v:.2f}", tipo)}</div></div>')
     return out
 
-st.markdown("""
-<style>
-.tp-grid2{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;margin-bottom:8px;} .tp-grid2 .tp-card{margin-bottom:0;}
-.tp-saldo-n{font-size:2.1rem;font-weight:800;line-height:1.1;margin:14px 0 10px;color:var(--tp-ink);font-variant-numeric:tabular-nums;}
-.tp-saldo-n span{font-size:.88rem;font-weight:600;color:var(--tp-mute);margin-left:6px;}
-.tp-card.hero{padding:22px 24px;} .tp-card.hero .tp-saldo-n{font-size:2.8rem;}
-.tp-prog.ok i{background:var(--tp-ok);} .tp-prog.warn i{background:#F59E0B;} .tp-prog.bad i{background:var(--tp-bad);}
-[class*="st-key-recup_btn_"] button{background:var(--tp-ok)!important;border:none!important;}
-[class*="st-key-recup_btn_"] button *{color:#fff!important;}
-[class*="st-key-recup_btn_"] button:hover{background:#087548!important;}
-</style>
-""", unsafe_allow_html=True)
 
 def ui_saldo_card(nombre, sv, dni="", foto="", hero=False):
     gen, goz, sal = float(sv["dias_generados"]), float(sv["dias_gozados"]), float(sv["saldo_disponible"])
@@ -1743,11 +2105,6 @@ def render_busqueda(q, es_admin, dni_me, menu):
     if total == 0:
         st.markdown(f'<div class="tp-card" style="text-align:center;padding:36px 20px"><div class="tp-card-title">Sin resultados para “{e(q)}”</div><div class="tp-card-sub" style="margin-top:6px">Prueba con otro nombre, DNI o palabra, o revisa la ortografía.</div></div>', unsafe_allow_html=True)
 
-st.markdown("""
-<style>
-[class*="st-key-tpc_"]{background:var(--tp-surface);border:1px solid var(--tp-line);border-radius:16px;padding:16px 18px;box-shadow:var(--tp-sh-1);margin-bottom:12px;}
-</style>
-""", unsafe_allow_html=True)
 
 def ui_card_container(key):
     """Contenedor que ES la tarjeta blanca (foto, texto y botones dentro del mismo fondo)."""
@@ -1756,27 +2113,6 @@ def ui_card_container(key):
     except TypeError:
         return st.container(border=True)
 
-st.markdown("""
-<style>
-.tp-cols{display:flex;align-items:flex-end;gap:10px;height:var(--h,220px);overflow-x:auto;padding-bottom:2px;}
-.tp-col{flex:1;min-width:46px;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;}
-.tp-bars{display:flex;align-items:flex-end;justify-content:center;gap:4px;width:100%;height:calc(100% - 24px);padding-top:22px;box-sizing:border-box;border-bottom:1px solid var(--tp-line);}
-.tp-bar{position:relative;flex:1;max-width:40px;border-radius:9px 9px 0 0;}
-.tp-bar em{position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-style:normal;font-size:.68rem;font-weight:700;color:var(--tp-ink-2);white-space:nowrap;}
-.tp-col>span{font-size:.7rem;color:var(--tp-mute);margin-top:7px;white-space:nowrap;}
-.tp-legs{display:flex;gap:16px;margin-top:12px;font-size:.76rem;color:var(--tp-ink-2);font-weight:600;}
-.tp-leg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;}
-.tp-kpi{min-height:128px;}
-.tp-hb{display:grid;grid-template-columns:minmax(80px,160px) 1fr auto;gap:12px;align-items:center;margin:11px 0;}
-.tp-hb-l{font-size:.84rem;font-weight:600;color:var(--tp-ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.tp-hb-t{height:10px;background:#EEF1F5;border-radius:999px;overflow:hidden;} .tp-hb-t i{display:block;height:100%;border-radius:999px;}
-.tp-hb-v{font-size:.82rem;font-weight:700;color:var(--tp-ink-2);font-variant-numeric:tabular-nums;}
-.tp-rk{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid #F0F2F6;} .tp-rk:last-child{border-bottom:none;}
-.tp-rk-main{flex:1;min-width:0;} .tp-rk-main b{font-size:.88rem;} .tp-rk-main .tp-prog{margin-top:7px;height:6px;}
-.tp-rk-pct{font-weight:800;min-width:58px;text-align:right;font-variant-numeric:tabular-nums;}
-@media (max-width:640px){.tp-hb{grid-template-columns:1fr auto;}.tp-hb-t{grid-column:1/-1;order:3;}.tp-rk .tp-chips{display:none;}}
-</style>
-""", unsafe_allow_html=True)
 
 _MES_ABR = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
 _MESES_L = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
@@ -1854,18 +2190,6 @@ def ui_linea(labels, vals, color="#EC3237", fmt="{:g}", suf="", alto=230):
             f'<stop offset="1" stop-color="{color}" stop-opacity="0"/></linearGradient></defs><line x1="{px - 10}" y1="{H - bot}" x2="{W - px + 10}" y2="{H - bot}" stroke="#E3E6EC"/>'
             f'<polygon points="{area}" fill="url(#{gid})"/><polyline points="{linea}" fill="none" stroke="{color}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>{txt}</svg>')
 
-st.markdown("""
-<style>
-/* Quita el espacio vacío superior: los bloques de estilo y el iframe invisible no deben ocupar lugar */
-[data-testid="stElementContainer"]:has(style),.element-container:has(style),[data-testid="stElementContainer"]:has(iframe[height="0"]),.element-container:has(iframe[height="0"]){display:none!important;}
-.stApp:has([data-testid="stSidebar"][aria-expanded="true"]) .block-container{padding-top:3.2rem;}
-[data-testid="stToolbarActions"],[data-testid="stAppDeployButton"]{display:none!important;}
-.tp-steps{margin:2px 0 14px;padding:0;list-style:none;counter-reset:paso;}
-.tp-steps li{counter-increment:paso;position:relative;padding:5px 0 5px 34px;font-size:.84rem;line-height:1.45;color:var(--tp-ink-2);}
-.tp-steps li::before{content:counter(paso);position:absolute;left:0;top:4px;width:23px;height:23px;border-radius:50%;background:var(--tp-red-soft);color:var(--tp-red-dk);font-weight:700;font-size:.74rem;display:flex;align-items:center;justify-content:center;}
-.tp-steps-t{font-size:.7rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--tp-mute);margin:8px 0 4px;display:flex;gap:8px;align-items:center;}
-</style>
-""", unsafe_allow_html=True)
 
 @st.cache_resource(show_spinner=False)
 def ui_icono_app():
@@ -1928,57 +2252,7 @@ def ui_guia_instalar(cont):
         st.markdown((andr + ios) if es_and else (ios + andr), unsafe_allow_html=True)
         st.caption("Cada vez que abras la app te pedirá tu DNI y contraseña por seguridad.")
 
-st.markdown("""
-<style>
-.tp-kpi.al-bad{border-left:4px solid var(--tp-bad);} .tp-kpi.al-warn{border-left:4px solid #F59E0B;} .tp-kpi.al-info{border-left:4px solid var(--tp-info);} .tp-kpi.al-ok{border-left:4px solid var(--tp-ok);}
-.tp-banner{display:flex;align-items:center;gap:16px;border-radius:20px;padding:20px 24px;border:1px solid var(--tp-line);box-shadow:var(--tp-sh-1);}
-.tp-banner.ok{background:linear-gradient(120deg,#E3F6EC,#F4FBF7);border-color:#BFE8D2;} .tp-banner.warn{background:linear-gradient(120deg,#FEF3C7,#FFFBEB);border-color:#F8DE95;} .tp-banner.bad{background:linear-gradient(120deg,#FEE4E2,#FFF5F4);border-color:#F9C4C0;}
-.tp-banner b{font-size:1.1rem;color:var(--tp-ink);display:block;} .tp-banner span.s{font-size:.84rem;color:var(--tp-ink-2);}
-.tp-al-ico{flex:0 0 auto;width:42px;height:42px;border-radius:13px;display:flex;align-items:center;justify-content:center;}
-.tp-al-ico.bad{background:var(--tp-bad-soft);color:var(--tp-bad);} .tp-al-ico.warn{background:var(--tp-warn-soft);color:var(--tp-warn);} .tp-al-ico.info{background:var(--tp-info-soft);color:var(--tp-info);} .tp-al-ico.ok{background:var(--tp-ok-soft);color:var(--tp-ok);}
-/* Saludo de cumpleaños */
-.tp-bd{position:relative;overflow:hidden;border-radius:22px;border:1px solid var(--tp-line);background:#fff;}
-.tp-bd-top{position:relative;height:150px;background:linear-gradient(135deg,#EC3237 0%,#A3202A 55%,#0F172A 135%);}
-.tp-bd-conf{position:absolute;inset:0;overflow:hidden;}
-.tp-bd-top i{position:absolute;top:-16px;width:9px;height:15px;border-radius:2px;opacity:.95;animation:tpFall 3.4s linear infinite;}
-@keyframes tpFall{to{transform:translateY(200px) rotate(320deg);opacity:0;}}
-.tp-bd-photo{position:absolute;left:50%;top:94px;transform:translateX(-50%);z-index:2;}
-.tp-bd-photo .tp-avatar{box-shadow:0 0 0 5px #fff,0 18px 34px -12px rgba(15,23,42,.5);}
-.tp-bd-body{padding:68px 26px 22px;text-align:center;}
-.tp-bd-k{font-size:.7rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--tp-red);}
-.tp-bd-h{font-size:1.65rem;font-weight:800;color:var(--tp-ink);letter-spacing:-.02em;margin:6px 0 10px;line-height:1.2;}
-.tp-bd-msg{font-size:.92rem;line-height:1.65;color:var(--tp-ink-2);max-width:420px;margin:14px auto 0;}
-.tp-bd-big{font-size:1rem;font-weight:700;color:var(--tp-ink);margin:14px 0 0;}
-.tp-bd-sign{margin-top:16px;padding-top:14px;border-top:1px solid var(--tp-line);font-size:.8rem;color:var(--tp-mute);}
-[data-testid="stDialog"] .stButton>button{min-height:52px;border:none!important;background:linear-gradient(135deg,#EC3237,#C9262B)!important;box-shadow:0 14px 26px -12px rgba(236,50,55,.7);}
-[data-testid="stDialog"] .stButton>button *{color:#fff!important;font-weight:700;}
-</style>
-""", unsafe_allow_html=True)
 
-st.markdown("""
-<style>
-.st-key-tipo_sol_radio{width:100%!important;}
-.st-key-tipo_sol_radio [data-testid="stRadio"]{width:100%;display:flex;flex-direction:column;align-items:center;}
-.st-key-tipo_sol_radio [data-testid="stWidgetLabel"]{width:100%;}
-.st-key-tipo_sol_radio [role="radiogroup"]{gap:10px;flex-wrap:wrap;justify-content:center;width:100%;}
-.stFormSubmitButton>button{background:linear-gradient(135deg,#EC3237,#C9262B)!important;border:none!important;box-shadow:0 14px 26px -12px rgba(236,50,55,.6);}
-.stFormSubmitButton>button *{color:#fff!important;font-weight:700;}
-.st-key-tipo_sol_radio [data-testid="stWidgetLabel"]{justify-content:center;margin-bottom:6px;}
-.st-key-tipo_sol_radio [data-testid="stWidgetLabel"] p{font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--tp-mute);text-align:center;}
-.st-key-tipo_sol_radio [role="radiogroup"] label{border:1.5px solid var(--tp-line);background:#fff;border-radius:14px;padding:12px 18px;cursor:pointer;transition:all .12s ease;box-shadow:var(--tp-sh-1);}
-.st-key-tipo_sol_radio [role="radiogroup"] label>*:not(input):not([data-testid="stMarkdownContainer"]):not(:has([data-testid="stMarkdownContainer"])){display:none!important;}
-.st-key-tipo_sol_radio [role="radiogroup"] label p{font-weight:650;font-size:.9rem;color:var(--tp-ink-2);margin:0;}
-.st-key-tipo_sol_radio [role="radiogroup"] label:hover{border-color:#CBD2DC;}
-.st-key-tipo_sol_radio [role="radiogroup"] label:has(input:checked){border-color:var(--tp-red);background:var(--tp-red-soft);}
-.st-key-tipo_sol_radio [role="radiogroup"] label:has(input:checked) p{color:var(--tp-red-dk);}
-[class*="st-key-form_nuevo_"] button,[class*="st-key-form_domingo"] button{background:linear-gradient(135deg,#EC3237,#C9262B)!important;border:none!important;box-shadow:0 14px 26px -12px rgba(236,50,55,.6);}
-[class*="st-key-form_nuevo_"] button *,[class*="st-key-form_domingo"] button *{color:#fff!important;font-weight:700;}
-.tp-callout{display:flex;gap:12px;align-items:flex-start;border-radius:14px;padding:14px 16px;margin:6px 0 14px;font-size:.88rem;line-height:1.55;color:var(--tp-ink-2);border:1px solid var(--tp-line);}
-.tp-callout.info{background:var(--tp-info-soft);border-color:#C7D8FB;} .tp-callout.ok{background:var(--tp-ok-soft);border-color:#BFE8D2;} .tp-callout.warn{background:var(--tp-warn-soft);border-color:#F8DE95;}
-.tp-callout i{flex:0 0 auto;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-style:normal;font-weight:800;font-size:.8rem;background:#fff;}
-.tp-callout.info i{color:var(--tp-info);} .tp-callout.ok i{color:var(--tp-ok);} .tp-callout.warn i{color:var(--tp-warn);}
-</style>
-""", unsafe_allow_html=True)
 
 def ui_callout(texto, tono="info"):
     t = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", _html.escape(str(texto)))
@@ -2044,24 +2318,6 @@ def render_hist_puntualidad(dfa, dias_corte=None):
     e1.markdown(ui_panel("Tus horas extras por mes", f"Tiempo trabajado sobre la jornada base de {jornada_base_txt()}", ui_linea(lbl, [round(ext.get(m, 0) / 60, 1) for m in meses], "#F59E0B", "{:g}", " h")), unsafe_allow_html=True)
     e2.markdown(ui_panel("Tus últimas tardanzas", "Las 5 más recientes", filas_u), unsafe_allow_html=True)
 
-st.markdown("""
-<style>
-[class*="st-key-seg_"]{width:100%!important;}
-[class*="st-key-seg_"] [data-testid="stRadio"]{width:100%;display:flex;flex-direction:column;align-items:center;}
-[class*="st-key-seg_"] [data-testid="stWidgetLabel"]{width:100%;justify-content:center;margin-bottom:6px;}
-[class*="st-key-seg_"] [data-testid="stWidgetLabel"] p{font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--tp-mute);text-align:center;}
-[class*="st-key-seg_"] [role="radiogroup"]{gap:10px;flex-wrap:wrap;justify-content:center;width:100%;}
-[class*="st-key-seg_"] [role="radiogroup"] label{border:1.5px solid var(--tp-line);background:#fff;border-radius:14px;padding:12px 18px;cursor:pointer;transition:all .12s ease;box-shadow:var(--tp-sh-1);}
-[class*="st-key-seg_"] [role="radiogroup"] label>*:not(input):not([data-testid="stMarkdownContainer"]):not(:has([data-testid="stMarkdownContainer"])){display:none!important;}
-[class*="st-key-seg_"] [role="radiogroup"] label p{font-weight:650;font-size:.9rem;color:var(--tp-ink-2);margin:0;}
-[class*="st-key-seg_"] [role="radiogroup"] label:hover{border-color:#CBD2DC;}
-[class*="st-key-seg_"] [role="radiogroup"] label:has(input:checked){border-color:var(--tp-red);background:var(--tp-red-soft);}
-[class*="st-key-seg_"] [role="radiogroup"] label:has(input:checked) p{color:var(--tp-red-dk);}
-[class*="st-key-bf_dev_"] button{background:var(--tp-ok)!important;border:none!important;}
-[class*="st-key-bf_dev_"] button *{color:#fff!important;font-weight:700;}
-[class*="st-key-bf_dev_"] button:hover{background:#087548!important;}
-</style>
-""", unsafe_allow_html=True)
 
 def ui_inc_card(r, admin=False, flat=False):
     e = _html.escape
@@ -2080,39 +2336,10 @@ def ui_inc_card(r, admin=False, flat=False):
     return (f'<div class="tp-card{" flat" if flat else ""}"><div class="tp-card-head">{quien}'
             f'<div class="tp-chips">{ui_chip(val, "info")}{ui_chip(e(est), "warn" if "pend" in est.lower() else "ok")}</div></div><div class="tp-card-body" style="margin-bottom:0">{e(detalle)}</div></div>')
 
-st.markdown("""
-<style>
-.legend-container{display:flex;flex-wrap:wrap;gap:8px;background:#fff;border:1px solid var(--tp-line);border-radius:16px;padding:14px 16px;box-shadow:var(--tp-sh-1);margin:8px 0 14px;}
-.legend-item{display:inline-flex;align-items:center;gap:8px;background:#F6F7FA;border-radius:999px;padding:5px 12px 5px 8px;font-size:.76rem;font-weight:600;color:var(--tp-ink-2);}
-.legend-badge{width:14px;height:14px;border-radius:50%;display:inline-block;}
-.tp-gridk{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:6px 0 18px;} .tp-gridk .tp-kpi{min-height:118px;}
-.tp-grp{display:flex;align-items:center;gap:10px;margin:22px 0 10px;font-size:.78rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;}
-.tp-grp::before{content:"";width:10px;height:10px;border-radius:50%;background:currentColor;}
-.tp-grp.ok{color:var(--tp-ok);} .tp-grp.bad{color:var(--tp-bad);} .tp-grp.info{color:var(--tp-info);}
-[class*="st-key-inc_res_"] button{background:var(--tp-ok)!important;border:none!important;}
-[class*="st-key-inc_res_"] button *{color:#fff!important;font-weight:700;}
-</style>
-""", unsafe_allow_html=True)
 
 def ui_kpi_acc(lbl, val, sub, tono):
     return f'<div class="tp-kpi al-{tono}"><div class="tp-kpi-lbl">{lbl}</div><div class="tp-kpi-val">{val}</div><div class="tp-kpi-sub">{sub}</div></div>'
 
-st.markdown("""
-<style>
-/* Notificaciones (toasts): sobrias, compactas y corporativas */
-[data-testid="stToast"]{background:#FFFFFF!important;border:1px solid var(--tp-line)!important;border-radius:14px!important;
-  box-shadow:0 14px 34px -14px rgba(15,23,42,.32)!important;padding:12px 16px!important;width:auto!important;min-width:240px;max-width:min(380px,92vw)!important;
-  animation:tpToastIn .25s ease;}
-[data-testid="stToast"] [data-testid="stMarkdownContainer"] p{color:var(--tp-ink-2)!important;font-size:.82rem!important;line-height:1.45!important;margin:0!important;overflow-wrap:anywhere;}
-[data-testid="stToast"] [data-testid="stMarkdownContainer"] p:first-child{color:var(--tp-ink)!important;font-size:.88rem!important;margin-bottom:3px!important;}
-[data-testid="stToast"] button,[data-testid="stToast"] button svg{color:var(--tp-mute)!important;fill:var(--tp-mute)!important;}
-@keyframes tpToastIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
-@media (max-width:900px){[data-testid="stToastContainer"]{bottom:88px!important;}}
-/* Avisos en pantalla (st.success / st.error / st.warning / st.info) */
-[data-testid="stAlert"]{border-radius:12px!important;box-shadow:none;}
-[data-testid="stAlert"] p{font-weight:500;font-size:.86rem;}
-</style>
-""", unsafe_allow_html=True)
 
 def _tp_toast(body, *args, **kwargs):
     """Todas las notificaciones st.toast de la app salen con título de color, ícono y diseño de marca."""
@@ -2137,18 +2364,6 @@ if not hasattr(st, "_tp_toast_orig"):
     st._tp_toast_orig = st.toast
 st.toast = _tp_toast
 
-st.markdown("""
-<style>
-/* Transición entre pestañas: la página entra suavemente */
-@keyframes tpPgA{from{opacity:.5;transform:translateY(12px);}to{opacity:1;transform:none;}}
-@keyframes tpPgB{from{opacity:.5;transform:translateY(12px);}to{opacity:1;transform:none;}}
-.stApp:has(.tp-pg-a) .block-container{animation:tpPgA .45s cubic-bezier(.2,.7,.2,1);}
-.stApp:has(.tp-pg-b) .block-container{animation:tpPgB .45s cubic-bezier(.2,.7,.2,1);}
-[data-testid="stElementContainer"]:has(.tp-pg-a),[data-testid="stElementContainer"]:has(.tp-pg-b),.element-container:has(.tp-pg-a),.element-container:has(.tp-pg-b){display:none!important;}
-[data-testid="stStatusWidget"]{display:none!important;}
-[data-stale="true"],.stale-element{opacity:.45!important;transition:opacity .25s ease;}
-</style>
-""", unsafe_allow_html=True)
 
 import json, numbers, hmac, hashlib, zipfile
 
@@ -2401,71 +2616,8 @@ def ui_firma_card(r):
             f'{img}<div class="tp-card-sub">Dispositivo: {disp or "no registrado"}</div></div>')
 
 NEGOSY_URL = "https://app.negosy.com/accounts/login/"
-st.markdown("""
-<style>
-[data-testid="stSidebar"] a.tp-negosy{display:flex;align-items:center;justify-content:space-between;gap:10px;background:linear-gradient(135deg,#0F172A 0%,#1B2A4A 100%);
-  border-radius:14px;padding:12px 16px;margin:6px 0 12px;text-decoration:none;box-shadow:var(--tp-sh-1);transition:transform .12s ease,box-shadow .12s ease;}
-[data-testid="stSidebar"] a.tp-negosy:hover{transform:translateY(-1px);box-shadow:var(--tp-sh-2);}
-[data-testid="stSidebar"] a.tp-negosy .tp-negosy-t{display:block;font-weight:800;font-size:.95rem;letter-spacing:.01em;color:#FFFFFF!important;}
-[data-testid="stSidebar"] a.tp-negosy .tp-negosy-s{display:block;font-size:.7rem;color:#9FB0CC!important;margin-top:1px;}
-[data-testid="stSidebar"] a.tp-negosy svg{flex:0 0 auto;color:#FF8A8E!important;stroke:#FF8A8E!important;}
-</style>
-""", unsafe_allow_html=True)
 
 # Armonización visual: estilos exclusivamente CSS; no cambia lógica ni navegación.
-st.markdown("""
-<style>
-/* Acciones generales: superficie clara, acento corporativo y contraste accesible. */
-.stButton > button:not([kind="primary"]):not([data-testid="stBaseButton-primary"]),
-.stDownloadButton > button:not([kind="primary"]) {
-  background:#FFFFFF !important; color:#334155 !important;
-  border:1px solid #D9E0E9 !important; border-radius:11px !important;
-  box-shadow:0 2px 5px rgba(24,39,75,.05) !important;
-}
-.stButton > button:not([kind="primary"]):hover,
-.stDownloadButton > button:not([kind="primary"]):hover {
-  background:#FFF4F4 !important; border-color:#EC3237 !important;
-  color:#C8252B !important; box-shadow:0 4px 10px rgba(236,50,55,.09) !important;
-}
-.stButton > button:not([kind="primary"]) *,
-.stDownloadButton > button:not([kind="primary"]) * {color:inherit !important;}
-/* Botón de acción principal: rojo de Tiendas Premium, no negro. */
-.stButton > button[kind="primary"],
-.stButton > button[data-testid="stBaseButton-primary"] {
-  background:#EC3237 !important; border:1px solid #EC3237 !important;
-  color:#FFFFFF !important; border-radius:11px !important;
-  box-shadow:0 3px 9px rgba(236,50,55,.17) !important;
-}
-.stButton > button[kind="primary"]:hover,
-.stButton > button[data-testid="stBaseButton-primary"]:hover {
-  background:#D6282D !important; border-color:#D6282D !important;
-}
-.stButton > button[kind="primary"] *,
-.stButton > button[data-testid="stBaseButton-primary"] * {color:#FFFFFF !important;}
-/* En formularios, guardar/confirmar conserva el acento rojo existente. */
-.stFormSubmitButton > button {border-radius:11px !important;}
-/* Se respetan los botones de ingreso/salida, chatbot, menú lateral y navegación móvil. */
-.btn-ingreso > button, .btn-ingreso button {background:#00A959 !important;color:#fff !important;border-color:#00A959 !important;}
-.btn-salida > button, .btn-salida button {background:#EC3237 !important;color:#fff !important;border-color:#EC3237 !important;}
-.st-key-tp_chat_fab button {border-radius:50% !important;background-color:#EC3237 !important;}
-.st-key-tp_bottomnav button:not([kind="primary"]) {background:transparent !important;border:none !important;box-shadow:none !important;}
-/* Acceso a Negosy: visible sin desentonar con la marca. */
-[data-testid="stSidebar"] a.tp-negosy {
-  background:linear-gradient(120deg,#EC3237 0%,#D52C32 100%) !important;
-  border:1px solid #C9272D !important;border-radius:12px !important;
-  box-shadow:0 4px 12px rgba(236,50,55,.18) !important;
-  transition:transform .15s ease,box-shadow .15s ease !important;
-}
-[data-testid="stSidebar"] a.tp-negosy:hover {
-  transform:translateY(-2px) !important;
-  box-shadow:0 7px 17px rgba(236,50,55,.26) !important;
-}
-[data-testid="stSidebar"] a.tp-negosy .tp-negosy-t {color:#FFFFFF !important;}
-[data-testid="stSidebar"] a.tp-negosy .tp-negosy-s {color:#FFE5E6 !important;}
-[data-testid="stSidebar"] a.tp-negosy svg {color:#FFFFFF !important;stroke:#FFFFFF !important;}
-/* Navegación lateral original: no modificar selección, disposición ni etiquetas. */
-</style>
-""", unsafe_allow_html=True)
 
 COLS_HOR = ["id_regla", "nombre", "vigente_desde", "estado", "jornada_base_min", "turnos_json", "creado_por", "fecha_creacion"]
 
@@ -2910,326 +3062,24 @@ def ui_mi_programacion(dni):
         # No interrumpir el terminal de asistencia si falta alguna fuente de datos.
         pass
 
-st.markdown("""
-<style>
-.tp-cal-shell{background:#fff;border:1px solid #E1E6ED;border-radius:18px;padding:20px 20px 16px;box-shadow:0 3px 12px rgba(22,34,56,.04);margin:12px 0 18px}
-.tp-cal-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;flex-wrap:wrap}
-.tp-cal-head h3{font-size:1.15rem;color:#172238;font-weight:750;margin:0 0 4px}
-.tp-cal-head p{color:#728099;font-size:.82rem;margin:0}
-.tp-cal-week{background:#FFF0F0;color:#D92E33;padding:7px 12px;border-radius:20px;font-size:.78rem;font-weight:700}
-.tp-cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}
-.tp-cal-day{min-height:143px;border:1px solid #E5E9F0;border-radius:12px;background:#F8FAFC;overflow:hidden;min-width:0}
-.tp-cal-date{display:flex;justify-content:space-between;align-items:center;padding:10px 10px 8px;border-bottom:1px solid rgba(0,0,0,.05);color:#64748B;font-size:.75rem}
-.tp-cal-date strong{font-size:.76rem;color:#344256}
-.tp-cal-body{padding:12px 10px;display:flex;flex-direction:column;gap:7px;overflow-wrap:anywhere}
-.tp-cal-body b{font-size:.79rem;color:#263347;line-height:1.3}
-.tp-cal-body span{font-size:.76rem;color:#516179;line-height:1.35}
-.tp-cal-body small{font-size:.69rem;color:#64748B}
-.tp-cal-day.trabajo{background:#F0F7FF;border-color:#D8E7FF}
-.tp-cal-day.trabajo .tp-cal-body b{color:#1558A2}
-.tp-cal-day.voluntario{background:#ECFAF3;border-color:#C5EBD6}
-.tp-cal-day.voluntario .tp-cal-body b{color:#087B47}
-.tp-cal-day.pendiente{background:#FFF8E7;border-color:#F4DE9E}
-.tp-cal-day.pendiente .tp-cal-body b{color:#956300}
-.tp-cal-day.ausencia{background:#FFF1F1;border-color:#FFDADA}
-.tp-cal-day.hoy{outline:2px solid #EC3237;outline-offset:-2px}
-.tp-cal-legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:15px;color:#66768C;font-size:.7rem}
-.tp-cal-legend span:nth-child(1){color:#1558A2}.tp-cal-legend span:nth-child(2){color:#087B47}.tp-cal-legend span:nth-child(3){color:#956300}
-@media(max-width:1050px){.tp-cal-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
-@media(max-width:650px){.tp-cal-shell{padding:14px}.tp-cal-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.tp-cal-day{min-height:125px}}
-/* Login: legibilidad de botón habilitado y deshabilitado, sin afectar botones de otros módulos. */
-.st-key-tpc_login_form [data-testid="stButton"] button,
-.st-key-tpc_login_form .stButton>button,
-.st-key-login_btn button,
-.st-key-login_btn button[kind="secondary"]{background:#EC3237!important;border:1px solid #EC3237!important;color:#111827!important;opacity:1!important;box-shadow:none!important}
-.st-key-tpc_login_form [data-testid="stButton"] button *,
-.st-key-login_btn button *{color:#111827!important;opacity:1!important}
-.st-key-tpc_login_form [data-testid="stButton"] button:disabled,
-.st-key-login_btn button:disabled{background:#EEF0F4!important;border:1px solid #D8DEE7!important;color:#253044!important;opacity:1!important}
-.st-key-tpc_login_form [data-testid="stButton"] button:disabled *,
-.st-key-login_btn button:disabled *{color:#253044!important;opacity:1!important}
-</style>
-""", unsafe_allow_html=True)
 
-st.markdown("""
-<style>
-.tp-shift-detail-wrap{display:block;width:100%;max-width:100%;overflow-x:auto;overflow-y:visible;background:#fff;border:1px solid #D9E0E9;border-radius:0!important;padding:0;box-shadow:none;box-sizing:border-box;}
-table.tp-shift-detail{display:table!important;width:100%!important;min-width:1000px!important;height:auto!important;max-height:none!important;overflow:visible!important;border-collapse:collapse!important;border-spacing:0!important;border-radius:0!important;table-layout:fixed;font-size:.76rem;line-height:1.4;background:#fff;}
-table.tp-shift-detail th,table.tp-shift-detail td{border:1px solid #DDE3EB!important;border-radius:0!important;box-shadow:none!important;vertical-align:middle;text-align:center;padding:11px 7px;white-space:normal;overflow-wrap:break-word;}
-table.tp-shift-detail thead th{background:#F3F6FA;color:#52647E;font-size:.72rem;font-weight:700;}
-table.tp-shift-detail th.n{width:235px;min-width:235px;text-align:left!important;padding:11px 12px!important;color:#172238;font-size:.78rem;font-weight:700;background:#F7F9FC;}
-table.tp-shift-detail td{width:108px;min-width:108px;}
-table.tp-shift-detail td:last-child{width:128px;min-width:128px;}
-table.tp-shift-detail td span,table.tp-shift-detail td em{display:block;font-style:normal;color:#52647E;}
-table.tp-shift-detail td.trab{background:#EFF4FF;color:#172238;}
-table.tp-shift-detail td.trab b{display:block;color:#172238;}
-table.tp-shift-detail td.trab em{color:#2156D8;font-weight:650;}
-table.tp-shift-detail td.desc{background:#F5F7FA;color:#65748B;font-weight:600;}
-table.tp-shift-detail td.aus{background:#FFF5DF;color:#9B6700;font-weight:600;}
-table.tp-shift-detail td.vacio{background:#fff;color:#B7C1CE;}
-table.tp-shift-detail td.tot{background:#F7F9FC;font-weight:650;}
-table.tp-shift-detail td.cob{background:#FBFCFD;}
-table.tp-shift-detail td.cob span.cero{color:#C62828;font-weight:700;}
-</style>
-""", unsafe_allow_html=True)
 
 # =============================================================
 # TIENDAS PREMIUM · CAPA RESPONSIVE (solo presentación)
 # No cambia datos, turnos, aprobaciones, sesiones ni Google Sheets.
 # =============================================================
-st.markdown(r"""<style>
-/* Tablets: controles y tarjetas se acomodan sin desbordar */
-@media screen and (max-width: 900px) {
-  .main .block-container {max-width:100%!important;padding-left:16px!important;padding-right:16px!important;}
-  [data-testid="stMainBlockContainer"] {max-width:100%!important;}
-  [data-testid="stHorizontalBlock"] {flex-wrap:wrap!important;}
-  [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {min-width:min(260px,100%)!important;flex:1 1 260px!important;}
-  .tp-up-calendar {max-width:100%!important;overflow-x:auto!important;-webkit-overflow-scrolling:touch;}
-  .tp-up-calendar table {min-width:850px!important;}
-  .tp-shift-detail-wrap {max-width:100%!important;overflow-x:auto!important;-webkit-overflow-scrolling:touch;}
-  .tp-cal-grid {grid-template-columns:repeat(3,minmax(0,1fr))!important;}
-  .tp-mgrid {grid-template-columns:repeat(2,minmax(0,1fr))!important;}
-}
-/* Teléfonos: una columna, tipografía legible y acciones táctiles */
-@media screen and (max-width: 640px) {
-  html,body {max-width:100%;overflow-x:hidden;}
-  .main .block-container,[data-testid="stMainBlockContainer"] {padding:64px 12px 36px!important;max-width:100%!important;overflow-x:clip;}
-  [data-testid="stHorizontalBlock"] {gap:10px!important;flex-wrap:wrap!important;}
-  [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {flex:1 1 100%!important;min-width:0!important;width:100%!important;}
-  [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] > div {min-width:0!important;}
-  [data-testid="stSidebar"] {max-width:min(86vw,320px)!important;}
-  [data-testid="stSidebar"] [role="radiogroup"] label {min-height:44px;}
-  .market-header {padding:16px!important;margin-bottom:12px!important;}
-  .market-header h1 {font-size:1.18rem!important;line-height:1.3!important;}
-  .tp-kpi,.cal-card,.boleta-container {max-width:100%;box-sizing:border-box;}
-  .tp-kpi-val {font-size:1.4rem!important;}
-  .stButton>button,.stDownloadButton>button,.stFormSubmitButton>button {min-height:46px!important;max-width:100%;white-space:normal!important;line-height:1.3!important;}
-  [data-baseweb="input"] input,[data-baseweb="textarea"] textarea {font-size:16px!important;}
-  [data-testid="stDataFrame"],[data-testid="stDataEditor"] {max-width:100%!important;overflow-x:auto!important;}
-  .stTabs [data-baseweb="tab-list"] {overflow-x:auto!important;flex-wrap:nowrap!important;}
-  .stTabs [data-baseweb="tab"] {flex-shrink:0!important;}
-  .tp-cal-shell {padding:12px!important;margin:8px 0 12px!important;}
-  .tp-cal-head {align-items:flex-start!important;gap:8px!important;}
-  .tp-cal-head h3 {font-size:1rem!important;}
-  .tp-cal-grid {grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px!important;}
-  .tp-cal-day {min-height:112px!important;border-radius:10px!important;}
-  .tp-cal-date {padding:8px!important;}
-  .tp-cal-body {padding:9px 8px!important;gap:5px!important;}
-  .tp-cal-body b {font-size:.78rem!important;}
-  .tp-cal-body span {font-size:.73rem!important;}
-  .tp-cal-legend {gap:8px!important;}
-  .tp-up-calendar {width:100%!important;overflow-x:auto!important;border-radius:10px!important;}
-  .tp-up-calendar table {min-width:820px!important;}
-  .tp-up-calendar th.tp-up-person {min-width:145px!important;width:145px!important;}
-  .tp-up-calendar thead th:first-child {width:145px!important;}
-  .tp-up-calendar th.tp-up-person,.tp-up-calendar thead th:first-child {position:sticky;left:0;z-index:2;background:#fff;box-shadow:2px 0 5px rgba(0,0,0,.05);}
-  .tp-up-calendar thead th:first-child {background:#f8fafc;z-index:3;}
-  .tp-shift-detail-wrap {width:100%!important;overflow-x:auto!important;border-radius:0!important;}
-  table.tp-shift-detail {min-width:950px!important;border-radius:0!important;}
-  .tp-mgrid,.tp-id-grid {grid-template-columns:1fr!important;}
-  .tp-hb {display:flex!important;flex-wrap:wrap!important;gap:8px!important;}
-  .tp-hb-t {flex-basis:100%!important;}
-  .tp-lg-hero {padding:16px!important;min-height:0!important;border-radius:16px!important;}
-  .tp-lg-h {font-size:1.32rem!important;line-height:1.25!important;}
-  .tp-lg-p {font-size:.88rem!important;line-height:1.5!important;}
-  .tp-lg-quote {margin-top:12px!important;padding:12px!important;}
-  .tp-lg-quote p {font-size:.86rem!important;}
-  .tp-lg-who .tp-avatar {width:64px!important;height:64px!important;}
-  .tp-lg-t {font-size:1.2rem!important;}
-  .tp-lg-note {font-size:.71rem!important;line-height:1.4!important;}
-  .st-key-tp_chat_fab {right:10px!important;top:60px!important;}
-  .st-key-tp_chat_panel {right:8px!important;top:125px!important;width:calc(100vw - 16px)!important;max-height:65dvh!important;}
-}
-@media screen and (max-width:380px) {
-  .main .block-container,[data-testid="stMainBlockContainer"] {padding-left:9px!important;padding-right:9px!important;}
-  .tp-cal-grid {grid-template-columns:1fr!important;}
-  .tp-cal-day {min-height:0!important;}
-  .tp-cal-body {gap:3px!important;}
-  .tp-cal-legend {font-size:.65rem!important;}
-}
-</style>""", unsafe_allow_html=True)
 
 # =============================================================
 # TIENDAS PREMIUM · MOBILE FIRST 2026
 # Solo CSS: no modifica asistencia, horarios, boletas ni Sheets.
 # Compatible con navegadores Android / iOS.
 # =============================================================
-st.markdown(r"""<style>
-@media (max-width: 767px) {
-  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
-  body, .stApp, [data-testid="stAppViewContainer"] { width:100%; max-width:100%; }
-  [data-testid="stMainBlockContainer"], .main .block-container {
-    width:100%!important; max-width:100%!important;
-    padding: max(70px, env(safe-area-inset-top)) 12px calc(28px + env(safe-area-inset-bottom))!important;
-    box-sizing:border-box!important;
-  }
-  /* No recortar elementos desplegables ni ventanas de Streamlit */
-  [data-testid="stMain"], [data-testid="stVerticalBlock"], [data-testid="stVerticalBlockBorderWrapper"] {
-    min-width:0!important; max-width:100%;
-  }
-  [data-testid="stHorizontalBlock"] { flex-wrap:wrap!important; gap:12px!important; align-items:stretch!important; }
-  [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {
-    flex:1 1 100%!important; width:100%!important; min-width:0!important; max-width:100%!important;
-  }
-  [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] > div { min-width:0!important; }
-  [data-testid="stForm"], [data-testid="stExpander"], [data-testid="stVerticalBlockBorderWrapper"] {
-    max-width:100%; box-sizing:border-box;
-  }
-  [data-testid="stForm"] { padding:12px!important; }
-  [data-testid="stWidgetLabel"] p { line-height:1.35!important; }
-  [data-testid="stTextInput"] input, [data-testid="stNumberInput"] input,
-  [data-testid="stTextArea"] textarea, [data-baseweb="select"] input {
-    font-size:16px!important; min-height:44px;
-  }
-  [data-testid="stButton"] button, [data-testid="stFormSubmitButton"] button,
-  [data-testid="stDownloadButton"] button, [data-testid="stPopover"] button {
-    min-height:48px!important; width:100%; touch-action:manipulation;
-    white-space:normal!important; overflow-wrap:anywhere; line-height:1.3!important;
-  }
-  /* Ingreso y salida: botones cómodos y diferenciados en móvil */
-  .btn-ingreso button, .btn-salida button { min-height:60px!important; font-size:1rem!important; }
-  .tp-hero, .tp-card, .tp-kpi, .market-header, .cal-card, .boleta-container {
-    max-width:100%!important; min-width:0!important; box-sizing:border-box!important;
-    overflow-wrap:anywhere;
-  }
-  .tp-hero-top { flex-wrap:wrap; }
-  .tp-hero-hi { overflow-wrap:anywhere; }
-  .tp-kpi-val { overflow-wrap:anywhere; font-size:clamp(1.25rem,6vw,1.7rem)!important; }
-  .tp-mgrid, .tp-gridk, .tp-id-grid { grid-template-columns:minmax(0,1fr)!important; }
-  .tp-cal-grid { grid-template-columns:repeat(2,minmax(0,1fr))!important; }
-  .tp-up-calendar, .tp-shift-detail-wrap, .cal-card, .boleta-container,
-  [data-testid="stDataFrame"], [data-testid="stDataEditor"] {
-    max-width:100%!important; overflow-x:auto!important; -webkit-overflow-scrolling:touch;
-  }
-  .stTabs [data-baseweb="tab-list"] { max-width:100%; overflow-x:auto!important; scrollbar-width:thin; }
-  .stTabs [data-baseweb="tab"] { white-space:nowrap!important; min-height:44px; }
-  /* Dialogos de cumpleaños, botellas y formularios: visibles sin salir de pantalla */
-  [role="dialog"] { max-width:calc(100vw - 20px)!important; max-height:calc(100dvh - 32px)!important;
-    overflow-y:auto!important; box-sizing:border-box!important; }
-  [data-testid="stDialog"] { max-width:100vw!important; }
-  [data-testid="stDialog"] [data-testid="stVerticalBlock"] { min-width:0!important; }
-  [data-testid="stDialog"] button { min-height:48px!important; white-space:normal!important; }
-  [data-testid="stSidebar"] { width:min(88vw,330px)!important; max-width:min(88vw,330px)!important; }
-  [data-testid="stSidebar"] button { min-height:44px; }
-  /* Chatbot: sin tapar la navegación ni el contenido inferior */
-  .st-key-tp_chat_fab { right:12px!important; top:70px!important; }
-  .st-key-tp_chat_panel { right:8px!important; top:135px!important;
-    width:calc(100vw - 16px)!important; max-width:calc(100vw - 16px)!important;
-    max-height:calc(100dvh - 150px)!important; overflow-y:auto!important; }
-  [data-testid="stToastContainer"] { max-width:calc(100vw - 20px)!important; }
-  [data-testid="stToast"] { max-width:calc(100vw - 24px)!important; }
-}
-@media (max-width: 390px) {
-  [data-testid="stMainBlockContainer"], .main .block-container { padding-left:9px!important; padding-right:9px!important; }
-  .tp-cal-grid { grid-template-columns:minmax(0,1fr)!important; }
-  .tp-cal-day { min-height:0!important; }
-}
-@media (orientation: landscape) and (max-height: 480px) {
-  [role="dialog"] { max-height:calc(100dvh - 12px)!important; }
-  .st-key-tp_chat_panel { top:65px!important; max-height:calc(100dvh - 75px)!important; }
-}
-</style>""", unsafe_allow_html=True)
 
 # =============================================================
 # PREMIUM MARKET · CONTROL INTERNO INSPIRED · DESIGN SYSTEM 2026
 # Exclusivamente presentación: no modifica datos, sesiones ni reglas.
 # Insertado después de las capas globales anteriores para unificar UI.
 # =============================================================
-st.markdown(r"""<style>
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-:root {
-  --tp-red:#EC3237; --tp-red-dk:#C9262B; --tp-red-soft:#FFF0F0;
-  --tp-ink:#0F172A; --tp-ink-2:#334155; --tp-mute:#64748B;
-  --tp-bg:#FFFFFF; --tp-surface:#FFFFFF; --tp-line:#E2E8F0;
-  --tp-r-sm:12px; --tp-r-md:18px; --tp-r-lg:24px;
-  --tp-sh-1:0 12px 30px -18px rgba(15,23,42,.18);
-  --tp-sh-2:0 22px 48px -24px rgba(15,23,42,.25);
-}
-html,body,[class*="css"],.stApp,.stMarkdown,div,button,input,select,textarea,
-[data-testid="stSidebar"] * {font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif!important;}
-.stApp,[data-testid="stAppViewContainer"],[data-testid="stMain"] {background:#fff!important;}
-.block-container,[data-testid="stMainBlockContainer"] {
-  max-width:1180px!important;padding-top:1.65rem!important;padding-bottom:3.5rem!important;
-}
-h1,h2,h3,h4 {letter-spacing:-.035em!important;font-weight:800!important;color:#0f172a;}
-p {line-height:1.58;}
-/* Cabecera: misma gramática visual del hero de Control Interno, marca Premium */
-.market-header {
-  position:relative!important;isolation:isolate;overflow:hidden!important;
-  background:linear-gradient(118deg,#3b0b13 0%,#8e1724 52%,#ec3237 110%)!important;
-  color:#fff!important;border:0!important;border-radius:28px!important;
-  padding:35px 40px!important;margin:12px 0 27px!important;
-  box-shadow:0 30px 60px -28px rgba(114,20,34,.48)!important;
-}
-.market-header::before {
-  content:""!important;position:absolute!important;inset:0!important;width:auto!important;height:auto!important;
-  left:0!important;top:0!important;border-radius:0!important;pointer-events:none;
-  background-image:linear-gradient(rgba(255,255,255,.055) 1px,transparent 1px),
-   linear-gradient(90deg,rgba(255,255,255,.055) 1px,transparent 1px)!important;
-  background-size:42px 42px!important;opacity:.7!important;
-}
-.market-header::after {content:"";position:absolute;width:280px;height:280px;right:-65px;top:-125px;
-  border-radius:50%;background:rgba(255,132,139,.19);filter:blur(30px);pointer-events:none;}
-.market-header h1,.market-header h1 * {
-  position:relative;color:#fff!important;font-size:clamp(1.5rem,2.8vw,2.35rem)!important;
-  font-weight:800!important;line-height:1.2!important;letter-spacing:-.04em!important;
-}
-.market-header p,.market-header p * {position:relative;color:#ffe4e6!important;font-size:.97rem!important;font-weight:500!important;}
-/* Tarjetas, métricas y formularios: superficies limpias y elevación elegante */
-.tp-card,.tp-kpi,.info-card,.cal-card,.boleta-container,
-[data-testid="stMetric"],div[data-testid="stVerticalBlockBorderWrapper"],
-div[data-testid="stForm"],div[data-testid="stExpander"] {
-  background:#fff!important;border:1px solid #e2e8f0!important;
-  border-radius:22px!important;box-shadow:0 12px 30px -18px rgba(15,23,42,.17)!important;
-}
-.tp-card,.tp-kpi,.info-card,.cal-card,[data-testid="stMetric"] {
-  transition:transform .35s cubic-bezier(.16,1,.3,1),box-shadow .35s,border-color .35s;
-}
-.tp-card:hover,.tp-kpi:hover,.info-card:hover,[data-testid="stMetric"]:hover {
-  transform:translateY(-3px);border-color:#f0b4b7!important;
-  box-shadow:0 24px 42px -22px rgba(121,27,40,.23)!important;
-}
-.tp-kpi-val,[data-testid="stMetricValue"] {font-weight:800!important;letter-spacing:-.045em!important;}
-.tp-kpi-lbl,[data-testid="stMetricLabel"] {font-weight:700!important;}
-/* Botones: Control Interno (gradiente, 14px, elevación), sin recolorear estados */
-.stButton>button[kind="primary"],.stFormSubmitButton>button[kind="primary"],
-.stButton>button[data-testid="stBaseButton-primary"],
-.stFormSubmitButton>button[data-testid="stBaseButton-primary"] {
-  background:linear-gradient(135deg,#bd2530,#ec3237)!important;color:#fff!important;
-  border:1px solid transparent!important;box-shadow:0 8px 18px -8px rgba(180,30,46,.55)!important;
-}
-.stButton>button,.stFormSubmitButton>button,.stDownloadButton>button {
-  border-radius:14px!important;font-weight:700!important;
-  transition:transform .25s cubic-bezier(.16,1,.3,1),box-shadow .25s,border-color .25s!important;
-}
-.stButton>button:hover:not(:disabled),.stFormSubmitButton>button:hover:not(:disabled),
-.stDownloadButton>button:hover:not(:disabled) {transform:translateY(-2px);box-shadow:0 12px 24px -12px rgba(15,23,42,.3)!important;}
-/* Campos y pestañas */
-[data-baseweb="input"],[data-baseweb="select"]>div,[data-baseweb="textarea"] {
-  border-radius:13px!important;border-color:#e2e8f0!important;background:#fff!important;
-}
-[data-baseweb="input"]:focus-within,[data-baseweb="select"]>div:focus-within {
-  border-color:#ec3237!important;box-shadow:0 0 0 3px rgba(236,50,55,.1)!important;
-}
-.stTabs [data-baseweb="tab"] {font-weight:700!important;}
-.stTabs [data-baseweb="tab-highlight"] {background:#ec3237!important;}
-.stTabs [aria-selected="true"] {color:#b91c2a!important;}
-/* Sidebar: mantener navegación operativa; refinar superficies y opciones */
-[data-testid="stSidebar"] {border-right:1px solid #e2e8f0!important;}
-[data-testid="stSidebar"] [data-testid="stWidgetLabel"] p {font-weight:700!important;}
-[data-testid="stSidebar"] button {border-radius:12px!important;}
-/* Tablas y cuadros de datos */
-[data-testid="stDataFrame"],[data-testid="stDataEditor"] {border-radius:16px!important;overflow:hidden;}
-[data-testid="stDialog"]>div,[role="dialog"] {border-radius:24px!important;}
-@media(max-width:767px){
- .block-container,[data-testid="stMainBlockContainer"] {max-width:100%!important;padding:70px 12px 30px!important;}
- .market-header {padding:24px 20px!important;border-radius:21px!important;margin:8px 0 18px!important;}
- .market-header h1,.market-header h1 * {font-size:1.48rem!important;}
- .market-header p {font-size:.88rem!important;}
- .tp-card,.tp-kpi,.info-card,[data-testid="stMetric"] {border-radius:17px!important;}
-}
-@media(prefers-reduced-motion:reduce){.tp-card,.tp-kpi,.info-card,[data-testid="stMetric"],.stButton>button{transition:none!important;}}
-</style>""", unsafe_allow_html=True)
 
 # --- COMPONENTES UI REUTILIZABLES ---
 def ui_iniciales(nombre):
@@ -3251,36 +3101,6 @@ def ui_kpi(etiqueta, valor, detalle=""):
     sub = f'<div class="tp-kpi-sub">{detalle}</div>' if detalle else ""
     return f'<div class="tp-kpi"><div class="tp-kpi-lbl">{etiqueta}</div><div class="tp-kpi-val">{valor}</div>{sub}</div>'
 
-st.markdown("""<style>
-/* Tiendas Premium · diseño limpio, sin cambiar el menú original */
-:root { --tp-up-red:#ec3237; --tp-up-green:#00a959; --tp-up-ink:#182338; }
-.tp-up-section { margin:22px 0 12px; }
-.tp-up-section h3 { margin:4px 0 4px; font-size:1.22rem; font-weight:750; color:#182338; }
-.tp-up-section p { margin:0; color:#738096; font-size:.86rem; }
-.tp-up-eyebrow { font-size:.68rem; letter-spacing:.09em; font-weight:750; color:#8b96a8; }
-.tp-up-calendar { width:100%; overflow-x:auto; border:1px solid #e2e8f0; border-radius:14px; background:#fff; }
-.tp-up-calendar table { border-collapse:collapse; width:100%; min-width:1120px; table-layout:fixed; }
-.tp-up-calendar th,.tp-up-calendar td { border-right:1px solid #edf0f5; border-bottom:1px solid #edf0f5; padding:10px 7px; vertical-align:top; }
-.tp-up-calendar thead th { background:#f8fafc; color:#64748b; font-size:.75rem; text-align:center; padding:14px 8px; }
-.tp-up-calendar thead th:first-child { width:205px; text-align:left; padding-left:16px; }
-.tp-up-calendar th.tp-up-person { width:205px; background:#fff; font-size:.77rem; text-align:left; color:#1e293b; padding:17px 12px; font-weight:700; }
-.tp-up-person small { display:block; color:#94a3b8; font-size:.68rem; margin-top:5px; font-weight:400; }
-.tp-up-calendar td { height:88px; background:#fff; }
-.tp-up-shift { border-left:3px solid; padding:9px 7px; min-height:65px; border-radius:5px; line-height:1.45; }
-.tp-up-shift b { display:block; font-size:.72rem; }
-.tp-up-shift span,.tp-up-shift small { display:block; font-size:.68rem; margin-top:3px; }
-.tp-up-shift.mor { background:#eef4ff; border-color:#2563eb; color:#1d4ed8; }
-.tp-up-shift.tar { background:#edfbff; border-color:#0891b2; color:#0e7490; }
-.tp-up-shift.vol { background:#ecfdf3; border-color:#00a959; color:#047857; }
-.tp-up-shift.adm { background:#f4f6f9; border-color:#94a3b8; color:#475569; min-height:0; margin-bottom:5px; }
-.tp-up-off { color:#9aa5b5; font-size:.73rem; padding:18px 3px; text-align:center; }
-.tp-up-empty { color:#cbd5e1; text-align:center; padding-top:20px; }
-/* Bordes suaves y colores corporativos para los controles, sin bloques negros */
-div.stButton > button { border-radius:10px!important; font-weight:600!important; }
-div.stButton > button[kind=secondary] { background:#fff!important; color:#334155!important; border:1px solid #e0e5ec!important; }
-div.stButton > button[kind=secondary]:hover { border-color:#ec3237!important; color:#ec3237!important; background:#fff7f7!important; }
-div.stButton > button[kind=primary] { background:#ec3237!important; color:#fff!important; border-color:#ec3237!important; }
-</style>""", unsafe_allow_html=True)
 
 # --- PRECALENTAMIENTO EN PARALELO ---
 # Al abrir una sesión nueva, si la caché compartida no tiene las hojas, se leen todas a la vez
@@ -3507,75 +3327,6 @@ def _salir_preview():
 # CAPA DE EXPERIENCIA DE USUARIO (UX PRO)
 # Solo presentación: no modifica datos ni lógica de negocio.
 # =========================================================
-st.markdown("""
-<style>
-/* --- Interacción más fluida: menos parpadeo al recargar --- */
-.stApp [data-stale="true"]{opacity:.6!important;transition:opacity .25s ease!important;}
-html{scroll-behavior:smooth;}
-::selection{background:rgba(236,50,55,.18);}
-
-/* --- Barras de desplazamiento discretas --- */
-.stApp ::-webkit-scrollbar{width:10px;height:10px;}
-.stApp ::-webkit-scrollbar-thumb{background:#CBD2DE;border-radius:10px;border:2px solid transparent;background-clip:content-box;}
-.stApp ::-webkit-scrollbar-thumb:hover{background:#9AA6BB;background-clip:content-box;}
-.stApp ::-webkit-scrollbar-track{background:transparent;}
-
-/* --- Menú lateral con iconos --- */
-[data-testid="stSidebar"] [role="radiogroup"] label{min-height:42px;display:flex;align-items:center;}
-[data-testid="stSidebar"] [role="radiogroup"] label [data-testid="stIconMaterial"]{
-  font-size:1.2rem!important;margin-right:10px;vertical-align:-4px;color:var(--tp-mute)!important;transition:color .15s ease;}
-[data-testid="stSidebar"] [role="radiogroup"] label:hover [data-testid="stIconMaterial"]{color:var(--tp-ink)!important;}
-[data-testid="stSidebar"] [role="radiogroup"] label:has(input:checked) [data-testid="stIconMaterial"]{color:var(--tp-red)!important;}
-
-/* --- Barra de ubicación (dónde estoy / qué día es) --- */
-.tp-crumbbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 14px;}
-.tp-crumb{display:flex;align-items:center;gap:8px;font-size:.8rem;color:var(--tp-mute);font-weight:600;min-width:0;}
-.tp-crumb b{color:var(--tp-ink);font-weight:700;}
-.tp-crumb svg{flex:0 0 auto;opacity:.55;}
-.tp-crumbmeta{display:flex;gap:8px;flex-wrap:wrap;}
-.tp-pill{display:inline-flex;align-items:center;gap:7px;background:var(--tp-surface);border:1px solid var(--tp-line);border-radius:999px;
-  padding:5px 12px;font-size:.74rem;font-weight:650;color:var(--tp-ink-2);box-shadow:var(--tp-sh-1);white-space:nowrap;}
-.tp-pill i{width:7px;height:7px;border-radius:50%;background:var(--tp-ok);display:inline-block;}
-@media(max-width:650px){.tp-crumbmeta{display:none;}}
-
-/* --- Detalles de acabado --- */
-.stTabs [data-baseweb="tab"]:hover{color:var(--tp-ink)!important;}
-div[role="dialog"]{border-radius:20px!important;}
-[data-testid="stToast"]{border-radius:14px!important;border:1px solid var(--tp-line)!important;box-shadow:var(--tp-sh-2)!important;}
-[data-testid="stExpander"] summary{transition:background-color .15s ease;}
-[data-testid="stExpander"] summary:hover{background:#F8FAFC;}
-::placeholder{color:#9AA6BB!important;opacity:1!important;}
-/* --- Panel "Operación de hoy" (Dashboard) --- */
-.tp-focus{display:flex;gap:24px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:0 0 16px;
-  padding:22px 26px;border-radius:20px;border:1px solid var(--tp-line);box-shadow:var(--tp-sh-1);}
-.tp-focus.ok{background:linear-gradient(120deg,#E3F6EC,#F4FBF7);border-color:#BFE8D2;}
-.tp-focus.warn{background:linear-gradient(120deg,#FEF3C7,#FFFBEB);border-color:#F8DE95;}
-.tp-focus.bad{background:linear-gradient(120deg,#FEE4E2,#FFF5F4);border-color:#F9C4C0;}
-.tp-focus-main{display:flex;gap:16px;align-items:center;min-width:0;flex:1 1 360px;}
-.tp-focus-k{font-size:.72rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--tp-mute);}
-.tp-focus-h{font-size:1.35rem;font-weight:700;letter-spacing:-.01em;line-height:1.25;margin:4px 0 4px;color:var(--tp-ink);}
-.tp-focus-s{font-size:.88rem;color:var(--tp-ink-2);line-height:1.5;}
-.tp-att{flex:0 0 auto;min-width:250px;padding:14px 18px;border-radius:16px;background:rgba(255,255,255,.78);border:1px solid rgba(15,23,42,.08);}
-.tp-att .l{font-size:.78rem;font-weight:700;color:var(--tp-mute);}
-.tp-att .v{display:flex;align-items:baseline;gap:8px;margin-top:2px;}
-.tp-att .v b{font-size:1.7rem;font-weight:800;color:var(--tp-ink);font-variant-numeric:tabular-nums;line-height:1.1;}
-.tp-att .v span{font-size:.8rem;color:var(--tp-mute);font-weight:600;}
-.tp-att .r{height:7px;border-radius:99px;background:#E5E9F0;overflow:hidden;margin-top:9px;}
-.tp-att .r i{display:block;height:100%;border-radius:99px;background:var(--tp-ok);}
-.tp-att.none .v span{font-size:.84rem;}
-  border:1px solid var(--tp-line);border-radius:18px;box-shadow:var(--tp-sh-1);}
-@media(max-width:650px){.tp-focus{padding:18px;}.tp-focus-h{font-size:1.2rem;}.tp-att{width:100%;min-width:0;}}
-/* --- Accesos a pendientes en el sidebar --- */
-section[data-testid="stSidebar"] div.st-key-tp_acc_bot button{background:#FEE2E2!important;border:1px solid #FECACA!important;}
-section[data-testid="stSidebar"] div.st-key-tp_acc_bot button *{color:#991B1B!important;font-weight:700!important;}
-section[data-testid="stSidebar"] div.st-key-tp_acc_sol button{background:#FEF3C7!important;border:1px solid #F8DE95!important;}
-section[data-testid="stSidebar"] div.st-key-tp_acc_sol button *{color:#92400E!important;font-weight:700!important;}
-@media (prefers-reduced-motion:reduce){
-  .stApp [data-stale="true"]{transition:none!important;}
-  html{scroll-behavior:auto;}
-}
-</style>
-""", unsafe_allow_html=True)
 
 # Iconos del menú lateral. El valor devuelto por el menú sigue siendo el texto original,
 # por lo que ninguna comparación del tipo `choice == "Dashboard General"` cambia.
@@ -3599,8 +3350,9 @@ def _tp_iconos_soportados():
         return False
 
 def _tp_nav_label(opcion):
-    ico = _TP_NAV_ICONOS.get(opcion)
-    return f":material/{ico}:  {opcion}" if (ico and _tp_iconos_soportados()) else opcion
+    """Solo el nombre del módulo: el radio de Streamlit no interpreta
+    códigos :material/...: dentro de format_func."""
+    return opcion
 
 _TP_DIAS = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
 _TP_MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
@@ -3792,43 +3544,6 @@ _AC_USER = {"autocomplete": "username"} if _AC_OK else {}
 _AC_PASS = {"autocomplete": "current-password"} if _AC_OK else {}
 
 if not st.session_state.usuario_login:
-    st.markdown("""
-<style>
-.stApp:has(.tp-lg-hero){background:radial-gradient(1100px 560px at 8% -10%,#FDECEC 0%,transparent 60%),radial-gradient(900px 520px at 100% 110%,#E4EBF8 0%,transparent 58%),var(--tp-bg);}
-.stApp:has(.tp-lg-hero) .block-container{padding-top:1.6rem;max-width:1180px;}
-.tp-lg-hero{position:relative;overflow:hidden;border-radius:28px;padding:36px 38px;min-height:640px;color:#fff;display:flex;flex-direction:column;justify-content:space-between;
-  background:linear-gradient(150deg,#0B1220 0%,#111C33 55%,#1B2A4A 100%);box-shadow:0 30px 60px -30px rgba(15,23,42,.6);}
-.tp-lg-hero::before{content:"";position:absolute;width:540px;height:540px;right:-190px;top:-170px;border-radius:50%;background:radial-gradient(circle,rgba(236,50,55,.55),rgba(236,50,55,0) 68%);}
-.tp-lg-hero::after{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px);background-size:44px 44px;-webkit-mask-image:linear-gradient(180deg,#000,transparent 88%);mask-image:linear-gradient(180deg,#000,transparent 88%);}
-.tp-lg-hero>*{position:relative;z-index:1;}
-.tp-lg-logo{display:inline-flex;background:#fff;border-radius:16px;padding:10px 18px;box-shadow:0 12px 30px -12px rgba(0,0,0,.6);}
-.tp-lg-k{font-size:.72rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#FF8A8E;margin:34px 0 10px;}
-.tp-lg-h{font-size:2.2rem;font-weight:800;line-height:1.14;letter-spacing:-.02em;margin:0 0 14px;color:#fff;}
-.tp-lg-h em{font-style:normal;color:#FF6B70;}
-.tp-lg-p{color:#B7C2D9;font-size:.98rem;line-height:1.65;max-width:440px;margin:0;}
-.tp-lg-feat{display:grid;gap:10px;margin-top:26px;max-width:460px;}
-.tp-lg-feat div{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:12px 14px;font-size:.87rem;font-weight:600;color:#E6ECF8;}
-.tp-lg-feat i{flex:0 0 auto;width:32px;height:32px;border-radius:10px;background:rgba(236,50,55,.2);color:#FF8A8E;display:flex;align-items:center;justify-content:center;}
-.tp-lg-quote{position:relative;margin-top:26px;padding:18px 20px 18px 24px;border-radius:16px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);}
-.tp-lg-quote::before{content:"";position:absolute;left:0;top:16px;bottom:16px;width:4px;border-radius:4px;background:#EC3237;}
-.tp-lg-quote small{display:block;font-size:.68rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#FF8A8E;margin-bottom:8px;}
-.tp-lg-quote p{margin:0;font-size:1.1rem;font-weight:600;line-height:1.5;color:#fff;}
-.tp-lg-spacer{height:64px;}
-.tp-lg-who{display:flex;flex-direction:column;align-items:center;text-align:center;margin-bottom:10px;animation:tpPop .4s ease;}
-.tp-lg-who .tp-avatar{box-shadow:0 0 0 3px #fff,0 0 0 6px var(--tp-red),0 14px 30px -10px rgba(236,50,55,.55);}
-.tp-lg-t{font-size:1.45rem;font-weight:800;color:var(--tp-ink);margin-top:16px;letter-spacing:-.01em;}
-.tp-lg-s{font-size:.86rem;color:var(--tp-mute);margin-top:4px;}
-.tp-lg-lock{width:58px;height:58px;border-radius:18px;background:var(--tp-red-soft);color:var(--tp-red);display:flex;align-items:center;justify-content:center;}
-@keyframes tpPop{from{opacity:0;transform:translateY(8px) scale(.97);}to{opacity:1;transform:none;}}
-.st-key-tpc_login_form{padding:32px 30px 26px!important;border-radius:26px!important;box-shadow:var(--tp-sh-2)!important;}
-.st-key-tpc_login_form [data-baseweb="input"]{min-height:50px;background:#F6F7FA!important;}
-.st-key-tpc_login_form .stButton>button{min-height:52px;border:none!important;background:linear-gradient(135deg,#EC3237,#C9262B)!important;box-shadow:0 14px 26px -12px rgba(236,50,55,.7);}
-.st-key-tpc_login_form .stButton>button *{color:#111827!important;font-weight:700;}
-.st-key-tpc_login_form .stButton>button{color:#111827!important;}
-.tp-lg-note{display:flex;gap:8px;align-items:center;justify-content:center;font-size:.76rem;color:var(--tp-mute);margin-top:14px;}
-@media (max-width:900px){.tp-lg-hero{min-height:0;padding:22px;border-radius:22px;}.tp-lg-k{margin-top:20px;}.tp-lg-h{font-size:1.5rem;}.tp-lg-feat,.tp-lg-spacer{display:none;}.tp-lg-quote{margin-top:16px;padding:14px 16px 14px 20px;}.tp-lg-quote p{font-size:.95rem;}}
-</style>
-""", unsafe_allow_html=True)
 
     _ico = lambda d: f'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">{d}</svg>'
     _i1 = _ico("<circle cx='12' cy='12' r='9'/><path d='M12 7v5l3 2'/>")
@@ -4793,15 +4508,15 @@ def renderizar_calendario_colaborador(nombre_colab, anio, mes):
     hoy = obtener_ahora_peru().date()
 
     html = f"""
-    <div class='cal-card'>
+    <div class='cal-card tp-calendar-scroll' role='region' tabindex='0' aria-label='Calendario de asistencia'>
         <div class='cal-title'>
-            <span> </span> <span>{nombre_colab}</span>
+            <span> </span> <span>{_html.escape(str(nombre_colab))}</span>
         </div>
         <table class='cal-table'>
             <thead>
                 <tr>
-                    <th>Lun</th><th>Mar</th><th>Mié</th><th>Jue</th>
-                    <th>Vie</th><th>Sáb</th><th>Dom</th>
+                    <th scope="col">Lun</th><th scope="col">Mar</th><th scope="col">Mié</th><th scope="col">Jue</th>
+                    <th scope="col">Vie</th><th scope="col">Sáb</th><th scope="col">Dom</th>
                 </tr>
             </thead>
             <tbody>
@@ -4879,6 +4594,17 @@ def renderizar_calendario_colaborador(nombre_colab, anio, mes):
         html += "</tr>"
     html += "</tbody></table></div>"
     return html
+
+# =============================================================
+# PREMIUM MARKET · REFINAMIENTO FINAL DEL SISTEMA VISUAL
+# Los controles nativos del sidebar conservan navegación y estados.
+# =============================================================
+
+# =============================================================
+# PREMIUM MARKET · DESIGN SYSTEM 3.0
+# Diseño unificado para todas las vistas, sin cambiar los datos.
+# Tokens y componentes reutilizables en un solo bloque de cierre.
+# =============================================================
 
 # --- SIDEBAR ---
 st.sidebar.markdown(f'<div style="text-align:center; padding: 8px 0 14px 0;">{logo_tag_app39(58)}</div>', unsafe_allow_html=True)
@@ -5080,20 +4806,6 @@ def _chat_responder(pregunta):
 if rol_actual == "admin":
     # El asistente ahora se abre desde un botón flotante; no ocupa espacio en el menú.
     # Estilo uniforme para paneles de operación: conserva lógica y menú original.
-    st.markdown("""<style>
-    .market-header {border-radius:16px!important; padding:22px 26px!important; margin-bottom:18px!important; box-shadow:0 2px 8px rgba(20,35,60,.035)!important;}
-    .market-header h1 {font-size:26px!important; letter-spacing:-.5px!important;}
-    .tp-up-section-compact {margin:18px 0 10px!important;}
-    .tp-up-section-compact h3 {font-size:19px!important; margin:3px 0 4px!important;}
-    .tp-up-calendar {border:1px solid #E5E9EF!important; border-radius:12px!important; box-shadow:0 3px 12px rgba(20,35,60,.035)!important; overflow-x:auto!important;}
-    .tp-up-calendar table {min-width:900px!important;}
-    .tp-up-calendar td {padding:7px!important;}
-    .tp-up-shift {border-radius:7px!important; padding:8px!important; min-height:68px!important;}
-    div[data-testid="stExpander"] {border:1px solid #E5E9EF!important; border-radius:11px!important; background:#FFF!important;}
-    div[data-testid="stExpander"] details summary {font-weight:600!important; color:#26334B!important;}
-    div[data-testid="stTabs"] button[role="tab"] {font-weight:600!important;}
-    div[data-testid="stDataFrame"], div[data-testid="stDataEditor"] {border-radius:10px!important; overflow:hidden!important;}
-    </style>""", unsafe_allow_html=True)
     menu = ["Dashboard General", "Centro de Alertas", "Analítica (BI)", "Gestión Colaboradores", "Onboarding / Offboarding", "Gestión de Vacaciones", "Programación de Turnos", "Boletas de Pago", "Solicitudes y Permisos", "Historial de Descuadres", "Incidencias y Daños", "Botellas Fiadas", "Historial de Asistencias", "Auditoría y Configuración"]
 else:
     menu = ["Marcar Asistencia", "Registrar Descuadre", "Registrar Incidencia", "Botellas Fiadas", "Mi Ficha Técnica", "Mis Vacaciones", "Mis Boletas", "Solicitar Permiso / Adelanto", "Mi Dashboard Mensual"]
@@ -5409,34 +5121,10 @@ def _tp_chat_consulta(pregunta):
     return ("⚠️ **Premium IA no pudo responder:** " + detalle +
             "\n\nEl asistente local sigue disponible mientras solucionamos la conexión."), None, False
 
-BOT_PATH = os.path.join(BASE_DIR, "assets", "bot.png")
-BOT_DISPONIBLE = os.path.isfile(BOT_PATH)
-BOT_MIME = mimetypes.guess_type(BOT_PATH)[0] or "image/png"
-_bot_b64 = ""
-if BOT_DISPONIBLE:
-    try:
-        with open(BOT_PATH, "rb") as _fb:
-            _bot_b64 = base64.b64encode(_fb.read()).decode("ascii")
-    except Exception:
-        pass
 if "chat_flotante_abierto" not in st.session_state:
     st.session_state.chat_flotante_abierto = False
 if "chat_datos_historial" not in st.session_state:
     st.session_state.chat_datos_historial = []
-_bot_fondo = f'background-image:url("data:{BOT_MIME};base64,{_bot_b64}");' if _bot_b64 else ""
-_bot_texto = "" if _bot_b64 else "💬"
-st.markdown(f"""
-<style>
-.st-key-tp_chat_fab {{position:fixed!important;right:22px!important;top:72px!important;z-index:100000!important;width:64px!important;height:64px!important;}}
-.st-key-tp_chat_fab button {{width:62px!important;height:62px!important;min-height:62px!important;border-radius:50%!important;border:3px solid #fff!important;background-color:#EC3237!important;{_bot_fondo}background-size:cover!important;background-position:center!important;background-repeat:no-repeat!important;box-shadow:0 8px 24px rgba(15,23,42,.24)!important;color:transparent!important;padding:0!important;transition:transform .2s ease!important;}}
-.st-key-tp_chat_fab button:hover {{transform:translateY(-3px) scale(1.06)!important;}}
-.st-key-tp_chat_panel {{position:fixed!important;right:22px!important;top:145px!important;width:min(440px,calc(100vw - 28px))!important;max-height:calc(100dvh - 166px)!important;overflow-y:auto!important;z-index:99999!important;background:#fff!important;border:1px solid #e7eaf0!important;border-radius:22px!important;padding:16px!important;box-shadow:0 18px 55px rgba(15,23,42,.2)!important;}}
-.st-key-tp_chat_panel [data-testid="stChatMessage"] {{padding:9px!important;border-radius:12px!important;}}
-.st-key-tp_chat_panel [data-testid="stDataFrame"] {{max-height:200px!important;}}
-.st-key-tp_chat_panel [data-testid="stForm"] {{padding:0!important;border:0!important;box-shadow:none!important;}}
-@media(max-width:600px) {{.st-key-tp_chat_fab {{right:12px!important;top:66px!important;}}.st-key-tp_chat_panel {{right:8px!important;top:136px!important;width:calc(100vw - 16px)!important;max-height:calc(100dvh - 150px)!important;padding:12px!important;}}}}
-</style>""", unsafe_allow_html=True)
-
 with st.container(key="tp_chat_fab"):
     if st.button(_bot_texto, key="abrir_chat_flotante", help="Hablar con Premium"):
         st.session_state.chat_flotante_abierto = not st.session_state.chat_flotante_abierto
@@ -5487,6 +5175,82 @@ if st.session_state.chat_flotante_abierto:
             st.session_state.chat_datos_historial = []
             st.rerun()
 
+
+# =============================================================
+# PREMIUM MARKET 4.0 · COMPONENTES DE VISTA INDIVIDUALES
+# Cada módulo cuenta con encabezado propio y semántica consistente.
+# =============================================================
+
+
+# ============================================================
+# PREMIUM MARKET 7.0 — COMPONENTES ESTRUCTURALES POR MÓDULO
+# Las 22 vistas disponen de su propio contexto, navegación y
+# jerarquía visual; ningún componente escribe en Google Sheets.
+# ============================================================
+PM7_MODULES = {
+    'Marcar Asistencia': 'fingerprint',
+    'Registrar Descuadre': 'account_balance_wallet',
+    'Registrar Incidencia': 'report',
+    'Mi Ficha Técnica': 'badge',
+    'Solicitar Permiso / Adelanto': 'edit_document',
+    'Mis Boletas': 'receipt_long',
+    'Mi Dashboard Mensual': 'monitoring',
+    'Dashboard General': 'space_dashboard',
+    'Gestión Colaboradores': 'groups',
+    'Boletas de Pago': 'receipt_long',
+    'Programación de Turnos': 'calendar_month',
+    'Solicitudes y Permisos': 'approval',
+    'Historial de Descuadres': 'account_balance',
+    'Incidencias y Daños': 'report_problem',
+    'Botellas Fiadas': 'inventory_2',
+    'Historial de Asistencias': 'history',
+    'Centro de Alertas': 'notifications_active',
+    'Gestión de Vacaciones': 'beach_access',
+    'Mis Vacaciones': 'beach_access',
+    'Analítica (BI)': 'query_stats',
+    'Onboarding / Offboarding': 'person_add',
+    'Auditoría y Configuración': 'settings',
+}
+
+
+PM8_VIEW_DETAILS = {'Marcar Asistencia': ('Registro de jornada', 'Tus marcaciones se guardan al confirmar la operación.', 'personal'), 'Registrar Descuadre': ('Control de caja', 'Revisa el importe y la observación antes de registrar.', 'finanzas'), 'Registrar Incidencia': ('Registro operativo', 'Describe el hecho y verifica los datos del registro.', 'control'), 'Mi Ficha Técnica': ('Expediente personal', 'Información laboral y de contacto registrada.', 'personal'), 'Solicitar Permiso / Adelanto': ('Nueva solicitud', 'Completa los datos y revisa el estado de tus solicitudes.', 'personal'), 'Mis Boletas': ('Documentos personales', 'Consulta los documentos disponibles en tu historial.', 'personal'), 'Mi Dashboard Mensual': ('Resumen de mi mes', 'Consulta tus registros y resultados del periodo.', 'analitica'), 'Dashboard General': ('Centro de operaciones', 'Indicadores y asistencia para seguimiento diario.', 'analitica'), 'Gestión Colaboradores': ('Directorio de personal', 'Consulta, filtra y administra las fichas del equipo.', 'personal'), 'Boletas de Pago': ('Gestión documental', 'Consulta y administra los documentos de nómina.', 'finanzas'), 'Programación de Turnos': ('Planificación operativa', 'Organiza y revisa los horarios del equipo.', 'operaciones'), 'Solicitudes y Permisos': ('Bandeja de solicitudes', 'Revisa solicitudes y registra decisiones.', 'operaciones'), 'Historial de Descuadres': ('Auditoría de caja', 'Filtra movimientos y consulta el detalle de las diferencias.', 'finanzas'), 'Incidencias y Daños': ('Seguimiento de incidencias', 'Consulta y gestiona el estado de los casos.', 'control'), 'Botellas Fiadas': ('Préstamos y devoluciones', 'Consulta saldos pendientes y registros de devolución.', 'operaciones'), 'Historial de Asistencias': ('Control de asistencia', 'Consulta marcaciones y trazabilidad de jornadas.', 'personal'), 'Centro de Alertas': ('Prioridades del día', 'Revisa los pendientes que necesitan atención.', 'control'), 'Gestión de Vacaciones': ('Control de descansos', 'Consulta periodos, saldos y solicitudes registradas.', 'personal'), 'Mis Vacaciones': ('Mis descansos', 'Consulta tus periodos registrados.', 'personal'), 'Analítica (BI)': ('Inteligencia de negocio', 'Explora tendencias y reportes operativos.', 'analitica'), 'Onboarding / Offboarding': ('Ciclo de vida laboral', 'Gestiona altas, bajas y tareas asociadas.', 'personal'), 'Auditoría y Configuración': ('Administración del sistema', 'Consulta la trazabilidad y configuración autorizada.', 'control')}
+
+def premium_module_context(titulo):
+    """Contextual introduction for each of the 22 modules; presentation only."""
+    from html import escape as esc
+    section, detail, family = PM8_VIEW_DETAILS.get(titulo, ("Área de trabajo", "", "operaciones"))
+    st.markdown(
+        '<div class="pm8-context pm8-context--' + esc(family) + '">'
+        '<div class="pm8-context-mark" aria-hidden="true"></div>'
+        '<div class="pm8-context-content"><span class="pm8-context-title">' + esc(section) + '</span>'
+        '<span class="pm8-context-description">' + esc(detail) + '</span></div></div>',
+        unsafe_allow_html=True,
+    )
+
+def premium_module_shell(titulo, categoria, descripcion):
+    """Encabezado estructural específico para cada vista, seguro ante HTML arbitrario."""
+    from html import escape as esc
+    icon = PM7_MODULES.get(titulo, 'apps')
+    st.markdown(
+        '<section class="pm7-view" aria-label="Información de la sección">'
+        '<div class="pm7-topline"><div class="pm7-breadcrumb">Premium Market'
+        '<span class="pm7-chevron">/</span><strong>' + esc(titulo) + '</strong></div>'
+        '<span class="pm7-category">' + esc(categoria) + '</span></div>'
+        '<div class="pm7-banner"><div><div class="pm7-kicker">ESPACIO DE TRABAJO · PREMIUM MARKET</div>'
+        '<h1>' + esc(titulo) + '</h1><p>' + esc(descripcion) + '</p></div>'
+        '<div class="pm7-emblem" aria-hidden="true"><span class="material-symbols-rounded">' + esc(icon) + '</span></div>'
+        '</div></section>', unsafe_allow_html=True)
+    premium_module_context(titulo)
+
+def premium_section(text, *args, **kwargs):
+    """Semantic section heading: consistent hierarchy across modules."""
+    import html as _escmod
+    if args or kwargs:
+        return st.subheader(text, *args, **kwargs)
+    st.markdown('<div class="pm7-divider"><span class="pm7-text">' +
+                _escmod.escape(str(text)) + '</span><span class="pm7-line"></span></div>',
+                unsafe_allow_html=True)
+
 # -------------------- MÓDULOS OPERATIVOS --------------------
 
 if _vc:
@@ -5506,3247 +5270,3207 @@ if len(_gq) >= 2:
     render_busqueda(_gq, rol_actual == "admin", dni_actual, menu)
     st.stop()
 
+# =============================================================
+# PREMIUM MARKET 5.0 · COMPONENTES INTERNOS REUTILIZABLES
+# Una única implementación para tablas, indicadores y estructura.
+# No modifica los DataFrames originales ni los registros.
+# =============================================================
+def premium_table(data, *args, **kwargs):
+    """Tabla operativa uniforme; respeta los argumentos y los datos originales."""
+    kwargs.setdefault("use_container_width", True)
+    kwargs.setdefault("hide_index", True)
+    return st.dataframe(data, *args, **kwargs)
+
+
+
+# PREMIUM 6.0 — consolidated last-in-cascade component theme
+
+
+# ============================================================
+# PREMIUM MARKET 8.0 — CAPA FINAL DE COMPONENTES Y ACCESIBILIDAD
+# ============================================================
+
 if choice == "Marcar Asistencia":
-    st.markdown(f"""
-        <div class="market-header">
-            <h1>Terminal de Asistencia</h1>
-            <p>Colaborador activo: <b>{user_actual}</b> | Jornada laboral requerida: <b>{jornada_base_txt()}</b></p>
-        </div>
-    """, unsafe_allow_html=True)
+    premium_module_shell('Marcar Asistencia', 'MI JORNADA', 'Registra y consulta tus marcaciones.')
 
-    _hoy_h = obtener_ahora_peru().strftime("%Y-%m-%d")
-    _estado, _chip, _lab_h = "Aún no marcas ingreso hoy", "neutral", 0
-    if not st.session_state.asistencia.empty:
-        _mh = st.session_state.asistencia[(st.session_state.asistencia["fecha"].astype(str) == _hoy_h) & (st.session_state.asistencia["dni"].astype(str) == str(dni_actual))].copy()
-        _mh["dt"] = pd.to_datetime(_mh["fecha_hora"], errors="coerce")
-        _mh = _mh.dropna(subset=["dt"]).sort_values("dt")
-        if not _mh.empty:
-            _u = _mh.iloc[-1]
-            if _u["tipo"] == "INGRESO":
-                _estado, _chip = f"En turno desde las {_u['dt'].strftime('%H:%M')}", "ok"
-            else:
-                _estado, _chip = f"Salida registrada a las {_u['dt'].strftime('%H:%M')}", "info"
-            _lab_h = calcular_jornada_y_horas_extras(_mh)[0]
-    _pct_h = min(100, int(_lab_h * 100 / jornada_base_min()))
-    _hc1, _hc2 = st.columns([1.5, 1])
-    with _hc1:
-        st.markdown(f'<div class="tp-hero"><div class="tp-hero-top">{ui_avatar(user_actual, dni_actual, _foto_actual, 54)}<div><div class="tp-hero-hi">Hola, {user_actual.split()[0]}</div>{ui_chip(_estado, _chip)}</div></div><div class="tp-prog-lbl"><span>Jornada de hoy</span><span>{formatear_horas_minutos(_lab_h)} de {jornada_base_txt()}</span></div><div class="tp-prog"><i style="width:{_pct_h}%"></i></div></div>', unsafe_allow_html=True)
-    with _hc2:
-        components.html("""<body style="margin:0;font-family:Montserrat,Arial,sans-serif"><div style="box-sizing:border-box;height:132px;background:#fff;border:1px solid #E3E6EC;border-radius:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(15,23,42,.05)"><div id="t" style="font-size:2.3rem;font-weight:700;color:#0F172A;font-variant-numeric:tabular-nums">--:--:--</div><div id="d" style="font-size:.8rem;color:#64748B;font-weight:600;text-transform:capitalize"></div></div><script>function u(){var n=new Date(),o={timeZone:"America/Lima"};document.getElementById("t").textContent=n.toLocaleTimeString("es-PE",{timeZone:"America/Lima",hour12:false});document.getElementById("d").textContent=n.toLocaleDateString("es-PE",{timeZone:"America/Lima",weekday:"long",day:"numeric",month:"long"})}u();setInterval(u,1000)</script></body>""", height=134)
-    st.markdown("<div style='height:14px'></div>", unsafe_allow_html=True)
+    with st.container(key="pm_v_marcar_asistencia"):
 
-    ui_mi_programacion(dni_actual)
-    col_main, col_preview = st.columns([1.1, 1])
-
-    with col_main:
-        with st.container(border=True):
-            st.markdown("<h4 style='margin:0; font-size:1rem; color:#111827;'>Registro de Turno</h4>", unsafe_allow_html=True)
-            st.caption("Selecciona el tipo de marcación que deseas realizar:")
-            
-            es_turno_extra = st.checkbox("Marcación Fuera de Horario / Turno Adicional")
-            
-            motivo_extra = ""
-            if es_turno_extra:
-                motivo_extra = st.selectbox(
-                    "Motivo del Turno Adicional",
-                    ["Cubrir Turno Mañana (Apoyo)", "Cubrir Turno Tarde (Apoyo)", "Permanencia Extra / Post-Turno", "Trabajo Voluntario en Domingo (Día de Descanso)", "Otro Sustento"]
-                )
-                if motivo_extra == "Trabajo Voluntario en Domingo (Día de Descanso)":
-                    st.caption("☀ Se registrará como día de descanso trabajado por decisión propia. En tu boleta aparecerá como un día adicional pagado, distinto a tus faltas o tardanzas.")
-            
-            obs_marca = st.text_input("Observación / Justificación (Opcional)", placeholder="Ej. Reemplazo por renuncia, apoyo en caja, etc.")
-            
-            if es_turno_extra and motivo_extra:
-                obs_marca = f"[{motivo_extra}] {obs_marca}".strip()
-
-            st.markdown("<br>", unsafe_allow_html=True)
-
-            c1, c2 = st.columns(2)
-            with c1:
-                st.markdown('<div class="btn-ingreso">', unsafe_allow_html=True)
-                if st.button("Marcar Ingreso", use_container_width=True):
-                    if registrar_marca(dni_actual, user_actual, "INGRESO", obs_marca, es_turno_extra):
-                        st.toast("Ingreso registrado correctamente")
-                        st.rerun()
-                st.markdown('</div>', unsafe_allow_html=True)
-
-            with c2:
-                st.markdown('<div class="btn-salida">', unsafe_allow_html=True)
-                if st.button("Marcar Salida", use_container_width=True):
-                    if registrar_marca(dni_actual, user_actual, "SALIDA", obs_marca, es_turno_extra):
-                        st.toast("Salida registrada correctamente")
-                        st.rerun()
-                st.markdown('</div>', unsafe_allow_html=True)
-
-    with col_preview:
-        st.markdown("<h4 style='margin:0; font-size:1rem; color:#111827; margin-bottom:12px;'>Marcaciones de Hoy</h4>", unsafe_allow_html=True)
-        hoy_str = obtener_ahora_peru().strftime("%Y-%m-%d")
-        
+        _hoy_h = obtener_ahora_peru().strftime("%Y-%m-%d")
+        _estado, _chip, _lab_h = "Aún no marcas ingreso hoy", "neutral", 0
         if not st.session_state.asistencia.empty:
-            df_mismarcas = st.session_state.asistencia[
-                (st.session_state.asistencia["fecha"].astype(str) == hoy_str) & 
-                (st.session_state.asistencia["dni"].astype(str) == str(dni_actual))
-            ].copy()
+            _mh = st.session_state.asistencia[(st.session_state.asistencia["fecha"].astype(str) == _hoy_h) & (st.session_state.asistencia["dni"].astype(str) == str(dni_actual))].copy()
+            _mh["dt"] = pd.to_datetime(_mh["fecha_hora"], errors="coerce")
+            _mh = _mh.dropna(subset=["dt"]).sort_values("dt")
+            if not _mh.empty:
+                _u = _mh.iloc[-1]
+                if _u["tipo"] == "INGRESO":
+                    _estado, _chip = f"En turno desde las {_u['dt'].strftime('%H:%M')}", "ok"
+                else:
+                    _estado, _chip = f"Salida registrada a las {_u['dt'].strftime('%H:%M')}", "info"
+                _lab_h = calcular_jornada_y_horas_extras(_mh)[0]
+        _pct_h = min(100, int(_lab_h * 100 / jornada_base_min()))
+        _hc1, _hc2 = st.columns([1.5, 1])
+        with _hc1:
+            st.markdown(f'<div class="tp-hero"><div class="tp-hero-top">{ui_avatar(user_actual, dni_actual, _foto_actual, 54)}<div><div class="tp-hero-hi">Hola, {user_actual.split()[0]}</div>{ui_chip(_estado, _chip)}</div></div><div class="tp-prog-lbl"><span>Jornada de hoy</span><span>{formatear_horas_minutos(_lab_h)} de {jornada_base_txt()}</span></div><div class="tp-prog"><i style="width:{_pct_h}%"></i></div></div>', unsafe_allow_html=True)
+        with _hc2:
+            components.html("""<body style="margin:0;font-family:Montserrat,Arial,sans-serif"><div style="box-sizing:border-box;height:132px;background:#fff;border:1px solid #E3E6EC;border-radius:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(15,23,42,.05)"><div id="t" style="font-size:2.3rem;font-weight:700;color:#0F172A;font-variant-numeric:tabular-nums">--:--:--</div><div id="d" style="font-size:.8rem;color:#64748B;font-weight:600;text-transform:capitalize"></div></div><script>function u(){var n=new Date(),o={timeZone:"America/Lima"};document.getElementById("t").textContent=n.toLocaleTimeString("es-PE",{timeZone:"America/Lima",hour12:false});document.getElementById("d").textContent=n.toLocaleDateString("es-PE",{timeZone:"America/Lima",weekday:"long",day:"numeric",month:"long"})}u();setInterval(u,1000)</script></body>""", height=134)
+        st.markdown("<div style='height:14px'></div>", unsafe_allow_html=True)
 
-            if not df_mismarcas.empty:
-                _filas = ""
-                for _, _r in df_mismarcas.sort_values("fecha_hora", ascending=False).iterrows():
-                    _es_ing = str(_r["tipo"]) == "INGRESO"
-                    _obs = str(_r.get("observacion", "")).strip() or "Sin observación"
-                    _chips = ui_chip("Ingreso" if _es_ing else "Salida", "ok" if _es_ing else "bad") + (ui_chip("Extra", "warn") if str(_r.get("es_extra", "")) == "SI" else "")
-                    _filas += f'<div class="tp-row"><div class="tp-row-time">{str(_r["fecha_hora"])[11:16]}</div><div class="tp-row-main"><b>{"Ingreso" if _es_ing else "Salida"}</b><span>{_obs}</span></div><div class="tp-chips">{_chips}</div></div>'
-                st.markdown(_filas, unsafe_allow_html=True)
+        ui_mi_programacion(dni_actual)
+        col_main, col_preview = st.columns([1.1, 1])
+
+        with col_main:
+            with st.container(border=True):
+                st.markdown("<h4 style='margin:0; font-size:1rem; color:#111827;'>Registro de Turno</h4>", unsafe_allow_html=True)
+                st.caption("Selecciona el tipo de marcación que deseas realizar:")
+            
+                es_turno_extra = st.checkbox("Marcación Fuera de Horario / Turno Adicional")
+            
+                motivo_extra = ""
+                if es_turno_extra:
+                    motivo_extra = st.selectbox(
+                        "Motivo del Turno Adicional",
+                        ["Cubrir Turno Mañana (Apoyo)", "Cubrir Turno Tarde (Apoyo)", "Permanencia Extra / Post-Turno", "Trabajo Voluntario en Domingo (Día de Descanso)", "Otro Sustento"]
+                    )
+                    if motivo_extra == "Trabajo Voluntario en Domingo (Día de Descanso)":
+                        st.caption("☀ Se registrará como día de descanso trabajado por decisión propia. En tu boleta aparecerá como un día adicional pagado, distinto a tus faltas o tardanzas.")
+            
+                obs_marca = st.text_input("Observación / Justificación (Opcional)", placeholder="Ej. Reemplazo por renuncia, apoyo en caja, etc.")
+            
+                if es_turno_extra and motivo_extra:
+                    obs_marca = f"[{motivo_extra}] {obs_marca}".strip()
+
+                st.markdown("<br>", unsafe_allow_html=True)
+
+                c1, c2 = st.columns(2)
+                with c1:
+                    st.markdown('<div class="btn-ingreso">', unsafe_allow_html=True)
+                    if st.button("Marcar Ingreso", use_container_width=True):
+                        if registrar_marca(dni_actual, user_actual, "INGRESO", obs_marca, es_turno_extra):
+                            st.toast("Ingreso registrado correctamente")
+                            st.rerun()
+                    st.markdown('</div>', unsafe_allow_html=True)
+
+                with c2:
+                    st.markdown('<div class="btn-salida">', unsafe_allow_html=True)
+                    if st.button("Marcar Salida", use_container_width=True):
+                        if registrar_marca(dni_actual, user_actual, "SALIDA", obs_marca, es_turno_extra):
+                            st.toast("Salida registrada correctamente")
+                            st.rerun()
+                    st.markdown('</div>', unsafe_allow_html=True)
+
+        with col_preview:
+            st.markdown("<h4 style='margin:0; font-size:1rem; color:#111827; margin-bottom:12px;'>Marcaciones de Hoy</h4>", unsafe_allow_html=True)
+            hoy_str = obtener_ahora_peru().strftime("%Y-%m-%d")
+        
+            if not st.session_state.asistencia.empty:
+                df_mismarcas = st.session_state.asistencia[
+                    (st.session_state.asistencia["fecha"].astype(str) == hoy_str) & 
+                    (st.session_state.asistencia["dni"].astype(str) == str(dni_actual))
+                ].copy()
+
+                if not df_mismarcas.empty:
+                    _filas = ""
+                    for _, _r in df_mismarcas.sort_values("fecha_hora", ascending=False).iterrows():
+                        _es_ing = str(_r["tipo"]) == "INGRESO"
+                        _obs = str(_r.get("observacion", "")).strip() or "Sin observación"
+                        _chips = ui_chip("Ingreso" if _es_ing else "Salida", "ok" if _es_ing else "bad") + (ui_chip("Extra", "warn") if str(_r.get("es_extra", "")) == "SI" else "")
+                        _filas += f'<div class="tp-row"><div class="tp-row-time">{str(_r["fecha_hora"])[11:16]}</div><div class="tp-row-main"><b>{"Ingreso" if _es_ing else "Salida"}</b><span>{_obs}</span></div><div class="tp-chips">{_chips}</div></div>'
+                    st.markdown(_filas, unsafe_allow_html=True)
                 
-                df_mismarcas["dt"] = pd.to_datetime(df_mismarcas["fecha_hora"])
-                mins_lab, mins_ext, mins_tot, _ = calcular_jornada_y_horas_extras(df_mismarcas)
+                    df_mismarcas["dt"] = pd.to_datetime(df_mismarcas["fecha_hora"])
+                    mins_lab, mins_ext, mins_tot, _ = calcular_jornada_y_horas_extras(df_mismarcas)
                 
-                st.markdown("---")
-                st.markdown(f"**Horas Trabajadas Hoy:** {formatear_horas_minutos(mins_tot)}")
-                st.markdown(f"**Jornada Completa ({jornada_base_txt()}):** {formatear_horas_minutos(mins_lab)} / {jornada_base_txt()}")
-                if mins_ext > 0:
-                    st.markdown(f"**Horas Extras Generadas:** <span style='color:#00A959; font-weight:700;'>{formatear_horas_minutos(mins_ext)}</span>", unsafe_allow_html=True)
+                    st.markdown("---")
+                    st.markdown(f"**Horas Trabajadas Hoy:** {formatear_horas_minutos(mins_tot)}")
+                    st.markdown(f"**Jornada Completa ({jornada_base_txt()}):** {formatear_horas_minutos(mins_lab)} / {jornada_base_txt()}")
+                    if mins_ext > 0:
+                        st.markdown(f"**Horas Extras Generadas:** <span style='color:#00A959; font-weight:700;'>{formatear_horas_minutos(mins_ext)}</span>", unsafe_allow_html=True)
+                else:
+                    st.info("No hay marcaciones registradas la jornada de hoy.")
             else:
                 st.info("No hay marcaciones registradas la jornada de hoy.")
-        else:
-            st.info("No hay marcaciones registradas la jornada de hoy.")
 
 elif choice == "Registrar Descuadre":
-    st.markdown(f"""
-        <div class="market-header">
-            <h1>Registro de Descuadre de Caja</h1>
-            <p>Responsable del reporte: <b>{user_actual}</b></p>
-        </div>
-    """, unsafe_allow_html=True)
+    premium_module_shell('Registrar Descuadre', 'CAJA', 'Reporta diferencias de caja de forma segura.')
 
-    _dm = st.session_state.descuadres
-    _mio = _dm[_dm["dni"].astype(str) == str(dni_actual)].copy() if not _dm.empty else _dm.copy()
-    if not _mio.empty:
-        _mio["monto_num"] = pd.to_numeric(_mio["monto"], errors="coerce").fillna(0)
-        _mes_d = _mio[pd.to_datetime(_mio["fecha"], errors="coerce").dt.strftime("%Y-%m") == obtener_ahora_peru().strftime("%Y-%m")]
-    else:
-        _mes_d = _mio
-    _sob = float(_mes_d[_mes_d["monto_num"] > 0]["monto_num"].sum()) if not _mes_d.empty else 0.0
-    _fal = float(_mes_d[_mes_d["monto_num"] < 0]["monto_num"].sum()) if not _mes_d.empty else 0.0
-    _kd1, _kd2, _kd3 = st.columns(3)
-    _kd1.markdown(ui_kpi("Sobrantes del mes", f"S/. {_sob:.2f}", "a tu favor"), unsafe_allow_html=True)
-    _kd2.markdown(ui_kpi("Faltantes del mes", f"S/. {abs(_fal):.2f}", "por justificar"), unsafe_allow_html=True)
-    _kd3.markdown(ui_kpi("Balance del mes", f"S/. {_sob + _fal:.2f}", "sobrantes menos faltantes"), unsafe_allow_html=True)
-    st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
-    ui_callout("Registra la diferencia de caja de tu turno. Un **motivo claro** ayuda a resolverla más rápido.")
+    with st.container(key="pm_v_registrar_descuadre"):
 
-    with st.form("form_descuadre_user", clear_on_submit=True):
-        tipo_desc = st.radio("Tipo de diferencia", ["Sobrante (+)", "Faltante (-)"], horizontal=True, key="seg_desc_tipo")
-        c1, c2 = st.columns(2)
-        f_operacion = c1.date_input("Fecha operativa", obtener_ahora_peru())
-        monto = c2.number_input("Monto (S/.)", min_value=0.01, step=0.50, format="%.2f")
-        obs = st.text_area("Sustento o motivo", placeholder="Cuéntanos qué pasó con la diferencia de caja…")
-
-        if st.form_submit_button("Guardar registro", use_container_width=True):
-            monto_final = monto if "+" in tipo_desc else -monto
-            tipo_final = "Sobrante" if "+" in tipo_desc else "Faltante"
-            f_reg = obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S")
-
-            nuevo_row = {
-                "fecha": str(f_operacion),
-                "dni": str(dni_actual),
-                "nombre": user_actual,
-                "tipo": tipo_final,
-                "monto": monto_final,
-                "observacion": obs,
-                "fecha_registro": f_reg
-            }
-            st.session_state.descuadres = pd.concat([pd.DataFrame([nuevo_row]), st.session_state.descuadres], ignore_index=True)
-            guardar_descuadre_gsheets(str(f_operacion), dni_actual, user_actual, tipo_final, monto_final, obs, f_reg)
-            st.toast("Descuadre registrado en la nube")
-            time.sleep(0.3)
-            st.rerun()
-
-    if not _mio.empty:
-        st.markdown("<div class='tp-note-t' style='margin:22px 0 10px'>Tus últimos registros</div>", unsafe_allow_html=True)
-        _MES_A = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
-        _filas_r = ""
-        for _, _r in _mio.sort_values("fecha_registro", ascending=False).head(5).iterrows():
-            _dt = pd.to_datetime(_r["fecha"], errors="coerce")
-            _mv = float(_r["monto_num"])
-            _filas_r += (f'<div class="tp-row"><div class="tp-row-time">{(str(_dt.day) + " " + _MES_A[_dt.month - 1]) if pd.notnull(_dt) else str(_r["fecha"])}</div>'
-                         f'<div class="tp-row-main"><b>{_html.escape(str(_r["tipo"]))}</b><span class="wrap">{_html.escape(str(_r["observacion"]).strip() or "Sin motivo registrado")}</span></div>'
-                         f'<div class="tp-chips">{ui_chip(("+" if _mv > 0 else "") + f"S/. {_mv:.2f}", "ok" if _mv >= 0 else "bad")}</div></div>')
-        st.markdown(_filas_r, unsafe_allow_html=True)
-
-elif choice == "Registrar Incidencia":
-    st.markdown(f"""
-        <div class="market-header">
-            <h1>Registro de Incidencias y Daños</h1>
-            <p>Billetes falsos, botellas rotas u otros daños — responsable: <b>{user_actual}</b></p>
-        </div>
-    """, unsafe_allow_html=True)
-
-    ui_callout("Registra aquí cualquier billete falso recibido, botella rota (gaseosa o cerveza), o cualquier otro daño (silla, pared, vitrina, etc.). El valor de reparación queda visible para administración.")
-
-    _inc_all = st.session_state.incidencias
-    _inc_mias = _inc_all[_inc_all["nombre"] == user_actual].copy() if not _inc_all.empty else _inc_all.copy()
-    _n_pend = int(_inc_mias["estado"].astype(str).str.lower().str.contains("pend").sum()) if not _inc_mias.empty else 0
-    _v_pend = float(pd.to_numeric(_inc_mias[_inc_mias["estado"].astype(str).str.lower().str.contains("pend")]["valor_reparacion"], errors="coerce").fillna(0).sum()) if not _inc_mias.empty else 0.0
-    _ki1, _ki2, _ki3 = st.columns(3)
-    _ki1.markdown(ui_kpi("Incidencias registradas", str(len(_inc_mias)), "en tu historial"), unsafe_allow_html=True)
-    _ki2.markdown(ui_kpi("Pendientes", str(_n_pend), "en revisión"), unsafe_allow_html=True)
-    _ki3.markdown(ui_kpi("Valor pendiente", f"S/. {_v_pend:.2f}", "de reparación o reposición"), unsafe_allow_html=True)
-    st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
-
-    tipo_inc_sel = st.radio(
-        "Tipo de incidencia",
-        ["Billete Falso", "Botella Rota (Gaseosa)", "Botella Rota (Cerveza)", "Otro Daño (Silla, Pared, Vitrina, etc.)"],
-        horizontal=True,
-        key="seg_inc_tipo"
-    )
-
-    with st.form("form_incidencia_user", clear_on_submit=True):
-        f_inc = st.date_input("Fecha del Incidente", obtener_ahora_peru(), key="inc_fecha")
-
-        if tipo_inc_sel == "Billete Falso":
-            valor_inc = st.number_input("Valor del Billete Falso (S/.)", min_value=0.0, step=1.0, format="%.2f", key="inc_valor_billete")
-            detalle_inc = st.text_area("Detalle (denominación, cómo se detectó, etc.)", key="inc_detalle_billete")
-        elif "Botella Rota" in tipo_inc_sel:
-            cantidad_bot_rota = st.number_input("Cantidad de Botellas Rotas", min_value=1, step=1, key="inc_cantidad_botella")
-            valor_unit_bot = st.number_input("Valor de Reposición por Botella (S/.)", min_value=0.0, step=0.50, format="%.2f", key="inc_valor_unit_botella")
-            valor_inc = cantidad_bot_rota * valor_unit_bot
-            detalle_inc = st.text_area("Detalle (cómo ocurrió)", key="inc_detalle_botella")
-            ui_callout(f"Valor total estimado de reparación: **S/. {valor_inc:.2f}**", "ok")
+        _dm = st.session_state.descuadres
+        _mio = _dm[_dm["dni"].astype(str) == str(dni_actual)].copy() if not _dm.empty else _dm.copy()
+        if not _mio.empty:
+            _mio["monto_num"] = pd.to_numeric(_mio["monto"], errors="coerce").fillna(0)
+            _mes_d = _mio[pd.to_datetime(_mio["fecha"], errors="coerce").dt.strftime("%Y-%m") == obtener_ahora_peru().strftime("%Y-%m")]
         else:
-            detalle_inc = st.text_area("Describe el daño (ej: 'Rompió la silla del área de mesas', 'Golpeó la pared del almacén')", key="inc_detalle_otro")
-            valor_inc = st.number_input("Valor Estimado de Reparación (S/.)", min_value=0.0, step=1.0, format="%.2f", key="inc_valor_otro")
+            _mes_d = _mio
+        _sob = float(_mes_d[_mes_d["monto_num"] > 0]["monto_num"].sum()) if not _mes_d.empty else 0.0
+        _fal = float(_mes_d[_mes_d["monto_num"] < 0]["monto_num"].sum()) if not _mes_d.empty else 0.0
+        _kd1, _kd2, _kd3 = st.columns(3)
+        _kd1.markdown(ui_kpi("Sobrantes del mes", f"S/. {_sob:.2f}", "a tu favor"), unsafe_allow_html=True)
+        _kd2.markdown(ui_kpi("Faltantes del mes", f"S/. {abs(_fal):.2f}", "por justificar"), unsafe_allow_html=True)
+        _kd3.markdown(ui_kpi("Balance del mes", f"S/. {_sob + _fal:.2f}", "sobrantes menos faltantes"), unsafe_allow_html=True)
+        st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
+        ui_callout("Registra la diferencia de caja de tu turno. Un **motivo claro** ayuda a resolverla más rápido.")
 
-        if st.form_submit_button("Guardar Incidencia", use_container_width=True):
-            f_reg_inc = obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S")
-            id_inc_nuevo = f"INC-{int(time.time()*1000)}"
+        with st.form("form_descuadre_user", clear_on_submit=True):
+            tipo_desc = st.radio("Tipo de diferencia", ["Sobrante (+)", "Faltante (-)"], horizontal=True, key="seg_desc_tipo")
+            c1, c2 = st.columns(2)
+            f_operacion = c1.date_input("Fecha operativa", obtener_ahora_peru())
+            monto = c2.number_input("Monto (S/.)", min_value=0.01, step=0.50, format="%.2f")
+            obs = st.text_area("Sustento o motivo", placeholder="Cuéntanos qué pasó con la diferencia de caja…")
 
-            guardado_ok = guardar_incidencia_gsheets(
-                id_inc_nuevo, dni_actual, user_actual, f_inc, tipo_inc_sel, detalle_inc,
-                valor_inc, f_reg_inc, user_actual, "Pendiente"
-            )
-            if guardado_ok:
-                nueva_fila_inc = {
-                    "id_incidencia": id_inc_nuevo, "dni": dni_actual, "nombre": user_actual,
-                    "fecha": str(f_inc), "tipo_incidencia": tipo_inc_sel, "detalle": detalle_inc,
-                    "valor_reparacion": valor_inc, "fecha_registro": f_reg_inc,
-                    "registrado_por": user_actual, "estado": "Pendiente"
+            if st.form_submit_button("Guardar registro", use_container_width=True):
+                monto_final = monto if "+" in tipo_desc else -monto
+                tipo_final = "Sobrante" if "+" in tipo_desc else "Faltante"
+                f_reg = obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S")
+
+                nuevo_row = {
+                    "fecha": str(f_operacion),
+                    "dni": str(dni_actual),
+                    "nombre": user_actual,
+                    "tipo": tipo_final,
+                    "monto": monto_final,
+                    "observacion": obs,
+                    "fecha_registro": f_reg
                 }
-                st.session_state.incidencias = pd.concat([pd.DataFrame([nueva_fila_inc]), st.session_state.incidencias], ignore_index=True)
-                registrar_auditoria("Registrar Incidencia", "Incidencias", f"{user_actual}: {tipo_inc_sel} — S/. {valor_inc:.2f}")
-                st.toast("Incidencia registrada correctamente")
+                st.session_state.descuadres = pd.concat([pd.DataFrame([nuevo_row]), st.session_state.descuadres], ignore_index=True)
+                guardar_descuadre_gsheets(str(f_operacion), dni_actual, user_actual, tipo_final, monto_final, obs, f_reg)
+                st.toast("Descuadre registrado en la nube")
                 time.sleep(0.3)
                 st.rerun()
 
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("<div class='tp-note-t' style='margin:6px 0 10px'>Mis incidencias registradas</div>", unsafe_allow_html=True)
-    if not st.session_state.incidencias.empty:
-        mis_inc = st.session_state.incidencias[st.session_state.incidencias["nombre"] == user_actual]
-        if not mis_inc.empty:
-            for _, _ri in mis_inc.sort_values("fecha", ascending=False).iterrows():
-                st.markdown(ui_inc_card(_ri), unsafe_allow_html=True)
-        else:
-            st.info("Aún no tienes incidencias registradas.")
-    else:
-        st.info("Aún no tienes incidencias registradas.")
+        if not _mio.empty:
+            st.markdown("<div class='tp-note-t' style='margin:22px 0 10px'>Tus últimos registros</div>", unsafe_allow_html=True)
+            _MES_A = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
+            _filas_r = ""
+            for _, _r in _mio.sort_values("fecha_registro", ascending=False).head(5).iterrows():
+                _dt = pd.to_datetime(_r["fecha"], errors="coerce")
+                _mv = float(_r["monto_num"])
+                _filas_r += (f'<div class="tp-row"><div class="tp-row-time">{(str(_dt.day) + " " + _MES_A[_dt.month - 1]) if pd.notnull(_dt) else str(_r["fecha"])}</div>'
+                             f'<div class="tp-row-main"><b>{_html.escape(str(_r["tipo"]))}</b><span class="wrap">{_html.escape(str(_r["observacion"]).strip() or "Sin motivo registrado")}</span></div>'
+                             f'<div class="tp-chips">{ui_chip(("+" if _mv > 0 else "") + f"S/. {_mv:.2f}", "ok" if _mv >= 0 else "bad")}</div></div>')
+            st.markdown(_filas_r, unsafe_allow_html=True)
 
-elif choice == "Mi Ficha Técnica":
-    st.markdown(f"""
-        <div class="market-header">
-            <h1>Mi Ficha Técnica</h1>
-            <p>Información laboral y de contacto registrada para <b>{user_actual}</b></p>
-        </div>
-    """, unsafe_allow_html=True)
+elif choice == "Registrar Incidencia":
+    premium_module_shell('Registrar Incidencia', 'CONTROL', 'Registra novedades e incidencias operativas.')
 
-    mi_row = st.session_state.empleados[st.session_state.empleados["dni"].astype(str) == str(dni_actual)]
-    if not mi_row.empty:
-        renderizar_tarjeta_colaborador(mi_row.iloc[0])
-    else:
-        st.error("No se encontró tu información en la base de datos de colaboradores.")
+    with st.container(key="pm_v_registrar_incidencia"):
 
-elif choice == "Solicitar Permiso / Adelanto":
-    st.markdown(f"""
-        <div class="market-header">
-            <h1>Solicitudes de Permiso y Adelantos</h1>
-            <p>Gestión de permisos laborales y adelantos de sueldo para <b>{user_actual}</b></p>
-        </div>
-    """, unsafe_allow_html=True)
+        ui_callout("Registra aquí cualquier billete falso recibido, botella rota (gaseosa o cerveza), o cualquier otro daño (silla, pared, vitrina, etc.). El valor de reparación queda visible para administración.")
 
-    _sol_me = st.session_state.solicitudes[st.session_state.solicitudes["dni"].astype(str) == str(dni_actual)] if not st.session_state.solicitudes.empty else pd.DataFrame(columns=["estado"])
-    _cnt = lambda e: int((_sol_me["estado"] == e).sum()) if not _sol_me.empty else 0
-    _q1, _q2, _q3 = st.columns(3)
-    _q1.markdown(ui_kpi("En revisión", str(_cnt("Pendiente")), "esperan respuesta"), unsafe_allow_html=True)
-    _q2.markdown(ui_kpi("Aprobadas", str(_cnt("Aprobado")), "en tu historial"), unsafe_allow_html=True)
-    _q3.markdown(ui_kpi("Rechazadas", str(_cnt("Rechazado")), "en tu historial"), unsafe_allow_html=True)
-    st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
-    t_sol, t_hist = st.tabs(["Nueva Solicitud", "Mi Historial de Solicitudes"])
+        _inc_all = st.session_state.incidencias
+        _inc_mias = _inc_all[_inc_all["nombre"] == user_actual].copy() if not _inc_all.empty else _inc_all.copy()
+        _n_pend = int(_inc_mias["estado"].astype(str).str.lower().str.contains("pend").sum()) if not _inc_mias.empty else 0
+        _v_pend = float(pd.to_numeric(_inc_mias[_inc_mias["estado"].astype(str).str.lower().str.contains("pend")]["valor_reparacion"], errors="coerce").fillna(0).sum()) if not _inc_mias.empty else 0.0
+        _ki1, _ki2, _ki3 = st.columns(3)
+        _ki1.markdown(ui_kpi("Incidencias registradas", str(len(_inc_mias)), "en tu historial"), unsafe_allow_html=True)
+        _ki2.markdown(ui_kpi("Pendientes", str(_n_pend), "en revisión"), unsafe_allow_html=True)
+        _ki3.markdown(ui_kpi("Valor pendiente", f"S/. {_v_pend:.2f}", "de reparación o reposición"), unsafe_allow_html=True)
+        st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
 
-    with t_sol:
-        tipo_sol = st.radio("Tipo de solicitud", ["Permiso Laboral", "Adelanto de Sueldo", "Trabajar Domingo (Descanso)"], horizontal=True, key="tipo_sol_radio")
+        tipo_inc_sel = st.radio(
+            "Tipo de incidencia",
+            ["Billete Falso", "Botella Rota (Gaseosa)", "Botella Rota (Cerveza)", "Otro Daño (Silla, Pared, Vitrina, etc.)"],
+            horizontal=True,
+            key="seg_inc_tipo"
+        )
 
-        hoy_peru = obtener_ahora_peru().date()
-        fecha_minima_permiso = hoy_peru + timedelta(days=7)
-        f_permiso_val = ""
-        monto_adel_val = 0.0
-        requiere_recuperacion = False
-        fecha_recuperacion_sel = None
+        with st.form("form_incidencia_user", clear_on_submit=True):
+            f_inc = st.date_input("Fecha del Incidente", obtener_ahora_peru(), key="inc_fecha")
 
-        if tipo_sol == "Permiso Laboral":
-            ui_callout("**Regla de Permisos:** Toda solicitud de permiso debe realizarse con un mínimo de **7 días de anticipación**.")
-            f_permiso_sel = st.date_input("Fecha solicitada para el permiso", value=fecha_minima_permiso, min_value=fecha_minima_permiso, key="fecha_permiso_nueva")
-            f_permiso_val = str(f_permiso_sel)
-
-            st.markdown("##### Recuperación del día")
-            requiere_recuperacion = st.checkbox("¿Deseas recuperar el día del permiso?", value=False, key="requiere_recuperacion_nueva")
-            if requiere_recuperacion:
-                ui_callout("Selecciona el día en que deseas recuperar el permiso. **Los domingos también están habilitados.**", "ok")
-                fecha_min_rec = f_permiso_sel + timedelta(days=1)
-                fecha_recuperacion_sel = st.date_input("Día a recuperar", value=fecha_min_rec, min_value=fecha_min_rec, key="fecha_recuperacion_nueva", help="Puedes seleccionar cualquier fecha, incluido domingo.")
-                dias_semana = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
-                st.caption(f"Permiso: **{f_permiso_sel.strftime('%d/%m/%Y')}** | Día a recuperar: **{fecha_recuperacion_sel.strftime('%d/%m/%Y')} ({dias_semana[fecha_recuperacion_sel.weekday()]})**")
-
-            with st.form("form_nuevo_permiso", clear_on_submit=True):
-                motivo_sol = st.text_area("Motivo o Justificación detallada", placeholder="Escribe aquí el motivo de tu solicitud...")
-                enviar_solicitud = st.form_submit_button("Enviar Solicitud", use_container_width=True)
-
-        elif tipo_sol == "Trabajar Domingo (Descanso)":
-            ui_callout("**Trabajar tu día de descanso:** Si tu descanso semanal es el domingo y deseas trabajar ese día, solicita autorización previa aquí. Una vez aprobada, podrás marcar tu asistencia ese domingo y en tu boleta se reflejará claramente como un día adicional trabajado (no como una falta ni un domingo normal de descanso).")
-
-            proximos_domingos = []
-            cursor_dom = hoy_peru
-            while len(proximos_domingos) < 8:
-                cursor_dom += timedelta(days=1)
-                if cursor_dom.weekday() == 6:
-                    proximos_domingos.append(cursor_dom)
-
-            domingo_sel = st.selectbox(
-                "Domingo que deseas trabajar",
-                proximos_domingos,
-                format_func=lambda d: d.strftime("%d/%m/%Y"),
-                key="domingo_trabajo_sel"
-            )
-            f_permiso_val = str(domingo_sel)
-
-            with st.form("form_domingo_trabajo", clear_on_submit=True):
-                motivo_sol = st.text_area("Motivo o Justificación (opcional)", placeholder="Ej. Necesito cubrir turno, quiero generar ingreso adicional, etc.")
-                enviar_solicitud = st.form_submit_button("Enviar Solicitud", use_container_width=True)
-        else:
-            ui_callout("**Adelanto de Sueldo:** Ingresa el monto total a solicitar y la justificación.")
-            with st.form("form_nuevo_adelanto", clear_on_submit=True):
-                monto_adel_val = st.number_input("Monto a Solicitar (S/.)", min_value=10.0, step=10.0, format="%.2f")
-                f_permiso_val = str(hoy_peru)
-                motivo_sol = st.text_area("Motivo o Justificación detallada", placeholder="Escribe aquí el motivo de tu solicitud...")
-                enviar_solicitud = st.form_submit_button("Enviar Solicitud", use_container_width=True)
-
-        if enviar_solicitud:
-                if tipo_sol != "Trabajar Domingo (Descanso)" and not motivo_sol.strip():
-                    st.error("Por favor ingresa un motivo para tu solicitud.")
-                else:
-                    if tipo_sol == "Permiso Laboral":
-                        diff_dias = (f_permiso_sel - hoy_peru).days
-                        if diff_dias < 7:
-                            st.error("Los permisos requieren como mínimo 7 días de anticipación.")
-                            st.stop()
-
-                        if requiere_recuperacion and fecha_recuperacion_sel is not None:
-                            if fecha_recuperacion_sel == f_permiso_sel:
-                                st.error("La fecha de recuperación debe ser diferente a la fecha del permiso.")
-                                st.stop()
-                            fecha_recuperacion_val = str(fecha_recuperacion_sel)
-                        else:
-                            fecha_recuperacion_val = ""
-                    else:
-                        fecha_recuperacion_val = ""
-
-                    if tipo_sol == "Trabajar Domingo (Descanso)":
-                        ya_existe_dom = False
-                        if not st.session_state.solicitudes.empty:
-                            df_check_dom = st.session_state.solicitudes[
-                                (st.session_state.solicitudes["dni"].astype(str) == str(dni_actual)) &
-                                (st.session_state.solicitudes["tipo_solicitud"] == "Trabajar Domingo (Descanso)") &
-                                (st.session_state.solicitudes["fecha_permiso"].astype(str) == f_permiso_val) &
-                                (st.session_state.solicitudes["estado"].isin(["Pendiente", "Aprobado"]))
-                            ]
-                            ya_existe_dom = not df_check_dom.empty
-                        if ya_existe_dom:
-                            st.warning("Ya tienes una solicitud pendiente o aprobada para trabajar ese domingo.")
-                            st.stop()
-                        motivo_sol = motivo_sol.strip() if motivo_sol else "Solicita trabajar su día de descanso semanal (domingo)."
-
-                    id_nuevo = f"SOL-{int(time.time())}"
-                    f_reg_now = obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S")
-
-                    nueva_peticion = {
-                        "id_solicitud": id_nuevo,
-                        "fecha_registro": f_reg_now,
-                        "dni": str(dni_actual),
-                        "nombre": user_actual,
-                        "tipo_solicitud": tipo_sol,
-                        "fecha_permiso": f_permiso_val,
-                        "monto_adelanto": monto_adel_val,
-                        "motivo": motivo_sol.strip(),
-                        "estado": "Pendiente",
-                        "respuesta_admin": "",
-                        "requiere_recuperacion": "Sí" if (tipo_sol == "Permiso Laboral" and requiere_recuperacion) else "No",
-                        "fecha_recuperacion": fecha_recuperacion_val
-                    }
-
-                    st.session_state.solicitudes = pd.concat([pd.DataFrame([nueva_peticion]), st.session_state.solicitudes], ignore_index=True)
-                    guardar_solicitud_gsheets(
-                        id_nuevo, f_reg_now, dni_actual, user_actual, tipo_sol,
-                        f_permiso_val, monto_adel_val, motivo_sol.strip(),
-                        requiere_recuperacion=("Sí" if (tipo_sol == "Permiso Laboral" and requiere_recuperacion) else "No"),
-                        fecha_recuperacion=fecha_recuperacion_val
-                    )
-                    st.success("Solicitud enviada con éxito. Un administrador la revisará pronto.")
-                    time.sleep(0.5)
-                    st.rerun()
-
-    with t_hist:
-        st.markdown("<h4 style='font-size:1rem; color:#111827; margin-bottom:12px;'>Historial de Solicitudes</h4>", unsafe_allow_html=True)
-        
-        df_mis_sol = st.session_state.solicitudes[st.session_state.solicitudes["dni"].astype(str) == str(dni_actual)].copy() if not st.session_state.solicitudes.empty else pd.DataFrame()
-
-        if not df_mis_sol.empty:
-            _MESES_HS = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-                         "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
-            _ahora_hs = obtener_ahora_peru()
-            df_mis_sol["_f_reg_dt"] = pd.to_datetime(df_mis_sol["fecha_registro"], errors="coerce")
-
-            _anios_hs = sorted({int(a) for a in df_mis_sol["_f_reg_dt"].dt.year.dropna().unique()} | {_ahora_hs.year}, reverse=True)
-            _fh1, _fh2 = st.columns(2)
-            _mes_hs = _fh1.selectbox(
-                "Mes", [0] + list(range(1, 13)),
-                index=_ahora_hs.month,
-                format_func=lambda x: "Todos los meses" if x == 0 else _MESES_HS[x - 1],
-                key="hist_sol_mes"
-            )
-            _anio_hs = _fh2.selectbox("Año", _anios_hs, index=_anios_hs.index(_ahora_hs.year), key="hist_sol_anio")
-
-            df_mis_sol = df_mis_sol[df_mis_sol["_f_reg_dt"].dt.year == int(_anio_hs)]
-            if _mes_hs != 0:
-                df_mis_sol = df_mis_sol[df_mis_sol["_f_reg_dt"].dt.month == int(_mes_hs)]
-            df_mis_sol = df_mis_sol.sort_values("_f_reg_dt", ascending=False)
-
-            if df_mis_sol.empty:
-                _txt_per = f"{_MESES_HS[_mes_hs - 1]} " if _mes_hs != 0 else ""
-                st.info(f"No tienes solicitudes en {_txt_per}{_anio_hs}.")
+            if tipo_inc_sel == "Billete Falso":
+                valor_inc = st.number_input("Valor del Billete Falso (S/.)", min_value=0.0, step=1.0, format="%.2f", key="inc_valor_billete")
+                detalle_inc = st.text_area("Detalle (denominación, cómo se detectó, etc.)", key="inc_detalle_billete")
+            elif "Botella Rota" in tipo_inc_sel:
+                cantidad_bot_rota = st.number_input("Cantidad de Botellas Rotas", min_value=1, step=1, key="inc_cantidad_botella")
+                valor_unit_bot = st.number_input("Valor de Reposición por Botella (S/.)", min_value=0.0, step=0.50, format="%.2f", key="inc_valor_unit_botella")
+                valor_inc = cantidad_bot_rota * valor_unit_bot
+                detalle_inc = st.text_area("Detalle (cómo ocurrió)", key="inc_detalle_botella")
+                ui_callout(f"Valor total estimado de reparación: **S/. {valor_inc:.2f}**", "ok")
             else:
-                st.caption(f"{len(df_mis_sol)} solicitud(es) encontrada(s).")
-
-            for _, r_sol in df_mis_sol.iterrows():
-                st.markdown(ui_solicitud_card(r_sol), unsafe_allow_html=True)
-                if r_sol['tipo_solicitud'] == "Trabajar Domingo (Descanso)" and r_sol["estado"] == "Aprobado":
-                    st.success("Autorizado. Podrás marcar tu asistencia ese domingo desde 'Marcar Asistencia'.")
-        else:
-            st.info("No registras solicitudes en tu historial.")
-
-elif choice == "Mis Boletas":
-    st.markdown("""
-        <div class="market-header">
-            <h1>Mis Boletas de Pago</h1>
-            <p>Revisa tus boletas emitidas, da tu conformidad o envía una observación</p>
-        </div>
-    """, unsafe_allow_html=True)
-    _all = st.session_state.boletas_historial
-    _mias = _all[_all["dni"].apply(lambda x: _mismo_dni(x, dni_actual)) & _all["estado"].astype(str).isin(ESTADOS_BOL_VIGENTES) & (_all["datos_json"].astype(str).str.len() > 2)] if not _all.empty else _all
-    _mias = _boletas_orden(_mias)
-    if _mias.empty:
-        st.markdown('<div class="tp-card" style="text-align:center;padding:34px 20px"><div class="tp-card-title">Aún no tienes boletas emitidas</div><div class="tp-card-sub" style="margin-top:6px">Cuando administración emita tu boleta, aparecerá aquí para que la revises.</div></div>', unsafe_allow_html=True)
-    else:
-        _pend = int((_mias["estado"] == "Emitido").sum())
-        st.markdown('<div class="tp-gridk">' +
-                    ui_kpi_acc("Boletas emitidas", str(len(_mias)), "en tu historial", "info") +
-                    ui_kpi_acc("Pendientes de tu conformidad", str(_pend), "revísalas y responde" if _pend else "Todo al día", "warn" if _pend else "ok") +
-                    ui_kpi_acc("Observadas", str(int((_mias["estado"] == "Observado").sum())), "en revisión de administración", "info") +
-                    ui_kpi_acc("Conformes", str(int(_mias["estado"].isin(["Conforme", "Firmado"]).sum())), "ya cerradas", "ok") + '</div>', unsafe_allow_html=True)
-        st.markdown("".join(ui_boleta_card(_r, colaborador=True) for _, _r in _mias.head(12).iterrows()), unsafe_allow_html=True)
-
-        st.markdown("<div class='tp-note-t' style='margin:22px 0 10px'>Detalle de la boleta</div>", unsafe_allow_html=True)
-        _opc_m = {f"{r['mes']} {r['anio']} · versión {_ver_bol(r['version'])}": r for _, r in _mias.iterrows()}
-        _sel_m = st.selectbox("Boleta", list(_opc_m.keys()), key="misbol_sel", label_visibility="collapsed")
-        _rm = _opc_m[_sel_m]
-        _idb = str(_rm["id_boleta"])
-        try:
-            _dm = json.loads(str(_rm["datos_json"]))
-        except Exception:
-            _dm = None
-        if not _dm:
-            ui_callout("No se pudo leer el detalle de esta boleta. Avisa a administración.", "warn")
-        else:
-            if str(_rm.get("respuesta_admin", "")).strip():
-                ui_callout(f"**Respuesta de administración:** {_rm['respuesta_admin']}", "info")
-            st.markdown(generar_html_boleta(_dm), unsafe_allow_html=True)
-            _pdf_m = generar_pdf_boleta(_dm, _extra_boleta(_rm))
-            if _pdf_m:
-                st.download_button("Descargar mi boleta en PDF", _pdf_m, f"Boleta_{_dm['periodo'].replace(' ', '_')}.pdf", "application/pdf", use_container_width=True, key=f"misbol_pdf_{_idb}")
-            _est_m = str(_rm["estado"])
-            if _est_m == "Emitido":
-                st.markdown("<div class='tp-note-t' style='margin:22px 0 10px'>¿Qué deseas hacer con esta boleta?</div>", unsafe_allow_html=True)
-                ui_callout("Revisa el desglose. Si todo está correcto, **firma y da tu conformidad**. Si notas un error, envía una **observación** y administración la revisará.")
-                ui_callout("Firma con tu dedo dentro del recuadro, presiona **Confirmar firma** y luego **Firmar y dar conformidad**.")
-                _chk = st.checkbox("He revisado el detalle de mi boleta y estoy conforme con los montos.", key=f"misbol_chk_{_idb}")
-                _firma_val = ui_firma_pad(f"firma_{_idb}")
-                if _firma_val:
-                    st.markdown(ui_chip("Firma lista", "ok"), unsafe_allow_html=True)
-                if st.button("Firmar y dar conformidad", key=f"misbol_ok_{_idb}", disabled=not (_chk and _firma_val), use_container_width=True):
-                    _b64f = _procesar_firma(_firma_val)
-                    if not _b64f:
-                        st.error("La firma es muy corta o está vacía. Bórrala y vuelve a dibujarla.")
-                    else:
-                        _ahora_f = obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S")
-                        try:
-                            _ua = str(st.context.headers.get("User-Agent", ""))[:160]
-                        except Exception:
-                            _ua = ""
-                        _cod = _codigo_boleta({**dict(_rm), "firma_png_b64": _b64f, "fecha_firma": _ahora_f})
-                        if _actualizar_boleta(_idb, {"estado": "Firmado", "fecha_conformidad": _ahora_f, "firma_png_b64": _b64f, "fecha_firma": _ahora_f,
-                                                     "firma_dispositivo": _ua, "codigo_verificacion": _cod}):
-                            registrar_auditoria("Firma de Boleta", "Boletas", f"{user_actual} firmó su boleta de {_dm['periodo']}")
-                            st.session_state.boletas_historial = obtener_boletas_historial_gsheets()
-                            st.toast("Boleta firmada. ¡Gracias!")
-                            time.sleep(0.3)
-                            st.rerun()
-                with st.expander("¿No puedes firmar en pantalla?"):
-                    st.caption("Puedes dar tu conformidad sin firma. Quedará registrada la fecha y hora, pero sin firma manuscrita.")
-                    if st.button("Dar conformidad sin firma", key=f"misbol_ok_sf_{_idb}", disabled=not _chk, use_container_width=True):
-                        if _actualizar_boleta(_idb, {"estado": "Conforme", "fecha_conformidad": obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S")}):
-                            registrar_auditoria("Conformidad de Boleta", "Boletas", f"{user_actual} — {_dm['periodo']} (sin firma)")
-                            st.session_state.boletas_historial = obtener_boletas_historial_gsheets()
-                            st.toast("Conformidad registrada. ¡Gracias!")
-                            time.sleep(0.3)
-                            st.rerun()
-                _obs = st.text_area("Describe qué parte de tu boleta no está correcta", key=f"misbol_obs_{_idb}", placeholder="Ej.: Me descontaron una tardanza del día 12, pero llegué a tiempo.")
-                if st.button("Enviar observación", key=f"misbol_obsbtn_{_idb}", disabled=len(_obs.strip()) < 10, use_container_width=True):
-                    if _actualizar_boleta(_idb, {"estado": "Observado", "observacion_colaborador": _obs.strip(), "fecha_observacion": obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S")}):
-                        registrar_auditoria("Observación de Boleta", "Boletas", f"{user_actual} — {_dm['periodo']}: {_obs.strip()[:120]}")
-                        st.session_state.boletas_historial = obtener_boletas_historial_gsheets()
-                        st.toast("Observación enviada a administración")
-                        st.rerun()
-                st.caption("La observación debe tener al menos 10 caracteres.")
-            elif _est_m == "Observado":
-                ui_callout(f"Enviaste una observación el {str(_rm['fecha_observacion'])[:16]}: “{_rm['observacion_colaborador']}”. Administración la revisará y emitirá una nueva versión.", "warn")
-            else:
-                ui_callout(f"Diste tu conformidad el {str(_rm['fecha_conformidad'])[:16]}. Esta boleta ya está cerrada.", "ok")
-                if str(_rm.get("firma_png_b64", "")).strip():
-                    st.markdown(ui_firma_card(_rm), unsafe_allow_html=True)
-            st.caption(f"Código de verificación: {_rm['codigo_verificacion']}")
-
-elif choice == "Mi Dashboard Mensual":
-    ahora_dash = obtener_ahora_peru()
-
-    NOMBRES_MESES_DASH = [
-        "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-        "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
-    ]
-
-    st.markdown(f"""
-        <div class="market-header">
-            <h1>Rendimiento Mensual</h1>
-            <p>Resumen del período seleccionado para <b>{user_actual}</b></p>
-        </div>
-    """, unsafe_allow_html=True)
-
-    col_mes_dash, col_anio_dash = st.columns(2)
-    mes_dash_sel = col_mes_dash.selectbox(
-        "Seleccionar Mes",
-        list(range(1, 13)),
-        index=ahora_dash.month - 1,
-        format_func=lambda x: NOMBRES_MESES_DASH[x - 1],
-        key="mes_mi_dashboard"
-    )
-    anio_dash_sel = col_anio_dash.number_input(
-        "Seleccionar Año",
-        min_value=2024,
-        max_value=2030,
-        value=ahora_dash.year,
-        step=1,
-        key="anio_mi_dashboard"
-    )
-
-    periodo_dash = f"{NOMBRES_MESES_DASH[mes_dash_sel - 1]} {int(anio_dash_sel)}"
-    ui_callout(f"Indicadores correspondientes únicamente a **{periodo_dash}**. Las horas extras y demás métricas no acumulan meses anteriores.")
-
-    df_mis_desc = pd.DataFrame()
-    df_mis_asist = pd.DataFrame()
-
-    if not st.session_state.descuadres.empty:
-        df_mis_desc = st.session_state.descuadres[
-            st.session_state.descuadres["dni"].astype(str) == str(dni_actual)
-        ].copy()
-
-        if not df_mis_desc.empty:
-            df_mis_desc["fecha_dt"] = pd.to_datetime(df_mis_desc["fecha"], errors="coerce")
-            df_mis_desc = df_mis_desc[
-                (df_mis_desc["fecha_dt"].dt.month == mes_dash_sel) &
-                (df_mis_desc["fecha_dt"].dt.year == int(anio_dash_sel))
-            ]
-
-    if not st.session_state.asistencia.empty:
-        df_mis_asist = st.session_state.asistencia[
-            st.session_state.asistencia["dni"].astype(str) == str(dni_actual)
-        ].copy()
-
-        if not df_mis_asist.empty:
-            df_mis_asist["fecha_dt"] = pd.to_datetime(df_mis_asist["fecha"], errors="coerce")
-            df_mis_asist = df_mis_asist[
-                (df_mis_asist["fecha_dt"].dt.month == mes_dash_sel) &
-                (df_mis_asist["fecha_dt"].dt.year == int(anio_dash_sel))
-            ]
-
-    monto_total = (
-        pd.to_numeric(df_mis_desc["monto"], errors="coerce").sum()
-        if not df_mis_desc.empty else 0.0
-    )
-
-    dias_trabajados = (
-        df_mis_asist["fecha"].nunique()
-        if not df_mis_asist.empty else 0
-    )
-
-    minutos_extras_mes = 0
-    por_dia_dash = {}
-    if not df_mis_asist.empty:
-        df_mis_asist["dt"] = pd.to_datetime(df_mis_asist["fecha_hora"], errors="coerce")
-        for f_dia, grupo_dia in df_mis_asist.groupby("fecha"):
-            m_lab, mins_e, _, _ = calcular_jornada_y_horas_extras(grupo_dia)
-            minutos_extras_mes += mins_e
-            por_dia_dash[str(f_dia)] = (m_lab, mins_e)
-
-    metricas_p = calcular_metricas_puntualidad(df_mis_asist, user_actual)
-    pct_p = metricas_p["ratio"] if metricas_p["total_ingresos"] else 100
-    tono_p = "ok" if pct_p >= 90 else ("warn" if pct_p >= 75 else "bad")
-    if dias_trabajados == 0:
-        msg_p, chip_p = f"Aún sin marcaciones en {periodo_dash}", "neutral"
-    elif metricas_p["minutos_acumulados"] == 0:
-        msg_p, chip_p = "Mes impecable: ¡sin tardanzas!", "ok"
-    elif pct_p >= 90:
-        msg_p, chip_p = "Vas muy bien este mes", "ok"
-    else:
-        msg_p, chip_p = "Puedes mejorar tu puntualidad", "warn"
-
-    st.markdown(f'<div class="tp-hero"><div class="tp-hero-top">{ui_avatar(user_actual, dni_actual, _foto_actual, 56)}<div><div class="tp-hero-hi">Así va tu {periodo_dash}, {_html.escape(user_actual.split()[0])}</div>{ui_chip(msg_p, chip_p)}</div></div>'
-                f'<div class="tp-prog-lbl"><span>Puntualidad del mes</span><span>{pct_p:g}%</span></div><div class="tp-prog {tono_p}"><i style="width:{min(100, int(pct_p))}%"></i></div></div>', unsafe_allow_html=True)
-    st.markdown("<div style='height:14px'></div>", unsafe_allow_html=True)
-
-    def _kp(lbl, val, sub, tono):
-        return f'<div class="tp-kpi al-{tono}"><div class="tp-kpi-lbl">{lbl}</div><div class="tp-kpi-val">{val}</div><div class="tp-kpi-sub">{sub}</div></div>'
-
-    k1, k2, k3, k4 = st.columns(4)
-    k1.markdown(_kp("Días trabajados", str(dias_trabajados), "con marcaciones en el mes", "info"), unsafe_allow_html=True)
-    k2.markdown(_kp("Horas extras", formatear_horas_minutos(minutos_extras_mes), f"sobre la jornada base de {jornada_base_txt()}", "ok" if minutos_extras_mes > 0 else "info"), unsafe_allow_html=True)
-    k3.markdown(_kp("Minutos de tardanza", f"{metricas_p['minutos_acumulados']} m", f"{metricas_p['tardanzas']} tardanza(s) en el mes" if metricas_p["tardanzas"] else "Mes puntual", "ok" if metricas_p["minutos_acumulados"] == 0 else "bad"), unsafe_allow_html=True)
-    k4.markdown(_kp("Balance de descuadres", f"S/. {monto_total:.2f}", "sobrantes menos faltantes", "ok" if monto_total >= 0 else "bad"), unsafe_allow_html=True)
-    st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
-
-    if por_dia_dash:
-        fechas_d = sorted(por_dia_dash)
-        g1, g2 = st.columns([1.6, 1])
-        g1.markdown(ui_panel("Tus horas por día", "Horas trabajadas y horas extras", ui_columnas(
-            [ui_dia_label(f) for f in fechas_d],
-            [("Trabajadas", [round(por_dia_dash[f][0] / 60, 1) for f in fechas_d], "#0F172A"), ("Extras", [round(por_dia_dash[f][1] / 60, 1) for f in fechas_d], "#0B8F57")], alto=200)), unsafe_allow_html=True)
-        g2.markdown(ui_panel("Puntualidad del mes", "Tus ingresos a tiempo",
-                             f'<div class="tp-saldo-n">{pct_p:g}%<span>puntual</span></div><div class="tp-prog {tono_p}"><i style="width:{min(100, int(pct_p))}%"></i></div>'
-                             f'<div class="tp-chips" style="justify-content:flex-start;margin-top:14px">{ui_chip(str(metricas_p["puntuales"]) + " puntuales", "ok")}{ui_chip(str(metricas_p["tardanzas"]) + " tardanzas", "bad" if metricas_p["tardanzas"] else "neutral")}</div>'), unsafe_allow_html=True)
-    else:
-        st.markdown(f'<div class="tp-card" style="text-align:center;padding:30px 20px"><div class="tp-card-title">Sin marcaciones en {periodo_dash}</div><div class="tp-card-sub" style="margin-top:6px">Cuando registres tu asistencia verás aquí tus horas y tu puntualidad.</div></div>', unsafe_allow_html=True)
-
-    st.markdown(f"<div class='tp-note-t' style='margin:22px 0 10px'>Tus descuadres de caja · {periodo_dash}</div>", unsafe_allow_html=True)
-    if not df_mis_desc.empty:
-        _d_me = df_mis_desc.copy()
-        _d_me["monto_num"] = pd.to_numeric(_d_me["monto"], errors="coerce").fillna(0)
-        st.markdown(ui_desc_card(user_actual, _d_me, dni_actual, _foto_actual), unsafe_allow_html=True)
-    else:
-        ui_callout(f"Sin registros de descuadres en {periodo_dash}.", "ok")
-
-    st.markdown("<div style='height:18px'></div>", unsafe_allow_html=True)
-    st.markdown('<div class="tp-sec"><div><div class="tp-sec-title">Tu histórico de puntualidad</div><div class="tp-sec-sub">Cómo ha evolucionado tu asistencia en el tiempo. Solo tú puedes ver esta información.</div></div></div>', unsafe_allow_html=True)
-    rango_h = st.selectbox("Período del histórico", ["Últimos 3 meses", "Últimos 6 meses", "Todo mi historial"], index=1, key="mi_hist_rango")
-    _meses_h = {"Últimos 3 meses": 3, "Últimos 6 meses": 6}.get(rango_h)
-    _corte_h = (pd.Timestamp(ahora_dash.replace(day=1).date()) - pd.DateOffset(months=_meses_h - 1)) if _meses_h else None
-    if st.session_state.asistencia.empty:
-        ui_callout("Aún no hay marcaciones registradas para mostrar tu histórico.", "info")
-    else:
-        _asist_me = st.session_state.asistencia[st.session_state.asistencia["dni"].astype(str) == str(dni_actual)]
-        render_hist_puntualidad(_asist_me, _corte_h)
-
-# -------------------- MÓDULOS ADMIN --------------------
-
-elif choice == "Dashboard General":
-    st.markdown("""
-        <div class="market-header">
-            <h1>Dashboard General</h1>
-            <p>Resumen operativo · asistencia, puntualidad y horas extras</p>
-        </div>
-    """, unsafe_allow_html=True)
-
-    _tp_panel_operacion_hoy()
-
-    col_f1, col_f2 = st.columns([1.5, 1])
-    with col_f1:
-        fecha_dash = st.date_input("Fecha de Consulta", obtener_ahora_peru(), key="dash_fecha")
-    f_dash_str = str(fecha_dash)
-    colaboradores_ops = obtener_solo_colaboradores(fecha_eval=fecha_dash)
-    with col_f2:
-        lista_colabs = ["Todos"] + colaboradores_ops
-        colab_dash = st.selectbox("Filtrar Colaborador", lista_colabs, key="dash_colab")
-    kpi_slot = st.empty()
-    ops_slot = st.empty()
-
-    st.markdown('<div class="tp-sec" style="margin-top:8px"><div><div class="tp-sec-title">Calendarios mensuales de asistencia</div><div class="tp-sec-sub">Elige el mes para revisar la asistencia de cada trabajador</div></div></div>', unsafe_allow_html=True)
-    col_mes, col_anio = st.columns(2)
-    
-    ahora_p = obtener_ahora_peru()
-    NOMBRES_MESES = [
-        "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-        "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
-    ]
-    mes_sel = col_mes.selectbox("Mes", list(range(1, 13)), index=ahora_p.month - 1, format_func=lambda x: NOMBRES_MESES[x-1])
-    anio_sel = col_anio.number_input("Año", min_value=2024, max_value=2030, value=ahora_p.year)
-
-    st.markdown("""
-        <div class="legend-container">
-            <div class="legend-item">
-                <span class="legend-badge" style="background-color: #dcfce7; border: 1px solid #bbf7d0;"></span>
-                <span>Asistió</span>
-            </div>
-            <div class="legend-item">
-                <span class="legend-badge" style="background-color: #fee2e2; border: 1px solid #fca5a5;"></span>
-                <span>Inasistencia (Falta)</span>
-            </div>
-            <div class="legend-item">
-                <span class="legend-badge" style="background-color: #fef9c3; border: 1px solid #fef08a;"></span>
-                <span>Turno Adicional</span>
-            </div>
-            <div class="legend-item">
-                <span class="legend-badge" style="background-color: #f3f4f6; border: 1px solid #e5e7eb;"></span>
-                <span>Descanso Programado</span>
-            </div>
-            <div class="legend-item">
-                <span class="legend-badge" style="background-color: #e0f2fe; border: 1px solid #bae6fd;"></span>
-                <span>Primer Día</span>
-            </div>
-            <div class="legend-item">
-                <span class="legend-badge" style="background-color: #f3e8ff; border: 1px solid #e9d5ff;"></span>
-                <span>Cese / Baja</span>
-            </div>
-            <div class="legend-item">
-                <span class="legend-badge" style="background-color: #ede9fe; border: 1px solid #c4b5fd;"></span>
-                <span>Permiso Aprobado</span>
-            </div>
-            <div class="legend-item">
-                <span class="legend-badge" style="background-color: #fef3c7; border: 1px solid #fcd34d;"></span>
-                <span>Permiso Pendiente</span>
-            </div>
-            <div class="legend-item">
-                <span class="legend-badge" style="background-color: #cffafe; border: 1px solid #67e8f9;"></span>
-                <span>Recuperación</span>
-            </div>
-            <div class="legend-item">
-                <span class="legend-badge" style="background-color: #fce7f3; border: 1px solid #f9a8d4;"></span>
-                <span>Permiso de Salud</span>
-            </div>
-            <div class="legend-item">
-                <span class="legend-badge" style="background-color: #e0e7ff; border: 1px solid #c7d2fe;"></span>
-                <span>Recuperación de Salud (Domingo)</span>
-            </div>
-            <div class="legend-item">
-                <span class="legend-badge" style="background-color: #ccfbf1; border: 1px solid #5eead4;"></span>
-                <span>Domingo Trabajado Voluntariamente</span>
-            </div>
-        </div>
-    """, unsafe_allow_html=True)
-
-
-    if colaboradores_ops:
-        colabs_a_renderizar = colaboradores_ops if colab_dash == "Todos" else [colab_dash]
-        with st.expander("Ver Calendarios de Asistencia por Trabajador", expanded=True):
-            cols_cal = st.columns(2)
-            for idx, c_nom in enumerate(colabs_a_renderizar):
-                with cols_cal[idx % 2]:
-                    html_cal = renderizar_calendario_colaborador(c_nom, int(anio_sel), int(mes_sel))
-                    st.markdown(html_cal, unsafe_allow_html=True)
-    else:
-        st.info("No hay colaboradores con rol operativo activos para la fecha consultada.")
-
-    st.markdown("---")
-
-    # --- CÁLCULO DE HORAS EXTRAS MENSUALES POR TRABAJADOR ---
-    
-    df_asist_mes = st.session_state.asistencia.copy()
-    horas_extras_mensuales = {}
-
-    if not df_asist_mes.empty:
-        df_asist_mes["fecha_dt"] = pd.to_datetime(df_asist_mes["fecha"], errors="coerce")
-        df_asist_mes = df_asist_mes[
-            (df_asist_mes["fecha_dt"].dt.month == mes_sel) & 
-            (df_asist_mes["fecha_dt"].dt.year == anio_sel)
-        ]
-
-        colabs_eval_mes = colaboradores_ops if colab_dash == "Todos" else ([colab_dash] if colab_dash in colaboradores_ops else [])
-
-        for nom_col in colabs_eval_mes:
-            df_col_mes = df_asist_mes[df_asist_mes["nombre"] == nom_col].copy()
-            mins_extras_colab = 0
-            if not df_col_mes.empty:
-                df_col_mes["dt"] = pd.to_datetime(df_col_mes["fecha_hora"])
-                for _, grupo_dia in df_col_mes.groupby("fecha"):
-                    _, mins_e, _, _ = calcular_jornada_y_horas_extras(grupo_dia)
-                    mins_extras_colab += mins_e
-            horas_extras_mensuales[nom_col] = mins_extras_colab
-
-    if horas_extras_mensuales:
-        _he_items = sorted(horas_extras_mensuales.items(), key=lambda x: -x[1])
-        st.markdown(ui_panel("Horas extras del período", f"{NOMBRES_MESES[mes_sel-1]} {int(anio_sel)} · por colaborador", ui_hbars([(n, m, "#0B8F57" if m > 0 else "#CBD2DC") for n, m in _he_items], fmt=formatear_horas_minutos)), unsafe_allow_html=True)
-    else:
-        ui_callout(f"No hay registros de horas extras para el mes de {NOMBRES_MESES[mes_sel-1]} {int(anio_sel)}.")
-
-    st.markdown("---")
-
-    df_asist_dash = st.session_state.asistencia.copy()
-    df_desc_dash = st.session_state.descuadres.copy()
-    
-    fichas_colaboradores = {}
-    en_turno_cnt = 0
-    concluido_cnt = 0
-    total_minutos_extras_dia = 0
-
-    if not df_asist_dash.empty:
-        df_asist_dash = df_asist_dash[df_asist_dash["fecha"].astype(str) == f_dash_str]
-        
-        if colab_dash != "Todos":
-            df_asist_dash = df_asist_dash[df_asist_dash["nombre"] == colab_dash]
-
-        if not df_asist_dash.empty:
-            df_asist_dash["dt"] = pd.to_datetime(df_asist_dash["fecha_hora"])
-            
-            for nombre_colab, grupo in df_asist_dash.groupby("nombre"):
-                if nombre_colab not in colaboradores_ops:
-                    continue
-
-                grupo_ordenado = grupo.sort_values("dt")
-                
-                ingresos = grupo_ordenado[grupo_ordenado["tipo"] == "INGRESO"]
-                salidas = grupo_ordenado[grupo_ordenado["tipo"] == "SALIDA"]
-                
-                hora_primer_ingreso = ingresos.iloc[0]["dt"].strftime("%H:%M:%S") if not ingresos.empty else "--:--:--"
-                hora_ultima_salida = salidas.iloc[-1]["dt"].strftime("%H:%M:%S") if not salidas.empty else "--:--:--"
-                ultima_marca = grupo_ordenado.iloc[-1]
-                
-                tardanza_txt = "Puntual"
-                if not ingresos.empty:
-                    ing_regulares = ingresos[ingresos["es_extra"].astype(str) != "SI"]
-                    ing_eval = ing_regulares.iloc[0] if not ing_regulares.empty else ingresos.iloc[0]
-                    mins_t, es_t, turno_p = calcular_tardanza_ingreso(ing_eval["fecha_hora"])
-                    if es_t:
-                        tardanza_txt = f"⚠️ Tardanza ({mins_t} min)"
-
-                if ultima_marca["tipo"] == "INGRESO":
-                    estado = "🟢 En Turno"
-                    en_turno_cnt += 1
-                else:
-                    estado = "⚪ Concluido"
-                    concluido_cnt += 1
-
-                mins_lab, mins_ext, mins_tot, turnos_adicionales = calcular_jornada_y_horas_extras(grupo_ordenado)
-                total_minutos_extras_dia += mins_ext
-
-                obs_asistencia = [
-                    f"[{r['tipo']} {r['dt'].strftime('%H:%M')}] {r['observacion']}" 
-                    for _, r in grupo_ordenado.iterrows() 
-                    if str(r.get('observacion', '')).strip() != ""
-                ]
-
-                descuadres_user = []
-                monto_desc_user = 0.0
-                if not df_desc_dash.empty:
-                    df_d_u = df_desc_dash[
-                        (df_desc_dash["fecha"].astype(str) == f_dash_str) & 
-                        (df_desc_dash["nombre"] == nombre_colab)
-                    ]
-                    if not df_d_u.empty:
-                        monto_desc_user = pd.to_numeric(df_d_u["monto"], errors="coerce").sum()
-                        for _, r_d in df_d_u.iterrows():
-                            descuadres_user.append({
-                                "tipo": r_d["tipo"],
-                                "monto": r_d["monto"],
-                                "obs": r_d.get("observacion", "")
-                            })
-
-                fichas_colaboradores[nombre_colab] = {
-                    "estado": estado,
-                    "primer_ingreso": hora_primer_ingreso,
-                    "ultima_salida": hora_ultima_salida,
-                    "tiempo_total_str": formatear_horas_minutos(mins_tot),
-                    "horas_laborales_str": f"{formatear_horas_minutos(mins_lab)} / {jornada_base_txt(f_dash_str)}",
-                    "horas_extras_str": formatear_horas_minutos(mins_ext),
-                    "minutos_extras": mins_ext,
-                    "tardanza": tardanza_txt,
-                    "turnos_adicionales": turnos_adicionales,
-                    "balance_descuadre": monto_desc_user,
-                    "descuadres_detalle": descuadres_user,
-                    "obs_asistencia": obs_asistencia
-                }
-
-    total_descuadre_monto = 0.0
-    if not df_desc_dash.empty:
-        df_desc_dash = df_desc_dash[df_desc_dash["fecha"].astype(str) == f_dash_str]
-        if colab_dash != "Todos":
-            df_desc_dash = df_desc_dash[df_desc_dash["nombre"] == colab_dash]
-        else:
-            df_desc_dash = df_desc_dash[df_desc_dash["nombre"].isin(colaboradores_ops)]
-        total_descuadre_monto = pd.to_numeric(df_desc_dash["monto"], errors="coerce").sum() if not df_desc_dash.empty else 0.0
-
-    metricas_gen = calcular_metricas_puntualidad(st.session_state.asistencia)
-    _pg = metricas_gen["ratio"]
-    kpi_slot.markdown('<div class="tp-gridk">' +
-                      ui_kpi_acc("En turno ahora", str(en_turno_cnt), "colaboradores trabajando", "ok" if en_turno_cnt else "info") +
-                      ui_kpi_acc("Turno concluido", str(concluido_cnt), "ya marcaron salida", "info") +
-                      ui_kpi_acc("Horas extras hoy", formatear_horas_minutos(total_minutos_extras_dia), "sobre la jornada base", "ok" if total_minutos_extras_dia else "info") +
-                      ui_kpi_acc("Puntualidad global", f"{_pg:g}%", "de todos los ingresos", "ok" if _pg >= 90 else ("warn" if _pg >= 75 else "bad")) +
-                      ui_kpi_acc("Balance descuadres", f"S/. {total_descuadre_monto:.2f}", "sobrantes menos faltantes del día", "ok" if total_descuadre_monto >= 0 else "bad") + '</div>', unsafe_allow_html=True)
-
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    if fichas_colaboradores:
-        _emp_op = st.session_state.empleados
-        _partes_op = [f'<div class="tp-sec"><div><div class="tp-sec-title">Control operativo del día</div><div class="tp-sec-sub">Horas, puntualidad y caja por colaborador · {f_dash_str}</div></div>{ui_chip(str(len(fichas_colaboradores)) + " colaboradores", "neutral")}</div>']
-        for nombre_col, datos in fichas_colaboradores.items():
-            _fm = _emp_op[_emp_op["nombre"] == nombre_col]
-            _dni_c = str(_fm.iloc[0]["dni"]) if not _fm.empty else ""
-            _foto_c = str(_fm.iloc[0].get("foto", "")) if not _fm.empty else ""
-            _partes_op.append(ui_op_card(nombre_col, datos, _dni_c, _foto_c))
-        ops_slot.markdown("".join(_partes_op), unsafe_allow_html=True)
-    else:
-        with ops_slot.container():
-            ui_callout(f"No hay registros de marcación para la fecha {f_dash_str}.")
-
-elif choice == "Gestión Colaboradores":
-    st.markdown("""
-        <div class="market-header">
-            <h1>Gestión de Colaboradores</h1>
-            <p>Directorio del equipo · fichas, altas y actualización de datos</p>
-        </div>
-    """, unsafe_allow_html=True)
-
-    tab_fichas, tab_nuevo, tab_directorio = st.tabs(["Fichas Técnicas", "Registrar Colaborador", "Directorio General"])
-
-    with tab_fichas:
-        st.markdown('<div class="tp-sec"><div><div class="tp-sec-title">Tarjetas de identificación del personal</div><div class="tp-sec-sub">Busca por nombre, DNI o cargo, y filtra por estado</div></div></div>', unsafe_allow_html=True)
-        
-        colabs_df = st.session_state.empleados.copy()
-        
-        if colabs_df.empty:
-            st.info("No existen colaboradores registrados.")
-        else:
-            colabs_df["orden_estado"] = colabs_df["estado"].astype(str).str.lower().apply(lambda x: 0 if x == "activo" else 1)
-            colabs_df = colabs_df.sort_values(by="orden_estado").reset_index(drop=True)
-            _act = int((colabs_df["orden_estado"] == 0).sum())
-            _baj = len(colabs_df) - _act
-            st.markdown('<div class="tp-gridk">' + ui_kpi_acc("Colaboradores", str(len(colabs_df)), "registrados en el sistema", "info") + ui_kpi_acc("Activos", str(_act), "equipo actual", "ok") +
-                        ui_kpi_acc("Dados de baja", str(_baj), "con fecha de cese", "warn" if _baj else "ok") + '</div>', unsafe_allow_html=True)
-            _fb1, _fb2 = st.columns([1.2, 1])
-            _q_f = _fb1.text_input("Buscar colaborador", placeholder="Buscar por nombre, DNI o cargo…", key="ficha_buscar", label_visibility="collapsed")
-            _est_f = _fb2.radio("Mostrar", ["Activos", "Dados de baja", "Todos"], horizontal=True, key="seg_ficha_estado", label_visibility="collapsed")
-            if _est_f == "Activos":
-                colabs_df = colabs_df[colabs_df["orden_estado"] == 0]
-            elif _est_f == "Dados de baja":
-                colabs_df = colabs_df[colabs_df["orden_estado"] == 1]
-            if _q_f.strip():
-                colabs_df = colabs_df[colabs_df.apply(lambda r: _gs_hit(_q_f, r.get("nombre", ""), r.get("dni", ""), r.get("cargo", "")), axis=1)]
-            colabs_df = colabs_df.reset_index(drop=True)
-            if colabs_df.empty:
-                ui_callout("No hay colaboradores que coincidan con el filtro.")
-
-            grid_cols = st.columns(2)
-            for i, row in colabs_df.iterrows():
-                col_idx = i % 2
-                with grid_cols[col_idx]:
-                    renderizar_tarjeta_colaborador(row)
-
-    with tab_nuevo:
-        with st.form("form_emp_completo", clear_on_submit=True):
-            st.markdown('<div class="tp-grp info" style="margin-top:0">Datos personales</div>', unsafe_allow_html=True)
-            
-            f1, f2 = st.columns(2)
-            dni_in = f1.text_input("DNI / Identificación")
-            nom_in = f2.text_input("Nombre y Apellidos Completos")
-
-            st.markdown('<div class="tp-grp info">Puesto y planilla</div>', unsafe_allow_html=True)
-            f3, f4 = st.columns(2)
-            cargo_in = f3.selectbox("Cargo", ["Cajero", "Supervisora", "Reposidor", "Gerente de Tienda"])
-            rol_in = f4.selectbox("Rol de Sistema", ["operativo", "admin"])
-
-            f3b, f4b = st.columns(2)
-            en_planilla_in = f3b.selectbox("¿Está en Planilla?", ["Sí", "No"], index=0, help="Marca 'No' para trabajadores jóvenes/informales que no están en planilla formal. No se les calculará beneficio vacacional.")
-
-            st.markdown('<div class="tp-grp info">Contacto y acceso</div>', unsafe_allow_html=True)
-            f5, f6 = st.columns(2)
-            dir_in = f5.text_input("Dirección de Domicilio")
-            tel_in = f6.text_input("Número de Contacto / Teléfono")
-
-            f7, f8 = st.columns(2)
-            fnac_in = f7.date_input("Fecha de Nacimiento", value=date(1995, 1, 1))
-            clave_in = f8.text_input("Contraseña de Acceso", type="password")
-
-            finicio_in = st.date_input("Fecha de Inicio de Labores", value=obtener_ahora_peru().date())
-
-            st.markdown('<div class="tp-grp info">Emergencia y ubicación</div>', unsafe_allow_html=True)
-            
-            e1, e2 = st.columns(2)
-            c_emerg_in = e1.text_input("Contacto de Emergencia (Nombre / Parentesco)", placeholder="Ej. Maria Insapillo (Madre)")
-            num_emerg_in = e2.text_input("Teléfono de Emergencia", placeholder="Ej. 987654321")
-
-            link_maps_in = st.text_input("Enlace Ubicación Domicilio (Google Maps Link)", placeholder="https://maps.app.goo.gl/...")
-
-            ui_callout("Nota: La imagen debe guardarse en la carpeta `fotos/` del repositorio como: `<DNI>.png` o `<DNI>.jpg`")
-
-            if st.form_submit_button("Guardar Registro", use_container_width=True):
-                if not dni_in or not nom_in or not clave_in:
-                    st.error("DNI, Nombre y Contraseña son obligatorios.")
-                else:
-                    foto_nombre = f"{str(dni_in).strip()}.png"
-                    fnac_str = str(fnac_in)
-                    _clave_prot = _hash_clave(str(clave_in).strip())
-                    finicio_str = str(finicio_in)
-                    
-                    nuevo_e = {
-                        "dni": str(dni_in).strip(),
-                        "nombre": nom_in.strip(),
-                        "cargo": cargo_in,
-                        "estado": "Activo",
-                        "clave": _clave_prot,
-                        "rol": rol_in,
-                        "direccion": dir_in.strip(),
-                        "telefono": str(tel_in).strip(),
-                        "fecha_nacimiento": fnac_str,
-                        "foto": foto_nombre,
-                        "contacto_emergencia": c_emerg_in.strip(),
-                        "numero_emergencia": str(num_emerg_in).strip(),
-                        "link_domicilio": link_maps_in.strip(),
-                        "fecha_inicio": finicio_str,
-                        "fecha_cese": "",
-                        "en_planilla": en_planilla_in
+                detalle_inc = st.text_area("Describe el daño (ej: 'Rompió la silla del área de mesas', 'Golpeó la pared del almacén')", key="inc_detalle_otro")
+                valor_inc = st.number_input("Valor Estimado de Reparación (S/.)", min_value=0.0, step=1.0, format="%.2f", key="inc_valor_otro")
+
+            if st.form_submit_button("Guardar Incidencia", use_container_width=True):
+                f_reg_inc = obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S")
+                id_inc_nuevo = f"INC-{int(time.time()*1000)}"
+
+                guardado_ok = guardar_incidencia_gsheets(
+                    id_inc_nuevo, dni_actual, user_actual, f_inc, tipo_inc_sel, detalle_inc,
+                    valor_inc, f_reg_inc, user_actual, "Pendiente"
+                )
+                if guardado_ok:
+                    nueva_fila_inc = {
+                        "id_incidencia": id_inc_nuevo, "dni": dni_actual, "nombre": user_actual,
+                        "fecha": str(f_inc), "tipo_incidencia": tipo_inc_sel, "detalle": detalle_inc,
+                        "valor_reparacion": valor_inc, "fecha_registro": f_reg_inc,
+                        "registrado_por": user_actual, "estado": "Pendiente"
                     }
-                    st.session_state.empleados = pd.concat([st.session_state.empleados, pd.DataFrame([nuevo_e])], ignore_index=True)
-                    guardar_colaborador_gsheets(
-                        dni_in, nom_in, cargo_in, "Activo", _clave_prot, rol_in, 
-                        dir_in, tel_in, fnac_str, foto_nombre,
-                        c_emerg_in.strip(), num_emerg_in.strip(), link_maps_in.strip(),
-                        finicio_str, "", en_planilla_in
-                    )
-                    registrar_auditoria("Crear Colaborador", "Colaboradores", f"{nom_in.strip()} (DNI {dni_in}) — cargo: {cargo_in}")
-                    crear_checklist_onboarding(str(dni_in).strip(), nom_in.strip())
-                    st.toast("Colaborador y Ficha Técnica registrados")
+                    st.session_state.incidencias = pd.concat([pd.DataFrame([nueva_fila_inc]), st.session_state.incidencias], ignore_index=True)
+                    registrar_auditoria("Registrar Incidencia", "Incidencias", f"{user_actual}: {tipo_inc_sel} — S/. {valor_inc:.2f}")
+                    st.toast("Incidencia registrada correctamente")
                     time.sleep(0.3)
                     st.rerun()
 
-    with tab_directorio:
-        st.markdown('<div class="tp-sec"><div><div class="tp-sec-title">Directorio consolidado</div><div class="tp-sec-sub">Todos los colaboradores y sus datos de contacto</div></div></div>', unsafe_allow_html=True)
-        cols_mostrar = [
-            c for c in ["dni", "nombre", "cargo", "rol", "telefono", "direccion", "fecha_nacimiento", "contacto_emergencia", "numero_emergencia", "estado", "fecha_inicio", "fecha_cese", "en_planilla"] 
-            if c in st.session_state.empleados.columns
-        ]
-        _dir_q = st.text_input("Buscar en el directorio", placeholder="Buscar por nombre, DNI, cargo o teléfono…", key="dir_buscar", label_visibility="collapsed")
-        _dir_df = st.session_state.empleados
-        if _dir_q.strip():
-            _dir_df = _dir_df[_dir_df.apply(lambda r: _gs_hit(_dir_q, r.get("nombre", ""), r.get("dni", ""), r.get("cargo", ""), r.get("telefono", "")), axis=1)]
-        try:
-            _c_tab, _c_tar = st.container(key="vista_tabla"), st.container(key="vista_tarjetas")
-        except TypeError:
-            _c_tab, _c_tar = st.container(), None
-        with _c_tab:
-            st.dataframe(_dir_df[cols_mostrar], use_container_width=True, hide_index=True)
-        if _c_tar is not None:
-            with _c_tar:
-                _filas_dir = ""
-                for _, _rd in _dir_df.iterrows():
-                    _ok = str(_rd.get("estado", "")).lower() == "activo"
-                    _filas_dir += (f'<div class="tp-row">{ui_avatar(_rd["nombre"], _rd["dni"], str(_rd.get("foto", "")), 44)}<div class="tp-row-main"><b>{_html.escape(str(_rd["nombre"]))}</b>'
-                                   f'<span>{_html.escape(str(_rd.get("cargo", "")))} · {_html.escape(str(_rd.get("telefono", "")) or "sin teléfono")}</span></div>'
-                                   f'<div class="tp-chips">{ui_chip("Activo" if _ok else "Baja", "ok" if _ok else "neutral")}</div></div>')
-                st.markdown(_filas_dir or "<div class='tp-card-sub'>Sin resultados.</div>", unsafe_allow_html=True)
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("<div class='tp-note-t' style='margin:6px 0 10px'>Mis incidencias registradas</div>", unsafe_allow_html=True)
+        if not st.session_state.incidencias.empty:
+            mis_inc = st.session_state.incidencias[st.session_state.incidencias["nombre"] == user_actual]
+            if not mis_inc.empty:
+                for _, _ri in mis_inc.sort_values("fecha", ascending=False).iterrows():
+                    st.markdown(ui_inc_card(_ri), unsafe_allow_html=True)
+            else:
+                st.info("Aún no tienes incidencias registradas.")
+        else:
+            st.info("Aún no tienes incidencias registradas.")
 
-        if rol_actual == "admin" and not st.session_state.empleados.empty:
-            st.markdown("<br>", unsafe_allow_html=True)
-            with st.expander("Actualizar Estado de Planilla (REMYPE)"):
-                ui_callout("Los trabajadores marcados como **'No'** (jóvenes/informales sin planilla) no acumulan beneficio vacacional en el sistema.")
-                colabs_todos_ep = st.session_state.empleados["nombre"].tolist()
-                if colabs_todos_ep:
-                    colab_ep_sel = st.selectbox("Seleccionar colaborador", colabs_todos_ep, key="ep_sel")
-                    fila_ep = st.session_state.empleados[st.session_state.empleados["nombre"] == colab_ep_sel].iloc[0]
-                    valor_actual_ep = fila_ep.get("en_planilla", "Sí") or "Sí"
-                    nuevo_ep = st.selectbox("¿Está en Planilla?", ["Sí", "No"], index=0 if valor_actual_ep == "Sí" else 1, key="ep_valor")
-                    if st.button("Guardar Estado de Planilla", use_container_width=True, key="ep_btn"):
-                        idx_ep = st.session_state.empleados[st.session_state.empleados["nombre"] == colab_ep_sel].index
-                        st.session_state.empleados.loc[idx_ep, "en_planilla"] = nuevo_ep
-                        actualizar_hoja_completa("Colaboradores", st.session_state.empleados)
-                        registrar_auditoria("Actualizar Estado de Planilla", "Colaboradores", f"{colab_ep_sel} → en_planilla={nuevo_ep}")
-                        st.toast(f"Estado de planilla de {colab_ep_sel} actualizado a '{nuevo_ep}'")
+elif choice == "Mi Ficha Técnica":
+    premium_module_shell('Mi Ficha Técnica', 'MI PERFIL', 'Consulta tu información personal y laboral.')
+
+    with st.container(key="pm_v_mi_ficha_tecnica"):
+
+        mi_row = st.session_state.empleados[st.session_state.empleados["dni"].astype(str) == str(dni_actual)]
+        if not mi_row.empty:
+            renderizar_tarjeta_colaborador(mi_row.iloc[0])
+        else:
+            st.error("No se encontró tu información en la base de datos de colaboradores.")
+
+elif choice == "Solicitar Permiso / Adelanto":
+    premium_module_shell('Solicitar Permiso / Adelanto', 'SOLICITUDES', 'Registra tus solicitudes y consulta su estado.')
+
+    with st.container(key="pm_v_solicitar_permiso_adelanto"):
+
+        _sol_me = st.session_state.solicitudes[st.session_state.solicitudes["dni"].astype(str) == str(dni_actual)] if not st.session_state.solicitudes.empty else pd.DataFrame(columns=["estado"])
+        _cnt = lambda e: int((_sol_me["estado"] == e).sum()) if not _sol_me.empty else 0
+        _q1, _q2, _q3 = st.columns(3)
+        _q1.markdown(ui_kpi("En revisión", str(_cnt("Pendiente")), "esperan respuesta"), unsafe_allow_html=True)
+        _q2.markdown(ui_kpi("Aprobadas", str(_cnt("Aprobado")), "en tu historial"), unsafe_allow_html=True)
+        _q3.markdown(ui_kpi("Rechazadas", str(_cnt("Rechazado")), "en tu historial"), unsafe_allow_html=True)
+        st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
+        t_sol, t_hist = st.tabs(["Nueva Solicitud", "Mi Historial de Solicitudes"])
+
+        with t_sol:
+            tipo_sol = st.radio("Tipo de solicitud", ["Permiso Laboral", "Adelanto de Sueldo", "Trabajar Domingo (Descanso)"], horizontal=True, key="tipo_sol_radio")
+
+            hoy_peru = obtener_ahora_peru().date()
+            fecha_minima_permiso = hoy_peru + timedelta(days=7)
+            f_permiso_val = ""
+            monto_adel_val = 0.0
+            requiere_recuperacion = False
+            fecha_recuperacion_sel = None
+
+            if tipo_sol == "Permiso Laboral":
+                ui_callout("**Regla de Permisos:** Toda solicitud de permiso debe realizarse con un mínimo de **7 días de anticipación**.")
+                f_permiso_sel = st.date_input("Fecha solicitada para el permiso", value=fecha_minima_permiso, min_value=fecha_minima_permiso, key="fecha_permiso_nueva")
+                f_permiso_val = str(f_permiso_sel)
+
+                st.markdown("##### Recuperación del día")
+                requiere_recuperacion = st.checkbox("¿Deseas recuperar el día del permiso?", value=False, key="requiere_recuperacion_nueva")
+                if requiere_recuperacion:
+                    ui_callout("Selecciona el día en que deseas recuperar el permiso. **Los domingos también están habilitados.**", "ok")
+                    fecha_min_rec = f_permiso_sel + timedelta(days=1)
+                    fecha_recuperacion_sel = st.date_input("Día a recuperar", value=fecha_min_rec, min_value=fecha_min_rec, key="fecha_recuperacion_nueva", help="Puedes seleccionar cualquier fecha, incluido domingo.")
+                    dias_semana = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
+                    st.caption(f"Permiso: **{f_permiso_sel.strftime('%d/%m/%Y')}** | Día a recuperar: **{fecha_recuperacion_sel.strftime('%d/%m/%Y')} ({dias_semana[fecha_recuperacion_sel.weekday()]})**")
+
+                with st.form("form_nuevo_permiso", clear_on_submit=True):
+                    motivo_sol = st.text_area("Motivo o Justificación detallada", placeholder="Escribe aquí el motivo de tu solicitud...")
+                    enviar_solicitud = st.form_submit_button("Enviar Solicitud", use_container_width=True)
+
+            elif tipo_sol == "Trabajar Domingo (Descanso)":
+                ui_callout("**Trabajar tu día de descanso:** Si tu descanso semanal es el domingo y deseas trabajar ese día, solicita autorización previa aquí. Una vez aprobada, podrás marcar tu asistencia ese domingo y en tu boleta se reflejará claramente como un día adicional trabajado (no como una falta ni un domingo normal de descanso).")
+
+                proximos_domingos = []
+                cursor_dom = hoy_peru
+                while len(proximos_domingos) < 8:
+                    cursor_dom += timedelta(days=1)
+                    if cursor_dom.weekday() == 6:
+                        proximos_domingos.append(cursor_dom)
+
+                domingo_sel = st.selectbox(
+                    "Domingo que deseas trabajar",
+                    proximos_domingos,
+                    format_func=lambda d: d.strftime("%d/%m/%Y"),
+                    key="domingo_trabajo_sel"
+                )
+                f_permiso_val = str(domingo_sel)
+
+                with st.form("form_domingo_trabajo", clear_on_submit=True):
+                    motivo_sol = st.text_area("Motivo o Justificación (opcional)", placeholder="Ej. Necesito cubrir turno, quiero generar ingreso adicional, etc.")
+                    enviar_solicitud = st.form_submit_button("Enviar Solicitud", use_container_width=True)
+            else:
+                ui_callout("**Adelanto de Sueldo:** Ingresa el monto total a solicitar y la justificación.")
+                with st.form("form_nuevo_adelanto", clear_on_submit=True):
+                    monto_adel_val = st.number_input("Monto a Solicitar (S/.)", min_value=10.0, step=10.0, format="%.2f")
+                    f_permiso_val = str(hoy_peru)
+                    motivo_sol = st.text_area("Motivo o Justificación detallada", placeholder="Escribe aquí el motivo de tu solicitud...")
+                    enviar_solicitud = st.form_submit_button("Enviar Solicitud", use_container_width=True)
+
+            if enviar_solicitud:
+                    if tipo_sol != "Trabajar Domingo (Descanso)" and not motivo_sol.strip():
+                        st.error("Por favor ingresa un motivo para tu solicitud.")
+                    else:
+                        if tipo_sol == "Permiso Laboral":
+                            diff_dias = (f_permiso_sel - hoy_peru).days
+                            if diff_dias < 7:
+                                st.error("Los permisos requieren como mínimo 7 días de anticipación.")
+                                st.stop()
+
+                            if requiere_recuperacion and fecha_recuperacion_sel is not None:
+                                if fecha_recuperacion_sel == f_permiso_sel:
+                                    st.error("La fecha de recuperación debe ser diferente a la fecha del permiso.")
+                                    st.stop()
+                                fecha_recuperacion_val = str(fecha_recuperacion_sel)
+                            else:
+                                fecha_recuperacion_val = ""
+                        else:
+                            fecha_recuperacion_val = ""
+
+                        if tipo_sol == "Trabajar Domingo (Descanso)":
+                            ya_existe_dom = False
+                            if not st.session_state.solicitudes.empty:
+                                df_check_dom = st.session_state.solicitudes[
+                                    (st.session_state.solicitudes["dni"].astype(str) == str(dni_actual)) &
+                                    (st.session_state.solicitudes["tipo_solicitud"] == "Trabajar Domingo (Descanso)") &
+                                    (st.session_state.solicitudes["fecha_permiso"].astype(str) == f_permiso_val) &
+                                    (st.session_state.solicitudes["estado"].isin(["Pendiente", "Aprobado"]))
+                                ]
+                                ya_existe_dom = not df_check_dom.empty
+                            if ya_existe_dom:
+                                st.warning("Ya tienes una solicitud pendiente o aprobada para trabajar ese domingo.")
+                                st.stop()
+                            motivo_sol = motivo_sol.strip() if motivo_sol else "Solicita trabajar su día de descanso semanal (domingo)."
+
+                        id_nuevo = f"SOL-{int(time.time())}"
+                        f_reg_now = obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S")
+
+                        nueva_peticion = {
+                            "id_solicitud": id_nuevo,
+                            "fecha_registro": f_reg_now,
+                            "dni": str(dni_actual),
+                            "nombre": user_actual,
+                            "tipo_solicitud": tipo_sol,
+                            "fecha_permiso": f_permiso_val,
+                            "monto_adelanto": monto_adel_val,
+                            "motivo": motivo_sol.strip(),
+                            "estado": "Pendiente",
+                            "respuesta_admin": "",
+                            "requiere_recuperacion": "Sí" if (tipo_sol == "Permiso Laboral" and requiere_recuperacion) else "No",
+                            "fecha_recuperacion": fecha_recuperacion_val
+                        }
+
+                        st.session_state.solicitudes = pd.concat([pd.DataFrame([nueva_peticion]), st.session_state.solicitudes], ignore_index=True)
+                        guardar_solicitud_gsheets(
+                            id_nuevo, f_reg_now, dni_actual, user_actual, tipo_sol,
+                            f_permiso_val, monto_adel_val, motivo_sol.strip(),
+                            requiere_recuperacion=("Sí" if (tipo_sol == "Permiso Laboral" and requiere_recuperacion) else "No"),
+                            fecha_recuperacion=fecha_recuperacion_val
+                        )
+                        st.success("Solicitud enviada con éxito. Un administrador la revisará pronto.")
+                        time.sleep(0.5)
                         st.rerun()
 
-        if rol_actual == "admin" and not st.session_state.empleados.empty:
-            st.markdown("<br>", unsafe_allow_html=True)
-            with st.expander("Desactivar / Dar de Baja a Colaborador"):
-                colabs_activos = st.session_state.empleados[st.session_state.empleados["estado"].astype(str).str.lower() == "activo"]["nombre"].tolist()
-                
-                if colabs_activos:
-                    colab_a_desactivar = st.selectbox("Seleccionar colaborador a dar de baja", colabs_activos)
-                    f_cese_input = st.date_input("Fecha de Salida / Cese", value=obtener_ahora_peru().date())
-                    confirm_desactivar = st.checkbox(f"Confirmar baja del colaborador {colab_a_desactivar}")
-                    
-                    if st.button("Dar de Baja al Colaborador", type="primary", use_container_width=True):
-                        if confirm_desactivar:
-                            idx = st.session_state.empleados[st.session_state.empleados["nombre"] == colab_a_desactivar].index
-                            if not idx.empty:
-                                dni_baja_ep = str(st.session_state.empleados.loc[idx[0], "dni"])
-                                st.session_state.empleados.loc[idx, "estado"] = "Desactivado"
-                                st.session_state.empleados.loc[idx, "fecha_cese"] = str(f_cese_input)
-                                actualizar_hoja_completa("Colaboradores", st.session_state.empleados)
-                                registrar_auditoria("Dar de Baja Colaborador", "Colaboradores", f"{colab_a_desactivar} — cese: {f_cese_input}")
-                                crear_checklist_offboarding(dni_baja_ep, colab_a_desactivar)
-                                st.toast(f"Colaborador {colab_a_desactivar} desactivado correctamente")
+        with t_hist:
+            st.markdown("<h4 style='font-size:1rem; color:#111827; margin-bottom:12px;'>Historial de Solicitudes</h4>", unsafe_allow_html=True)
+        
+            df_mis_sol = st.session_state.solicitudes[st.session_state.solicitudes["dni"].astype(str) == str(dni_actual)].copy() if not st.session_state.solicitudes.empty else pd.DataFrame()
+
+            if not df_mis_sol.empty:
+                _MESES_HS = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+                             "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
+                _ahora_hs = obtener_ahora_peru()
+                df_mis_sol["_f_reg_dt"] = pd.to_datetime(df_mis_sol["fecha_registro"], errors="coerce")
+
+                _anios_hs = sorted({int(a) for a in df_mis_sol["_f_reg_dt"].dt.year.dropna().unique()} | {_ahora_hs.year}, reverse=True)
+                _fh1, _fh2 = st.columns(2)
+                _mes_hs = _fh1.selectbox(
+                    "Mes", [0] + list(range(1, 13)),
+                    index=_ahora_hs.month,
+                    format_func=lambda x: "Todos los meses" if x == 0 else _MESES_HS[x - 1],
+                    key="hist_sol_mes"
+                )
+                _anio_hs = _fh2.selectbox("Año", _anios_hs, index=_anios_hs.index(_ahora_hs.year), key="hist_sol_anio")
+
+                df_mis_sol = df_mis_sol[df_mis_sol["_f_reg_dt"].dt.year == int(_anio_hs)]
+                if _mes_hs != 0:
+                    df_mis_sol = df_mis_sol[df_mis_sol["_f_reg_dt"].dt.month == int(_mes_hs)]
+                df_mis_sol = df_mis_sol.sort_values("_f_reg_dt", ascending=False)
+
+                if df_mis_sol.empty:
+                    _txt_per = f"{_MESES_HS[_mes_hs - 1]} " if _mes_hs != 0 else ""
+                    st.info(f"No tienes solicitudes en {_txt_per}{_anio_hs}.")
+                else:
+                    st.caption(f"{len(df_mis_sol)} solicitud(es) encontrada(s).")
+
+                for _, r_sol in df_mis_sol.iterrows():
+                    st.markdown(ui_solicitud_card(r_sol), unsafe_allow_html=True)
+                    if r_sol['tipo_solicitud'] == "Trabajar Domingo (Descanso)" and r_sol["estado"] == "Aprobado":
+                        st.success("Autorizado. Podrás marcar tu asistencia ese domingo desde 'Marcar Asistencia'.")
+            else:
+                st.info("No registras solicitudes en tu historial.")
+
+elif choice == "Mis Boletas":
+    premium_module_shell('Mis Boletas', 'MI PERFIL', 'Consulta tus boletas de pago.')
+
+    with st.container(key="pm_v_mis_boletas"):
+        _all = st.session_state.boletas_historial
+        _mias = _all[_all["dni"].apply(lambda x: _mismo_dni(x, dni_actual)) & _all["estado"].astype(str).isin(ESTADOS_BOL_VIGENTES) & (_all["datos_json"].astype(str).str.len() > 2)] if not _all.empty else _all
+        _mias = _boletas_orden(_mias)
+        if _mias.empty:
+            st.markdown('<div class="tp-card" style="text-align:center;padding:34px 20px"><div class="tp-card-title">Aún no tienes boletas emitidas</div><div class="tp-card-sub" style="margin-top:6px">Cuando administración emita tu boleta, aparecerá aquí para que la revises.</div></div>', unsafe_allow_html=True)
+        else:
+            _pend = int((_mias["estado"] == "Emitido").sum())
+            st.markdown('<div class="tp-gridk">' +
+                        ui_kpi_acc("Boletas emitidas", str(len(_mias)), "en tu historial", "info") +
+                        ui_kpi_acc("Pendientes de tu conformidad", str(_pend), "revísalas y responde" if _pend else "Todo al día", "warn" if _pend else "ok") +
+                        ui_kpi_acc("Observadas", str(int((_mias["estado"] == "Observado").sum())), "en revisión de administración", "info") +
+                        ui_kpi_acc("Conformes", str(int(_mias["estado"].isin(["Conforme", "Firmado"]).sum())), "ya cerradas", "ok") + '</div>', unsafe_allow_html=True)
+            st.markdown("".join(ui_boleta_card(_r, colaborador=True) for _, _r in _mias.head(12).iterrows()), unsafe_allow_html=True)
+
+            st.markdown("<div class='tp-note-t' style='margin:22px 0 10px'>Detalle de la boleta</div>", unsafe_allow_html=True)
+            _opc_m = {f"{r['mes']} {r['anio']} · versión {_ver_bol(r['version'])}": r for _, r in _mias.iterrows()}
+            _sel_m = st.selectbox("Boleta", list(_opc_m.keys()), key="misbol_sel", label_visibility="collapsed")
+            _rm = _opc_m[_sel_m]
+            _idb = str(_rm["id_boleta"])
+            try:
+                _dm = json.loads(str(_rm["datos_json"]))
+            except Exception:
+                _dm = None
+            if not _dm:
+                ui_callout("No se pudo leer el detalle de esta boleta. Avisa a administración.", "warn")
+            else:
+                if str(_rm.get("respuesta_admin", "")).strip():
+                    ui_callout(f"**Respuesta de administración:** {_rm['respuesta_admin']}", "info")
+                st.markdown(generar_html_boleta(_dm), unsafe_allow_html=True)
+                _pdf_m = generar_pdf_boleta(_dm, _extra_boleta(_rm))
+                if _pdf_m:
+                    st.download_button("Descargar mi boleta en PDF", _pdf_m, f"Boleta_{_dm['periodo'].replace(' ', '_')}.pdf", "application/pdf", use_container_width=True, key=f"misbol_pdf_{_idb}")
+                _est_m = str(_rm["estado"])
+                if _est_m == "Emitido":
+                    st.markdown("<div class='tp-note-t' style='margin:22px 0 10px'>¿Qué deseas hacer con esta boleta?</div>", unsafe_allow_html=True)
+                    ui_callout("Revisa el desglose. Si todo está correcto, **firma y da tu conformidad**. Si notas un error, envía una **observación** y administración la revisará.")
+                    ui_callout("Firma con tu dedo dentro del recuadro, presiona **Confirmar firma** y luego **Firmar y dar conformidad**.")
+                    _chk = st.checkbox("He revisado el detalle de mi boleta y estoy conforme con los montos.", key=f"misbol_chk_{_idb}")
+                    _firma_val = ui_firma_pad(f"firma_{_idb}")
+                    if _firma_val:
+                        st.markdown(ui_chip("Firma lista", "ok"), unsafe_allow_html=True)
+                    if st.button("Firmar y dar conformidad", key=f"misbol_ok_{_idb}", disabled=not (_chk and _firma_val), use_container_width=True):
+                        _b64f = _procesar_firma(_firma_val)
+                        if not _b64f:
+                            st.error("La firma es muy corta o está vacía. Bórrala y vuelve a dibujarla.")
+                        else:
+                            _ahora_f = obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S")
+                            try:
+                                _ua = str(st.context.headers.get("User-Agent", ""))[:160]
+                            except Exception:
+                                _ua = ""
+                            _cod = _codigo_boleta({**dict(_rm), "firma_png_b64": _b64f, "fecha_firma": _ahora_f})
+                            if _actualizar_boleta(_idb, {"estado": "Firmado", "fecha_conformidad": _ahora_f, "firma_png_b64": _b64f, "fecha_firma": _ahora_f,
+                                                         "firma_dispositivo": _ua, "codigo_verificacion": _cod}):
+                                registrar_auditoria("Firma de Boleta", "Boletas", f"{user_actual} firmó su boleta de {_dm['periodo']}")
+                                st.session_state.boletas_historial = obtener_boletas_historial_gsheets()
+                                st.toast("Boleta firmada. ¡Gracias!")
                                 time.sleep(0.3)
                                 st.rerun()
-                        else:
-                            st.warning("Marca la casilla de confirmación antes de dar de baja.")
+                    with st.expander("¿No puedes firmar en pantalla?"):
+                        st.caption("Puedes dar tu conformidad sin firma. Quedará registrada la fecha y hora, pero sin firma manuscrita.")
+                        if st.button("Dar conformidad sin firma", key=f"misbol_ok_sf_{_idb}", disabled=not _chk, use_container_width=True):
+                            if _actualizar_boleta(_idb, {"estado": "Conforme", "fecha_conformidad": obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S")}):
+                                registrar_auditoria("Conformidad de Boleta", "Boletas", f"{user_actual} — {_dm['periodo']} (sin firma)")
+                                st.session_state.boletas_historial = obtener_boletas_historial_gsheets()
+                                st.toast("Conformidad registrada. ¡Gracias!")
+                                time.sleep(0.3)
+                                st.rerun()
+                    _obs = st.text_area("Describe qué parte de tu boleta no está correcta", key=f"misbol_obs_{_idb}", placeholder="Ej.: Me descontaron una tardanza del día 12, pero llegué a tiempo.")
+                    if st.button("Enviar observación", key=f"misbol_obsbtn_{_idb}", disabled=len(_obs.strip()) < 10, use_container_width=True):
+                        if _actualizar_boleta(_idb, {"estado": "Observado", "observacion_colaborador": _obs.strip(), "fecha_observacion": obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S")}):
+                            registrar_auditoria("Observación de Boleta", "Boletas", f"{user_actual} — {_dm['periodo']}: {_obs.strip()[:120]}")
+                            st.session_state.boletas_historial = obtener_boletas_historial_gsheets()
+                            st.toast("Observación enviada a administración")
+                            st.rerun()
+                    st.caption("La observación debe tener al menos 10 caracteres.")
+                elif _est_m == "Observado":
+                    ui_callout(f"Enviaste una observación el {str(_rm['fecha_observacion'])[:16]}: “{_rm['observacion_colaborador']}”. Administración la revisará y emitirá una nueva versión.", "warn")
                 else:
-                    st.info("No hay colaboradores activos para dar de baja.")
+                    ui_callout(f"Diste tu conformidad el {str(_rm['fecha_conformidad'])[:16]}. Esta boleta ya está cerrada.", "ok")
+                    if str(_rm.get("firma_png_b64", "")).strip():
+                        st.markdown(ui_firma_card(_rm), unsafe_allow_html=True)
+                st.caption(f"Código de verificación: {_rm['codigo_verificacion']}")
 
-# --- MÓDULO NUEVO: BOLETAS DE PAGO & FERIADOS (SOLO ADMIN) ---
-elif choice == "Boletas de Pago":
-    st.markdown("""
-        <div class="market-header">
-            <h1>Generación de Boletas de Pago</h1>
-            <p>Emisión, cálculo automático y descarga de boletas de pago para colaboradores</p>
-        </div>
-    """, unsafe_allow_html=True)
+elif choice == "Mi Dashboard Mensual":
+    premium_module_shell('Mi Dashboard Mensual', 'MI DESEMPEÑO', 'Revisa tus indicadores y evolución mensual.')
 
-    tab_boleta, tab_emitidas, tab_feriados = st.tabs(["Generar Boleta de Pago", "Histórico de boletas", "Gestión de Feriados"])
+    with st.container(key="pm_v_mi_dashboard_mensual"):
+        ahora_dash = obtener_ahora_peru()
 
-    with tab_emitidas:
-        _dfh = st.session_state.boletas_historial.copy()
-        if _dfh.empty:
-            ui_callout("Aún no hay boletas emitidas. Genera una en la pestaña anterior y presiona 'Emitir boleta (Visto Bueno)'.")
+        NOMBRES_MESES_DASH = [
+            "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+            "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+        ]
+
+        st.markdown(f"""
+            <div class="market-header">
+                <h1>Rendimiento Mensual</h1>
+                <p>Resumen del período seleccionado para <b>{user_actual}</b></p>
+            </div>
+        """, unsafe_allow_html=True)
+
+        col_mes_dash, col_anio_dash = st.columns(2)
+        mes_dash_sel = col_mes_dash.selectbox(
+            "Seleccionar Mes",
+            list(range(1, 13)),
+            index=ahora_dash.month - 1,
+            format_func=lambda x: NOMBRES_MESES_DASH[x - 1],
+            key="mes_mi_dashboard"
+        )
+        anio_dash_sel = col_anio_dash.number_input(
+            "Seleccionar Año",
+            min_value=2024,
+            max_value=2030,
+            value=ahora_dash.year,
+            step=1,
+            key="anio_mi_dashboard"
+        )
+
+        periodo_dash = f"{NOMBRES_MESES_DASH[mes_dash_sel - 1]} {int(anio_dash_sel)}"
+        ui_callout(f"Indicadores correspondientes únicamente a **{periodo_dash}**. Las horas extras y demás métricas no acumulan meses anteriores.")
+
+        df_mis_desc = pd.DataFrame()
+        df_mis_asist = pd.DataFrame()
+
+        if not st.session_state.descuadres.empty:
+            df_mis_desc = st.session_state.descuadres[
+                st.session_state.descuadres["dni"].astype(str) == str(dni_actual)
+            ].copy()
+
+            if not df_mis_desc.empty:
+                df_mis_desc["fecha_dt"] = pd.to_datetime(df_mis_desc["fecha"], errors="coerce")
+                df_mis_desc = df_mis_desc[
+                    (df_mis_desc["fecha_dt"].dt.month == mes_dash_sel) &
+                    (df_mis_desc["fecha_dt"].dt.year == int(anio_dash_sel))
+                ]
+
+        if not st.session_state.asistencia.empty:
+            df_mis_asist = st.session_state.asistencia[
+                st.session_state.asistencia["dni"].astype(str) == str(dni_actual)
+            ].copy()
+
+            if not df_mis_asist.empty:
+                df_mis_asist["fecha_dt"] = pd.to_datetime(df_mis_asist["fecha"], errors="coerce")
+                df_mis_asist = df_mis_asist[
+                    (df_mis_asist["fecha_dt"].dt.month == mes_dash_sel) &
+                    (df_mis_asist["fecha_dt"].dt.year == int(anio_dash_sel))
+                ]
+
+        monto_total = (
+            pd.to_numeric(df_mis_desc["monto"], errors="coerce").sum()
+            if not df_mis_desc.empty else 0.0
+        )
+
+        dias_trabajados = (
+            df_mis_asist["fecha"].nunique()
+            if not df_mis_asist.empty else 0
+        )
+
+        minutos_extras_mes = 0
+        por_dia_dash = {}
+        if not df_mis_asist.empty:
+            df_mis_asist["dt"] = pd.to_datetime(df_mis_asist["fecha_hora"], errors="coerce")
+            for f_dia, grupo_dia in df_mis_asist.groupby("fecha"):
+                m_lab, mins_e, _, _ = calcular_jornada_y_horas_extras(grupo_dia)
+                minutos_extras_mes += mins_e
+                por_dia_dash[str(f_dia)] = (m_lab, mins_e)
+
+        metricas_p = calcular_metricas_puntualidad(df_mis_asist, user_actual)
+        pct_p = metricas_p["ratio"] if metricas_p["total_ingresos"] else 100
+        tono_p = "ok" if pct_p >= 90 else ("warn" if pct_p >= 75 else "bad")
+        if dias_trabajados == 0:
+            msg_p, chip_p = f"Aún sin marcaciones en {periodo_dash}", "neutral"
+        elif metricas_p["minutos_acumulados"] == 0:
+            msg_p, chip_p = "Mes impecable: ¡sin tardanzas!", "ok"
+        elif pct_p >= 90:
+            msg_p, chip_p = "Vas muy bien este mes", "ok"
         else:
-            _dfh["estado"] = _dfh["estado"].astype(str).replace({"": "Histórico", "nan": "Histórico"})
-            st.markdown('<div class="tp-sec"><div><div class="tp-sec-title">Histórico de boletas emitidas</div><div class="tp-sec-sub">Filtra por trabajador, año y mes. Aquí queda el archivo para consultas y fiscalizaciones.</div></div></div>', unsafe_allow_html=True)
-            _f1, _f2, _f3, _f4 = st.columns(4)
-            _ft = _f1.selectbox("Trabajador", ["Todos"] + sorted(_dfh["nombre"].astype(str).unique().tolist()), key="bolh_trab")
-            _anios = sorted({str(a) for a in _dfh["anio"].tolist() if str(a).strip()}, reverse=True)
-            _fa = _f2.selectbox("Año", ["Todos"] + _anios, key="bolh_anio")
-            _fm = _f3.selectbox("Mes", ["Todos"] + _MESES_L, key="bolh_mes")
-            _fe = _f4.selectbox("Estado", ["Vigentes", "Emitido", "Observado", "Conforme", "Firmado", "Reemplazado", "Histórico", "Todos"], key="bolh_est")
-            _base = _dfh
-            if _ft != "Todos":
-                _base = _base[_base["nombre"].astype(str) == _ft]
-            if _fa != "Todos":
-                _base = _base[_base["anio"].astype(str) == _fa]
-            if _fm != "Todos":
-                _base = _base[_base["mes"].astype(str) == _fm]
-            _vig = _base[_base["estado"] != "Reemplazado"]
-            if _fe == "Vigentes":
-                _tab = _vig
-            elif _fe == "Todos":
-                _tab = _base
+            msg_p, chip_p = "Puedes mejorar tu puntualidad", "warn"
+
+        st.markdown(f'<div class="tp-hero"><div class="tp-hero-top">{ui_avatar(user_actual, dni_actual, _foto_actual, 56)}<div><div class="tp-hero-hi">Así va tu {periodo_dash}, {_html.escape(user_actual.split()[0])}</div>{ui_chip(msg_p, chip_p)}</div></div>'
+                    f'<div class="tp-prog-lbl"><span>Puntualidad del mes</span><span>{pct_p:g}%</span></div><div class="tp-prog {tono_p}"><i style="width:{min(100, int(pct_p))}%"></i></div></div>', unsafe_allow_html=True)
+        st.markdown("<div style='height:14px'></div>", unsafe_allow_html=True)
+
+        def _kp(lbl, val, sub, tono):
+            return f'<div class="tp-kpi al-{tono}"><div class="tp-kpi-lbl">{lbl}</div><div class="tp-kpi-val">{val}</div><div class="tp-kpi-sub">{sub}</div></div>'
+
+        k1, k2, k3, k4 = st.columns(4)
+        k1.markdown(_kp("Días trabajados", str(dias_trabajados), "con marcaciones en el mes", "info"), unsafe_allow_html=True)
+        k2.markdown(_kp("Horas extras", formatear_horas_minutos(minutos_extras_mes), f"sobre la jornada base de {jornada_base_txt()}", "ok" if minutos_extras_mes > 0 else "info"), unsafe_allow_html=True)
+        k3.markdown(_kp("Minutos de tardanza", f"{metricas_p['minutos_acumulados']} m", f"{metricas_p['tardanzas']} tardanza(s) en el mes" if metricas_p["tardanzas"] else "Mes puntual", "ok" if metricas_p["minutos_acumulados"] == 0 else "bad"), unsafe_allow_html=True)
+        k4.markdown(_kp("Balance de descuadres", f"S/. {monto_total:.2f}", "sobrantes menos faltantes", "ok" if monto_total >= 0 else "bad"), unsafe_allow_html=True)
+        st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
+
+        if por_dia_dash:
+            fechas_d = sorted(por_dia_dash)
+            g1, g2 = st.columns([1.6, 1])
+            g1.markdown(ui_panel("Tus horas por día", "Horas trabajadas y horas extras", ui_columnas(
+                [ui_dia_label(f) for f in fechas_d],
+                [("Trabajadas", [round(por_dia_dash[f][0] / 60, 1) for f in fechas_d], "#0F172A"), ("Extras", [round(por_dia_dash[f][1] / 60, 1) for f in fechas_d], "#0B8F57")], alto=200)), unsafe_allow_html=True)
+            g2.markdown(ui_panel("Puntualidad del mes", "Tus ingresos a tiempo",
+                                 f'<div class="tp-saldo-n">{pct_p:g}%<span>puntual</span></div><div class="tp-prog {tono_p}"><i style="width:{min(100, int(pct_p))}%"></i></div>'
+                                 f'<div class="tp-chips" style="justify-content:flex-start;margin-top:14px">{ui_chip(str(metricas_p["puntuales"]) + " puntuales", "ok")}{ui_chip(str(metricas_p["tardanzas"]) + " tardanzas", "bad" if metricas_p["tardanzas"] else "neutral")}</div>'), unsafe_allow_html=True)
+        else:
+            st.markdown(f'<div class="tp-card" style="text-align:center;padding:30px 20px"><div class="tp-card-title">Sin marcaciones en {periodo_dash}</div><div class="tp-card-sub" style="margin-top:6px">Cuando registres tu asistencia verás aquí tus horas y tu puntualidad.</div></div>', unsafe_allow_html=True)
+
+        st.markdown(f"<div class='tp-note-t' style='margin:22px 0 10px'>Tus descuadres de caja · {periodo_dash}</div>", unsafe_allow_html=True)
+        if not df_mis_desc.empty:
+            _d_me = df_mis_desc.copy()
+            _d_me["monto_num"] = pd.to_numeric(_d_me["monto"], errors="coerce").fillna(0)
+            st.markdown(ui_desc_card(user_actual, _d_me, dni_actual, _foto_actual), unsafe_allow_html=True)
+        else:
+            ui_callout(f"Sin registros de descuadres en {periodo_dash}.", "ok")
+
+        st.markdown("<div style='height:18px'></div>", unsafe_allow_html=True)
+        st.markdown('<div class="tp-sec"><div><div class="tp-sec-title">Tu histórico de puntualidad</div><div class="tp-sec-sub">Cómo ha evolucionado tu asistencia en el tiempo. Solo tú puedes ver esta información.</div></div></div>', unsafe_allow_html=True)
+        rango_h = st.selectbox("Período del histórico", ["Últimos 3 meses", "Últimos 6 meses", "Todo mi historial"], index=1, key="mi_hist_rango")
+        _meses_h = {"Últimos 3 meses": 3, "Últimos 6 meses": 6}.get(rango_h)
+        _corte_h = (pd.Timestamp(ahora_dash.replace(day=1).date()) - pd.DateOffset(months=_meses_h - 1)) if _meses_h else None
+        if st.session_state.asistencia.empty:
+            ui_callout("Aún no hay marcaciones registradas para mostrar tu histórico.", "info")
+        else:
+            _asist_me = st.session_state.asistencia[st.session_state.asistencia["dni"].astype(str) == str(dni_actual)]
+            render_hist_puntualidad(_asist_me, _corte_h)
+
+    # -------------------- MÓDULOS ADMIN --------------------
+
+elif choice == "Dashboard General":
+    premium_module_shell('Dashboard General', 'OPERACIONES', 'Resumen operativo, asistencia y desempeño del equipo.')
+
+    with st.container(key="pm_v_dashboard_general"):
+
+        _tp_panel_operacion_hoy()
+
+        col_f1, col_f2 = st.columns([1.5, 1])
+        with col_f1:
+            fecha_dash = st.date_input("Fecha de Consulta", obtener_ahora_peru(), key="dash_fecha")
+        f_dash_str = str(fecha_dash)
+        colaboradores_ops = obtener_solo_colaboradores(fecha_eval=fecha_dash)
+        with col_f2:
+            lista_colabs = ["Todos"] + colaboradores_ops
+            colab_dash = st.selectbox("Filtrar Colaborador", lista_colabs, key="dash_colab")
+        kpi_slot = st.empty()
+        ops_slot = st.empty()
+
+        st.markdown('<div class="tp-sec" style="margin-top:8px"><div><div class="tp-sec-title">Calendarios mensuales de asistencia</div><div class="tp-sec-sub">Elige el mes para revisar la asistencia de cada trabajador</div></div></div>', unsafe_allow_html=True)
+        col_mes, col_anio = st.columns(2)
+    
+        ahora_p = obtener_ahora_peru()
+        NOMBRES_MESES = [
+            "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+            "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+        ]
+        mes_sel = col_mes.selectbox("Mes", list(range(1, 13)), index=ahora_p.month - 1, format_func=lambda x: NOMBRES_MESES[x-1])
+        anio_sel = col_anio.number_input("Año", min_value=2024, max_value=2030, value=ahora_p.year)
+
+        st.markdown("""
+            <div class="legend-container">
+                <div class="legend-item">
+                    <span class="legend-badge" style="background-color: #dcfce7; border: 1px solid #bbf7d0;"></span>
+                    <span>Asistió</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-badge" style="background-color: #fee2e2; border: 1px solid #fca5a5;"></span>
+                    <span>Inasistencia (Falta)</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-badge" style="background-color: #fef9c3; border: 1px solid #fef08a;"></span>
+                    <span>Turno Adicional</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-badge" style="background-color: #f3f4f6; border: 1px solid #e5e7eb;"></span>
+                    <span>Descanso Programado</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-badge" style="background-color: #e0f2fe; border: 1px solid #bae6fd;"></span>
+                    <span>Primer Día</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-badge" style="background-color: #f3e8ff; border: 1px solid #e9d5ff;"></span>
+                    <span>Cese / Baja</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-badge" style="background-color: #ede9fe; border: 1px solid #c4b5fd;"></span>
+                    <span>Permiso Aprobado</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-badge" style="background-color: #fef3c7; border: 1px solid #fcd34d;"></span>
+                    <span>Permiso Pendiente</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-badge" style="background-color: #cffafe; border: 1px solid #67e8f9;"></span>
+                    <span>Recuperación</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-badge" style="background-color: #fce7f3; border: 1px solid #f9a8d4;"></span>
+                    <span>Permiso de Salud</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-badge" style="background-color: #e0e7ff; border: 1px solid #c7d2fe;"></span>
+                    <span>Recuperación de Salud (Domingo)</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-badge" style="background-color: #ccfbf1; border: 1px solid #5eead4;"></span>
+                    <span>Domingo Trabajado Voluntariamente</span>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
+
+
+        if colaboradores_ops:
+            colabs_a_renderizar = colaboradores_ops if colab_dash == "Todos" else [colab_dash]
+            with st.expander("Ver Calendarios de Asistencia por Trabajador", expanded=True):
+                cols_cal = st.columns(2)
+                for idx, c_nom in enumerate(colabs_a_renderizar):
+                    with cols_cal[idx % 2]:
+                        html_cal = renderizar_calendario_colaborador(c_nom, int(anio_sel), int(mes_sel))
+                        st.markdown(html_cal, unsafe_allow_html=True)
+        else:
+            st.info("No hay colaboradores con rol operativo activos para la fecha consultada.")
+
+        st.markdown("---")
+
+        # --- CÁLCULO DE HORAS EXTRAS MENSUALES POR TRABAJADOR ---
+    
+        df_asist_mes = st.session_state.asistencia.copy()
+        horas_extras_mensuales = {}
+
+        if not df_asist_mes.empty:
+            df_asist_mes["fecha_dt"] = pd.to_datetime(df_asist_mes["fecha"], errors="coerce")
+            df_asist_mes = df_asist_mes[
+                (df_asist_mes["fecha_dt"].dt.month == mes_sel) & 
+                (df_asist_mes["fecha_dt"].dt.year == anio_sel)
+            ]
+
+            colabs_eval_mes = colaboradores_ops if colab_dash == "Todos" else ([colab_dash] if colab_dash in colaboradores_ops else [])
+
+            for nom_col in colabs_eval_mes:
+                df_col_mes = df_asist_mes[df_asist_mes["nombre"] == nom_col].copy()
+                mins_extras_colab = 0
+                if not df_col_mes.empty:
+                    df_col_mes["dt"] = pd.to_datetime(df_col_mes["fecha_hora"])
+                    for _, grupo_dia in df_col_mes.groupby("fecha"):
+                        _, mins_e, _, _ = calcular_jornada_y_horas_extras(grupo_dia)
+                        mins_extras_colab += mins_e
+                horas_extras_mensuales[nom_col] = mins_extras_colab
+
+        if horas_extras_mensuales:
+            _he_items = sorted(horas_extras_mensuales.items(), key=lambda x: -x[1])
+            st.markdown(ui_panel("Horas extras del período", f"{NOMBRES_MESES[mes_sel-1]} {int(anio_sel)} · por colaborador", ui_hbars([(n, m, "#0B8F57" if m > 0 else "#CBD2DC") for n, m in _he_items], fmt=formatear_horas_minutos)), unsafe_allow_html=True)
+        else:
+            ui_callout(f"No hay registros de horas extras para el mes de {NOMBRES_MESES[mes_sel-1]} {int(anio_sel)}.")
+
+        st.markdown("---")
+
+        df_asist_dash = st.session_state.asistencia.copy()
+        df_desc_dash = st.session_state.descuadres.copy()
+    
+        fichas_colaboradores = {}
+        en_turno_cnt = 0
+        concluido_cnt = 0
+        total_minutos_extras_dia = 0
+
+        if not df_asist_dash.empty:
+            df_asist_dash = df_asist_dash[df_asist_dash["fecha"].astype(str) == f_dash_str]
+        
+            if colab_dash != "Todos":
+                df_asist_dash = df_asist_dash[df_asist_dash["nombre"] == colab_dash]
+
+            if not df_asist_dash.empty:
+                df_asist_dash["dt"] = pd.to_datetime(df_asist_dash["fecha_hora"])
+            
+                for nombre_colab, grupo in df_asist_dash.groupby("nombre"):
+                    if nombre_colab not in colaboradores_ops:
+                        continue
+
+                    grupo_ordenado = grupo.sort_values("dt")
+                
+                    ingresos = grupo_ordenado[grupo_ordenado["tipo"] == "INGRESO"]
+                    salidas = grupo_ordenado[grupo_ordenado["tipo"] == "SALIDA"]
+                
+                    hora_primer_ingreso = ingresos.iloc[0]["dt"].strftime("%H:%M:%S") if not ingresos.empty else "--:--:--"
+                    hora_ultima_salida = salidas.iloc[-1]["dt"].strftime("%H:%M:%S") if not salidas.empty else "--:--:--"
+                    ultima_marca = grupo_ordenado.iloc[-1]
+                
+                    tardanza_txt = "Puntual"
+                    if not ingresos.empty:
+                        ing_regulares = ingresos[ingresos["es_extra"].astype(str) != "SI"]
+                        ing_eval = ing_regulares.iloc[0] if not ing_regulares.empty else ingresos.iloc[0]
+                        mins_t, es_t, turno_p = calcular_tardanza_ingreso(ing_eval["fecha_hora"])
+                        if es_t:
+                            tardanza_txt = f"⚠️ Tardanza ({mins_t} min)"
+
+                    if ultima_marca["tipo"] == "INGRESO":
+                        estado = "🟢 En Turno"
+                        en_turno_cnt += 1
+                    else:
+                        estado = "⚪ Concluido"
+                        concluido_cnt += 1
+
+                    mins_lab, mins_ext, mins_tot, turnos_adicionales = calcular_jornada_y_horas_extras(grupo_ordenado)
+                    total_minutos_extras_dia += mins_ext
+
+                    obs_asistencia = [
+                        f"[{r['tipo']} {r['dt'].strftime('%H:%M')}] {r['observacion']}" 
+                        for _, r in grupo_ordenado.iterrows() 
+                        if str(r.get('observacion', '')).strip() != ""
+                    ]
+
+                    descuadres_user = []
+                    monto_desc_user = 0.0
+                    if not df_desc_dash.empty:
+                        df_d_u = df_desc_dash[
+                            (df_desc_dash["fecha"].astype(str) == f_dash_str) & 
+                            (df_desc_dash["nombre"] == nombre_colab)
+                        ]
+                        if not df_d_u.empty:
+                            monto_desc_user = pd.to_numeric(df_d_u["monto"], errors="coerce").sum()
+                            for _, r_d in df_d_u.iterrows():
+                                descuadres_user.append({
+                                    "tipo": r_d["tipo"],
+                                    "monto": r_d["monto"],
+                                    "obs": r_d.get("observacion", "")
+                                })
+
+                    fichas_colaboradores[nombre_colab] = {
+                        "estado": estado,
+                        "primer_ingreso": hora_primer_ingreso,
+                        "ultima_salida": hora_ultima_salida,
+                        "tiempo_total_str": formatear_horas_minutos(mins_tot),
+                        "horas_laborales_str": f"{formatear_horas_minutos(mins_lab)} / {jornada_base_txt(f_dash_str)}",
+                        "horas_extras_str": formatear_horas_minutos(mins_ext),
+                        "minutos_extras": mins_ext,
+                        "tardanza": tardanza_txt,
+                        "turnos_adicionales": turnos_adicionales,
+                        "balance_descuadre": monto_desc_user,
+                        "descuadres_detalle": descuadres_user,
+                        "obs_asistencia": obs_asistencia
+                    }
+
+        total_descuadre_monto = 0.0
+        if not df_desc_dash.empty:
+            df_desc_dash = df_desc_dash[df_desc_dash["fecha"].astype(str) == f_dash_str]
+            if colab_dash != "Todos":
+                df_desc_dash = df_desc_dash[df_desc_dash["nombre"] == colab_dash]
             else:
-                _tab = _base[_base["estado"] == _fe]
-            _tab = _boletas_orden(_tab)
+                df_desc_dash = df_desc_dash[df_desc_dash["nombre"].isin(colaboradores_ops)]
+            total_descuadre_monto = pd.to_numeric(df_desc_dash["monto"], errors="coerce").sum() if not df_desc_dash.empty else 0.0
+
+        metricas_gen = calcular_metricas_puntualidad(st.session_state.asistencia)
+        _pg = metricas_gen["ratio"]
+        kpi_slot.markdown('<div class="tp-gridk">' +
+                          ui_kpi_acc("En turno ahora", str(en_turno_cnt), "colaboradores trabajando", "ok" if en_turno_cnt else "info") +
+                          ui_kpi_acc("Turno concluido", str(concluido_cnt), "ya marcaron salida", "info") +
+                          ui_kpi_acc("Horas extras hoy", formatear_horas_minutos(total_minutos_extras_dia), "sobre la jornada base", "ok" if total_minutos_extras_dia else "info") +
+                          ui_kpi_acc("Puntualidad global", f"{_pg:g}%", "de todos los ingresos", "ok" if _pg >= 90 else ("warn" if _pg >= 75 else "bad")) +
+                          ui_kpi_acc("Balance descuadres", f"S/. {total_descuadre_monto:.2f}", "sobrantes menos faltantes del día", "ok" if total_descuadre_monto >= 0 else "bad") + '</div>', unsafe_allow_html=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        if fichas_colaboradores:
+            _emp_op = st.session_state.empleados
+            _partes_op = [f'<div class="tp-sec"><div><div class="tp-sec-title">Control operativo del día</div><div class="tp-sec-sub">Horas, puntualidad y caja por colaborador · {f_dash_str}</div></div>{ui_chip(str(len(fichas_colaboradores)) + " colaboradores", "neutral")}</div>']
+            for nombre_col, datos in fichas_colaboradores.items():
+                _fm = _emp_op[_emp_op["nombre"] == nombre_col]
+                _dni_c = str(_fm.iloc[0]["dni"]) if not _fm.empty else ""
+                _foto_c = str(_fm.iloc[0].get("foto", "")) if not _fm.empty else ""
+                _partes_op.append(ui_op_card(nombre_col, datos, _dni_c, _foto_c))
+            ops_slot.markdown("".join(_partes_op), unsafe_allow_html=True)
+        else:
+            with ops_slot.container():
+                ui_callout(f"No hay registros de marcación para la fecha {f_dash_str}.")
+
+elif choice == "Gestión Colaboradores":
+    premium_module_shell('Gestión Colaboradores', 'PERSONAS', 'Directorio, fichas y administración del personal.')
+
+    with st.container(key="pm_v_gestion_colaboradores"):
+
+        tab_fichas, tab_nuevo, tab_directorio = st.tabs(["Fichas Técnicas", "Registrar Colaborador", "Directorio General"])
+
+        with tab_fichas:
+            st.markdown('<div class="tp-sec"><div><div class="tp-sec-title">Tarjetas de identificación del personal</div><div class="tp-sec-sub">Busca por nombre, DNI o cargo, y filtra por estado</div></div></div>', unsafe_allow_html=True)
+        
+            colabs_df = st.session_state.empleados.copy()
+        
+            if colabs_df.empty:
+                st.info("No existen colaboradores registrados.")
+            else:
+                colabs_df["orden_estado"] = colabs_df["estado"].astype(str).str.lower().apply(lambda x: 0 if x == "activo" else 1)
+                colabs_df = colabs_df.sort_values(by="orden_estado").reset_index(drop=True)
+                _act = int((colabs_df["orden_estado"] == 0).sum())
+                _baj = len(colabs_df) - _act
+                st.markdown('<div class="tp-gridk">' + ui_kpi_acc("Colaboradores", str(len(colabs_df)), "registrados en el sistema", "info") + ui_kpi_acc("Activos", str(_act), "equipo actual", "ok") +
+                            ui_kpi_acc("Dados de baja", str(_baj), "con fecha de cese", "warn" if _baj else "ok") + '</div>', unsafe_allow_html=True)
+                _fb1, _fb2 = st.columns([1.2, 1])
+                _q_f = _fb1.text_input("Buscar colaborador", placeholder="Buscar por nombre, DNI o cargo…", key="ficha_buscar", label_visibility="collapsed")
+                _est_f = _fb2.radio("Mostrar", ["Activos", "Dados de baja", "Todos"], horizontal=True, key="seg_ficha_estado", label_visibility="collapsed")
+                if _est_f == "Activos":
+                    colabs_df = colabs_df[colabs_df["orden_estado"] == 0]
+                elif _est_f == "Dados de baja":
+                    colabs_df = colabs_df[colabs_df["orden_estado"] == 1]
+                if _q_f.strip():
+                    colabs_df = colabs_df[colabs_df.apply(lambda r: _gs_hit(_q_f, r.get("nombre", ""), r.get("dni", ""), r.get("cargo", "")), axis=1)]
+                colabs_df = colabs_df.reset_index(drop=True)
+                if colabs_df.empty:
+                    ui_callout("No hay colaboradores que coincidan con el filtro.")
+
+                grid_cols = st.columns(2)
+                for i, row in colabs_df.iterrows():
+                    col_idx = i % 2
+                    with grid_cols[col_idx]:
+                        renderizar_tarjeta_colaborador(row)
+
+        with tab_nuevo:
+            with st.form("form_emp_completo", clear_on_submit=True):
+                st.markdown('<div class="tp-grp info" style="margin-top:0">Datos personales</div>', unsafe_allow_html=True)
+            
+                f1, f2 = st.columns(2)
+                dni_in = f1.text_input("DNI / Identificación")
+                nom_in = f2.text_input("Nombre y Apellidos Completos")
+
+                st.markdown('<div class="tp-grp info">Puesto y planilla</div>', unsafe_allow_html=True)
+                f3, f4 = st.columns(2)
+                cargo_in = f3.selectbox("Cargo", ["Cajero", "Supervisora", "Reposidor", "Gerente de Tienda"])
+                rol_in = f4.selectbox("Rol de Sistema", ["operativo", "admin"])
+
+                f3b, f4b = st.columns(2)
+                en_planilla_in = f3b.selectbox("¿Está en Planilla?", ["Sí", "No"], index=0, help="Marca 'No' para trabajadores jóvenes/informales que no están en planilla formal. No se les calculará beneficio vacacional.")
+
+                st.markdown('<div class="tp-grp info">Contacto y acceso</div>', unsafe_allow_html=True)
+                f5, f6 = st.columns(2)
+                dir_in = f5.text_input("Dirección de Domicilio")
+                tel_in = f6.text_input("Número de Contacto / Teléfono")
+
+                f7, f8 = st.columns(2)
+                fnac_in = f7.date_input("Fecha de Nacimiento", value=date(1995, 1, 1))
+                clave_in = f8.text_input("Contraseña de Acceso", type="password")
+
+                finicio_in = st.date_input("Fecha de Inicio de Labores", value=obtener_ahora_peru().date())
+
+                st.markdown('<div class="tp-grp info">Emergencia y ubicación</div>', unsafe_allow_html=True)
+            
+                e1, e2 = st.columns(2)
+                c_emerg_in = e1.text_input("Contacto de Emergencia (Nombre / Parentesco)", placeholder="Ej. Maria Insapillo (Madre)")
+                num_emerg_in = e2.text_input("Teléfono de Emergencia", placeholder="Ej. 987654321")
+
+                link_maps_in = st.text_input("Enlace Ubicación Domicilio (Google Maps Link)", placeholder="https://maps.app.goo.gl/...")
+
+                ui_callout("Nota: La imagen debe guardarse en la carpeta `fotos/` del repositorio como: `<DNI>.png` o `<DNI>.jpg`")
+
+                if st.form_submit_button("Guardar Registro", use_container_width=True):
+                    if not dni_in or not nom_in or not clave_in:
+                        st.error("DNI, Nombre y Contraseña son obligatorios.")
+                    else:
+                        foto_nombre = f"{str(dni_in).strip()}.png"
+                        fnac_str = str(fnac_in)
+                        _clave_prot = _hash_clave(str(clave_in).strip())
+                        finicio_str = str(finicio_in)
+                    
+                        nuevo_e = {
+                            "dni": str(dni_in).strip(),
+                            "nombre": nom_in.strip(),
+                            "cargo": cargo_in,
+                            "estado": "Activo",
+                            "clave": _clave_prot,
+                            "rol": rol_in,
+                            "direccion": dir_in.strip(),
+                            "telefono": str(tel_in).strip(),
+                            "fecha_nacimiento": fnac_str,
+                            "foto": foto_nombre,
+                            "contacto_emergencia": c_emerg_in.strip(),
+                            "numero_emergencia": str(num_emerg_in).strip(),
+                            "link_domicilio": link_maps_in.strip(),
+                            "fecha_inicio": finicio_str,
+                            "fecha_cese": "",
+                            "en_planilla": en_planilla_in
+                        }
+                        st.session_state.empleados = pd.concat([st.session_state.empleados, pd.DataFrame([nuevo_e])], ignore_index=True)
+                        guardar_colaborador_gsheets(
+                            dni_in, nom_in, cargo_in, "Activo", _clave_prot, rol_in, 
+                            dir_in, tel_in, fnac_str, foto_nombre,
+                            c_emerg_in.strip(), num_emerg_in.strip(), link_maps_in.strip(),
+                            finicio_str, "", en_planilla_in
+                        )
+                        registrar_auditoria("Crear Colaborador", "Colaboradores", f"{nom_in.strip()} (DNI {dni_in}) — cargo: {cargo_in}")
+                        crear_checklist_onboarding(str(dni_in).strip(), nom_in.strip())
+                        st.toast("Colaborador y Ficha Técnica registrados")
+                        time.sleep(0.3)
+                        st.rerun()
+
+        with tab_directorio:
+            st.markdown('<div class="tp-sec"><div><div class="tp-sec-title">Directorio consolidado</div><div class="tp-sec-sub">Todos los colaboradores y sus datos de contacto</div></div></div>', unsafe_allow_html=True)
+            cols_mostrar = [
+                c for c in ["dni", "nombre", "cargo", "rol", "telefono", "direccion", "fecha_nacimiento", "contacto_emergencia", "numero_emergencia", "estado", "fecha_inicio", "fecha_cese", "en_planilla"] 
+                if c in st.session_state.empleados.columns
+            ]
+            _dir_q = st.text_input("Buscar en el directorio", placeholder="Buscar por nombre, DNI, cargo o teléfono…", key="dir_buscar", label_visibility="collapsed")
+            _dir_df = st.session_state.empleados
+            if _dir_q.strip():
+                _dir_df = _dir_df[_dir_df.apply(lambda r: _gs_hit(_dir_q, r.get("nombre", ""), r.get("dni", ""), r.get("cargo", ""), r.get("telefono", "")), axis=1)]
+            try:
+                _c_tab, _c_tar = st.container(key="vista_tabla"), st.container(key="vista_tarjetas")
+            except TypeError:
+                _c_tab, _c_tar = st.container(), None
+            with _c_tab:
+                premium_table(_dir_df[cols_mostrar], use_container_width=True, hide_index=True)
+            if _c_tar is not None:
+                with _c_tar:
+                    _filas_dir = ""
+                    for _, _rd in _dir_df.iterrows():
+                        _ok = str(_rd.get("estado", "")).lower() == "activo"
+                        _filas_dir += (f'<div class="tp-row">{ui_avatar(_rd["nombre"], _rd["dni"], str(_rd.get("foto", "")), 44)}<div class="tp-row-main"><b>{_html.escape(str(_rd["nombre"]))}</b>'
+                                       f'<span>{_html.escape(str(_rd.get("cargo", "")))} · {_html.escape(str(_rd.get("telefono", "")) or "sin teléfono")}</span></div>'
+                                       f'<div class="tp-chips">{ui_chip("Activo" if _ok else "Baja", "ok" if _ok else "neutral")}</div></div>')
+                    st.markdown(_filas_dir or "<div class='tp-card-sub'>Sin resultados.</div>", unsafe_allow_html=True)
+
+            if rol_actual == "admin" and not st.session_state.empleados.empty:
+                st.markdown("<br>", unsafe_allow_html=True)
+                with st.expander("Actualizar Estado de Planilla (REMYPE)"):
+                    ui_callout("Los trabajadores marcados como **'No'** (jóvenes/informales sin planilla) no acumulan beneficio vacacional en el sistema.")
+                    colabs_todos_ep = st.session_state.empleados["nombre"].tolist()
+                    if colabs_todos_ep:
+                        colab_ep_sel = st.selectbox("Seleccionar colaborador", colabs_todos_ep, key="ep_sel")
+                        fila_ep = st.session_state.empleados[st.session_state.empleados["nombre"] == colab_ep_sel].iloc[0]
+                        valor_actual_ep = fila_ep.get("en_planilla", "Sí") or "Sí"
+                        nuevo_ep = st.selectbox("¿Está en Planilla?", ["Sí", "No"], index=0 if valor_actual_ep == "Sí" else 1, key="ep_valor")
+                        if st.button("Guardar Estado de Planilla", use_container_width=True, key="ep_btn"):
+                            idx_ep = st.session_state.empleados[st.session_state.empleados["nombre"] == colab_ep_sel].index
+                            st.session_state.empleados.loc[idx_ep, "en_planilla"] = nuevo_ep
+                            actualizar_hoja_completa("Colaboradores", st.session_state.empleados)
+                            registrar_auditoria("Actualizar Estado de Planilla", "Colaboradores", f"{colab_ep_sel} → en_planilla={nuevo_ep}")
+                            st.toast(f"Estado de planilla de {colab_ep_sel} actualizado a '{nuevo_ep}'")
+                            st.rerun()
+
+            if rol_actual == "admin" and not st.session_state.empleados.empty:
+                st.markdown("<br>", unsafe_allow_html=True)
+                with st.expander("Desactivar / Dar de Baja a Colaborador"):
+                    colabs_activos = st.session_state.empleados[st.session_state.empleados["estado"].astype(str).str.lower() == "activo"]["nombre"].tolist()
+                
+                    if colabs_activos:
+                        colab_a_desactivar = st.selectbox("Seleccionar colaborador a dar de baja", colabs_activos)
+                        f_cese_input = st.date_input("Fecha de Salida / Cese", value=obtener_ahora_peru().date())
+                        confirm_desactivar = st.checkbox(f"Confirmar baja del colaborador {colab_a_desactivar}")
+                    
+                        if st.button("Dar de Baja al Colaborador", type="primary", use_container_width=True):
+                            if confirm_desactivar:
+                                idx = st.session_state.empleados[st.session_state.empleados["nombre"] == colab_a_desactivar].index
+                                if not idx.empty:
+                                    dni_baja_ep = str(st.session_state.empleados.loc[idx[0], "dni"])
+                                    st.session_state.empleados.loc[idx, "estado"] = "Desactivado"
+                                    st.session_state.empleados.loc[idx, "fecha_cese"] = str(f_cese_input)
+                                    actualizar_hoja_completa("Colaboradores", st.session_state.empleados)
+                                    registrar_auditoria("Dar de Baja Colaborador", "Colaboradores", f"{colab_a_desactivar} — cese: {f_cese_input}")
+                                    crear_checklist_offboarding(dni_baja_ep, colab_a_desactivar)
+                                    st.toast(f"Colaborador {colab_a_desactivar} desactivado correctamente")
+                                    time.sleep(0.3)
+                                    st.rerun()
+                            else:
+                                st.warning("Marca la casilla de confirmación antes de dar de baja.")
+                    else:
+                        st.info("No hay colaboradores activos para dar de baja.")
+
+    # --- MÓDULO NUEVO: BOLETAS DE PAGO & FERIADOS (SOLO ADMIN) ---
+elif choice == "Boletas de Pago":
+    premium_module_shell('Boletas de Pago', 'NÓMINA', 'Consulta, preparación y gestión de boletas.')
+
+    with st.container(key="pm_v_boletas_de_pago"):
+
+        tab_boleta, tab_emitidas, tab_feriados = st.tabs(["Generar Boleta de Pago", "Histórico de boletas", "Gestión de Feriados"])
+
+        with tab_emitidas:
+            _dfh = st.session_state.boletas_historial.copy()
+            if _dfh.empty:
+                ui_callout("Aún no hay boletas emitidas. Genera una en la pestaña anterior y presiona 'Emitir boleta (Visto Bueno)'.")
+            else:
+                _dfh["estado"] = _dfh["estado"].astype(str).replace({"": "Histórico", "nan": "Histórico"})
+                st.markdown('<div class="tp-sec"><div><div class="tp-sec-title">Histórico de boletas emitidas</div><div class="tp-sec-sub">Filtra por trabajador, año y mes. Aquí queda el archivo para consultas y fiscalizaciones.</div></div></div>', unsafe_allow_html=True)
+                _f1, _f2, _f3, _f4 = st.columns(4)
+                _ft = _f1.selectbox("Trabajador", ["Todos"] + sorted(_dfh["nombre"].astype(str).unique().tolist()), key="bolh_trab")
+                _anios = sorted({str(a) for a in _dfh["anio"].tolist() if str(a).strip()}, reverse=True)
+                _fa = _f2.selectbox("Año", ["Todos"] + _anios, key="bolh_anio")
+                _fm = _f3.selectbox("Mes", ["Todos"] + _MESES_L, key="bolh_mes")
+                _fe = _f4.selectbox("Estado", ["Vigentes", "Emitido", "Observado", "Conforme", "Firmado", "Reemplazado", "Histórico", "Todos"], key="bolh_est")
+                _base = _dfh
+                if _ft != "Todos":
+                    _base = _base[_base["nombre"].astype(str) == _ft]
+                if _fa != "Todos":
+                    _base = _base[_base["anio"].astype(str) == _fa]
+                if _fm != "Todos":
+                    _base = _base[_base["mes"].astype(str) == _fm]
+                _vig = _base[_base["estado"] != "Reemplazado"]
+                if _fe == "Vigentes":
+                    _tab = _vig
+                elif _fe == "Todos":
+                    _tab = _base
+                else:
+                    _tab = _base[_base["estado"] == _fe]
+                _tab = _boletas_orden(_tab)
+                st.markdown('<div class="tp-gridk">' +
+                            ui_kpi_acc("Boletas vigentes", str(len(_vig)), "según los filtros", "info") +
+                            ui_kpi_acc("Pendientes de conformidad", str(int((_vig["estado"] == "Emitido").sum())), "esperan respuesta del colaborador", "warn" if (_vig["estado"] == "Emitido").any() else "ok") +
+                            ui_kpi_acc("Observadas", str(int((_vig["estado"] == "Observado").sum())), "requieren tu revisión", "bad" if (_vig["estado"] == "Observado").any() else "ok") +
+                            ui_kpi_acc("Conformes / firmadas", str(int(_vig["estado"].isin(["Conforme", "Firmado"]).sum())), "cerradas por el colaborador", "ok") + '</div>', unsafe_allow_html=True)
+                if _tab.empty:
+                    ui_callout("No hay boletas con esos filtros.")
+                else:
+                    try:
+                        _c_tab, _c_tar = st.container(key="vista_tabla"), st.container(key="vista_tarjetas")
+                    except TypeError:
+                        _c_tab, _c_tar = st.container(), None
+                    with _c_tab:
+                        _vista = _tab[["nombre", "mes", "anio", "version", "estado", "neto_pagar", "fecha_visto_bueno", "fecha_conformidad", "codigo_verificacion"]].copy()
+                        _vista.columns = ["Trabajador", "Mes", "Año", "Versión", "Estado", "Neto (S/.)", "Emitida", "Conformidad", "Código"]
+                        premium_table(_vista, use_container_width=True, hide_index=True)
+                    if _c_tar is not None:
+                        with _c_tar:
+                            st.markdown("".join(ui_boleta_card(_r) for _, _r in _tab.head(30).iterrows()), unsafe_allow_html=True)
+
+                    st.markdown("<div class='tp-note-t' style='margin:22px 0 10px'>Ver, imprimir o descargar una boleta</div>", unsafe_allow_html=True)
+                    _opc = {f"{r['nombre']} · {r['mes']} {r['anio']} · v{_ver_bol(r['version'])} · {r['estado']}": r for _, r in _tab.iterrows()}
+                    _sel = st.selectbox("Boleta", list(_opc.keys()), key="bolh_sel", label_visibility="collapsed")
+                    _rs = _opc[_sel]
+                    try:
+                        _ds = json.loads(str(_rs["datos_json"]))
+                    except Exception:
+                        _ds = None
+                    if _ds:
+                        if str(_rs["estado"]) == "Observado":
+                            ui_callout(f"**Observación del colaborador** ({str(_rs['fecha_observacion'])[:16]}): {_rs['observacion_colaborador']}. Corrige en 'Generar Boleta de Pago' y emite de nuevo: se creará una nueva versión.", "warn")
+                        if str(_rs.get("respuesta_admin", "")).strip():
+                            ui_callout(f"**Respuesta del administrador:** {_rs['respuesta_admin']}", "info")
+                        st.markdown(generar_html_boleta(_ds), unsafe_allow_html=True)
+                        if str(_rs["estado"]) in ("Firmado", "Conforme"):
+                            if str(_rs.get("firma_png_b64", "")).strip():
+                                st.markdown(ui_firma_card(_rs), unsafe_allow_html=True)
+                            else:
+                                ui_callout(f"Conformidad registrada el {str(_rs['fecha_conformidad'])[:16]} (sin firma en pantalla).", "ok")
+                        _pdf_s = generar_pdf_boleta(_ds, _extra_boleta(_rs))
+                        if _pdf_s:
+                            st.download_button("Descargar PDF de esta boleta", _pdf_s, f"Boleta_{str(_rs['nombre']).replace(' ', '_')}_{_ds['periodo'].replace(' ', '_')}_v{_ver_bol(_rs['version'])}.pdf", "application/pdf", use_container_width=True, key="bolh_pdf")
+                        st.caption(f"Código de verificación: {_rs['codigo_verificacion']}")
+                    else:
+                        ui_callout("Este registro es histórico: solo conserva los totales, sin el desglose de la boleta.", "info")
+
+                    st.markdown("<div class='tp-note-t' style='margin:22px 0 10px'>Archivo para fiscalización</div>", unsafe_allow_html=True)
+                    _con_datos = _tab[_tab["datos_json"].astype(str).str.len() > 2]
+                    st.caption(f"Se incluirán {len(_con_datos)} boleta(s) con desglose, según los filtros de arriba, ordenadas por año y mes.")
+                    if st.button("Preparar ZIP con los PDF", key="bolh_zip", use_container_width=True, disabled=_con_datos.empty):
+                        _buf = io.BytesIO()
+                        _n_pdf = 0
+                        with zipfile.ZipFile(_buf, "w", zipfile.ZIP_DEFLATED) as _z:
+                            for _, _r in _con_datos.iterrows():
+                                try:
+                                    _dz = json.loads(str(_r["datos_json"]))
+                                    _pz = generar_pdf_boleta(_dz, _extra_boleta(_r))
+                                    if _pz:
+                                        _z.writestr(f"{_r['anio']}/{str(_r['mes'])}/Boleta_{str(_r['nombre']).replace(' ', '_')}_{_dz['periodo'].replace(' ', '_')}_v{_ver_bol(_r['version'])}.pdf", _pz)
+                                        _n_pdf += 1
+                                except Exception:
+                                    continue
+                        st.session_state["_zip_boletas"] = (_buf.getvalue(), _n_pdf)
+                    if st.session_state.get("_zip_boletas"):
+                        _zb, _zn = st.session_state["_zip_boletas"]
+                        st.download_button(f"Descargar ZIP ({_zn} PDF)", _zb, "Boletas_Archivo.zip", "application/zip", use_container_width=True, key="bolh_zip_dl")
+
+        with tab_feriados:
+            st.markdown("<h4 style='font-size:1rem; color:#111827; margin-bottom:12px;'>Días Feriados Registrados</h4>", unsafe_allow_html=True)
+            st.caption("Los feriados trabajados de Lunes a Sábado se pagan con recargo adicional (17.66 / día sobre base S/. 530.00). Los feriados en domingo no aplican por ser día de descanso.")
+        
+            c_f1, c_f2 = st.columns([1, 2])
+            with c_f1:
+                with st.form("form_nuevo_feriado", clear_on_submit=True):
+                    st.markdown("**Agregar Feriado**")
+                    f_feriado = st.date_input("Fecha del Feriado", value=obtener_ahora_peru().date())
+                    desc_feriado = st.text_input("Descripción / Evento", placeholder="Ej. Fiestas Patrias")
+                    if st.form_submit_button("Guardar Feriado", use_container_width=True):
+                        if not desc_feriado.strip():
+                            st.error("Ingresa una descripción para el feriado.")
+                        else:
+                            str_f_fer = str(f_feriado)
+                            if not st.session_state.feriados.empty and str_f_fer in st.session_state.feriados["fecha"].astype(str).values:
+                                st.warning("Esa fecha ya se encuentra registrada como feriado.")
+                            else:
+                                nuevo_f = {"fecha": str_f_fer, "descripcion": desc_feriado.strip()}
+                                st.session_state.feriados = pd.concat([st.session_state.feriados, pd.DataFrame([nuevo_f])], ignore_index=True)
+                                guardar_feriado_gsheets(str_f_fer, desc_feriado.strip())
+                                st.toast("Feriado agregado con éxito")
+                                time.sleep(0.3)
+                                st.rerun()
+
+            with c_f2:
+                if not st.session_state.feriados.empty:
+                    df_fer_ord = st.session_state.feriados.sort_values("fecha").reset_index(drop=True)
+                    premium_table(df_fer_ord, use_container_width=True, hide_index=True)
+                else:
+                    st.info("No hay feriados registrados.")
+
+        with tab_boleta:
+            st.markdown('<div class="tp-sec"><div><div class="tp-sec-title">Parámetros de la boleta</div><div class="tp-sec-sub">Elige al colaborador y el período a liquidar</div></div></div>', unsafe_allow_html=True)
+        
+            b_c1, b_c2, b_c3 = st.columns([1.5, 1, 1])
+            colabs_list = obtener_solo_colaboradores()
+        
+            if not colabs_list:
+                st.warning("No hay colaboradores disponibles para emitir boletas.")
+                st.stop()
+
+            colab_b_sel = b_c1.selectbox("Colaborador", colabs_list, key="boleta_colab_sel")
+        
+            ahora_p_b = obtener_ahora_peru()
+            NOMBRES_MESES_B = [
+                "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+                "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+            ]
+            mes_b_sel = b_c2.selectbox("Mes de Boleta", list(range(1, 13)), index=ahora_p_b.month - 1, format_func=lambda x: NOMBRES_MESES_B[x-1], key="boleta_mes_sel")
+            anio_b_sel = b_c3.number_input("Año", min_value=2024, max_value=2030, value=ahora_p_b.year, key="boleta_anio_sel")
+
+            row_trab = st.session_state.empleados[st.session_state.empleados["nombre"] == colab_b_sel]
+            dni_b_val = str(row_trab.iloc[0]["dni"]) if not row_trab.empty and "dni" in row_trab.columns else "-"
+            cargo_b_val = str(row_trab.iloc[0]["cargo"]) if not row_trab.empty and "cargo" in row_trab.columns else "-"
+            finicio_b_val = str(row_trab.iloc[0]["fecha_inicio"]) if not row_trab.empty and "fecha_inicio" in row_trab.columns else "-"
+            _foto_b = str(row_trab.iloc[0].get("foto", "")) if not row_trab.empty else ""
+            st.markdown(f'<div class="tp-card"><div class="tp-op-head" style="margin:0">{ui_avatar(colab_b_sel, dni_b_val, _foto_b, 58)}<div><div class="tp-card-title">{_html.escape(colab_b_sel)}</div>'
+                        f'<div class="tp-card-sub">{_html.escape(cargo_b_val)} · DNI {_html.escape(dni_b_val)} · Ingreso {_html.escape(finicio_b_val)}</div></div>'
+                        f'{ui_chip(NOMBRES_MESES_B[mes_b_sel - 1] + " " + str(int(anio_b_sel)), "info")}</div></div>', unsafe_allow_html=True)
+
+            # --- RECOPILACIÓN Y CÁLCULOS AUTOMÁTICOS ---
+            df_asist_b = st.session_state.asistencia.copy()
+            dias_trabajados_cnt = 0
+            hrs_extras_totales = 0.0
+            feriados_trabajados_cnt = 0
+            domingos_voluntarios_cnt = 0
+            # Misma validación que el calendario: domingo con autorización aprobada
+            # y marcación real del colaborador (sin duplicar registros del mismo día).
+            _domingos_aprobados_boleta = set()
+            _sol_b = st.session_state.get("solicitudes", pd.DataFrame())
+            if isinstance(_sol_b, pd.DataFrame) and not _sol_b.empty:
+                for _, _sol_dom in _sol_b.iterrows():
+                    if (str(_sol_dom.get("nombre", "")).strip() == str(colab_b_sel).strip()
+                            and str(_sol_dom.get("tipo_solicitud", "")).strip() == "Trabajar Domingo (Descanso)"
+                            and str(_sol_dom.get("estado", "")).strip() == "Aprobado"):
+                        _fecha_dom = parsear_fecha_segura(_sol_dom.get("fecha_permiso", ""))
+                        if (_fecha_dom and _fecha_dom.weekday() == 6
+                                and _fecha_dom.month == mes_b_sel and _fecha_dom.year == anio_b_sel):
+                            _domingos_aprobados_boleta.add(_fecha_dom)
+
+            # --- PERMISOS RECUPERADOS (Permiso Laboral aprobado / Permiso de Salud a recuperar) ---
+            # Si el colaborador pidió permiso o se enfermó pero ya recuperó el día, NO cuenta como falta.
+            _asist_fechas_colab = set()
+            if not df_asist_b.empty:
+                _asist_fechas_colab = {parsear_fecha_segura(_x) for _x in df_asist_b[df_asist_b["nombre"] == colab_b_sel]["fecha"].astype(str).tolist()}
+                _asist_fechas_colab.discard(None)
+
+            fechas_recuperacion_colab = set()
+            permisos_recuperados_cnt = 0
+            permisos_recuperados_detalle = []
+
+            # a) Permiso Laboral aprobado con día de recuperación (se considera recuperado si asistió ese día)
+            df_sol_rec = st.session_state.solicitudes.copy()
+            if not df_sol_rec.empty:
+                df_sol_rec = df_sol_rec[
+                    (df_sol_rec["nombre"] == colab_b_sel) &
+                    (df_sol_rec["tipo_solicitud"] == "Permiso Laboral") &
+                    (df_sol_rec["estado"] == "Aprobado")
+                ]
+                for _, _s in df_sol_rec.iterrows():
+                    _f_perm = parsear_fecha_segura(_s.get("fecha_permiso", ""))
+                    _f_rec = parsear_fecha_segura(_s.get("fecha_recuperacion", ""))
+                    if not _f_rec:
+                        continue
+                    fechas_recuperacion_colab.add(_f_rec)
+                    if (_f_perm and _f_perm.month == mes_b_sel and _f_perm.year == anio_b_sel
+                            and _f_perm.weekday() != 6
+                            and _f_perm not in _asist_fechas_colab
+                            and _f_rec in _asist_fechas_colab):
+                        permisos_recuperados_cnt += 1
+                        permisos_recuperados_detalle.append(f"Permiso {_f_perm.strftime('%d/%m')} → recuperado el {_f_rec.strftime('%d/%m')}")
+
+            # b) Permiso de Salud (a recuperar): recuperado si el admin lo marcó "Recuperado" o si asistió el día de recuperación
+            df_vac_rec = st.session_state.vacaciones.copy()
+            if not df_vac_rec.empty:
+                df_vac_rec = df_vac_rec[
+                    (df_vac_rec["nombre"].astype(str) == colab_b_sel) &
+                    (df_vac_rec["tipo"] == "Permiso de Salud (a recuperar)")
+                ]
+                for _, _v in df_vac_rec.iterrows():
+                    _f_ini_v = parsear_fecha_segura(_v.get("fecha_inicio", ""))
+                    _f_fin_v = parsear_fecha_segura(_v.get("fecha_fin", ""))
+                    _f_rec_v = parsear_fecha_segura(_v.get("fecha_recuperacion", ""))
+                    if _f_rec_v:
+                        fechas_recuperacion_colab.add(_f_rec_v)
+                    _recuperado_v = (str(_v.get("estado_recuperacion", "")).strip() == "Recuperado") or (_f_rec_v is not None and _f_rec_v in _asist_fechas_colab)
+                    if not (_f_ini_v and _f_fin_v and _recuperado_v):
+                        continue
+                    _dias_sin_asist = []
+                    _d_it = _f_ini_v
+                    while _d_it <= _f_fin_v:
+                        if (_d_it.month == mes_b_sel and _d_it.year == anio_b_sel
+                                and _d_it.weekday() != 6 and _d_it not in _asist_fechas_colab):
+                            _dias_sin_asist.append(_d_it)
+                        _d_it += timedelta(days=1)
+                    if _dias_sin_asist:
+                        permisos_recuperados_cnt += 1
+                        _txt_rec_v = f" → recuperado el {_f_rec_v.strftime('%d/%m')}" if _f_rec_v else " → recuperado"
+                        permisos_recuperados_detalle.append(f"Permiso de salud {_dias_sin_asist[0].strftime('%d/%m')}{_txt_rec_v}")
+
+            if not df_asist_b.empty:
+                df_asist_b["fecha_dt"] = pd.to_datetime(df_asist_b["fecha"], errors="coerce")
+                df_asist_user = df_asist_b[
+                    (df_asist_b["nombre"] == colab_b_sel) & 
+                    (df_asist_b["fecha_dt"].dt.month == mes_b_sel) & 
+                    (df_asist_b["fecha_dt"].dt.year == anio_b_sel)
+                ]
+            
+                if not df_asist_user.empty:
+                    _fechas_user = pd.to_datetime(df_asist_user["fecha"].drop_duplicates(), errors="coerce").dropna()
+                    dias_trabajados_cnt = int((_fechas_user.dt.weekday != 6).sum())
+                
+                    df_asist_user["dt"] = pd.to_datetime(df_asist_user["fecha_hora"])
+                    for f_dia, grupo_dia in df_asist_user.groupby("fecha"):
+                        _, mins_e, _, _ = calcular_jornada_y_horas_extras(grupo_dia)
+                        hrs_extras_totales += (mins_e / 60.0)
+
+                        if not st.session_state.feriados.empty and str(f_dia) in st.session_state.feriados["fecha"].astype(str).values:
+                            dt_f = pd.to_datetime(f_dia)
+                            if dt_f.weekday() != 6:  # No es domingo
+                                feriados_trabajados_cnt += 1
+
+                        dt_dia_check = pd.to_datetime(f_dia)
+                        if (dt_dia_check.weekday() == 6
+                                and dt_dia_check.date() not in fechas_recuperacion_colab
+                                and (dt_dia_check.date() in _domingos_aprobados_boleta
+                                     or grupo_dia["observacion"].astype(str).str.contains(
+                                         "TRABAJO VOLUNTARIO EN DOMINGO", case=False, na=False).any())):
+                            domingos_voluntarios_cnt += 1
+
+            # Domingos de descanso semanal: son pagados, se suman a los días laborados (tope 30 días)
+            domingos_descanso_pagados = 0
+            if dias_trabajados_cnt + permisos_recuperados_cnt > 0:
+                _f_ini_emp = parsear_fecha_segura(finicio_b_val)
+                _f_cese_emp = parsear_fecha_segura(row_trab.iloc[0].get("fecha_cese", "")) if not row_trab.empty else None
+                _dias_mes_b = pd.Period(f"{int(anio_b_sel)}-{int(mes_b_sel):02d}").days_in_month
+                _hoy_b = ahora_p_b.date()
+                for _d in pd.date_range(start=f"{int(anio_b_sel)}-{int(mes_b_sel):02d}-01", periods=_dias_mes_b):
+                    if _d.weekday() == 6:
+                        _dd = _d.date()
+                        if _dd > _hoy_b:
+                            continue  # Domingos futuros aún no se devengan
+                        if _f_ini_emp and _dd < _f_ini_emp:
+                            continue
+                        if _f_cese_emp and _dd > _f_cese_emp:
+                            continue
+                        domingos_descanso_pagados += 1
+                dias_trabajados_cnt = min(_dias_mes_b, dias_trabajados_cnt + domingos_descanso_pagados + permisos_recuperados_cnt)
+
+            # Días transcurridos del mes: si el mes está en curso solo se evalúan los días que ya pasaron.
+            # Para el prorrateo solicitado se usa la cantidad REAL de días calendario del mes.
+            _dias_calendario_boleta = calendar.monthrange(int(anio_b_sel), int(mes_b_sel))[1]
+            _hoy_falt = ahora_p_b.date()
+            _inicio_mes_b = pd.Timestamp(year=int(anio_b_sel), month=int(mes_b_sel), day=1).date()
+            if _inicio_mes_b > _hoy_falt:
+                _dias_evaluables = 0  # Mes futuro
+            elif (_inicio_mes_b.year, _inicio_mes_b.month) == (_hoy_falt.year, _hoy_falt.month):
+                _dias_evaluables = min(_dias_calendario_boleta, _hoy_falt.day)  # Mes en curso
+            else:
+                _dias_evaluables = _dias_calendario_boleta  # Mes cerrado
+            dias_faltas_cnt = max(0, _dias_evaluables - dias_trabajados_cnt)
+
+            # Buscar adelantos aprobados
+            df_sol_b = st.session_state.solicitudes.copy()
+            adelanto_sueldo_monto = 0.0
+            if not df_sol_b.empty:
+                df_sol_user = df_sol_b[
+                    (df_sol_b["nombre"] == colab_b_sel) & 
+                    (df_sol_b["tipo_solicitud"] == "Adelanto de Sueldo") & 
+                    (df_sol_b["estado"] == "Aprobado")
+                ]
+                if not df_sol_user.empty:
+                    df_sol_user["f_reg_dt"] = pd.to_datetime(df_sol_user["fecha_registro"], errors="coerce")
+                    df_sol_m = df_sol_user[
+                        (df_sol_user["f_reg_dt"].dt.month == mes_b_sel) & 
+                        (df_sol_user["f_reg_dt"].dt.year == anio_b_sel)
+                    ]
+                    adelanto_sueldo_monto = pd.to_numeric(df_sol_m["monto_adelanto"], errors="coerce").sum()
+
+            # Descuadres de caja (solo faltantes negativos)
+            df_desc_b = st.session_state.descuadres.copy()
+            descuadre_caja_monto = 0.0
+            if not df_desc_b.empty:
+                df_desc_b["f_dt"] = pd.to_datetime(df_desc_b["fecha"], errors="coerce")
+                df_desc_u = df_desc_b[
+                    (df_desc_b["nombre"] == colab_b_sel) & 
+                    (df_desc_b["f_dt"].dt.month == mes_b_sel) & 
+                    (df_desc_b["f_dt"].dt.year == anio_b_sel)
+                ]
+                if not df_desc_u.empty:
+                    faltantes = df_desc_u[pd.to_numeric(df_desc_u["monto"], errors="coerce") < 0]
+                    descuadre_caja_monto = abs(pd.to_numeric(faltantes["monto"], errors="coerce").sum())
+
+            # Incidencias y daños del mes (se excluyen las condonadas)
+            incidencias_monto = 0.0
+            incidencias_cnt = 0
+            df_inc_b = st.session_state.incidencias.copy()
+            if not df_inc_b.empty:
+                df_inc_b["f_dt"] = pd.to_datetime(df_inc_b["fecha"], errors="coerce")
+                df_inc_u = df_inc_b[
+                    (df_inc_b["nombre"] == colab_b_sel) &
+                    (df_inc_b["f_dt"].dt.month == mes_b_sel) &
+                    (df_inc_b["f_dt"].dt.year == anio_b_sel) &
+                    (df_inc_b["estado"].astype(str) != "Resuelto / Condonado")
+                ]
+                if not df_inc_u.empty:
+                    incidencias_cnt = len(df_inc_u)
+                    incidencias_monto = float(pd.to_numeric(df_inc_u["valor_reparacion"], errors="coerce").fillna(0).sum())
+
+            st.markdown('<div class="tp-sec" style="margin-top:18px"><div><div class="tp-sec-title">Valores y conceptos calculados</div><div class="tp-sec-sub">Los valores se calculan solos desde asistencia, solicitudes y caja; puedes ajustarlos si hace falta</div></div></div>', unsafe_allow_html=True)
+            resumen_slot = st.empty()
+        
+            if permisos_recuperados_cnt > 0:
+                ui_callout("**Permisos recuperados (no se cuentan como falta):** " + " | ".join(permisos_recuperados_detalle), "ok")
+
+            st.markdown('<div class="tp-grp ok">Ingresos</div>', unsafe_allow_html=True)
+            c_i1, c_i2, c_i3 = st.columns(3)
+            sueldo_basico_in = c_i1.number_input("Sueldo Básico (S/.)", min_value=0.0, value=530.0, step=10.0, format="%.2f")
+            dias_trab_in = c_i2.number_input("Días Laborados", min_value=0, max_value=31, value=int(dias_trabajados_cnt))
+            feriados_trab_in = c_i3.number_input("Feriados Trab. (Adicional)", min_value=0, max_value=10, value=int(feriados_trabajados_cnt))
+
+            c_i4, c_i10 = st.columns(2)
+            hrs_extras_in = c_i4.number_input("Horas Extras (Hrs)", min_value=0.0, value=float(hrs_extras_totales), step=0.5, format="%.2f")
+            domingo_volunt_in = c_i10.number_input(
+                "Días de Descanso Trabajados Voluntariamente (Domingo)", min_value=0, max_value=5, value=int(domingos_voluntarios_cnt),
+                help="Se calcula automáticamente con la solicitud aprobada y la asistencia registrada; también reconoce marcaciones históricas de domingo voluntario. Puedes ajustarlo manualmente."
+            )
+            ui_callout("Los domingos trabajados voluntariamente se pagan como día adicional (100% del valor día), separado del sueldo básico, dejando constancia de que originalmente era su descanso.")
+
+            c_b1, c_b2, c_b3 = st.columns(3)
+            bono_puntualidad_in = c_b1.number_input("Bono por Puntualidad (S/.)", min_value=0.0, value=0.0, step=5.0, format="%.2f", key="boleta_bono_puntualidad")
+            bono_presencia_in = c_b2.number_input("Bono Presencia y Uniforme (S/.)", min_value=0.0, value=0.0, step=5.0, format="%.2f", key="boleta_bono_presencia")
+            bono_orden_in = c_b3.number_input("Bono Orden y Limpieza (S/.)", min_value=0.0, value=0.0, step=5.0, format="%.2f", key="boleta_bono_orden")
+
+            st.markdown('<div class="tp-grp bad">Descuentos</div>', unsafe_allow_html=True)
+            c_i5, c_i6, c_i7 = st.columns(3)
+            adelanto_in = c_i5.number_input("Adelanto de Sueldo (S/.)", min_value=0.0, value=float(adelanto_sueldo_monto), step=5.0, format="%.2f")
+            dias_faltas_in = c_i6.number_input("Días Faltas", min_value=0, max_value=30, value=int(dias_faltas_cnt))
+            descuadre_caja_in = c_i7.number_input("Descuadre / Faltante Caja (S/.)", min_value=0.0, value=float(descuadre_caja_monto), step=1.0, format="%.2f")
+
+            c_i8, c_i9 = st.columns(2)
+            desc_inventario_in = c_i8.number_input("Descuadre Inventario (S/.)", min_value=0.0, value=0.0, step=1.0, format="%.2f")
+            consumos_in = c_i9.number_input("Consumos por Pagar (S/.)", min_value=0.0, value=0.0, step=1.0, format="%.2f")
+
+            c_inc1, c_inc2 = st.columns(2)
+            incidencias_in = c_inc1.number_input("Incidencias / Daños (S/.)", min_value=0.0, value=float(incidencias_monto), step=1.0, format="%.2f", key=f"boleta_incidencias_{colab_b_sel}_{mes_b_sel}_{anio_b_sel}")
+            with c_inc2:
+                ui_callout(f"Se descuentan las incidencias del mes registradas por el colaborador ({incidencias_cnt} registrada(s)), excepto las marcadas como 'Resuelto / Condonado'.")
+
+            # FÓRMULAS DE CÁLCULO
+            _ult_dia_b = pd.Period(f"{int(anio_b_sel)}-{int(mes_b_sel):02d}").days_in_month
+            _base_h = jornada_base_min(f"{int(anio_b_sel)}-{int(mes_b_sel):02d}-{_ult_dia_b:02d}") / 60.0   # jornada base vigente al cierre del mes (5.75 h con el horario actual)
+            # Sueldo mensual pactado, prorrateado por días reconocidos sobre los días reales del mes.
+            # Ejemplo: S/ 530 * 20 / 31 = S/ 341.94 en octubre.
+            valor_dia = sueldo_basico_in / _ult_dia_b if sueldo_basico_in > 0 else 0.0
+            sueldo_proporcional_calc = round(valor_dia * min(int(dias_trab_in), _ult_dia_b), 2)
+            valor_hora = valor_dia / _base_h if valor_dia > 0 else 0.0
+
+            monto_feriados_calc = feriados_trab_in * (valor_dia * 1.0)
+            monto_horas_extras_calc = hrs_extras_in * (valor_hora * FACTOR_HORA_EXTRA)
+            # Las faltas ya están reflejadas en los días reconocidos: no descontar dos veces.
+            monto_faltas_calc = 0.0
+            monto_domingo_volunt_calc = domingo_volunt_in * (valor_dia * 1.0)
+
+            total_ingresos_calc = sueldo_proporcional_calc + monto_feriados_calc + monto_horas_extras_calc + monto_domingo_volunt_calc + bono_puntualidad_in + bono_presencia_in + bono_orden_in
+            total_descuentos_calc = adelanto_in + monto_faltas_calc + descuadre_caja_in + desc_inventario_in + consumos_in + incidencias_in
+            neto_pagar_calc = max(0.0, total_ingresos_calc - total_descuentos_calc)
+
+            datos_boleta = {
+                "empresa": "TIENDAS PREMIUM E.I.R.L.",
+                "ruc": "20612107786",
+                "periodo": f"{NOMBRES_MESES_B[mes_b_sel-1].upper()} {anio_b_sel}",
+                "colaborador": colab_b_sel,
+                "dni": dni_b_val,
+                "cargo": cargo_b_val,
+                "fecha_inicio": finicio_b_val,
+                "dias_trabajados": dias_trab_in,
+                "dias_faltas": dias_faltas_in,
+                "permisos_recuperados": permisos_recuperados_cnt,
+                "feriados_trabajados": feriados_trab_in,
+                "horas_extras_hrs": hrs_extras_in,
+                "sueldo_basico": sueldo_proporcional_calc,
+                "sueldo_mensual_pactado": sueldo_basico_in,
+                "monto_feriados": monto_feriados_calc,
+                "monto_horas_extras": monto_horas_extras_calc,
+                "domingos_voluntarios": domingo_volunt_in,
+                "monto_domingos_voluntarios": monto_domingo_volunt_calc,
+                "bono_puntualidad": bono_puntualidad_in,
+                "bono_presencia_uniforme": bono_presencia_in,
+                "bono_orden_limpieza": bono_orden_in,
+                "adelanto_sueldo": adelanto_in,
+                "monto_faltas": monto_faltas_calc,
+                "descuadre_caja": descuadre_caja_in,
+                "descuadre_inventario": desc_inventario_in,
+                "consumos_pagar": consumos_in,
+                "incidencias_danos": incidencias_in,
+                "total_ingresos": total_ingresos_calc,
+                "total_descuentos": total_descuentos_calc,
+                "neto_pagar": neto_pagar_calc
+            }
+
+            _base_ini_b = jornada_base_min(f"{int(anio_b_sel)}-{int(mes_b_sel):02d}-01")
+            ui_callout(f"**Sueldo proporcional:** S/ {sueldo_basico_in:,.2f} ÷ {_ult_dia_b} días × {min(int(dias_trab_in), _ult_dia_b)} días reconocidos = **S/ {sueldo_proporcional_calc:,.2f}**. **Valor hora:** S/ {valor_hora:.4f} (sin recargo para horas extra). Las faltas no se descuentan nuevamente porque ya están reflejadas en el prorrateo.", "info")
+            if int(_base_ini_b) != int(_base_h * 60):
+                ui_callout(f"En este mes **cambió la jornada base** ({_fmt_min(_base_ini_b)} → {_fmt_min(int(_base_h * 60))}). Para el valor de la hora se usó la jornada vigente al cierre del mes. Revisa que el monto de horas extra sea el que corresponde.", "warn")
+            resumen_slot.markdown('<div class="tp-gridk">' +
+                                  ui_kpi_acc("Total ingresos", f"S/. {total_ingresos_calc:,.2f}", "sueldo, extras y bonos", "ok") +
+                                  ui_kpi_acc("Total descuentos", f"S/. {total_descuentos_calc:,.2f}", "adelantos y otros (sin duplicar faltas)", "bad") +
+                                  ui_kpi_acc("Neto a pagar", f"S/. {neto_pagar_calc:,.2f}", "monto final de la boleta", "info") + '</div>', unsafe_allow_html=True)
+
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown("##### Previsualización de la Boleta de Pago")
+
+            st.markdown(generar_html_boleta(datos_boleta), unsafe_allow_html=True)
+
+            st.markdown("##### Opciones de Exportación")
+            col_exp1, col_exp2 = st.columns(2)
+
+            excel_data = generar_excel_boleta(datos_boleta)
+            col_exp1.download_button(
+                label="Descargar Boleta en Excel (.xlsx)",
+                data=excel_data,
+                file_name=f"Boleta_{colab_b_sel.replace(' ', '_')}_{datos_boleta['periodo']}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True
+            )
+
+            pdf_bytes = generar_pdf_boleta(datos_boleta)
+            if pdf_bytes:
+                col_exp2.download_button(
+                    label="Descargar Boleta en PDF (.pdf)",
+                    data=pdf_bytes,
+                    file_name=f"Boleta_{colab_b_sel.replace(' ', '_')}_{datos_boleta['periodo']}.pdf",
+                    mime="application/pdf",
+                    use_container_width=True
+                )
+            else:
+                col_exp2.warning("La librería `reportlab` no está instalada en el entorno.")
+
+            st.markdown("<br>", unsafe_allow_html=True)
+            _mes_nom_b = NOMBRES_MESES_B[mes_b_sel - 1]
+            _bh = st.session_state.boletas_historial
+            _prev = _bh[_bh["dni"].apply(lambda x: _mismo_dni(x, dni_b_val)) & (_bh["mes"].astype(str) == _mes_nom_b) & (_bh["anio"].astype(str) == str(int(anio_b_sel))) & (_bh["estado"].astype(str).isin(ESTADOS_BOL_VIGENTES))] if not _bh.empty else _bh
+            _resp_nota = ""
+            _bloq = False
+            if not _prev.empty:
+                _pr = _boletas_orden(_prev).iloc[0]
+                _est_p = str(_pr["estado"])
+                if _est_p in ("Conforme", "Firmado"):
+                    _bloq = True
+                    ui_callout(f"Esta boleta ya fue **{'firmada' if _est_p == 'Firmado' else 'conformada'}** por el colaborador y no se puede modificar.", "ok")
+                else:
+                    _obs_t = f" Observación del colaborador: “{_pr['observacion_colaborador']}”." if _est_p == "Observado" else ""
+                    ui_callout(f"Ya existe una boleta emitida de este período (versión {_ver_bol(_pr['version'])}, estado **{_est_p}**). Al emitir de nuevo se crea la versión siguiente y la anterior queda como reemplazada.{_obs_t}", "warn")
+                    if _est_p == "Observado":
+                        _resp_nota = st.text_input("Respuesta para el colaborador (opcional)", key="bol_resp_nota", placeholder="Ej.: Se corrigió el descuento por tardanzas.")
+            if st.button("Emitir boleta (Visto Bueno)", use_container_width=True, disabled=_bloq, key="bol_emitir"):
+                _res = emitir_boleta_gsheets(datos_boleta, _mes_nom_b, int(anio_b_sel), user_actual, _resp_nota)
+                if _res == "cerrada":
+                    st.error("Esta boleta ya fue conformada por el colaborador y no se puede emitir de nuevo.")
+                elif _res:
+                    registrar_auditoria("Emitir Boleta", "Boletas", f"{colab_b_sel} — {datos_boleta['periodo']} — Neto: S/. {neto_pagar_calc:.2f}")
+                    st.session_state.boletas_historial = obtener_boletas_historial_gsheets()
+                    st.toast("Boleta emitida: ya es visible para el colaborador")
+                    time.sleep(0.3)
+                    st.rerun()
+elif choice == "Programación de Turnos":
+    premium_module_shell('Programación de Turnos', 'PLANIFICACIÓN', 'Organización de horarios y cobertura operativa.')
+
+    with st.container(key="pm_v_programacion_de_turnos"):
+        if "prog_lunes" not in st.session_state:
+            st.session_state["prog_lunes"] = _lunes_de(obtener_ahora_peru().date())
+        _lunes = st.session_state["prog_lunes"]
+        _lunes_iso = _lunes.strftime("%Y-%m-%d")
+        _dias = [_lunes + timedelta(days=i) for i in range(7)]
+        _cols = [_dia_label(d) for d in _dias]
+        _ver = st.session_state.get("prog_ver", 0)
+
+        _nv1, _nv2, _nv3, _nv4 = st.columns([1, 1, 1.6, 1])
+        _nv1.button("Semana anterior", key="prog_ant", on_click=_prog_mover, args=(-7,), use_container_width=True)
+        _nv2.button("Esta semana", key="prog_hoy", on_click=_prog_ir_hoy, use_container_width=True)
+        _nv3.markdown(f'<div style="text-align:center;padding-top:6px">{ui_chip(_dias[0].strftime("%d/%m/%Y") + " – " + _dias[6].strftime("%d/%m/%Y"), "info")}</div>', unsafe_allow_html=True)
+        _nv4.button("Semana siguiente", key="prog_sig", on_click=_prog_mover, args=(7,), use_container_width=True)
+
+        _reglas_sem = {}
+        for _d in _dias:
+            _r = _regla_para_fecha(_d)
+            _reglas_sem[_r["nombre"]] = _r
+        _nombres_turno = []
+        for _r in _reglas_sem.values():
+            for _t in sorted(_r["turnos"], key=lambda t: _hhmm(t["entrada"])):
+                if _t["nombre"] not in _nombres_turno:
+                    _nombres_turno.append(_t["nombre"])
+        if len(_reglas_sem) > 1:
+            ui_callout("En esta semana **cambia el horario** (" + " → ".join(_reglas_sem.keys()) + "). Cada casilla se calcula con el horario que rige ese día.", "warn")
+        else:
+            _r0 = list(_reglas_sem.values())[0]
+            st.caption(f"Horario: {_r0['nombre']} · Base por turno: {_fmt_min(_r0['jornada_base_min'])}. La cobertura del administrador no suma horas remuneradas.")
+
+        _base = st.session_state.get(f"prog_base_{_lunes_iso}")
+        if _base is None:
+            _base = _prog_base(_lunes)
+        if len(_base) <= 1:
+            ui_callout("No hay colaboradores activos para programar en esta semana.", "info")
+        else:
+            _opts = ["", "Descanso"] + _nombres_turno + [DOMINGO_VOLUNTARIO] + list(_AUSENCIAS)
+            # Las solicitudes aprobadas se reflejan incluso si ya se abrió la semana.
+            _base = _base.copy()
+            for _dom in _dias:
+                if _dom.weekday() != 6:
+                    continue
+                _col_dom = _dia_label(_dom)
+                _aprobadas = _solicitudes_domingo_aprobadas(_dom)
+                for _sr in _aprobadas:
+                    _dni_sr = str(_sr.get("dni", ""))
+                    _emp_sr = st.session_state.empleados
+                    _matches = _emp_sr[_emp_sr["dni"].apply(lambda x: _mismo_dni(x, _dni_sr))]
+                    if not _matches.empty:
+                        _nom_sr = str(_matches.iloc[0]["nombre"])
+                        _mask_sr = _base["Colaborador"].eq(_nom_sr)
+                        if _mask_sr.any() and not _ausencia_en(_dni_sr, _dom.strftime("%Y-%m-%d")):
+                            _base.loc[_mask_sr, _col_dom] = DOMINGO_VOLUNTARIO
+            # Panel integrado de aprobaciones de domingo: usa la misma hoja y reglas de la bandeja.
+            _domingo_panel = _dias[6]
+            _sol_panel = st.session_state.get("solicitudes", pd.DataFrame())
+            _pend_panel = pd.DataFrame()
+            if isinstance(_sol_panel, pd.DataFrame) and not _sol_panel.empty:
+                _pend_panel = _sol_panel[
+                    (_sol_panel["tipo_solicitud"].astype(str) == "Trabajar Domingo (Descanso)") &
+                    (_sol_panel["estado"].astype(str) == "Pendiente") &
+                    (_sol_panel["fecha_permiso"].apply(_norm_fecha_h) == _domingo_panel.strftime("%Y-%m-%d"))
+                ]
+            st.markdown('<div class="tp-up-eyebrow">SOLICITUDES DEL DOMINGO</div>', unsafe_allow_html=True)
+            if not _pend_panel.empty:
+                with st.expander(f"Revisar solicitudes pendientes ({len(_pend_panel)})", expanded=False):
+                    for _, _pend_r in _pend_panel.iterrows():
+                        _id_p = str(_pend_r.get("id_solicitud", ""))
+                        _ca, _cb, _cc = st.columns([3, 1, 1])
+                        _ca.markdown(f"**{_html.escape(str(_pend_r.get('nombre', 'Colaborador')))}**  \nDomingo {_domingo_panel:%d/%m/%Y} · 15:15–21:00")
+                        if _cb.button("Aprobar", key=f"turn_ap_{_id_p}", use_container_width=True):
+                            _ok, _msg = _resolver_solicitud_administrativa(_id_p, "Aprobado")
+                            (st.success if _ok else st.error)(_msg)
+                            if _ok:
+                                st.rerun()
+                        if _cc.button("Rechazar", key=f"turn_rec_{_id_p}", use_container_width=True):
+                            _ok, _msg = _resolver_solicitud_administrativa(_id_p, "Rechazado")
+                            (st.success if _ok else st.error)(_msg)
+                            if _ok:
+                                st.rerun()
+            else:
+                st.caption("Sin solicitudes dominicales pendientes esta semana.")
+            with st.expander("Editar programación semanal", expanded=False):
+                st.caption("Selecciona una casilla para cambiar el turno. Los cambios se reflejan en el calendario y se guardan con «Guardar semana».")
+                _ed = st.data_editor(_base, hide_index=True, use_container_width=True, disabled=["Colaborador"], key=f"prog_ed_{_lunes_iso}_{_ver}",
+                                     column_config={"Colaborador": st.column_config.TextColumn("Colaborador", width="medium"),
+                                                    **{c: st.column_config.SelectboxColumn(c, options=_opts, required=False) for c in _cols}})
+            _emp_p = st.session_state.empleados
+            _dni_de = {n: str(_emp_p[_emp_p["nombre"] == n].iloc[0]["dni"]) for n in _ed["Colaborador"] if not _emp_p[_emp_p["nombre"] == n].empty}
+            _dni_de[ADMIN_FILA] = "ADMIN"
+
+            # Vista calendario visual inspirada en software de turnos, sin sustituir editor.
+            _dias_cab = "".join(f'<th>{_html.escape(_dia_label(d))}</th>' for d in _dias)
+            _cal_rows = []
+            for _, _r_cal in _ed.iterrows():
+                _nom_cal = str(_r_cal["Colaborador"])
+                if _nom_cal == ADMIN_FILA:
+                    continue
+                _celdas_cal = []
+                for _dia_cal, _col_cal in zip(_dias, _cols):
+                    _val_cal = str(_r_cal.get(_col_cal, "") or "").strip()
+                    _info_cal = _info_turno(_val_cal, _dia_cal)
+                    if _info_cal:
+                        _tipo_cal = "vol" if _val_cal == DOMINGO_VOLUNTARIO else ("mor" if "mañ" in _val_cal.lower() else "tar")
+                        _celdas_cal.append(f'<td><div class="tp-up-shift {_tipo_cal}"><b>{_html.escape(_val_cal)}</b><span>{_info_cal["entrada"]} – {_info_cal["salida"]}</span><small>{_fmt_min(_info_cal["dur"])}</small></div></td>')
+                    elif _val_cal and _val_cal.lower() not in ("none", "nan"):
+                        _celdas_cal.append(f'<td><div class="tp-up-off">{_html.escape(_val_cal)}</div></td>')
+                    else:
+                        _celdas_cal.append('<td><div class="tp-up-empty">—</div></td>')
+                _cal_rows.append(f'<tr><th class="tp-up-person">{_html.escape(_nom_cal)}</th>{"".join(_celdas_cal)}</tr>')
+            # Administrador: cobertura real, no editable ni computable como remuneración.
+            _adm_cells = []
+            for _dia_cal in _dias:
+                if _dia_cal.weekday() == 6:
+                    _bloques = _cobertura_admin_domingo(_dia_cal)
+                    _contenido = "".join(f'<div class="tp-up-shift adm"><b>{_html.escape(et)}</b><span>{ini} – {fin}</span></div>' for ini, fin, et in _bloques)
+                else:
+                    _contenido = '<div class="tp-up-shift adm"><b>Cierre</b><span>21:00 – 00:00</span></div>'
+                _adm_cells.append(f'<td>{_contenido}</td>')
+            _cal_rows.append(f'<tr><th class="tp-up-person">Administrador<small>Cobertura operativa</small></th>{"".join(_adm_cells)}</tr>')
+            st.markdown('<div class="tp-up-section tp-up-section-compact"><div class="tp-up-eyebrow">CALENDARIO SEMANAL</div><h3>Turnos y cobertura</h3></div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="tp-up-calendar"><table><thead><tr><th>Colaborador</th>{_dias_cab}</tr></thead><tbody>{"".join(_cal_rows)}</tbody></table></div>', unsafe_allow_html=True)
+            st.caption("Azul: mañana · Celeste: tarde · Verde: domingo voluntario · Gris: cobertura administrativa. El calendario muestra cambios aún no guardados.")
+            _b1, _b2, _b3 = st.columns(3)
+            _b1.button("Copiar semana anterior", key="prog_copiar", on_click=_prog_copiar_anterior, use_container_width=True)
+            _b2.button("Limpiar semana", key="prog_limpiar", on_click=_prog_limpiar, use_container_width=True)
+            _guardar = _b3.button("Guardar semana", key="prog_guardar", use_container_width=True)
+
+            _tabla_html, _avisos, _tb, _te, _td = _analizar_programacion(_ed, _dias, _cols, _dni_de)
+            st.markdown("<div style='height:8px'></div>" + '<div class="tp-gridk">' +
+                        ui_kpi_acc("Horas base programadas", _fmt_min(_tb), "entre todos, esta semana", "info") +
+                        ui_kpi_acc("Horas extra programadas", _fmt_min(_te), "sobre la jornada base", "warn" if _te else "ok") +
+                        ui_kpi_acc("Días de descanso o ausencia", str(_td), "en la semana", "info") +
+                        ui_kpi_acc("Avisos", str(len(_avisos)), "revisa antes de guardar" if _avisos else "Todo en orden", "bad" if _avisos else "ok") + '</div>', unsafe_allow_html=True)
+            # Detalle de horas y avisos bajo demanda: no duplicar calendario en pantalla.
+            with st.expander("Ver desglose de horas y avisos", expanded=False):
+                st.markdown(_tabla_html, unsafe_allow_html=True)
+                for _av in dict.fromkeys(_avisos):
+                    ui_callout(_av, "warn")
+                _domingo = _dias[6]
+                _aprobadas = _solicitudes_domingo_aprobadas(_domingo)
+                st.markdown("**Cobertura operativa del domingo**")
+                _cobertura = [{"Responsable": "Administrador", "Inicio": ini, "Fin": fin, "Actividad": tipo}
+                              for ini, fin, tipo in _cobertura_admin_domingo(_domingo)]
+                for _sr in _aprobadas:
+                    _cobertura.append({"Responsable": str(_sr.get("nombre", "Trabajador")),
+                                       "Inicio": "15:15", "Fin": "21:00", "Actividad": "Domingo voluntario aprobado"})
+                premium_table(pd.DataFrame(_cobertura), hide_index=True, use_container_width=True)
+                if len(_aprobadas) > 1:
+                    st.warning("Hay varias solicitudes aprobadas para el mismo domingo. Revisa la cobertura antes de guardar.")
+            if _guardar:
+                _errores_dom = []
+                for _d_dom, _c_dom in zip(_dias, _cols):
+                    if _d_dom.weekday() != 6:
+                        continue
+                    _aut = _solicitudes_domingo_aprobadas(_d_dom)
+                    _nombres_aut = set()
+                    for _a in _aut:
+                        _match = st.session_state.empleados[st.session_state.empleados["dni"].apply(lambda x: _mismo_dni(x, _a.get("dni", "")))]
+                        if not _match.empty:
+                            _nombres_aut.add(str(_match.iloc[0]["nombre"]))
+                    for _, _fila in _ed.iterrows():
+                        _nom = str(_fila["Colaborador"])
+                        _val = str(_fila.get(_c_dom, "") or "").strip()
+                        if _nom == ADMIN_FILA:
+                            continue
+                        if _nom in _nombres_aut and _val != DOMINGO_VOLUNTARIO:
+                            _errores_dom.append(f"{_nom} tiene domingo aprobado y debe figurar como '{DOMINGO_VOLUNTARIO}'.")
+                        if _val == DOMINGO_VOLUNTARIO and _nom not in _nombres_aut:
+                            _errores_dom.append(f"{_nom} no tiene autorización aprobada para trabajar el domingo.")
+                    if len(_aut) > 1:
+                        _errores_dom.append("Hay más de una autorización aprobada el mismo domingo: revisar la cobertura antes de guardar.")
+                if _errores_dom:
+                    for _err in _errores_dom:
+                        st.error(_err)
+                    st.stop()
+                _nuevas = []
+                _ahora_p = obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S")
+                for _, _rp in _ed.iterrows():
+                    for _d, _c in zip(_dias, _cols):
+                        _v = str(_rp.get(_c) or "").strip()
+                        if _v:
+                            _nuevas.append({"semana_inicio": _lunes_iso, "dni": _dni_de.get(_rp["Colaborador"], ""), "nombre": _rp["Colaborador"], "fecha": _d.strftime("%Y-%m-%d"),
+                                            "turno": _v, "actualizado_por": user_real, "fecha_actualizacion": _ahora_p})
+                _prog_df = st.session_state.programacion
+                _resto = _prog_df[_prog_df["semana_inicio"].apply(_norm_fecha_h) != _lunes_iso] if not _prog_df.empty else _prog_df
+                _nuevo_df = pd.concat([_resto, pd.DataFrame(_nuevas, columns=COLS_PROG)], ignore_index=True)[COLS_PROG]
+                actualizar_hoja_completa("Programacion", _nuevo_df)
+                registrar_auditoria("Guardar Programación de Turnos", "Programación", f"Semana del {_lunes_iso}: {len(_nuevas)} casilla(s)")
+                st.session_state.programacion = obtener_programacion_gsheets()
+                st.session_state.pop(f"prog_base_{_lunes_iso}", None)
+                st.toast("Programación de la semana guardada. Los colaboradores ya ven su turno.")
+                time.sleep(0.3)
+                st.rerun()
+
+elif choice == "Solicitudes y Permisos":
+    premium_module_shell('Solicitudes y Permisos', 'SOLICITUDES', 'Evaluación y seguimiento de requerimientos.')
+
+    with st.container(key="pm_v_solicitudes_y_permisos"):
+
+        if not st.session_state.solicitudes.empty:
+            df_sol_base = st.session_state.solicitudes.copy()
+
+            # --- MÉTRICAS RESUMEN ---
+            # --- SELECTOR DE MES PARA LAS MÉTRICAS ---
+            NOMBRES_MESES_SOL = [
+                "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+                "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+            ]
+            ahora_p_sol = obtener_ahora_peru()
+            col_mes_sol, col_anio_sol, _col_sp_sol = st.columns([1, 1, 2])
+            mes_sol_sel = col_mes_sol.selectbox(
+                "Seleccionar Mes",
+                [0] + list(range(1, 13)),
+                index=ahora_p_sol.month,
+                format_func=lambda x: "Todos los meses" if x == 0 else NOMBRES_MESES_SOL[x - 1],
+                key="sol_mes_resumen"
+            )
+            anio_sol_sel = col_anio_sol.number_input(
+                "Año", min_value=2024, max_value=2030, value=ahora_p_sol.year,
+                key="sol_anio_resumen", disabled=(mes_sol_sel == 0)
+            )
+
+            df_sol_metricas = df_sol_base.copy()
+            if mes_sol_sel != 0:
+                _fecha_sol_dt = pd.to_datetime(df_sol_metricas["fecha_registro"], errors="coerce")
+                df_sol_metricas = df_sol_metricas[
+                    (_fecha_sol_dt.dt.month == mes_sol_sel) & (_fecha_sol_dt.dt.year == anio_sol_sel)
+                ]
+            etiqueta_periodo_sol = "Total" if mes_sol_sel == 0 else NOMBRES_MESES_SOL[mes_sol_sel - 1]
+
+            total_pend = len(df_sol_metricas[df_sol_metricas["estado"] == "Pendiente"])
+            total_aprob = len(df_sol_metricas[df_sol_metricas["estado"] == "Aprobado"])
+            total_rechaz = len(df_sol_metricas[df_sol_metricas["estado"] == "Rechazado"])
+            monto_adel_aprob = pd.to_numeric(
+                df_sol_metricas[(df_sol_metricas["tipo_solicitud"] == "Adelanto de Sueldo") & (df_sol_metricas["estado"] == "Aprobado")]["monto_adelanto"],
+                errors="coerce"
+            ).sum()
+
+            sm1, sm2, sm3, sm4 = st.columns(4)
+            with sm1:
+                st.markdown(f'<div class="info-card"><div class="info-label">Pendientes</div><div class="info-value" style="color:{"#EAB308" if total_pend else "#111827"};">{total_pend}</div></div>', unsafe_allow_html=True)
+            with sm2:
+                st.markdown(f'<div class="info-card"><div class="info-label">Aprobadas</div><div class="info-value" style="color:#00A959;">{total_aprob}</div></div>', unsafe_allow_html=True)
+            with sm3:
+                st.markdown(f'<div class="info-card"><div class="info-label">Rechazadas</div><div class="info-value" style="color:#EC3237;">{total_rechaz}</div></div>', unsafe_allow_html=True)
+            with sm4:
+                st.markdown(f'<div class="info-card"><div class="info-label">Adelantos Aprobados ({etiqueta_periodo_sol})</div><div class="info-value">S/. {monto_adel_aprob:.2f}</div></div>', unsafe_allow_html=True)
+
+            st.markdown("<br>", unsafe_allow_html=True)
+
+            # --- FILTROS ---
+            fc1, fc2, fc3 = st.columns([1, 1, 1.4])
+            with fc1:
+                estado_filtro = st.selectbox("Filtrar por Estado", ["Pendiente", "Todos", "Aprobado", "Rechazado"], key="sol_estado_filtro")
+            with fc2:
+                tipos_disp = ["Todos"] + sorted(df_sol_base["tipo_solicitud"].dropna().unique().tolist())
+                tipo_filtro = st.selectbox("Filtrar por Tipo", tipos_disp, key="sol_tipo_filtro")
+            with fc3:
+                busqueda_sol = st.text_input("Buscar por colaborador", placeholder="Escribe un nombre...", key="sol_busqueda")
+
+            df_sol = df_sol_base.copy()
+            if estado_filtro != "Todos":
+                df_sol = df_sol[df_sol["estado"] == estado_filtro]
+            if tipo_filtro != "Todos":
+                df_sol = df_sol[df_sol["tipo_solicitud"] == tipo_filtro]
+            if busqueda_sol.strip():
+                df_sol = df_sol[df_sol["nombre"].astype(str).str.contains(busqueda_sol.strip(), case=False, na=False)]
+
+            df_sol = df_sol.sort_values("fecha_registro", ascending=False)
+            st.caption(f"Mostrando {len(df_sol)} de {len(df_sol_base)} solicitud(es) registradas.")
+            st.markdown("<br>", unsafe_allow_html=True)
+
+            if df_sol.empty:
+                st.info("Ninguna solicitud coincide con los filtros seleccionados.")
+
+            for idx, row_sol in df_sol.iterrows():
+                id_s = row_sol["id_solicitud"]
+                nom_s = row_sol["nombre"]
+                tipo_s = row_sol["tipo_solicitud"]
+                est_s = row_sol["estado"]
+            
+                with ui_card_container(f"sol_{id_s}"):
+                    st.markdown(ui_solicitud_card(row_sol, admin=True), unsafe_allow_html=True)
+                    if tipo_s == "Permiso Laboral":
+                        _fr = pd.to_datetime(str(row_sol.get("fecha_recuperacion", "")).strip(), errors="coerce")
+                        if pd.notna(_fr) and _fr.dayofweek == 6:
+                            st.caption("La recuperación está programada para domingo.")
+                    elif tipo_s == "Trabajar Domingo (Descanso)":
+                        st.caption("Este domingo es normalmente su día de descanso semanal. Al aprobar, el colaborador podrá marcar asistencia ese día y se reflejará como día adicional en su boleta.")
+                    if est_s == "Pendiente":
+                        c_obs, c_ap, c_rc = st.columns([2.4, 1, 1])
+                        resp_admin_input = c_obs.text_input("Observación", key=f"resp_{id_s}", placeholder="Observación para el colaborador (opcional)", label_visibility="collapsed")
+                        if c_ap.button("Aprobar", key=f"ap_{id_s}", use_container_width=True):
+                            _ok, _msg = _resolver_solicitud_administrativa(id_s, "Aprobado", resp_admin_input)
+                            (st.success if _ok else st.error)(_msg)
+                            if _ok:
+                                st.rerun()
+                        if c_rc.button("Rechazar", key=f"rec_{id_s}", use_container_width=True):
+                            _ok, _msg = _resolver_solicitud_administrativa(id_s, "Rechazado", resp_admin_input)
+                            (st.success if _ok else st.error)(_msg)
+                            if _ok:
+                                st.rerun()
+
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.download_button("Exportar Solicitudes Filtradas a Excel", to_excel(df_sol), "Solicitudes.xlsx", use_container_width=True)
+        else:
+            st.info("No hay solicitudes registradas en el sistema.")
+
+elif choice == "Historial de Descuadres":
+    premium_module_shell('Historial de Descuadres', 'CAJA', 'Análisis de diferencias y movimientos registrados.')
+
+    with st.container(key="pm_v_historial_de_descuadres"):
+
+        if not st.session_state.descuadres.empty:
+            st.markdown("##### Resumen Mensual de Descuadres por Trabajador")
+        
+            col_m_desc, col_a_desc = st.columns(2)
+            ahora_p_desc = obtener_ahora_peru()
+        
+            NOMBRES_MESES = [
+                "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+                "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+            ]
+        
+            mes_desc_sel = col_m_desc.selectbox(
+                "Seleccionar Mes", 
+                list(range(1, 13)), 
+                index=ahora_p_desc.month - 1,
+                format_func=lambda x: NOMBRES_MESES[x-1],
+                key="mes_resumen_desc"
+            )
+            anio_desc_sel = col_a_desc.number_input("Año Resumen", min_value=2024, max_value=2030, value=ahora_p_desc.year, key="anio_resumen_desc")
+
+            df_desc_mes = st.session_state.descuadres.copy()
+            df_desc_mes["fecha_dt"] = pd.to_datetime(df_desc_mes["fecha"], errors="coerce")
+            df_desc_mes["monto_num"] = pd.to_numeric(df_desc_mes["monto"], errors="coerce").fillna(0)
+        
+            df_desc_mes = df_desc_mes[
+                (df_desc_mes["fecha_dt"].dt.month == mes_desc_sel) & 
+                (df_desc_mes["fecha_dt"].dt.year == anio_desc_sel)
+            ]
+
+            _f_ini_mes = f"{int(anio_desc_sel)}-{mes_desc_sel:02d}-01"
+            _validos = obtener_solo_colaboradores(_f_ini_mes)  # excluye a quienes ya cesaron antes del mes
+            colabs_operativos = list(dict.fromkeys(_validos + [n for n in df_desc_mes["nombre"].unique().tolist() if n in obtener_solo_colaboradores()]))
+            _per = f"{NOMBRES_MESES[mes_desc_sel-1]} {int(anio_desc_sel)}"
+
+            if not df_desc_mes.empty:
+                _sob = df_desc_mes[df_desc_mes["monto_num"] > 0]["monto_num"].sum()
+                _fal = df_desc_mes[df_desc_mes["monto_num"] < 0]["monto_num"].sum()
+                _bal = df_desc_mes["monto_num"].sum()
+                kd1, kd2, kd3 = st.columns(3)
+                kd1.markdown(ui_kpi(f"Sobrantes · {_per}", f"S/. {_sob:.2f}"), unsafe_allow_html=True)
+                kd2.markdown(ui_kpi(f"Faltantes · {_per}", f"S/. {abs(_fal):.2f}"), unsafe_allow_html=True)
+                kd3.markdown(ui_kpi(f"Balance neto · {_per}", f"S/. {_bal:.2f}"), unsafe_allow_html=True)
+                st.markdown("<div style='height:14px'></div>", unsafe_allow_html=True)
+                _sin_mov = []
+                for nombre_colab in colabs_operativos:
+                    df_c = df_desc_mes[df_desc_mes["nombre"] == nombre_colab]
+                    if df_c.empty:
+                        _sin_mov.append(nombre_colab)
+                        continue
+                    _d, _f = ui_dni_foto(nombre_colab)
+                    st.markdown(ui_desc_card(nombre_colab, df_c, _d, _f), unsafe_allow_html=True)
+                if _sin_mov:
+                    st.markdown('<div class="tp-card"><div class="tp-note-t">Sin descuadres en el mes</div><div class="tp-chips" style="justify-content:flex-start">' + "".join(ui_chip(_html.escape(n), "neutral") for n in _sin_mov) + '</div></div>', unsafe_allow_html=True)
+            else:
+                st.info(f"No hay descuadres registrados en el mes de {_per}.")
+
+            st.markdown("---")
+
+            st.markdown("**Filtrar registros de asistencia**")
+            f_col1, f_col2 = st.columns([1.5, 1])
+        
+            with f_col1:
+                rango_fechas_desc = st.date_input("Rango de Fechas", value=(obtener_ahora_peru(), obtener_ahora_peru()), key="desc_fechas")
+            with f_col2:
+                colabs_desc = ["Todos"] + [c for c in st.session_state.descuadres["nombre"].unique().tolist() if c in obtener_solo_colaboradores()]
+                colab_desc_sel = st.selectbox("Colaborador", colabs_desc, key="desc_colab")
+
+            df_desc_filtrado = st.session_state.descuadres.copy()
+        
+            if isinstance(rango_fechas_desc, tuple):
+                if len(rango_fechas_desc) == 2:
+                    f_inicio, f_fin = str(rango_fechas_desc[0]), str(rango_fechas_desc[1])
+                    df_desc_filtrado = df_desc_filtrado[
+                        (df_desc_filtrado["fecha"].astype(str) >= f_inicio) & 
+                        (df_desc_filtrado["fecha"].astype(str) <= f_fin)
+                    ]
+                elif len(rango_fechas_desc) == 1:
+                    f_inicio = str(rango_fechas_desc[0])
+                    df_desc_filtrado = df_desc_filtrado[df_desc_filtrado["fecha"].astype(str) == f_inicio]
+
+            if colab_desc_sel != "Todos":
+                df_desc_filtrado = df_desc_filtrado[df_desc_filtrado["nombre"] == colab_desc_sel]
+
+            if not df_desc_filtrado.empty:
+                df_desc_filtrado["monto_num"] = pd.to_numeric(df_desc_filtrado["monto"], errors="coerce").fillna(0)
+                sobrantes = df_desc_filtrado[df_desc_filtrado["monto_num"] > 0]["monto_num"].sum()
+                faltantes = df_desc_filtrado[df_desc_filtrado["monto_num"] < 0]["monto_num"].sum()
+                balance = df_desc_filtrado["monto_num"].sum()
+
+                m1, m2, m3 = st.columns(3)
+                m1.markdown(ui_kpi("Total sobrantes (+)", f"S/. {sobrantes:.2f}"), unsafe_allow_html=True)
+                m2.markdown(ui_kpi("Total faltantes (-)", f"S/. {abs(faltantes):.2f}"), unsafe_allow_html=True)
+                m3.markdown(ui_kpi("Balance neto", f"S/. {balance:.2f}"), unsafe_allow_html=True)
+
+                st.markdown("<br>", unsafe_allow_html=True)
+                st.markdown("##### Ranking de Colaboradores (según filtro aplicado)")
+
+                df_rank_desc = df_desc_filtrado.groupby("nombre")["monto_num"].sum().reset_index().rename(columns={"monto_num": "balance"})
+                df_rank_desc = df_rank_desc.sort_values("balance")
+
+                if not df_rank_desc.empty:
+                    rk1, rk2 = st.columns(2)
+                    with rk1:
+                        st.markdown("**Mayores faltantes**")
+                        peores = df_rank_desc[df_rank_desc["balance"] < 0].head(5)
+                        if not peores.empty:
+                            st.markdown(ui_rank_rows(peores, "bad"), unsafe_allow_html=True)
+                        else:
+                            st.success("Nadie registra faltantes en este período.")
+                    with rk2:
+                        st.markdown("**Mejores balances**")
+                        mejores = df_rank_desc[df_rank_desc["balance"] >= 0].sort_values("balance", ascending=False).head(5)
+                        if not mejores.empty:
+                            st.markdown(ui_rank_rows(mejores, "ok"), unsafe_allow_html=True)
+                        else:
+                            st.info("Sin balances positivos registrados en este período.")
+
+                    st.bar_chart(df_rank_desc.set_index("nombre")["balance"])
+
+                st.markdown("<br>", unsafe_allow_html=True)
+                st.markdown("#####  Balance de Descuadres por Trabajador")
+            
+                for nombre_trab, df_trab in df_desc_filtrado.groupby("nombre"):
+                    _d, _f = ui_dni_foto(nombre_trab)
+                    st.markdown(ui_desc_card(nombre_trab, df_trab, _d, _f), unsafe_allow_html=True)
+
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown("##### Matriz Consolidada de Descuadres")
+            premium_table(
+                df_desc_filtrado.drop(columns=["monto_num"], errors="ignore"),
+                use_container_width=True,
+                hide_index=True,
+                column_config={"monto": st.column_config.NumberColumn("MONTO", format="S/. %.2f")}
+            )
+            st.download_button("Exportar a Excel", to_excel(df_desc_filtrado.drop(columns=["monto_num"], errors="ignore")), "Descuadres_General.xlsx", use_container_width=True)
+
+            if rol_actual == "admin":
+                st.markdown("<br>", unsafe_allow_html=True)
+                col_mod, col_del = st.columns(2)
+
+                with col_mod:
+                    with st.expander("Modificar Descuadre"):
+                        opciones_desc = [f"{i} | {r['fecha']} | {r['nombre']} | S/. {r['monto']}" for i, r in st.session_state.descuadres.iterrows()]
+                        sel_mod = st.selectbox("Seleccionar Registro a Editar", opciones_desc, key="mod_desc_sel")
+                    
+                        if sel_mod:
+                            idx_mod = int(sel_mod.split(" | ")[0])
+                            row_mod = st.session_state.descuadres.loc[idx_mod]
+                        
+                            nuevo_monto = st.number_input("Nuevo Monto (S/.)", value=float(row_mod["monto"]), step=0.50, format="%.2f")
+                            tipo_options = ["Sobrante", "Faltante"]
+                            idx_tipo = tipo_options.index(row_mod["tipo"]) if row_mod["tipo"] in tipo_options else 0
+                            nuevo_tipo = st.selectbox("Nuevo Tipo", tipo_options, index=idx_tipo)
+                            nueva_obs = st.text_area("Nueva Observación", value=str(row_mod["observacion"]))
+
+                            if st.button("Guardar Cambios en Descuadre", use_container_width=True):
+                                valor_anterior_desc = f"S/. {row_mod['monto']} ({row_mod['tipo']})"
+                                st.session_state.descuadres.at[idx_mod, "monto"] = nuevo_monto
+                                st.session_state.descuadres.at[idx_mod, "tipo"] = nuevo_tipo
+                                st.session_state.descuadres.at[idx_mod, "observacion"] = nueva_obs
+                                actualizar_hoja_completa("Descuadres", st.session_state.descuadres)
+                                registrar_auditoria("Editar Descuadre", "Descuadres", f"{row_mod['nombre']} ({row_mod['fecha']}): {valor_anterior_desc} → S/. {nuevo_monto} ({nuevo_tipo})")
+                                st.toast("Descuadre actualizado correctamente")
+                                time.sleep(0.3)
+                                st.rerun()
+
+                with col_del:
+                    with st.expander("Eliminar Descuadre"):
+                        opciones_desc_del = [f"{i} | {r['fecha']} | {r['nombre']} | S/. {r['monto']}" for i, r in st.session_state.descuadres.iterrows()]
+                        sel_del = st.selectbox("Seleccionar Registro a Eliminar", opciones_desc_del, key="del_desc_sel")
+                        confirm_del_desc = st.checkbox("Confirmar eliminación del descuadre")
+
+                        if st.button("Eliminar Descuadre", type="primary", use_container_width=True):
+                            if confirm_del_desc:
+                                idx_del = int(sel_del.split(" | ")[0])
+                                row_del_desc = st.session_state.descuadres.loc[idx_del]
+                                st.session_state.descuadres = st.session_state.descuadres.drop(idx_del).reset_index(drop=True)
+                                actualizar_hoja_completa("Descuadres", st.session_state.descuadres)
+                                registrar_auditoria("Eliminar Descuadre", "Descuadres", f"{row_del_desc['nombre']} ({row_del_desc['fecha']}): S/. {row_del_desc['monto']} ({row_del_desc['tipo']})")
+                                st.toast("Descuadre eliminado correctamente")
+                                time.sleep(0.3)
+                                st.rerun()
+                            else:
+                                st.warning("Marca la casilla de confirmación antes de eliminar.")
+        else:
+            st.info("Sin descuadres registrados.")
+
+elif choice == "Incidencias y Daños":
+    premium_module_shell('Incidencias y Daños', 'CONTROL', 'Registro y seguimiento de incidencias.')
+
+    with st.container(key="pm_v_incidencias_y_danos"):
+
+        if not st.session_state.incidencias.empty:
+            df_inc_admin = st.session_state.incidencias.copy()
+            df_inc_admin["valor_reparacion"] = pd.to_numeric(df_inc_admin["valor_reparacion"], errors="coerce").fillna(0)
+
+            pend_inc_cnt = len(df_inc_admin[df_inc_admin["estado"] == "Pendiente"])
+            billetes_falsos_total = df_inc_admin[df_inc_admin["tipo_incidencia"] == "Billete Falso"]["valor_reparacion"].sum()
             st.markdown('<div class="tp-gridk">' +
-                        ui_kpi_acc("Boletas vigentes", str(len(_vig)), "según los filtros", "info") +
-                        ui_kpi_acc("Pendientes de conformidad", str(int((_vig["estado"] == "Emitido").sum())), "esperan respuesta del colaborador", "warn" if (_vig["estado"] == "Emitido").any() else "ok") +
-                        ui_kpi_acc("Observadas", str(int((_vig["estado"] == "Observado").sum())), "requieren tu revisión", "bad" if (_vig["estado"] == "Observado").any() else "ok") +
-                        ui_kpi_acc("Conformes / firmadas", str(int(_vig["estado"].isin(["Conforme", "Firmado"]).sum())), "cerradas por el colaborador", "ok") + '</div>', unsafe_allow_html=True)
-            if _tab.empty:
-                ui_callout("No hay boletas con esos filtros.")
+                        ui_kpi_acc("Total de incidencias", str(len(df_inc_admin)), "registradas por el personal", "info") +
+                        ui_kpi_acc("Valor total a reparar", f"S/. {df_inc_admin['valor_reparacion'].sum():.2f}", "suma de todas las incidencias", "bad") +
+                        ui_kpi_acc("Pendientes de resolver", str(pend_inc_cnt), "requieren tu decisión" if pend_inc_cnt else "Todo al día", "warn" if pend_inc_cnt else "ok") +
+                        ui_kpi_acc("Total en billetes falsos", f"S/. {billetes_falsos_total:.2f}", "valor recibido", "info") + '</div>', unsafe_allow_html=True)
+
+            st.markdown("<br>", unsafe_allow_html=True)
+
+            fi1, fi2 = st.columns(2)
+            with fi1:
+                tipos_inc_disp = ["Todos"] + sorted(df_inc_admin["tipo_incidencia"].dropna().unique().tolist())
+                tipo_inc_filtro = st.selectbox("Filtrar por Tipo", tipos_inc_disp, key="inc_filtro_tipo_admin")
+            with fi2:
+                colabs_inc_disp = ["Todos"] + sorted(df_inc_admin["nombre"].dropna().unique().tolist())
+                colab_inc_filtro = st.selectbox("Filtrar por Colaborador", colabs_inc_disp, key="inc_filtro_colab_admin")
+
+            df_inc_filtrado = df_inc_admin.copy()
+            if tipo_inc_filtro != "Todos":
+                df_inc_filtrado = df_inc_filtrado[df_inc_filtrado["tipo_incidencia"] == tipo_inc_filtro]
+            if colab_inc_filtro != "Todos":
+                df_inc_filtrado = df_inc_filtrado[df_inc_filtrado["nombre"] == colab_inc_filtro]
+
+            df_rank_inc = df_inc_filtrado.groupby("nombre")["valor_reparacion"].sum().reset_index().sort_values("valor_reparacion", ascending=False)
+            if not df_rank_inc.empty:
+                st.markdown(ui_panel("Ranking por colaborador", "Valor total a reparar según el filtro", ui_hbars([(r["nombre"], float(r["valor_reparacion"])) for _, r in df_rank_inc.head(8).iterrows()], "#EC3237", "S/. {:,.2f}")), unsafe_allow_html=True)
+
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown("<div class='tp-note-t' style='margin:6px 0 10px'>Detalle de incidencias</div>", unsafe_allow_html=True)
+            _inc_ord = df_inc_filtrado.sort_values("fecha_registro", ascending=False)
+            try:
+                _c_tab, _c_tar = st.container(key="vista_tabla"), st.container(key="vista_tarjetas")
+            except TypeError:
+                _c_tab, _c_tar = st.container(), None
+            with _c_tab:
+                premium_table(_inc_ord, use_container_width=True, hide_index=True)
+            if _c_tar is not None:
+                with _c_tar:
+                    st.markdown("".join(ui_inc_card(_r, admin=True) for _, _r in _inc_ord.head(30).iterrows()), unsafe_allow_html=True)
+                    st.caption("Se muestran las 30 incidencias más recientes. Exporta a Excel para ver todo.")
+            st.download_button("Exportar Incidencias a Excel", to_excel(df_inc_filtrado), "Incidencias.xlsx", use_container_width=True)
+
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown("<div class='tp-note-t' style='margin:6px 0 10px'>Pendientes de resolver</div>", unsafe_allow_html=True)
+            _pend_inc = st.session_state.incidencias[st.session_state.incidencias["estado"] == "Pendiente"]
+            if _pend_inc.empty:
+                ui_callout("No hay incidencias pendientes de resolver.", "ok")
+            for idx_inc_resolver, _rp in _pend_inc.iterrows():
+                with ui_card_container(f"inc_{idx_inc_resolver}"):
+                    st.markdown(ui_inc_card(_rp, admin=True, flat=True), unsafe_allow_html=True)
+                    _bd, _br = st.columns(2)
+                    _nuevo = None
+                    if _bd.button("Descontar en boleta", key=f"inc_desc_{idx_inc_resolver}", use_container_width=True):
+                        _nuevo = "Descontado en Boleta"
+                    if _br.button("Resuelto / Condonado", key=f"inc_res_{idx_inc_resolver}", use_container_width=True):
+                        _nuevo = "Resuelto / Condonado"
+                    if _nuevo:
+                        st.session_state.incidencias.at[idx_inc_resolver, "estado"] = _nuevo
+                        actualizar_hoja_completa("Incidencias", st.session_state.incidencias)
+                        registrar_auditoria("Actualizar Estado de Incidencia", "Incidencias", f"Incidencia #{idx_inc_resolver} → {_nuevo}")
+                        st.toast("Estado actualizado")
+                        time.sleep(0.3)
+                        st.rerun()
+        else:
+            ui_callout("No hay incidencias registradas todavía.")
+
+elif choice == "Botellas Fiadas":
+    premium_module_shell('Botellas Fiadas', 'CONTROL', 'Seguimiento de préstamos y devoluciones.')
+
+    with st.container(key="pm_v_botellas_fiadas"):
+
+        ui_callout("Registra aquí cuando se le fíen botellas (gaseosa o cerveza) a un cliente. Cualquier colaborador o el administrador podrá ver este registro en cualquier turno, hasta que las botellas sean devueltas.")
+
+        _bf = st.session_state.botellas_fiadas
+        _pend_k = _bf[_bf["estado"] != "Devuelta"] if not _bf.empty else _bf
+        _tot_bot = int(pd.to_numeric(_pend_k["cantidad_botellas"], errors="coerce").fillna(0).sum()) if not _pend_k.empty else 0
+        _gar = float(pd.to_numeric(_pend_k[_pend_k["dejo_dinero"].astype(str).str.lower().isin(["sí", "si"])]["monto_dejado"], errors="coerce").fillna(0).sum()) if not _pend_k.empty else 0.0
+        _kb1, _kb2, _kb3 = st.columns(3)
+        _kb1.markdown(ui_kpi("Registros pendientes", str(len(_pend_k)), "clientes con botellas por devolver"), unsafe_allow_html=True)
+        _kb2.markdown(ui_kpi("Botellas por devolver", str(_tot_bot), "entre todos los turnos"), unsafe_allow_html=True)
+        _kb3.markdown(ui_kpi("Garantía retenida", f"S/. {_gar:.2f}", "dejada por los clientes"), unsafe_allow_html=True)
+        st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
+
+        with st.container(border=True):
+            st.markdown("##### Registrar Botellas Fiadas")
+            with st.form("form_botella_fiada", clear_on_submit=True):
+                bf1, bf2 = st.columns(2)
+                cliente_nombre_bf = bf1.text_input("Nombre del Cliente", key="bf_nombre")
+                cliente_dni_bf = bf2.text_input("DNI del Cliente (opcional)", value="12345678", key="bf_dni", help="Si el cliente no quiere dar su DNI, deja 12345678.")
+
+                cliente_dir_bf = st.text_input("Dirección / Dónde Vive", key="bf_direccion")
+
+                bf3, bf4, bf5 = st.columns(3)
+                cantidad_bf = bf3.number_input("Cantidad de Botellas", min_value=1, step=1, key="bf_cantidad")
+                tipo_botella_bf = bf4.selectbox("Tipo de Botella", ["Gaseosa", "Cerveza", "Mixto (Gaseosa y Cerveza)"], key="bf_tipo")
+                dejo_dinero_bf = bf5.selectbox("¿Dejó Dinero de Garantía?", ["No", "Sí"], key="bf_dejo_dinero")
+
+                monto_dejado_bf = 0.0
+                if dejo_dinero_bf == "Sí":
+                    monto_dejado_bf = st.number_input("Monto Dejado (S/.)", min_value=0.0, step=1.0, format="%.2f", key="bf_monto_dejado")
+
+                obs_bf = st.text_area("Observación (opcional)", key="bf_obs")
+
+                if st.form_submit_button("Guardar Registro de Botellas Fiadas", use_container_width=True):
+                    if not cliente_nombre_bf.strip():
+                        st.error("Debes ingresar el nombre del cliente.")
+                    else:
+                        if not cliente_dni_bf.strip():
+                            cliente_dni_bf = "12345678"
+                        id_bf_nuevo = f"BF-{int(time.time()*1000)}"
+                        f_prestamo_bf = obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S")
+
+                        guardado_bf_ok = guardar_botella_fiada_gsheets(
+                            id_bf_nuevo, cliente_nombre_bf.strip(), cliente_dni_bf.strip(), cliente_dir_bf.strip(),
+                            cantidad_bf, tipo_botella_bf, dejo_dinero_bf, monto_dejado_bf, f_prestamo_bf,
+                            user_actual, "Pendiente", "", obs_bf
+                        )
+                        if guardado_bf_ok:
+                            nueva_fila_bf = {
+                                "id_fiado": id_bf_nuevo, "cliente_nombre": cliente_nombre_bf.strip(), "cliente_dni": cliente_dni_bf.strip(),
+                                "cliente_direccion": cliente_dir_bf.strip(), "cantidad_botellas": cantidad_bf, "tipo_botella": tipo_botella_bf,
+                                "dejo_dinero": dejo_dinero_bf, "monto_dejado": monto_dejado_bf, "fecha_prestamo": f_prestamo_bf,
+                                "registrado_por": user_actual, "estado": "Pendiente", "fecha_devolucion": "", "observacion": obs_bf
+                            }
+                            st.session_state.botellas_fiadas = pd.concat([pd.DataFrame([nueva_fila_bf]), st.session_state.botellas_fiadas], ignore_index=True)
+                            registrar_auditoria("Registrar Botellas Fiadas", "BotellasFiadas", f"{cliente_nombre_bf.strip()} — {cantidad_bf} botella(s) de {tipo_botella_bf}")
+                            st.toast("Botellas fiadas registradas correctamente")
+                            st.rerun()
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("<div class='tp-note-t' style='margin:6px 0 10px'>Botellas pendientes de devolución · todos los turnos</div>", unsafe_allow_html=True)
+
+        if not st.session_state.botellas_fiadas.empty:
+            df_bf_pend = st.session_state.botellas_fiadas[st.session_state.botellas_fiadas["estado"] != "Devuelta"]
+            if not df_bf_pend.empty:
+                for idx_bf, r_bf in df_bf_pend.iterrows():
+                    tiene_g = str(r_bf["dejo_dinero"]).strip().lower() in ["sí", "si"]
+                    try:
+                        dias_bf = (obtener_ahora_peru().date() - pd.to_datetime(r_bf["fecha_prestamo"]).date()).days
+                    except Exception:
+                        dias_bf = 0
+                    chip_g = ui_chip(f"Garantía S/. {float(r_bf['monto_dejado']):.2f}", "ok") if tiene_g else ui_chip("Sin garantía", "warn")
+                    chip_d = ui_chip("Hoy" if dias_bf <= 0 else f"hace {dias_bf} día(s)", "warn" if dias_bf >= 3 else "neutral")
+                    obs_txt = str(r_bf.get("observacion", "")).strip()
+                    with ui_card_container(f"bf_{idx_bf}"):
+                        st.markdown(
+                            f'<div class="tp-card flat"><div class="tp-card-head"><div class="tp-op-head" style="margin:0">{ui_avatar(r_bf["cliente_nombre"], "", "", 44)}<div>'
+                            f'<div class="tp-card-title">{_html.escape(str(r_bf["cliente_nombre"]))}</div><div class="tp-card-sub">DNI {_html.escape(str(r_bf["cliente_dni"]) or "No registrado")} · {_html.escape(str(r_bf["cliente_direccion"]) or "Sin dirección registrada")}</div></div></div>'
+                            f'<div class="tp-chips">{chip_d}</div></div><div class="tp-card-body" style="margin-bottom:8px"><b>{r_bf["cantidad_botellas"]} botella(s)</b> de <b>{_html.escape(str(r_bf["tipo_botella"]))}</b> · fiado el {str(r_bf["fecha_prestamo"])[:16]} por {_html.escape(str(r_bf["registrado_por"]))}'
+                            f'{("<br>Obs: " + _html.escape(obs_txt)) if obs_txt else ""}</div><div class="tp-chips" style="justify-content:flex-start">{chip_g}</div></div>', unsafe_allow_html=True)
+                        if st.button("Marcar devueltas", key=f"bf_dev_{idx_bf}", use_container_width=True):
+                            st.session_state.botellas_fiadas.at[idx_bf, "estado"] = "Devuelta"
+                            st.session_state.botellas_fiadas.at[idx_bf, "fecha_devolucion"] = obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S")
+                            actualizar_hoja_completa("BotellasFiadas", st.session_state.botellas_fiadas)
+                            registrar_auditoria("Marcar Botellas Devueltas", "BotellasFiadas", f"{r_bf['cliente_nombre']} — {r_bf['cantidad_botellas']} botella(s)")
+                            st.toast("Botellas marcadas como devueltas")
+                            st.rerun()
             else:
+                ui_callout("No hay botellas pendientes de devolución en este momento.", "ok")
+        else:
+            st.info("No hay registros de botellas fiadas todavía.")
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        with st.expander("Historial de botellas ya devueltas"):
+            if not st.session_state.botellas_fiadas.empty:
+                df_bf_devueltas = st.session_state.botellas_fiadas[st.session_state.botellas_fiadas["estado"] == "Devuelta"]
+                if not df_bf_devueltas.empty:
+                    premium_table(
+                        df_bf_devueltas.sort_values("fecha_devolucion", ascending=False),
+                        use_container_width=True,
+                        hide_index=True
+                    )
+                    st.download_button("Exportar Historial a Excel", to_excel(df_bf_devueltas), "Botellas_Devueltas.xlsx", use_container_width=True)
+                else:
+                    st.info("Aún no hay botellas devueltas registradas.")
+
+elif choice == "Historial de Asistencias":
+    premium_module_shell('Historial de Asistencias', 'ASISTENCIA', 'Marcaciones, puntualidad y trazabilidad.')
+
+    with st.container(key="pm_v_historial_de_asistencias"):
+
+        if not st.session_state.asistencia.empty:
+            st.markdown("##### Filtros de Búsqueda")
+            fa_col1, fa_col2 = st.columns([1.5, 1])
+        
+            with fa_col1:
+                rango_fechas_asist = st.date_input("Rango de Fechas", value=(obtener_ahora_peru(), obtener_ahora_peru()), key="asist_fechas")
+            with fa_col2:
+                colabs_asist = ["Todos"] + [c for c in st.session_state.asistencia["nombre"].unique().tolist() if c in obtener_solo_colaboradores()]
+                colab_asist_sel = st.selectbox("Colaborador", colabs_asist, key="asist_colab")
+
+            df_asist_filtrado = st.session_state.asistencia.copy()
+        
+            if isinstance(rango_fechas_asist, tuple):
+                if len(rango_fechas_asist) == 2:
+                    f_inicio, f_fin = str(rango_fechas_asist[0]), str(rango_fechas_asist[1])
+                    df_asist_filtrado = df_asist_filtrado[
+                        (df_asist_filtrado["fecha"].astype(str) >= f_inicio) & 
+                        (df_asist_filtrado["fecha"].astype(str) <= f_fin)
+                    ]
+                elif len(rango_fechas_asist) == 1:
+                    f_inicio = str(rango_fechas_asist[0])
+                    df_asist_filtrado = df_asist_filtrado[df_asist_filtrado["fecha"].astype(str) == f_inicio]
+
+            if colab_asist_sel != "Todos":
+                df_asist_filtrado = df_asist_filtrado[df_asist_filtrado["nombre"] == colab_asist_sel]
+
+            if not df_asist_filtrado.empty:
+                total_marcas = len(df_asist_filtrado)
+                ingresos_cnt = len(df_asist_filtrado[df_asist_filtrado["tipo"] == "INGRESO"])
+                colabs_unicos = df_asist_filtrado["nombre"].nunique()
+
+                filas_punt = []
+                for nom_p in sorted(df_asist_filtrado["nombre"].unique().tolist()):
+                    metrica_p = calcular_metricas_puntualidad(df_asist_filtrado, nom_p)
+                    if metrica_p["total_ingresos"] > 0:
+                        filas_punt.append({"Colaborador": nom_p, "Ingresos": metrica_p["total_ingresos"], "Puntuales": metrica_p["puntuales"],
+                                           "Tardanzas": metrica_p["tardanzas"], "Minutos": metrica_p["minutos_acumulados"], "Pct": metrica_p["ratio"]})
+                tot_i = sum(f["Ingresos"] for f in filas_punt); tot_p = sum(f["Puntuales"] for f in filas_punt)
+                tot_t = sum(f["Tardanzas"] for f in filas_punt); tot_m = sum(f["Minutos"] for f in filas_punt)
+                a1, a2, a3, a4 = st.columns(4)
+                a1.markdown(ui_kpi("Total de marcaciones", str(total_marcas), f"{colabs_unicos} colaborador(es)"), unsafe_allow_html=True)
+                a2.markdown(ui_kpi("Ingresos registrados", str(ingresos_cnt), "marcas de entrada"), unsafe_allow_html=True)
+                a3.markdown(ui_kpi("Puntualidad global", f"{tot_p / tot_i * 100 if tot_i else 100:.1f}%", f"{tot_p} de {tot_i} ingresos a tiempo"), unsafe_allow_html=True)
+                a4.markdown(ui_kpi("Tardanzas", str(tot_t), f"{tot_m} min acumulados"), unsafe_allow_html=True)
+                st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
+
+                por_dia = df_asist_filtrado.groupby("fecha").size().sort_index().tail(31)
+                if len(por_dia) > 1:
+                    st.markdown(ui_panel("Actividad por día", "Marcaciones registradas en el período", ui_columnas([ui_dia_label(d) for d in por_dia.index], [("Marcaciones", [int(v) for v in por_dia.values], "#0F172A")], alto=190)), unsafe_allow_html=True)
+                    st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
+
+                if filas_punt:
+                    rk_html = ""
+                    for f in sorted(filas_punt, key=lambda x: x["Pct"]):
+                        tono = "ok" if f["Pct"] >= 90 else ("warn" if f["Pct"] >= 75 else "bad")
+                        d_, ft_ = ui_dni_foto(f["Colaborador"])
+                        rk_html += (f'<div class="tp-rk">{ui_avatar(f["Colaborador"], d_, ft_, 40)}<div class="tp-rk-main"><b>{_html.escape(str(f["Colaborador"]))}</b>'
+                                    f'<div class="tp-prog {tono}"><i style="width:{f["Pct"]}%"></i></div></div><div class="tp-rk-pct">{f["Pct"]:g}%</div>'
+                                    f'<div class="tp-chips">{ui_chip(str(f["Ingresos"]) + " ingresos", "neutral")}{ui_chip(str(f["Tardanzas"]) + " tardanzas", "bad" if f["Tardanzas"] else "ok")}{ui_chip(str(f["Minutos"]) + " min", "warn" if f["Minutos"] else "neutral")}</div></div>')
+                    rk1, rk2 = st.columns([1.5, 1])
+                    rk1.markdown(ui_panel("Ranking de puntualidad", "Primero quienes necesitan más atención", rk_html), unsafe_allow_html=True)
+                    top_t = sorted([(f["Colaborador"], f["Tardanzas"]) for f in filas_punt if f["Tardanzas"] > 0], key=lambda x: -x[1])[:8]
+                    rk2.markdown(ui_panel("Tardanzas por colaborador", "Según el filtro aplicado", ui_hbars(top_t, "#EC3237")), unsafe_allow_html=True)
+                else:
+                    st.info("No hay ingresos registrados para calcular puntualidad en este filtro.")
+
+                st.markdown("<br>", unsafe_allow_html=True)
+                st.markdown("##### Registro Detallado de Asistencias")
                 try:
                     _c_tab, _c_tar = st.container(key="vista_tabla"), st.container(key="vista_tarjetas")
                 except TypeError:
                     _c_tab, _c_tar = st.container(), None
                 with _c_tab:
-                    _vista = _tab[["nombre", "mes", "anio", "version", "estado", "neto_pagar", "fecha_visto_bueno", "fecha_conformidad", "codigo_verificacion"]].copy()
-                    _vista.columns = ["Trabajador", "Mes", "Año", "Versión", "Estado", "Neto (S/.)", "Emitida", "Conformidad", "Código"]
-                    st.dataframe(_vista, use_container_width=True, hide_index=True)
+                    premium_table(df_asist_filtrado, use_container_width=True, hide_index=True)
                 if _c_tar is not None:
                     with _c_tar:
-                        st.markdown("".join(ui_boleta_card(_r) for _, _r in _tab.head(30).iterrows()), unsafe_allow_html=True)
-
-                st.markdown("<div class='tp-note-t' style='margin:22px 0 10px'>Ver, imprimir o descargar una boleta</div>", unsafe_allow_html=True)
-                _opc = {f"{r['nombre']} · {r['mes']} {r['anio']} · v{_ver_bol(r['version'])} · {r['estado']}": r for _, r in _tab.iterrows()}
-                _sel = st.selectbox("Boleta", list(_opc.keys()), key="bolh_sel", label_visibility="collapsed")
-                _rs = _opc[_sel]
-                try:
-                    _ds = json.loads(str(_rs["datos_json"]))
-                except Exception:
-                    _ds = None
-                if _ds:
-                    if str(_rs["estado"]) == "Observado":
-                        ui_callout(f"**Observación del colaborador** ({str(_rs['fecha_observacion'])[:16]}): {_rs['observacion_colaborador']}. Corrige en 'Generar Boleta de Pago' y emite de nuevo: se creará una nueva versión.", "warn")
-                    if str(_rs.get("respuesta_admin", "")).strip():
-                        ui_callout(f"**Respuesta del administrador:** {_rs['respuesta_admin']}", "info")
-                    st.markdown(generar_html_boleta(_ds), unsafe_allow_html=True)
-                    if str(_rs["estado"]) in ("Firmado", "Conforme"):
-                        if str(_rs.get("firma_png_b64", "")).strip():
-                            st.markdown(ui_firma_card(_rs), unsafe_allow_html=True)
-                        else:
-                            ui_callout(f"Conformidad registrada el {str(_rs['fecha_conformidad'])[:16]} (sin firma en pantalla).", "ok")
-                    _pdf_s = generar_pdf_boleta(_ds, _extra_boleta(_rs))
-                    if _pdf_s:
-                        st.download_button("Descargar PDF de esta boleta", _pdf_s, f"Boleta_{str(_rs['nombre']).replace(' ', '_')}_{_ds['periodo'].replace(' ', '_')}_v{_ver_bol(_rs['version'])}.pdf", "application/pdf", use_container_width=True, key="bolh_pdf")
-                    st.caption(f"Código de verificación: {_rs['codigo_verificacion']}")
-                else:
-                    ui_callout("Este registro es histórico: solo conserva los totales, sin el desglose de la boleta.", "info")
-
-                st.markdown("<div class='tp-note-t' style='margin:22px 0 10px'>Archivo para fiscalización</div>", unsafe_allow_html=True)
-                _con_datos = _tab[_tab["datos_json"].astype(str).str.len() > 2]
-                st.caption(f"Se incluirán {len(_con_datos)} boleta(s) con desglose, según los filtros de arriba, ordenadas por año y mes.")
-                if st.button("Preparar ZIP con los PDF", key="bolh_zip", use_container_width=True, disabled=_con_datos.empty):
-                    _buf = io.BytesIO()
-                    _n_pdf = 0
-                    with zipfile.ZipFile(_buf, "w", zipfile.ZIP_DEFLATED) as _z:
-                        for _, _r in _con_datos.iterrows():
-                            try:
-                                _dz = json.loads(str(_r["datos_json"]))
-                                _pz = generar_pdf_boleta(_dz, _extra_boleta(_r))
-                                if _pz:
-                                    _z.writestr(f"{_r['anio']}/{str(_r['mes'])}/Boleta_{str(_r['nombre']).replace(' ', '_')}_{_dz['periodo'].replace(' ', '_')}_v{_ver_bol(_r['version'])}.pdf", _pz)
-                                    _n_pdf += 1
-                            except Exception:
-                                continue
-                    st.session_state["_zip_boletas"] = (_buf.getvalue(), _n_pdf)
-                if st.session_state.get("_zip_boletas"):
-                    _zb, _zn = st.session_state["_zip_boletas"]
-                    st.download_button(f"Descargar ZIP ({_zn} PDF)", _zb, "Boletas_Archivo.zip", "application/zip", use_container_width=True, key="bolh_zip_dl")
-
-    with tab_feriados:
-        st.markdown("<h4 style='font-size:1rem; color:#111827; margin-bottom:12px;'>Días Feriados Registrados</h4>", unsafe_allow_html=True)
-        st.caption("Los feriados trabajados de Lunes a Sábado se pagan con recargo adicional (17.66 / día sobre base S/. 530.00). Los feriados en domingo no aplican por ser día de descanso.")
-        
-        c_f1, c_f2 = st.columns([1, 2])
-        with c_f1:
-            with st.form("form_nuevo_feriado", clear_on_submit=True):
-                st.markdown("**Agregar Feriado**")
-                f_feriado = st.date_input("Fecha del Feriado", value=obtener_ahora_peru().date())
-                desc_feriado = st.text_input("Descripción / Evento", placeholder="Ej. Fiestas Patrias")
-                if st.form_submit_button("Guardar Feriado", use_container_width=True):
-                    if not desc_feriado.strip():
-                        st.error("Ingresa una descripción para el feriado.")
-                    else:
-                        str_f_fer = str(f_feriado)
-                        if not st.session_state.feriados.empty and str_f_fer in st.session_state.feriados["fecha"].astype(str).values:
-                            st.warning("Esa fecha ya se encuentra registrada como feriado.")
-                        else:
-                            nuevo_f = {"fecha": str_f_fer, "descripcion": desc_feriado.strip()}
-                            st.session_state.feriados = pd.concat([st.session_state.feriados, pd.DataFrame([nuevo_f])], ignore_index=True)
-                            guardar_feriado_gsheets(str_f_fer, desc_feriado.strip())
-                            st.toast("Feriado agregado con éxito")
-                            time.sleep(0.3)
-                            st.rerun()
-
-        with c_f2:
-            if not st.session_state.feriados.empty:
-                df_fer_ord = st.session_state.feriados.sort_values("fecha").reset_index(drop=True)
-                st.dataframe(df_fer_ord, use_container_width=True, hide_index=True)
+                        _flt = ""
+                        for _, _a in df_asist_filtrado.sort_values("fecha_hora", ascending=False).head(40).iterrows():
+                            _ing = str(_a["tipo"]) == "INGRESO"
+                            _ch = ui_chip("Ingreso" if _ing else "Salida", "ok" if _ing else "bad") + (ui_chip("Extra", "warn") if str(_a.get("es_extra", "")) == "SI" else "")
+                            _flt += f'<div class="tp-row">{ui_avatar(_a["nombre"], _a.get("dni", ""), "", 40)}<div class="tp-row-main"><b>{_html.escape(str(_a["nombre"]))}</b><span>{str(_a["fecha_hora"])[:16]}</span></div><div class="tp-chips">{_ch}</div></div>'
+                        st.markdown(_flt, unsafe_allow_html=True)
+                        st.caption("Se muestran las 40 marcaciones más recientes. Exporta a Excel para ver todo.")
+                st.download_button("Exportar Asistencias a Excel", to_excel(df_asist_filtrado), "Asistencias_General.xlsx", use_container_width=True)
             else:
-                st.info("No hay feriados registrados.")
-
-    with tab_boleta:
-        st.markdown('<div class="tp-sec"><div><div class="tp-sec-title">Parámetros de la boleta</div><div class="tp-sec-sub">Elige al colaborador y el período a liquidar</div></div></div>', unsafe_allow_html=True)
-        
-        b_c1, b_c2, b_c3 = st.columns([1.5, 1, 1])
-        colabs_list = obtener_solo_colaboradores()
-        
-        if not colabs_list:
-            st.warning("No hay colaboradores disponibles para emitir boletas.")
-            st.stop()
-
-        colab_b_sel = b_c1.selectbox("Colaborador", colabs_list, key="boleta_colab_sel")
-        
-        ahora_p_b = obtener_ahora_peru()
-        NOMBRES_MESES_B = [
-            "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-            "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
-        ]
-        mes_b_sel = b_c2.selectbox("Mes de Boleta", list(range(1, 13)), index=ahora_p_b.month - 1, format_func=lambda x: NOMBRES_MESES_B[x-1], key="boleta_mes_sel")
-        anio_b_sel = b_c3.number_input("Año", min_value=2024, max_value=2030, value=ahora_p_b.year, key="boleta_anio_sel")
-
-        row_trab = st.session_state.empleados[st.session_state.empleados["nombre"] == colab_b_sel]
-        dni_b_val = str(row_trab.iloc[0]["dni"]) if not row_trab.empty and "dni" in row_trab.columns else "-"
-        cargo_b_val = str(row_trab.iloc[0]["cargo"]) if not row_trab.empty and "cargo" in row_trab.columns else "-"
-        finicio_b_val = str(row_trab.iloc[0]["fecha_inicio"]) if not row_trab.empty and "fecha_inicio" in row_trab.columns else "-"
-        _foto_b = str(row_trab.iloc[0].get("foto", "")) if not row_trab.empty else ""
-        st.markdown(f'<div class="tp-card"><div class="tp-op-head" style="margin:0">{ui_avatar(colab_b_sel, dni_b_val, _foto_b, 58)}<div><div class="tp-card-title">{_html.escape(colab_b_sel)}</div>'
-                    f'<div class="tp-card-sub">{_html.escape(cargo_b_val)} · DNI {_html.escape(dni_b_val)} · Ingreso {_html.escape(finicio_b_val)}</div></div>'
-                    f'{ui_chip(NOMBRES_MESES_B[mes_b_sel - 1] + " " + str(int(anio_b_sel)), "info")}</div></div>', unsafe_allow_html=True)
-
-        # --- RECOPILACIÓN Y CÁLCULOS AUTOMÁTICOS ---
-        df_asist_b = st.session_state.asistencia.copy()
-        dias_trabajados_cnt = 0
-        hrs_extras_totales = 0.0
-        feriados_trabajados_cnt = 0
-        domingos_voluntarios_cnt = 0
-        # Misma validación que el calendario: domingo con autorización aprobada
-        # y marcación real del colaborador (sin duplicar registros del mismo día).
-        _domingos_aprobados_boleta = set()
-        _sol_b = st.session_state.get("solicitudes", pd.DataFrame())
-        if isinstance(_sol_b, pd.DataFrame) and not _sol_b.empty:
-            for _, _sol_dom in _sol_b.iterrows():
-                if (str(_sol_dom.get("nombre", "")).strip() == str(colab_b_sel).strip()
-                        and str(_sol_dom.get("tipo_solicitud", "")).strip() == "Trabajar Domingo (Descanso)"
-                        and str(_sol_dom.get("estado", "")).strip() == "Aprobado"):
-                    _fecha_dom = parsear_fecha_segura(_sol_dom.get("fecha_permiso", ""))
-                    if (_fecha_dom and _fecha_dom.weekday() == 6
-                            and _fecha_dom.month == mes_b_sel and _fecha_dom.year == anio_b_sel):
-                        _domingos_aprobados_boleta.add(_fecha_dom)
-
-        # --- PERMISOS RECUPERADOS (Permiso Laboral aprobado / Permiso de Salud a recuperar) ---
-        # Si el colaborador pidió permiso o se enfermó pero ya recuperó el día, NO cuenta como falta.
-        _asist_fechas_colab = set()
-        if not df_asist_b.empty:
-            _asist_fechas_colab = {parsear_fecha_segura(_x) for _x in df_asist_b[df_asist_b["nombre"] == colab_b_sel]["fecha"].astype(str).tolist()}
-            _asist_fechas_colab.discard(None)
-
-        fechas_recuperacion_colab = set()
-        permisos_recuperados_cnt = 0
-        permisos_recuperados_detalle = []
-
-        # a) Permiso Laboral aprobado con día de recuperación (se considera recuperado si asistió ese día)
-        df_sol_rec = st.session_state.solicitudes.copy()
-        if not df_sol_rec.empty:
-            df_sol_rec = df_sol_rec[
-                (df_sol_rec["nombre"] == colab_b_sel) &
-                (df_sol_rec["tipo_solicitud"] == "Permiso Laboral") &
-                (df_sol_rec["estado"] == "Aprobado")
-            ]
-            for _, _s in df_sol_rec.iterrows():
-                _f_perm = parsear_fecha_segura(_s.get("fecha_permiso", ""))
-                _f_rec = parsear_fecha_segura(_s.get("fecha_recuperacion", ""))
-                if not _f_rec:
-                    continue
-                fechas_recuperacion_colab.add(_f_rec)
-                if (_f_perm and _f_perm.month == mes_b_sel and _f_perm.year == anio_b_sel
-                        and _f_perm.weekday() != 6
-                        and _f_perm not in _asist_fechas_colab
-                        and _f_rec in _asist_fechas_colab):
-                    permisos_recuperados_cnt += 1
-                    permisos_recuperados_detalle.append(f"Permiso {_f_perm.strftime('%d/%m')} → recuperado el {_f_rec.strftime('%d/%m')}")
-
-        # b) Permiso de Salud (a recuperar): recuperado si el admin lo marcó "Recuperado" o si asistió el día de recuperación
-        df_vac_rec = st.session_state.vacaciones.copy()
-        if not df_vac_rec.empty:
-            df_vac_rec = df_vac_rec[
-                (df_vac_rec["nombre"].astype(str) == colab_b_sel) &
-                (df_vac_rec["tipo"] == "Permiso de Salud (a recuperar)")
-            ]
-            for _, _v in df_vac_rec.iterrows():
-                _f_ini_v = parsear_fecha_segura(_v.get("fecha_inicio", ""))
-                _f_fin_v = parsear_fecha_segura(_v.get("fecha_fin", ""))
-                _f_rec_v = parsear_fecha_segura(_v.get("fecha_recuperacion", ""))
-                if _f_rec_v:
-                    fechas_recuperacion_colab.add(_f_rec_v)
-                _recuperado_v = (str(_v.get("estado_recuperacion", "")).strip() == "Recuperado") or (_f_rec_v is not None and _f_rec_v in _asist_fechas_colab)
-                if not (_f_ini_v and _f_fin_v and _recuperado_v):
-                    continue
-                _dias_sin_asist = []
-                _d_it = _f_ini_v
-                while _d_it <= _f_fin_v:
-                    if (_d_it.month == mes_b_sel and _d_it.year == anio_b_sel
-                            and _d_it.weekday() != 6 and _d_it not in _asist_fechas_colab):
-                        _dias_sin_asist.append(_d_it)
-                    _d_it += timedelta(days=1)
-                if _dias_sin_asist:
-                    permisos_recuperados_cnt += 1
-                    _txt_rec_v = f" → recuperado el {_f_rec_v.strftime('%d/%m')}" if _f_rec_v else " → recuperado"
-                    permisos_recuperados_detalle.append(f"Permiso de salud {_dias_sin_asist[0].strftime('%d/%m')}{_txt_rec_v}")
-
-        if not df_asist_b.empty:
-            df_asist_b["fecha_dt"] = pd.to_datetime(df_asist_b["fecha"], errors="coerce")
-            df_asist_user = df_asist_b[
-                (df_asist_b["nombre"] == colab_b_sel) & 
-                (df_asist_b["fecha_dt"].dt.month == mes_b_sel) & 
-                (df_asist_b["fecha_dt"].dt.year == anio_b_sel)
-            ]
-            
-            if not df_asist_user.empty:
-                _fechas_user = pd.to_datetime(df_asist_user["fecha"].drop_duplicates(), errors="coerce").dropna()
-                dias_trabajados_cnt = int((_fechas_user.dt.weekday != 6).sum())
-                
-                df_asist_user["dt"] = pd.to_datetime(df_asist_user["fecha_hora"])
-                for f_dia, grupo_dia in df_asist_user.groupby("fecha"):
-                    _, mins_e, _, _ = calcular_jornada_y_horas_extras(grupo_dia)
-                    hrs_extras_totales += (mins_e / 60.0)
-
-                    if not st.session_state.feriados.empty and str(f_dia) in st.session_state.feriados["fecha"].astype(str).values:
-                        dt_f = pd.to_datetime(f_dia)
-                        if dt_f.weekday() != 6:  # No es domingo
-                            feriados_trabajados_cnt += 1
-
-                    dt_dia_check = pd.to_datetime(f_dia)
-                    if (dt_dia_check.weekday() == 6
-                            and dt_dia_check.date() not in fechas_recuperacion_colab
-                            and (dt_dia_check.date() in _domingos_aprobados_boleta
-                                 or grupo_dia["observacion"].astype(str).str.contains(
-                                     "TRABAJO VOLUNTARIO EN DOMINGO", case=False, na=False).any())):
-                        domingos_voluntarios_cnt += 1
-
-        # Domingos de descanso semanal: son pagados, se suman a los días laborados (tope 30 días)
-        domingos_descanso_pagados = 0
-        if dias_trabajados_cnt + permisos_recuperados_cnt > 0:
-            _f_ini_emp = parsear_fecha_segura(finicio_b_val)
-            _f_cese_emp = parsear_fecha_segura(row_trab.iloc[0].get("fecha_cese", "")) if not row_trab.empty else None
-            _dias_mes_b = pd.Period(f"{int(anio_b_sel)}-{int(mes_b_sel):02d}").days_in_month
-            _hoy_b = ahora_p_b.date()
-            for _d in pd.date_range(start=f"{int(anio_b_sel)}-{int(mes_b_sel):02d}-01", periods=_dias_mes_b):
-                if _d.weekday() == 6:
-                    _dd = _d.date()
-                    if _dd > _hoy_b:
-                        continue  # Domingos futuros aún no se devengan
-                    if _f_ini_emp and _dd < _f_ini_emp:
-                        continue
-                    if _f_cese_emp and _dd > _f_cese_emp:
-                        continue
-                    domingos_descanso_pagados += 1
-            dias_trabajados_cnt = min(_dias_mes_b, dias_trabajados_cnt + domingos_descanso_pagados + permisos_recuperados_cnt)
-
-        # Días transcurridos del mes: si el mes está en curso solo se evalúan los días que ya pasaron.
-        # Para el prorrateo solicitado se usa la cantidad REAL de días calendario del mes.
-        _dias_calendario_boleta = calendar.monthrange(int(anio_b_sel), int(mes_b_sel))[1]
-        _hoy_falt = ahora_p_b.date()
-        _inicio_mes_b = pd.Timestamp(year=int(anio_b_sel), month=int(mes_b_sel), day=1).date()
-        if _inicio_mes_b > _hoy_falt:
-            _dias_evaluables = 0  # Mes futuro
-        elif (_inicio_mes_b.year, _inicio_mes_b.month) == (_hoy_falt.year, _hoy_falt.month):
-            _dias_evaluables = min(_dias_calendario_boleta, _hoy_falt.day)  # Mes en curso
+                st.info("No se encontraron registros de asistencia para los filtros seleccionados.")
         else:
-            _dias_evaluables = _dias_calendario_boleta  # Mes cerrado
-        dias_faltas_cnt = max(0, _dias_evaluables - dias_trabajados_cnt)
-
-        # Buscar adelantos aprobados
-        df_sol_b = st.session_state.solicitudes.copy()
-        adelanto_sueldo_monto = 0.0
-        if not df_sol_b.empty:
-            df_sol_user = df_sol_b[
-                (df_sol_b["nombre"] == colab_b_sel) & 
-                (df_sol_b["tipo_solicitud"] == "Adelanto de Sueldo") & 
-                (df_sol_b["estado"] == "Aprobado")
-            ]
-            if not df_sol_user.empty:
-                df_sol_user["f_reg_dt"] = pd.to_datetime(df_sol_user["fecha_registro"], errors="coerce")
-                df_sol_m = df_sol_user[
-                    (df_sol_user["f_reg_dt"].dt.month == mes_b_sel) & 
-                    (df_sol_user["f_reg_dt"].dt.year == anio_b_sel)
-                ]
-                adelanto_sueldo_monto = pd.to_numeric(df_sol_m["monto_adelanto"], errors="coerce").sum()
-
-        # Descuadres de caja (solo faltantes negativos)
-        df_desc_b = st.session_state.descuadres.copy()
-        descuadre_caja_monto = 0.0
-        if not df_desc_b.empty:
-            df_desc_b["f_dt"] = pd.to_datetime(df_desc_b["fecha"], errors="coerce")
-            df_desc_u = df_desc_b[
-                (df_desc_b["nombre"] == colab_b_sel) & 
-                (df_desc_b["f_dt"].dt.month == mes_b_sel) & 
-                (df_desc_b["f_dt"].dt.year == anio_b_sel)
-            ]
-            if not df_desc_u.empty:
-                faltantes = df_desc_u[pd.to_numeric(df_desc_u["monto"], errors="coerce") < 0]
-                descuadre_caja_monto = abs(pd.to_numeric(faltantes["monto"], errors="coerce").sum())
-
-        # Incidencias y daños del mes (se excluyen las condonadas)
-        incidencias_monto = 0.0
-        incidencias_cnt = 0
-        df_inc_b = st.session_state.incidencias.copy()
-        if not df_inc_b.empty:
-            df_inc_b["f_dt"] = pd.to_datetime(df_inc_b["fecha"], errors="coerce")
-            df_inc_u = df_inc_b[
-                (df_inc_b["nombre"] == colab_b_sel) &
-                (df_inc_b["f_dt"].dt.month == mes_b_sel) &
-                (df_inc_b["f_dt"].dt.year == anio_b_sel) &
-                (df_inc_b["estado"].astype(str) != "Resuelto / Condonado")
-            ]
-            if not df_inc_u.empty:
-                incidencias_cnt = len(df_inc_u)
-                incidencias_monto = float(pd.to_numeric(df_inc_u["valor_reparacion"], errors="coerce").fillna(0).sum())
-
-        st.markdown('<div class="tp-sec" style="margin-top:18px"><div><div class="tp-sec-title">Valores y conceptos calculados</div><div class="tp-sec-sub">Los valores se calculan solos desde asistencia, solicitudes y caja; puedes ajustarlos si hace falta</div></div></div>', unsafe_allow_html=True)
-        resumen_slot = st.empty()
-        
-        if permisos_recuperados_cnt > 0:
-            ui_callout("**Permisos recuperados (no se cuentan como falta):** " + " | ".join(permisos_recuperados_detalle), "ok")
-
-        st.markdown('<div class="tp-grp ok">Ingresos</div>', unsafe_allow_html=True)
-        c_i1, c_i2, c_i3 = st.columns(3)
-        sueldo_basico_in = c_i1.number_input("Sueldo Básico (S/.)", min_value=0.0, value=530.0, step=10.0, format="%.2f")
-        dias_trab_in = c_i2.number_input("Días Laborados", min_value=0, max_value=31, value=int(dias_trabajados_cnt))
-        feriados_trab_in = c_i3.number_input("Feriados Trab. (Adicional)", min_value=0, max_value=10, value=int(feriados_trabajados_cnt))
-
-        c_i4, c_i10 = st.columns(2)
-        hrs_extras_in = c_i4.number_input("Horas Extras (Hrs)", min_value=0.0, value=float(hrs_extras_totales), step=0.5, format="%.2f")
-        domingo_volunt_in = c_i10.number_input(
-            "Días de Descanso Trabajados Voluntariamente (Domingo)", min_value=0, max_value=5, value=int(domingos_voluntarios_cnt),
-            help="Se calcula automáticamente con la solicitud aprobada y la asistencia registrada; también reconoce marcaciones históricas de domingo voluntario. Puedes ajustarlo manualmente."
-        )
-        ui_callout("Los domingos trabajados voluntariamente se pagan como día adicional (100% del valor día), separado del sueldo básico, dejando constancia de que originalmente era su descanso.")
-
-        c_b1, c_b2, c_b3 = st.columns(3)
-        bono_puntualidad_in = c_b1.number_input("Bono por Puntualidad (S/.)", min_value=0.0, value=0.0, step=5.0, format="%.2f", key="boleta_bono_puntualidad")
-        bono_presencia_in = c_b2.number_input("Bono Presencia y Uniforme (S/.)", min_value=0.0, value=0.0, step=5.0, format="%.2f", key="boleta_bono_presencia")
-        bono_orden_in = c_b3.number_input("Bono Orden y Limpieza (S/.)", min_value=0.0, value=0.0, step=5.0, format="%.2f", key="boleta_bono_orden")
-
-        st.markdown('<div class="tp-grp bad">Descuentos</div>', unsafe_allow_html=True)
-        c_i5, c_i6, c_i7 = st.columns(3)
-        adelanto_in = c_i5.number_input("Adelanto de Sueldo (S/.)", min_value=0.0, value=float(adelanto_sueldo_monto), step=5.0, format="%.2f")
-        dias_faltas_in = c_i6.number_input("Días Faltas", min_value=0, max_value=30, value=int(dias_faltas_cnt))
-        descuadre_caja_in = c_i7.number_input("Descuadre / Faltante Caja (S/.)", min_value=0.0, value=float(descuadre_caja_monto), step=1.0, format="%.2f")
-
-        c_i8, c_i9 = st.columns(2)
-        desc_inventario_in = c_i8.number_input("Descuadre Inventario (S/.)", min_value=0.0, value=0.0, step=1.0, format="%.2f")
-        consumos_in = c_i9.number_input("Consumos por Pagar (S/.)", min_value=0.0, value=0.0, step=1.0, format="%.2f")
-
-        c_inc1, c_inc2 = st.columns(2)
-        incidencias_in = c_inc1.number_input("Incidencias / Daños (S/.)", min_value=0.0, value=float(incidencias_monto), step=1.0, format="%.2f", key=f"boleta_incidencias_{colab_b_sel}_{mes_b_sel}_{anio_b_sel}")
-        with c_inc2:
-            ui_callout(f"Se descuentan las incidencias del mes registradas por el colaborador ({incidencias_cnt} registrada(s)), excepto las marcadas como 'Resuelto / Condonado'.")
-
-        # FÓRMULAS DE CÁLCULO
-        _ult_dia_b = pd.Period(f"{int(anio_b_sel)}-{int(mes_b_sel):02d}").days_in_month
-        _base_h = jornada_base_min(f"{int(anio_b_sel)}-{int(mes_b_sel):02d}-{_ult_dia_b:02d}") / 60.0   # jornada base vigente al cierre del mes (5.75 h con el horario actual)
-        # Sueldo mensual pactado, prorrateado por días reconocidos sobre los días reales del mes.
-        # Ejemplo: S/ 530 * 20 / 31 = S/ 341.94 en octubre.
-        valor_dia = sueldo_basico_in / _ult_dia_b if sueldo_basico_in > 0 else 0.0
-        sueldo_proporcional_calc = round(valor_dia * min(int(dias_trab_in), _ult_dia_b), 2)
-        valor_hora = valor_dia / _base_h if valor_dia > 0 else 0.0
-
-        monto_feriados_calc = feriados_trab_in * (valor_dia * 1.0)
-        monto_horas_extras_calc = hrs_extras_in * (valor_hora * FACTOR_HORA_EXTRA)
-        # Las faltas ya están reflejadas en los días reconocidos: no descontar dos veces.
-        monto_faltas_calc = 0.0
-        monto_domingo_volunt_calc = domingo_volunt_in * (valor_dia * 1.0)
-
-        total_ingresos_calc = sueldo_proporcional_calc + monto_feriados_calc + monto_horas_extras_calc + monto_domingo_volunt_calc + bono_puntualidad_in + bono_presencia_in + bono_orden_in
-        total_descuentos_calc = adelanto_in + monto_faltas_calc + descuadre_caja_in + desc_inventario_in + consumos_in + incidencias_in
-        neto_pagar_calc = max(0.0, total_ingresos_calc - total_descuentos_calc)
-
-        datos_boleta = {
-            "empresa": "TIENDAS PREMIUM E.I.R.L.",
-            "ruc": "20612107786",
-            "periodo": f"{NOMBRES_MESES_B[mes_b_sel-1].upper()} {anio_b_sel}",
-            "colaborador": colab_b_sel,
-            "dni": dni_b_val,
-            "cargo": cargo_b_val,
-            "fecha_inicio": finicio_b_val,
-            "dias_trabajados": dias_trab_in,
-            "dias_faltas": dias_faltas_in,
-            "permisos_recuperados": permisos_recuperados_cnt,
-            "feriados_trabajados": feriados_trab_in,
-            "horas_extras_hrs": hrs_extras_in,
-            "sueldo_basico": sueldo_proporcional_calc,
-            "sueldo_mensual_pactado": sueldo_basico_in,
-            "monto_feriados": monto_feriados_calc,
-            "monto_horas_extras": monto_horas_extras_calc,
-            "domingos_voluntarios": domingo_volunt_in,
-            "monto_domingos_voluntarios": monto_domingo_volunt_calc,
-            "bono_puntualidad": bono_puntualidad_in,
-            "bono_presencia_uniforme": bono_presencia_in,
-            "bono_orden_limpieza": bono_orden_in,
-            "adelanto_sueldo": adelanto_in,
-            "monto_faltas": monto_faltas_calc,
-            "descuadre_caja": descuadre_caja_in,
-            "descuadre_inventario": desc_inventario_in,
-            "consumos_pagar": consumos_in,
-            "incidencias_danos": incidencias_in,
-            "total_ingresos": total_ingresos_calc,
-            "total_descuentos": total_descuentos_calc,
-            "neto_pagar": neto_pagar_calc
-        }
-
-        _base_ini_b = jornada_base_min(f"{int(anio_b_sel)}-{int(mes_b_sel):02d}-01")
-        ui_callout(f"**Sueldo proporcional:** S/ {sueldo_basico_in:,.2f} ÷ {_ult_dia_b} días × {min(int(dias_trab_in), _ult_dia_b)} días reconocidos = **S/ {sueldo_proporcional_calc:,.2f}**. **Valor hora:** S/ {valor_hora:.4f} (sin recargo para horas extra). Las faltas no se descuentan nuevamente porque ya están reflejadas en el prorrateo.", "info")
-        if int(_base_ini_b) != int(_base_h * 60):
-            ui_callout(f"En este mes **cambió la jornada base** ({_fmt_min(_base_ini_b)} → {_fmt_min(int(_base_h * 60))}). Para el valor de la hora se usó la jornada vigente al cierre del mes. Revisa que el monto de horas extra sea el que corresponde.", "warn")
-        resumen_slot.markdown('<div class="tp-gridk">' +
-                              ui_kpi_acc("Total ingresos", f"S/. {total_ingresos_calc:,.2f}", "sueldo, extras y bonos", "ok") +
-                              ui_kpi_acc("Total descuentos", f"S/. {total_descuentos_calc:,.2f}", "adelantos y otros (sin duplicar faltas)", "bad") +
-                              ui_kpi_acc("Neto a pagar", f"S/. {neto_pagar_calc:,.2f}", "monto final de la boleta", "info") + '</div>', unsafe_allow_html=True)
-
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown("##### Previsualización de la Boleta de Pago")
-
-        st.markdown(generar_html_boleta(datos_boleta), unsafe_allow_html=True)
-
-        st.markdown("##### Opciones de Exportación")
-        col_exp1, col_exp2 = st.columns(2)
-
-        excel_data = generar_excel_boleta(datos_boleta)
-        col_exp1.download_button(
-            label="Descargar Boleta en Excel (.xlsx)",
-            data=excel_data,
-            file_name=f"Boleta_{colab_b_sel.replace(' ', '_')}_{datos_boleta['periodo']}.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            use_container_width=True
-        )
-
-        pdf_bytes = generar_pdf_boleta(datos_boleta)
-        if pdf_bytes:
-            col_exp2.download_button(
-                label="Descargar Boleta en PDF (.pdf)",
-                data=pdf_bytes,
-                file_name=f"Boleta_{colab_b_sel.replace(' ', '_')}_{datos_boleta['periodo']}.pdf",
-                mime="application/pdf",
-                use_container_width=True
-            )
-        else:
-            col_exp2.warning("La librería `reportlab` no está instalada en el entorno.")
-
-        st.markdown("<br>", unsafe_allow_html=True)
-        _mes_nom_b = NOMBRES_MESES_B[mes_b_sel - 1]
-        _bh = st.session_state.boletas_historial
-        _prev = _bh[_bh["dni"].apply(lambda x: _mismo_dni(x, dni_b_val)) & (_bh["mes"].astype(str) == _mes_nom_b) & (_bh["anio"].astype(str) == str(int(anio_b_sel))) & (_bh["estado"].astype(str).isin(ESTADOS_BOL_VIGENTES))] if not _bh.empty else _bh
-        _resp_nota = ""
-        _bloq = False
-        if not _prev.empty:
-            _pr = _boletas_orden(_prev).iloc[0]
-            _est_p = str(_pr["estado"])
-            if _est_p in ("Conforme", "Firmado"):
-                _bloq = True
-                ui_callout(f"Esta boleta ya fue **{'firmada' if _est_p == 'Firmado' else 'conformada'}** por el colaborador y no se puede modificar.", "ok")
-            else:
-                _obs_t = f" Observación del colaborador: “{_pr['observacion_colaborador']}”." if _est_p == "Observado" else ""
-                ui_callout(f"Ya existe una boleta emitida de este período (versión {_ver_bol(_pr['version'])}, estado **{_est_p}**). Al emitir de nuevo se crea la versión siguiente y la anterior queda como reemplazada.{_obs_t}", "warn")
-                if _est_p == "Observado":
-                    _resp_nota = st.text_input("Respuesta para el colaborador (opcional)", key="bol_resp_nota", placeholder="Ej.: Se corrigió el descuento por tardanzas.")
-        if st.button("Emitir boleta (Visto Bueno)", use_container_width=True, disabled=_bloq, key="bol_emitir"):
-            _res = emitir_boleta_gsheets(datos_boleta, _mes_nom_b, int(anio_b_sel), user_actual, _resp_nota)
-            if _res == "cerrada":
-                st.error("Esta boleta ya fue conformada por el colaborador y no se puede emitir de nuevo.")
-            elif _res:
-                registrar_auditoria("Emitir Boleta", "Boletas", f"{colab_b_sel} — {datos_boleta['periodo']} — Neto: S/. {neto_pagar_calc:.2f}")
-                st.session_state.boletas_historial = obtener_boletas_historial_gsheets()
-                st.toast("Boleta emitida: ya es visible para el colaborador")
-                time.sleep(0.3)
-                st.rerun()
-elif choice == "Programación de Turnos":
-    st.markdown("""
-        <div class="market-header">
-            <h1>Programación de Turnos</h1>
-            <p>Arma la semana: quién trabaja qué turno, con las horas base y extra de cada casilla</p>
-        </div>
-    """, unsafe_allow_html=True)
-    if "prog_lunes" not in st.session_state:
-        st.session_state["prog_lunes"] = _lunes_de(obtener_ahora_peru().date())
-    _lunes = st.session_state["prog_lunes"]
-    _lunes_iso = _lunes.strftime("%Y-%m-%d")
-    _dias = [_lunes + timedelta(days=i) for i in range(7)]
-    _cols = [_dia_label(d) for d in _dias]
-    _ver = st.session_state.get("prog_ver", 0)
-
-    _nv1, _nv2, _nv3, _nv4 = st.columns([1, 1, 1.6, 1])
-    _nv1.button("Semana anterior", key="prog_ant", on_click=_prog_mover, args=(-7,), use_container_width=True)
-    _nv2.button("Esta semana", key="prog_hoy", on_click=_prog_ir_hoy, use_container_width=True)
-    _nv3.markdown(f'<div style="text-align:center;padding-top:6px">{ui_chip(_dias[0].strftime("%d/%m/%Y") + " – " + _dias[6].strftime("%d/%m/%Y"), "info")}</div>', unsafe_allow_html=True)
-    _nv4.button("Semana siguiente", key="prog_sig", on_click=_prog_mover, args=(7,), use_container_width=True)
-
-    _reglas_sem = {}
-    for _d in _dias:
-        _r = _regla_para_fecha(_d)
-        _reglas_sem[_r["nombre"]] = _r
-    _nombres_turno = []
-    for _r in _reglas_sem.values():
-        for _t in sorted(_r["turnos"], key=lambda t: _hhmm(t["entrada"])):
-            if _t["nombre"] not in _nombres_turno:
-                _nombres_turno.append(_t["nombre"])
-    if len(_reglas_sem) > 1:
-        ui_callout("En esta semana **cambia el horario** (" + " → ".join(_reglas_sem.keys()) + "). Cada casilla se calcula con el horario que rige ese día.", "warn")
-    else:
-        _r0 = list(_reglas_sem.values())[0]
-        st.caption(f"Horario: {_r0['nombre']} · Base por turno: {_fmt_min(_r0['jornada_base_min'])}. La cobertura del administrador no suma horas remuneradas.")
-
-    _base = st.session_state.get(f"prog_base_{_lunes_iso}")
-    if _base is None:
-        _base = _prog_base(_lunes)
-    if len(_base) <= 1:
-        ui_callout("No hay colaboradores activos para programar en esta semana.", "info")
-    else:
-        _opts = ["", "Descanso"] + _nombres_turno + [DOMINGO_VOLUNTARIO] + list(_AUSENCIAS)
-        # Las solicitudes aprobadas se reflejan incluso si ya se abrió la semana.
-        _base = _base.copy()
-        for _dom in _dias:
-            if _dom.weekday() != 6:
-                continue
-            _col_dom = _dia_label(_dom)
-            _aprobadas = _solicitudes_domingo_aprobadas(_dom)
-            for _sr in _aprobadas:
-                _dni_sr = str(_sr.get("dni", ""))
-                _emp_sr = st.session_state.empleados
-                _matches = _emp_sr[_emp_sr["dni"].apply(lambda x: _mismo_dni(x, _dni_sr))]
-                if not _matches.empty:
-                    _nom_sr = str(_matches.iloc[0]["nombre"])
-                    _mask_sr = _base["Colaborador"].eq(_nom_sr)
-                    if _mask_sr.any() and not _ausencia_en(_dni_sr, _dom.strftime("%Y-%m-%d")):
-                        _base.loc[_mask_sr, _col_dom] = DOMINGO_VOLUNTARIO
-        # Panel integrado de aprobaciones de domingo: usa la misma hoja y reglas de la bandeja.
-        _domingo_panel = _dias[6]
-        _sol_panel = st.session_state.get("solicitudes", pd.DataFrame())
-        _pend_panel = pd.DataFrame()
-        if isinstance(_sol_panel, pd.DataFrame) and not _sol_panel.empty:
-            _pend_panel = _sol_panel[
-                (_sol_panel["tipo_solicitud"].astype(str) == "Trabajar Domingo (Descanso)") &
-                (_sol_panel["estado"].astype(str) == "Pendiente") &
-                (_sol_panel["fecha_permiso"].apply(_norm_fecha_h) == _domingo_panel.strftime("%Y-%m-%d"))
-            ]
-        st.markdown('<div class="tp-up-eyebrow">SOLICITUDES DEL DOMINGO</div>', unsafe_allow_html=True)
-        if not _pend_panel.empty:
-            with st.expander(f"Revisar solicitudes pendientes ({len(_pend_panel)})", expanded=False):
-                for _, _pend_r in _pend_panel.iterrows():
-                    _id_p = str(_pend_r.get("id_solicitud", ""))
-                    _ca, _cb, _cc = st.columns([3, 1, 1])
-                    _ca.markdown(f"**{_html.escape(str(_pend_r.get('nombre', 'Colaborador')))}**  \nDomingo {_domingo_panel:%d/%m/%Y} · 15:15–21:00")
-                    if _cb.button("Aprobar", key=f"turn_ap_{_id_p}", use_container_width=True):
-                        _ok, _msg = _resolver_solicitud_administrativa(_id_p, "Aprobado")
-                        (st.success if _ok else st.error)(_msg)
-                        if _ok:
-                            st.rerun()
-                    if _cc.button("Rechazar", key=f"turn_rec_{_id_p}", use_container_width=True):
-                        _ok, _msg = _resolver_solicitud_administrativa(_id_p, "Rechazado")
-                        (st.success if _ok else st.error)(_msg)
-                        if _ok:
-                            st.rerun()
-        else:
-            st.caption("Sin solicitudes dominicales pendientes esta semana.")
-        with st.expander("Editar programación semanal", expanded=False):
-            st.caption("Selecciona una casilla para cambiar el turno. Los cambios se reflejan en el calendario y se guardan con «Guardar semana».")
-            _ed = st.data_editor(_base, hide_index=True, use_container_width=True, disabled=["Colaborador"], key=f"prog_ed_{_lunes_iso}_{_ver}",
-                                 column_config={"Colaborador": st.column_config.TextColumn("Colaborador", width="medium"),
-                                                **{c: st.column_config.SelectboxColumn(c, options=_opts, required=False) for c in _cols}})
-        _emp_p = st.session_state.empleados
-        _dni_de = {n: str(_emp_p[_emp_p["nombre"] == n].iloc[0]["dni"]) for n in _ed["Colaborador"] if not _emp_p[_emp_p["nombre"] == n].empty}
-        _dni_de[ADMIN_FILA] = "ADMIN"
-
-        # Vista calendario visual inspirada en software de turnos, sin sustituir editor.
-        _dias_cab = "".join(f'<th>{_html.escape(_dia_label(d))}</th>' for d in _dias)
-        _cal_rows = []
-        for _, _r_cal in _ed.iterrows():
-            _nom_cal = str(_r_cal["Colaborador"])
-            if _nom_cal == ADMIN_FILA:
-                continue
-            _celdas_cal = []
-            for _dia_cal, _col_cal in zip(_dias, _cols):
-                _val_cal = str(_r_cal.get(_col_cal, "") or "").strip()
-                _info_cal = _info_turno(_val_cal, _dia_cal)
-                if _info_cal:
-                    _tipo_cal = "vol" if _val_cal == DOMINGO_VOLUNTARIO else ("mor" if "mañ" in _val_cal.lower() else "tar")
-                    _celdas_cal.append(f'<td><div class="tp-up-shift {_tipo_cal}"><b>{_html.escape(_val_cal)}</b><span>{_info_cal["entrada"]} – {_info_cal["salida"]}</span><small>{_fmt_min(_info_cal["dur"])}</small></div></td>')
-                elif _val_cal and _val_cal.lower() not in ("none", "nan"):
-                    _celdas_cal.append(f'<td><div class="tp-up-off">{_html.escape(_val_cal)}</div></td>')
-                else:
-                    _celdas_cal.append('<td><div class="tp-up-empty">—</div></td>')
-            _cal_rows.append(f'<tr><th class="tp-up-person">{_html.escape(_nom_cal)}</th>{"".join(_celdas_cal)}</tr>')
-        # Administrador: cobertura real, no editable ni computable como remuneración.
-        _adm_cells = []
-        for _dia_cal in _dias:
-            if _dia_cal.weekday() == 6:
-                _bloques = _cobertura_admin_domingo(_dia_cal)
-                _contenido = "".join(f'<div class="tp-up-shift adm"><b>{_html.escape(et)}</b><span>{ini} – {fin}</span></div>' for ini, fin, et in _bloques)
-            else:
-                _contenido = '<div class="tp-up-shift adm"><b>Cierre</b><span>21:00 – 00:00</span></div>'
-            _adm_cells.append(f'<td>{_contenido}</td>')
-        _cal_rows.append(f'<tr><th class="tp-up-person">Administrador<small>Cobertura operativa</small></th>{"".join(_adm_cells)}</tr>')
-        st.markdown('<div class="tp-up-section tp-up-section-compact"><div class="tp-up-eyebrow">CALENDARIO SEMANAL</div><h3>Turnos y cobertura</h3></div>', unsafe_allow_html=True)
-        st.markdown(f'<div class="tp-up-calendar"><table><thead><tr><th>Colaborador</th>{_dias_cab}</tr></thead><tbody>{"".join(_cal_rows)}</tbody></table></div>', unsafe_allow_html=True)
-        st.caption("Azul: mañana · Celeste: tarde · Verde: domingo voluntario · Gris: cobertura administrativa. El calendario muestra cambios aún no guardados.")
-        _b1, _b2, _b3 = st.columns(3)
-        _b1.button("Copiar semana anterior", key="prog_copiar", on_click=_prog_copiar_anterior, use_container_width=True)
-        _b2.button("Limpiar semana", key="prog_limpiar", on_click=_prog_limpiar, use_container_width=True)
-        _guardar = _b3.button("Guardar semana", key="prog_guardar", use_container_width=True)
-
-        _tabla_html, _avisos, _tb, _te, _td = _analizar_programacion(_ed, _dias, _cols, _dni_de)
-        st.markdown("<div style='height:8px'></div>" + '<div class="tp-gridk">' +
-                    ui_kpi_acc("Horas base programadas", _fmt_min(_tb), "entre todos, esta semana", "info") +
-                    ui_kpi_acc("Horas extra programadas", _fmt_min(_te), "sobre la jornada base", "warn" if _te else "ok") +
-                    ui_kpi_acc("Días de descanso o ausencia", str(_td), "en la semana", "info") +
-                    ui_kpi_acc("Avisos", str(len(_avisos)), "revisa antes de guardar" if _avisos else "Todo en orden", "bad" if _avisos else "ok") + '</div>', unsafe_allow_html=True)
-        # Detalle de horas y avisos bajo demanda: no duplicar calendario en pantalla.
-        with st.expander("Ver desglose de horas y avisos", expanded=False):
-            st.markdown(_tabla_html, unsafe_allow_html=True)
-            for _av in dict.fromkeys(_avisos):
-                ui_callout(_av, "warn")
-            _domingo = _dias[6]
-            _aprobadas = _solicitudes_domingo_aprobadas(_domingo)
-            st.markdown("**Cobertura operativa del domingo**")
-            _cobertura = [{"Responsable": "Administrador", "Inicio": ini, "Fin": fin, "Actividad": tipo}
-                          for ini, fin, tipo in _cobertura_admin_domingo(_domingo)]
-            for _sr in _aprobadas:
-                _cobertura.append({"Responsable": str(_sr.get("nombre", "Trabajador")),
-                                   "Inicio": "15:15", "Fin": "21:00", "Actividad": "Domingo voluntario aprobado"})
-            st.dataframe(pd.DataFrame(_cobertura), hide_index=True, use_container_width=True)
-            if len(_aprobadas) > 1:
-                st.warning("Hay varias solicitudes aprobadas para el mismo domingo. Revisa la cobertura antes de guardar.")
-        if _guardar:
-            _errores_dom = []
-            for _d_dom, _c_dom in zip(_dias, _cols):
-                if _d_dom.weekday() != 6:
-                    continue
-                _aut = _solicitudes_domingo_aprobadas(_d_dom)
-                _nombres_aut = set()
-                for _a in _aut:
-                    _match = st.session_state.empleados[st.session_state.empleados["dni"].apply(lambda x: _mismo_dni(x, _a.get("dni", "")))]
-                    if not _match.empty:
-                        _nombres_aut.add(str(_match.iloc[0]["nombre"]))
-                for _, _fila in _ed.iterrows():
-                    _nom = str(_fila["Colaborador"])
-                    _val = str(_fila.get(_c_dom, "") or "").strip()
-                    if _nom == ADMIN_FILA:
-                        continue
-                    if _nom in _nombres_aut and _val != DOMINGO_VOLUNTARIO:
-                        _errores_dom.append(f"{_nom} tiene domingo aprobado y debe figurar como '{DOMINGO_VOLUNTARIO}'.")
-                    if _val == DOMINGO_VOLUNTARIO and _nom not in _nombres_aut:
-                        _errores_dom.append(f"{_nom} no tiene autorización aprobada para trabajar el domingo.")
-                if len(_aut) > 1:
-                    _errores_dom.append("Hay más de una autorización aprobada el mismo domingo: revisar la cobertura antes de guardar.")
-            if _errores_dom:
-                for _err in _errores_dom:
-                    st.error(_err)
-                st.stop()
-            _nuevas = []
-            _ahora_p = obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S")
-            for _, _rp in _ed.iterrows():
-                for _d, _c in zip(_dias, _cols):
-                    _v = str(_rp.get(_c) or "").strip()
-                    if _v:
-                        _nuevas.append({"semana_inicio": _lunes_iso, "dni": _dni_de.get(_rp["Colaborador"], ""), "nombre": _rp["Colaborador"], "fecha": _d.strftime("%Y-%m-%d"),
-                                        "turno": _v, "actualizado_por": user_real, "fecha_actualizacion": _ahora_p})
-            _prog_df = st.session_state.programacion
-            _resto = _prog_df[_prog_df["semana_inicio"].apply(_norm_fecha_h) != _lunes_iso] if not _prog_df.empty else _prog_df
-            _nuevo_df = pd.concat([_resto, pd.DataFrame(_nuevas, columns=COLS_PROG)], ignore_index=True)[COLS_PROG]
-            actualizar_hoja_completa("Programacion", _nuevo_df)
-            registrar_auditoria("Guardar Programación de Turnos", "Programación", f"Semana del {_lunes_iso}: {len(_nuevas)} casilla(s)")
-            st.session_state.programacion = obtener_programacion_gsheets()
-            st.session_state.pop(f"prog_base_{_lunes_iso}", None)
-            st.toast("Programación de la semana guardada. Los colaboradores ya ven su turno.")
-            time.sleep(0.3)
-            st.rerun()
-
-elif choice == "Solicitudes y Permisos":
-    st.markdown("""
-        <div class="market-header">
-            <h1>Gestión de Solicitudes y Permisos</h1>
-            <p>Bandeja de aprobación para administración</p>
-        </div>
-    """, unsafe_allow_html=True)
-
-    if not st.session_state.solicitudes.empty:
-        df_sol_base = st.session_state.solicitudes.copy()
-
-        # --- MÉTRICAS RESUMEN ---
-        # --- SELECTOR DE MES PARA LAS MÉTRICAS ---
-        NOMBRES_MESES_SOL = [
-            "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-            "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
-        ]
-        ahora_p_sol = obtener_ahora_peru()
-        col_mes_sol, col_anio_sol, _col_sp_sol = st.columns([1, 1, 2])
-        mes_sol_sel = col_mes_sol.selectbox(
-            "Seleccionar Mes",
-            [0] + list(range(1, 13)),
-            index=ahora_p_sol.month,
-            format_func=lambda x: "Todos los meses" if x == 0 else NOMBRES_MESES_SOL[x - 1],
-            key="sol_mes_resumen"
-        )
-        anio_sol_sel = col_anio_sol.number_input(
-            "Año", min_value=2024, max_value=2030, value=ahora_p_sol.year,
-            key="sol_anio_resumen", disabled=(mes_sol_sel == 0)
-        )
-
-        df_sol_metricas = df_sol_base.copy()
-        if mes_sol_sel != 0:
-            _fecha_sol_dt = pd.to_datetime(df_sol_metricas["fecha_registro"], errors="coerce")
-            df_sol_metricas = df_sol_metricas[
-                (_fecha_sol_dt.dt.month == mes_sol_sel) & (_fecha_sol_dt.dt.year == anio_sol_sel)
-            ]
-        etiqueta_periodo_sol = "Total" if mes_sol_sel == 0 else NOMBRES_MESES_SOL[mes_sol_sel - 1]
-
-        total_pend = len(df_sol_metricas[df_sol_metricas["estado"] == "Pendiente"])
-        total_aprob = len(df_sol_metricas[df_sol_metricas["estado"] == "Aprobado"])
-        total_rechaz = len(df_sol_metricas[df_sol_metricas["estado"] == "Rechazado"])
-        monto_adel_aprob = pd.to_numeric(
-            df_sol_metricas[(df_sol_metricas["tipo_solicitud"] == "Adelanto de Sueldo") & (df_sol_metricas["estado"] == "Aprobado")]["monto_adelanto"],
-            errors="coerce"
-        ).sum()
-
-        sm1, sm2, sm3, sm4 = st.columns(4)
-        with sm1:
-            st.markdown(f'<div class="info-card"><div class="info-label">Pendientes</div><div class="info-value" style="color:{"#EAB308" if total_pend else "#111827"};">{total_pend}</div></div>', unsafe_allow_html=True)
-        with sm2:
-            st.markdown(f'<div class="info-card"><div class="info-label">Aprobadas</div><div class="info-value" style="color:#00A959;">{total_aprob}</div></div>', unsafe_allow_html=True)
-        with sm3:
-            st.markdown(f'<div class="info-card"><div class="info-label">Rechazadas</div><div class="info-value" style="color:#EC3237;">{total_rechaz}</div></div>', unsafe_allow_html=True)
-        with sm4:
-            st.markdown(f'<div class="info-card"><div class="info-label">Adelantos Aprobados ({etiqueta_periodo_sol})</div><div class="info-value">S/. {monto_adel_aprob:.2f}</div></div>', unsafe_allow_html=True)
-
-        st.markdown("<br>", unsafe_allow_html=True)
-
-        # --- FILTROS ---
-        fc1, fc2, fc3 = st.columns([1, 1, 1.4])
-        with fc1:
-            estado_filtro = st.selectbox("Filtrar por Estado", ["Pendiente", "Todos", "Aprobado", "Rechazado"], key="sol_estado_filtro")
-        with fc2:
-            tipos_disp = ["Todos"] + sorted(df_sol_base["tipo_solicitud"].dropna().unique().tolist())
-            tipo_filtro = st.selectbox("Filtrar por Tipo", tipos_disp, key="sol_tipo_filtro")
-        with fc3:
-            busqueda_sol = st.text_input("Buscar por colaborador", placeholder="Escribe un nombre...", key="sol_busqueda")
-
-        df_sol = df_sol_base.copy()
-        if estado_filtro != "Todos":
-            df_sol = df_sol[df_sol["estado"] == estado_filtro]
-        if tipo_filtro != "Todos":
-            df_sol = df_sol[df_sol["tipo_solicitud"] == tipo_filtro]
-        if busqueda_sol.strip():
-            df_sol = df_sol[df_sol["nombre"].astype(str).str.contains(busqueda_sol.strip(), case=False, na=False)]
-
-        df_sol = df_sol.sort_values("fecha_registro", ascending=False)
-        st.caption(f"Mostrando {len(df_sol)} de {len(df_sol_base)} solicitud(es) registradas.")
-        st.markdown("<br>", unsafe_allow_html=True)
-
-        if df_sol.empty:
-            st.info("Ninguna solicitud coincide con los filtros seleccionados.")
-
-        for idx, row_sol in df_sol.iterrows():
-            id_s = row_sol["id_solicitud"]
-            nom_s = row_sol["nombre"]
-            tipo_s = row_sol["tipo_solicitud"]
-            est_s = row_sol["estado"]
-            
-            with ui_card_container(f"sol_{id_s}"):
-                st.markdown(ui_solicitud_card(row_sol, admin=True), unsafe_allow_html=True)
-                if tipo_s == "Permiso Laboral":
-                    _fr = pd.to_datetime(str(row_sol.get("fecha_recuperacion", "")).strip(), errors="coerce")
-                    if pd.notna(_fr) and _fr.dayofweek == 6:
-                        st.caption("La recuperación está programada para domingo.")
-                elif tipo_s == "Trabajar Domingo (Descanso)":
-                    st.caption("Este domingo es normalmente su día de descanso semanal. Al aprobar, el colaborador podrá marcar asistencia ese día y se reflejará como día adicional en su boleta.")
-                if est_s == "Pendiente":
-                    c_obs, c_ap, c_rc = st.columns([2.4, 1, 1])
-                    resp_admin_input = c_obs.text_input("Observación", key=f"resp_{id_s}", placeholder="Observación para el colaborador (opcional)", label_visibility="collapsed")
-                    if c_ap.button("Aprobar", key=f"ap_{id_s}", use_container_width=True):
-                        _ok, _msg = _resolver_solicitud_administrativa(id_s, "Aprobado", resp_admin_input)
-                        (st.success if _ok else st.error)(_msg)
-                        if _ok:
-                            st.rerun()
-                    if c_rc.button("Rechazar", key=f"rec_{id_s}", use_container_width=True):
-                        _ok, _msg = _resolver_solicitud_administrativa(id_s, "Rechazado", resp_admin_input)
-                        (st.success if _ok else st.error)(_msg)
-                        if _ok:
-                            st.rerun()
-
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.download_button("Exportar Solicitudes Filtradas a Excel", to_excel(df_sol), "Solicitudes.xlsx", use_container_width=True)
-    else:
-        st.info("No hay solicitudes registradas en el sistema.")
-
-elif choice == "Historial de Descuadres":
-    st.markdown("""
-        <div class="market-header">
-            <h1>Auditoría de Descuadres</h1>
-            <p>Histórico completo para contabilidad</p>
-        </div>
-    """, unsafe_allow_html=True)
-
-    if not st.session_state.descuadres.empty:
-        st.markdown("##### Resumen Mensual de Descuadres por Trabajador")
-        
-        col_m_desc, col_a_desc = st.columns(2)
-        ahora_p_desc = obtener_ahora_peru()
-        
-        NOMBRES_MESES = [
-            "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-            "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
-        ]
-        
-        mes_desc_sel = col_m_desc.selectbox(
-            "Seleccionar Mes", 
-            list(range(1, 13)), 
-            index=ahora_p_desc.month - 1,
-            format_func=lambda x: NOMBRES_MESES[x-1],
-            key="mes_resumen_desc"
-        )
-        anio_desc_sel = col_a_desc.number_input("Año Resumen", min_value=2024, max_value=2030, value=ahora_p_desc.year, key="anio_resumen_desc")
-
-        df_desc_mes = st.session_state.descuadres.copy()
-        df_desc_mes["fecha_dt"] = pd.to_datetime(df_desc_mes["fecha"], errors="coerce")
-        df_desc_mes["monto_num"] = pd.to_numeric(df_desc_mes["monto"], errors="coerce").fillna(0)
-        
-        df_desc_mes = df_desc_mes[
-            (df_desc_mes["fecha_dt"].dt.month == mes_desc_sel) & 
-            (df_desc_mes["fecha_dt"].dt.year == anio_desc_sel)
-        ]
-
-        _f_ini_mes = f"{int(anio_desc_sel)}-{mes_desc_sel:02d}-01"
-        _validos = obtener_solo_colaboradores(_f_ini_mes)  # excluye a quienes ya cesaron antes del mes
-        colabs_operativos = list(dict.fromkeys(_validos + [n for n in df_desc_mes["nombre"].unique().tolist() if n in obtener_solo_colaboradores()]))
-        _per = f"{NOMBRES_MESES[mes_desc_sel-1]} {int(anio_desc_sel)}"
-
-        if not df_desc_mes.empty:
-            _sob = df_desc_mes[df_desc_mes["monto_num"] > 0]["monto_num"].sum()
-            _fal = df_desc_mes[df_desc_mes["monto_num"] < 0]["monto_num"].sum()
-            _bal = df_desc_mes["monto_num"].sum()
-            kd1, kd2, kd3 = st.columns(3)
-            kd1.markdown(ui_kpi(f"Sobrantes · {_per}", f"S/. {_sob:.2f}"), unsafe_allow_html=True)
-            kd2.markdown(ui_kpi(f"Faltantes · {_per}", f"S/. {abs(_fal):.2f}"), unsafe_allow_html=True)
-            kd3.markdown(ui_kpi(f"Balance neto · {_per}", f"S/. {_bal:.2f}"), unsafe_allow_html=True)
-            st.markdown("<div style='height:14px'></div>", unsafe_allow_html=True)
-            _sin_mov = []
-            for nombre_colab in colabs_operativos:
-                df_c = df_desc_mes[df_desc_mes["nombre"] == nombre_colab]
-                if df_c.empty:
-                    _sin_mov.append(nombre_colab)
-                    continue
-                _d, _f = ui_dni_foto(nombre_colab)
-                st.markdown(ui_desc_card(nombre_colab, df_c, _d, _f), unsafe_allow_html=True)
-            if _sin_mov:
-                st.markdown('<div class="tp-card"><div class="tp-note-t">Sin descuadres en el mes</div><div class="tp-chips" style="justify-content:flex-start">' + "".join(ui_chip(_html.escape(n), "neutral") for n in _sin_mov) + '</div></div>', unsafe_allow_html=True)
-        else:
-            st.info(f"No hay descuadres registrados en el mes de {_per}.")
-
-        st.markdown("---")
-
-        st.markdown("**Filtrar registros de asistencia**")
-        f_col1, f_col2 = st.columns([1.5, 1])
-        
-        with f_col1:
-            rango_fechas_desc = st.date_input("Rango de Fechas", value=(obtener_ahora_peru(), obtener_ahora_peru()), key="desc_fechas")
-        with f_col2:
-            colabs_desc = ["Todos"] + [c for c in st.session_state.descuadres["nombre"].unique().tolist() if c in obtener_solo_colaboradores()]
-            colab_desc_sel = st.selectbox("Colaborador", colabs_desc, key="desc_colab")
-
-        df_desc_filtrado = st.session_state.descuadres.copy()
-        
-        if isinstance(rango_fechas_desc, tuple):
-            if len(rango_fechas_desc) == 2:
-                f_inicio, f_fin = str(rango_fechas_desc[0]), str(rango_fechas_desc[1])
-                df_desc_filtrado = df_desc_filtrado[
-                    (df_desc_filtrado["fecha"].astype(str) >= f_inicio) & 
-                    (df_desc_filtrado["fecha"].astype(str) <= f_fin)
-                ]
-            elif len(rango_fechas_desc) == 1:
-                f_inicio = str(rango_fechas_desc[0])
-                df_desc_filtrado = df_desc_filtrado[df_desc_filtrado["fecha"].astype(str) == f_inicio]
-
-        if colab_desc_sel != "Todos":
-            df_desc_filtrado = df_desc_filtrado[df_desc_filtrado["nombre"] == colab_desc_sel]
-
-        if not df_desc_filtrado.empty:
-            df_desc_filtrado["monto_num"] = pd.to_numeric(df_desc_filtrado["monto"], errors="coerce").fillna(0)
-            sobrantes = df_desc_filtrado[df_desc_filtrado["monto_num"] > 0]["monto_num"].sum()
-            faltantes = df_desc_filtrado[df_desc_filtrado["monto_num"] < 0]["monto_num"].sum()
-            balance = df_desc_filtrado["monto_num"].sum()
-
-            m1, m2, m3 = st.columns(3)
-            m1.markdown(ui_kpi("Total sobrantes (+)", f"S/. {sobrantes:.2f}"), unsafe_allow_html=True)
-            m2.markdown(ui_kpi("Total faltantes (-)", f"S/. {abs(faltantes):.2f}"), unsafe_allow_html=True)
-            m3.markdown(ui_kpi("Balance neto", f"S/. {balance:.2f}"), unsafe_allow_html=True)
-
-            st.markdown("<br>", unsafe_allow_html=True)
-            st.markdown("##### Ranking de Colaboradores (según filtro aplicado)")
-
-            df_rank_desc = df_desc_filtrado.groupby("nombre")["monto_num"].sum().reset_index().rename(columns={"monto_num": "balance"})
-            df_rank_desc = df_rank_desc.sort_values("balance")
-
-            if not df_rank_desc.empty:
-                rk1, rk2 = st.columns(2)
-                with rk1:
-                    st.markdown("**Mayores faltantes**")
-                    peores = df_rank_desc[df_rank_desc["balance"] < 0].head(5)
-                    if not peores.empty:
-                        st.markdown(ui_rank_rows(peores, "bad"), unsafe_allow_html=True)
-                    else:
-                        st.success("Nadie registra faltantes en este período.")
-                with rk2:
-                    st.markdown("**Mejores balances**")
-                    mejores = df_rank_desc[df_rank_desc["balance"] >= 0].sort_values("balance", ascending=False).head(5)
-                    if not mejores.empty:
-                        st.markdown(ui_rank_rows(mejores, "ok"), unsafe_allow_html=True)
-                    else:
-                        st.info("Sin balances positivos registrados en este período.")
-
-                st.bar_chart(df_rank_desc.set_index("nombre")["balance"])
-
-            st.markdown("<br>", unsafe_allow_html=True)
-            st.markdown("#####  Balance de Descuadres por Trabajador")
-            
-            for nombre_trab, df_trab in df_desc_filtrado.groupby("nombre"):
-                _d, _f = ui_dni_foto(nombre_trab)
-                st.markdown(ui_desc_card(nombre_trab, df_trab, _d, _f), unsafe_allow_html=True)
-
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown("##### Matriz Consolidada de Descuadres")
-        st.dataframe(
-            df_desc_filtrado.drop(columns=["monto_num"], errors="ignore"),
-            use_container_width=True,
-            hide_index=True,
-            column_config={"monto": st.column_config.NumberColumn("MONTO", format="S/. %.2f")}
-        )
-        st.download_button("Exportar a Excel", to_excel(df_desc_filtrado.drop(columns=["monto_num"], errors="ignore")), "Descuadres_General.xlsx", use_container_width=True)
-
-        if rol_actual == "admin":
-            st.markdown("<br>", unsafe_allow_html=True)
-            col_mod, col_del = st.columns(2)
-
-            with col_mod:
-                with st.expander("Modificar Descuadre"):
-                    opciones_desc = [f"{i} | {r['fecha']} | {r['nombre']} | S/. {r['monto']}" for i, r in st.session_state.descuadres.iterrows()]
-                    sel_mod = st.selectbox("Seleccionar Registro a Editar", opciones_desc, key="mod_desc_sel")
-                    
-                    if sel_mod:
-                        idx_mod = int(sel_mod.split(" | ")[0])
-                        row_mod = st.session_state.descuadres.loc[idx_mod]
-                        
-                        nuevo_monto = st.number_input("Nuevo Monto (S/.)", value=float(row_mod["monto"]), step=0.50, format="%.2f")
-                        tipo_options = ["Sobrante", "Faltante"]
-                        idx_tipo = tipo_options.index(row_mod["tipo"]) if row_mod["tipo"] in tipo_options else 0
-                        nuevo_tipo = st.selectbox("Nuevo Tipo", tipo_options, index=idx_tipo)
-                        nueva_obs = st.text_area("Nueva Observación", value=str(row_mod["observacion"]))
-
-                        if st.button("Guardar Cambios en Descuadre", use_container_width=True):
-                            valor_anterior_desc = f"S/. {row_mod['monto']} ({row_mod['tipo']})"
-                            st.session_state.descuadres.at[idx_mod, "monto"] = nuevo_monto
-                            st.session_state.descuadres.at[idx_mod, "tipo"] = nuevo_tipo
-                            st.session_state.descuadres.at[idx_mod, "observacion"] = nueva_obs
-                            actualizar_hoja_completa("Descuadres", st.session_state.descuadres)
-                            registrar_auditoria("Editar Descuadre", "Descuadres", f"{row_mod['nombre']} ({row_mod['fecha']}): {valor_anterior_desc} → S/. {nuevo_monto} ({nuevo_tipo})")
-                            st.toast("Descuadre actualizado correctamente")
-                            time.sleep(0.3)
-                            st.rerun()
-
-            with col_del:
-                with st.expander("Eliminar Descuadre"):
-                    opciones_desc_del = [f"{i} | {r['fecha']} | {r['nombre']} | S/. {r['monto']}" for i, r in st.session_state.descuadres.iterrows()]
-                    sel_del = st.selectbox("Seleccionar Registro a Eliminar", opciones_desc_del, key="del_desc_sel")
-                    confirm_del_desc = st.checkbox("Confirmar eliminación del descuadre")
-
-                    if st.button("Eliminar Descuadre", type="primary", use_container_width=True):
-                        if confirm_del_desc:
-                            idx_del = int(sel_del.split(" | ")[0])
-                            row_del_desc = st.session_state.descuadres.loc[idx_del]
-                            st.session_state.descuadres = st.session_state.descuadres.drop(idx_del).reset_index(drop=True)
-                            actualizar_hoja_completa("Descuadres", st.session_state.descuadres)
-                            registrar_auditoria("Eliminar Descuadre", "Descuadres", f"{row_del_desc['nombre']} ({row_del_desc['fecha']}): S/. {row_del_desc['monto']} ({row_del_desc['tipo']})")
-                            st.toast("Descuadre eliminado correctamente")
-                            time.sleep(0.3)
-                            st.rerun()
-                        else:
-                            st.warning("Marca la casilla de confirmación antes de eliminar.")
-    else:
-        st.info("Sin descuadres registrados.")
-
-elif choice == "Incidencias y Daños":
-    st.markdown("""
-        <div class="market-header">
-            <h1>Incidencias y Daños</h1>
-            <p>Billetes falsos, botellas rotas y otros daños reportados por el personal</p>
-        </div>
-    """, unsafe_allow_html=True)
-
-    if not st.session_state.incidencias.empty:
-        df_inc_admin = st.session_state.incidencias.copy()
-        df_inc_admin["valor_reparacion"] = pd.to_numeric(df_inc_admin["valor_reparacion"], errors="coerce").fillna(0)
-
-        pend_inc_cnt = len(df_inc_admin[df_inc_admin["estado"] == "Pendiente"])
-        billetes_falsos_total = df_inc_admin[df_inc_admin["tipo_incidencia"] == "Billete Falso"]["valor_reparacion"].sum()
-        st.markdown('<div class="tp-gridk">' +
-                    ui_kpi_acc("Total de incidencias", str(len(df_inc_admin)), "registradas por el personal", "info") +
-                    ui_kpi_acc("Valor total a reparar", f"S/. {df_inc_admin['valor_reparacion'].sum():.2f}", "suma de todas las incidencias", "bad") +
-                    ui_kpi_acc("Pendientes de resolver", str(pend_inc_cnt), "requieren tu decisión" if pend_inc_cnt else "Todo al día", "warn" if pend_inc_cnt else "ok") +
-                    ui_kpi_acc("Total en billetes falsos", f"S/. {billetes_falsos_total:.2f}", "valor recibido", "info") + '</div>', unsafe_allow_html=True)
-
-        st.markdown("<br>", unsafe_allow_html=True)
-
-        fi1, fi2 = st.columns(2)
-        with fi1:
-            tipos_inc_disp = ["Todos"] + sorted(df_inc_admin["tipo_incidencia"].dropna().unique().tolist())
-            tipo_inc_filtro = st.selectbox("Filtrar por Tipo", tipos_inc_disp, key="inc_filtro_tipo_admin")
-        with fi2:
-            colabs_inc_disp = ["Todos"] + sorted(df_inc_admin["nombre"].dropna().unique().tolist())
-            colab_inc_filtro = st.selectbox("Filtrar por Colaborador", colabs_inc_disp, key="inc_filtro_colab_admin")
-
-        df_inc_filtrado = df_inc_admin.copy()
-        if tipo_inc_filtro != "Todos":
-            df_inc_filtrado = df_inc_filtrado[df_inc_filtrado["tipo_incidencia"] == tipo_inc_filtro]
-        if colab_inc_filtro != "Todos":
-            df_inc_filtrado = df_inc_filtrado[df_inc_filtrado["nombre"] == colab_inc_filtro]
-
-        df_rank_inc = df_inc_filtrado.groupby("nombre")["valor_reparacion"].sum().reset_index().sort_values("valor_reparacion", ascending=False)
-        if not df_rank_inc.empty:
-            st.markdown(ui_panel("Ranking por colaborador", "Valor total a reparar según el filtro", ui_hbars([(r["nombre"], float(r["valor_reparacion"])) for _, r in df_rank_inc.head(8).iterrows()], "#EC3237", "S/. {:,.2f}")), unsafe_allow_html=True)
-
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown("<div class='tp-note-t' style='margin:6px 0 10px'>Detalle de incidencias</div>", unsafe_allow_html=True)
-        _inc_ord = df_inc_filtrado.sort_values("fecha_registro", ascending=False)
-        try:
-            _c_tab, _c_tar = st.container(key="vista_tabla"), st.container(key="vista_tarjetas")
-        except TypeError:
-            _c_tab, _c_tar = st.container(), None
-        with _c_tab:
-            st.dataframe(_inc_ord, use_container_width=True, hide_index=True)
-        if _c_tar is not None:
-            with _c_tar:
-                st.markdown("".join(ui_inc_card(_r, admin=True) for _, _r in _inc_ord.head(30).iterrows()), unsafe_allow_html=True)
-                st.caption("Se muestran las 30 incidencias más recientes. Exporta a Excel para ver todo.")
-        st.download_button("Exportar Incidencias a Excel", to_excel(df_inc_filtrado), "Incidencias.xlsx", use_container_width=True)
-
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown("<div class='tp-note-t' style='margin:6px 0 10px'>Pendientes de resolver</div>", unsafe_allow_html=True)
-        _pend_inc = st.session_state.incidencias[st.session_state.incidencias["estado"] == "Pendiente"]
-        if _pend_inc.empty:
-            ui_callout("No hay incidencias pendientes de resolver.", "ok")
-        for idx_inc_resolver, _rp in _pend_inc.iterrows():
-            with ui_card_container(f"inc_{idx_inc_resolver}"):
-                st.markdown(ui_inc_card(_rp, admin=True, flat=True), unsafe_allow_html=True)
-                _bd, _br = st.columns(2)
-                _nuevo = None
-                if _bd.button("Descontar en boleta", key=f"inc_desc_{idx_inc_resolver}", use_container_width=True):
-                    _nuevo = "Descontado en Boleta"
-                if _br.button("Resuelto / Condonado", key=f"inc_res_{idx_inc_resolver}", use_container_width=True):
-                    _nuevo = "Resuelto / Condonado"
-                if _nuevo:
-                    st.session_state.incidencias.at[idx_inc_resolver, "estado"] = _nuevo
-                    actualizar_hoja_completa("Incidencias", st.session_state.incidencias)
-                    registrar_auditoria("Actualizar Estado de Incidencia", "Incidencias", f"Incidencia #{idx_inc_resolver} → {_nuevo}")
-                    st.toast("Estado actualizado")
-                    time.sleep(0.3)
-                    st.rerun()
-    else:
-        ui_callout("No hay incidencias registradas todavía.")
-
-elif choice == "Botellas Fiadas":
-    st.markdown(f"""
-        <div class="market-header">
-            <h1>Botellas Fiadas a Clientes</h1>
-            <p>Visible para todos los turnos y roles — responsable actual: <b>{user_actual}</b></p>
-        </div>
-    """, unsafe_allow_html=True)
-
-    ui_callout("Registra aquí cuando se le fíen botellas (gaseosa o cerveza) a un cliente. Cualquier colaborador o el administrador podrá ver este registro en cualquier turno, hasta que las botellas sean devueltas.")
-
-    _bf = st.session_state.botellas_fiadas
-    _pend_k = _bf[_bf["estado"] != "Devuelta"] if not _bf.empty else _bf
-    _tot_bot = int(pd.to_numeric(_pend_k["cantidad_botellas"], errors="coerce").fillna(0).sum()) if not _pend_k.empty else 0
-    _gar = float(pd.to_numeric(_pend_k[_pend_k["dejo_dinero"].astype(str).str.lower().isin(["sí", "si"])]["monto_dejado"], errors="coerce").fillna(0).sum()) if not _pend_k.empty else 0.0
-    _kb1, _kb2, _kb3 = st.columns(3)
-    _kb1.markdown(ui_kpi("Registros pendientes", str(len(_pend_k)), "clientes con botellas por devolver"), unsafe_allow_html=True)
-    _kb2.markdown(ui_kpi("Botellas por devolver", str(_tot_bot), "entre todos los turnos"), unsafe_allow_html=True)
-    _kb3.markdown(ui_kpi("Garantía retenida", f"S/. {_gar:.2f}", "dejada por los clientes"), unsafe_allow_html=True)
-    st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
-
-    with st.container(border=True):
-        st.markdown("##### Registrar Botellas Fiadas")
-        with st.form("form_botella_fiada", clear_on_submit=True):
-            bf1, bf2 = st.columns(2)
-            cliente_nombre_bf = bf1.text_input("Nombre del Cliente", key="bf_nombre")
-            cliente_dni_bf = bf2.text_input("DNI del Cliente (opcional)", value="12345678", key="bf_dni", help="Si el cliente no quiere dar su DNI, deja 12345678.")
-
-            cliente_dir_bf = st.text_input("Dirección / Dónde Vive", key="bf_direccion")
-
-            bf3, bf4, bf5 = st.columns(3)
-            cantidad_bf = bf3.number_input("Cantidad de Botellas", min_value=1, step=1, key="bf_cantidad")
-            tipo_botella_bf = bf4.selectbox("Tipo de Botella", ["Gaseosa", "Cerveza", "Mixto (Gaseosa y Cerveza)"], key="bf_tipo")
-            dejo_dinero_bf = bf5.selectbox("¿Dejó Dinero de Garantía?", ["No", "Sí"], key="bf_dejo_dinero")
-
-            monto_dejado_bf = 0.0
-            if dejo_dinero_bf == "Sí":
-                monto_dejado_bf = st.number_input("Monto Dejado (S/.)", min_value=0.0, step=1.0, format="%.2f", key="bf_monto_dejado")
-
-            obs_bf = st.text_area("Observación (opcional)", key="bf_obs")
-
-            if st.form_submit_button("Guardar Registro de Botellas Fiadas", use_container_width=True):
-                if not cliente_nombre_bf.strip():
-                    st.error("Debes ingresar el nombre del cliente.")
-                else:
-                    if not cliente_dni_bf.strip():
-                        cliente_dni_bf = "12345678"
-                    id_bf_nuevo = f"BF-{int(time.time()*1000)}"
-                    f_prestamo_bf = obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S")
-
-                    guardado_bf_ok = guardar_botella_fiada_gsheets(
-                        id_bf_nuevo, cliente_nombre_bf.strip(), cliente_dni_bf.strip(), cliente_dir_bf.strip(),
-                        cantidad_bf, tipo_botella_bf, dejo_dinero_bf, monto_dejado_bf, f_prestamo_bf,
-                        user_actual, "Pendiente", "", obs_bf
-                    )
-                    if guardado_bf_ok:
-                        nueva_fila_bf = {
-                            "id_fiado": id_bf_nuevo, "cliente_nombre": cliente_nombre_bf.strip(), "cliente_dni": cliente_dni_bf.strip(),
-                            "cliente_direccion": cliente_dir_bf.strip(), "cantidad_botellas": cantidad_bf, "tipo_botella": tipo_botella_bf,
-                            "dejo_dinero": dejo_dinero_bf, "monto_dejado": monto_dejado_bf, "fecha_prestamo": f_prestamo_bf,
-                            "registrado_por": user_actual, "estado": "Pendiente", "fecha_devolucion": "", "observacion": obs_bf
-                        }
-                        st.session_state.botellas_fiadas = pd.concat([pd.DataFrame([nueva_fila_bf]), st.session_state.botellas_fiadas], ignore_index=True)
-                        registrar_auditoria("Registrar Botellas Fiadas", "BotellasFiadas", f"{cliente_nombre_bf.strip()} — {cantidad_bf} botella(s) de {tipo_botella_bf}")
-                        st.toast("Botellas fiadas registradas correctamente")
-                        st.rerun()
-
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("<div class='tp-note-t' style='margin:6px 0 10px'>Botellas pendientes de devolución · todos los turnos</div>", unsafe_allow_html=True)
-
-    if not st.session_state.botellas_fiadas.empty:
-        df_bf_pend = st.session_state.botellas_fiadas[st.session_state.botellas_fiadas["estado"] != "Devuelta"]
-        if not df_bf_pend.empty:
-            for idx_bf, r_bf in df_bf_pend.iterrows():
-                tiene_g = str(r_bf["dejo_dinero"]).strip().lower() in ["sí", "si"]
-                try:
-                    dias_bf = (obtener_ahora_peru().date() - pd.to_datetime(r_bf["fecha_prestamo"]).date()).days
-                except Exception:
-                    dias_bf = 0
-                chip_g = ui_chip(f"Garantía S/. {float(r_bf['monto_dejado']):.2f}", "ok") if tiene_g else ui_chip("Sin garantía", "warn")
-                chip_d = ui_chip("Hoy" if dias_bf <= 0 else f"hace {dias_bf} día(s)", "warn" if dias_bf >= 3 else "neutral")
-                obs_txt = str(r_bf.get("observacion", "")).strip()
-                with ui_card_container(f"bf_{idx_bf}"):
-                    st.markdown(
-                        f'<div class="tp-card flat"><div class="tp-card-head"><div class="tp-op-head" style="margin:0">{ui_avatar(r_bf["cliente_nombre"], "", "", 44)}<div>'
-                        f'<div class="tp-card-title">{_html.escape(str(r_bf["cliente_nombre"]))}</div><div class="tp-card-sub">DNI {_html.escape(str(r_bf["cliente_dni"]) or "No registrado")} · {_html.escape(str(r_bf["cliente_direccion"]) or "Sin dirección registrada")}</div></div></div>'
-                        f'<div class="tp-chips">{chip_d}</div></div><div class="tp-card-body" style="margin-bottom:8px"><b>{r_bf["cantidad_botellas"]} botella(s)</b> de <b>{_html.escape(str(r_bf["tipo_botella"]))}</b> · fiado el {str(r_bf["fecha_prestamo"])[:16]} por {_html.escape(str(r_bf["registrado_por"]))}'
-                        f'{("<br>Obs: " + _html.escape(obs_txt)) if obs_txt else ""}</div><div class="tp-chips" style="justify-content:flex-start">{chip_g}</div></div>', unsafe_allow_html=True)
-                    if st.button("Marcar devueltas", key=f"bf_dev_{idx_bf}", use_container_width=True):
-                        st.session_state.botellas_fiadas.at[idx_bf, "estado"] = "Devuelta"
-                        st.session_state.botellas_fiadas.at[idx_bf, "fecha_devolucion"] = obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S")
-                        actualizar_hoja_completa("BotellasFiadas", st.session_state.botellas_fiadas)
-                        registrar_auditoria("Marcar Botellas Devueltas", "BotellasFiadas", f"{r_bf['cliente_nombre']} — {r_bf['cantidad_botellas']} botella(s)")
-                        st.toast("Botellas marcadas como devueltas")
-                        st.rerun()
-        else:
-            ui_callout("No hay botellas pendientes de devolución en este momento.", "ok")
-    else:
-        st.info("No hay registros de botellas fiadas todavía.")
-
-    st.markdown("<br>", unsafe_allow_html=True)
-    with st.expander("Historial de botellas ya devueltas"):
-        if not st.session_state.botellas_fiadas.empty:
-            df_bf_devueltas = st.session_state.botellas_fiadas[st.session_state.botellas_fiadas["estado"] == "Devuelta"]
-            if not df_bf_devueltas.empty:
-                st.dataframe(
-                    df_bf_devueltas.sort_values("fecha_devolucion", ascending=False),
-                    use_container_width=True,
-                    hide_index=True
-                )
-                st.download_button("Exportar Historial a Excel", to_excel(df_bf_devueltas), "Botellas_Devueltas.xlsx", use_container_width=True)
-            else:
-                st.info("Aún no hay botellas devueltas registradas.")
-
-elif choice == "Historial de Asistencias":
-    st.markdown("""
-        <div class="market-header">
-            <h1>Historial de Asistencias</h1>
-            <p>Consulta y seguimiento de ingresos, salidas y puntualidad</p>
-        </div>
-    """, unsafe_allow_html=True)
-
-    if not st.session_state.asistencia.empty:
-        st.markdown("##### Filtros de Búsqueda")
-        fa_col1, fa_col2 = st.columns([1.5, 1])
-        
-        with fa_col1:
-            rango_fechas_asist = st.date_input("Rango de Fechas", value=(obtener_ahora_peru(), obtener_ahora_peru()), key="asist_fechas")
-        with fa_col2:
-            colabs_asist = ["Todos"] + [c for c in st.session_state.asistencia["nombre"].unique().tolist() if c in obtener_solo_colaboradores()]
-            colab_asist_sel = st.selectbox("Colaborador", colabs_asist, key="asist_colab")
-
-        df_asist_filtrado = st.session_state.asistencia.copy()
-        
-        if isinstance(rango_fechas_asist, tuple):
-            if len(rango_fechas_asist) == 2:
-                f_inicio, f_fin = str(rango_fechas_asist[0]), str(rango_fechas_asist[1])
-                df_asist_filtrado = df_asist_filtrado[
-                    (df_asist_filtrado["fecha"].astype(str) >= f_inicio) & 
-                    (df_asist_filtrado["fecha"].astype(str) <= f_fin)
-                ]
-            elif len(rango_fechas_asist) == 1:
-                f_inicio = str(rango_fechas_asist[0])
-                df_asist_filtrado = df_asist_filtrado[df_asist_filtrado["fecha"].astype(str) == f_inicio]
-
-        if colab_asist_sel != "Todos":
-            df_asist_filtrado = df_asist_filtrado[df_asist_filtrado["nombre"] == colab_asist_sel]
-
-        if not df_asist_filtrado.empty:
-            total_marcas = len(df_asist_filtrado)
-            ingresos_cnt = len(df_asist_filtrado[df_asist_filtrado["tipo"] == "INGRESO"])
-            colabs_unicos = df_asist_filtrado["nombre"].nunique()
-
-            filas_punt = []
-            for nom_p in sorted(df_asist_filtrado["nombre"].unique().tolist()):
-                metrica_p = calcular_metricas_puntualidad(df_asist_filtrado, nom_p)
-                if metrica_p["total_ingresos"] > 0:
-                    filas_punt.append({"Colaborador": nom_p, "Ingresos": metrica_p["total_ingresos"], "Puntuales": metrica_p["puntuales"],
-                                       "Tardanzas": metrica_p["tardanzas"], "Minutos": metrica_p["minutos_acumulados"], "Pct": metrica_p["ratio"]})
-            tot_i = sum(f["Ingresos"] for f in filas_punt); tot_p = sum(f["Puntuales"] for f in filas_punt)
-            tot_t = sum(f["Tardanzas"] for f in filas_punt); tot_m = sum(f["Minutos"] for f in filas_punt)
-            a1, a2, a3, a4 = st.columns(4)
-            a1.markdown(ui_kpi("Total de marcaciones", str(total_marcas), f"{colabs_unicos} colaborador(es)"), unsafe_allow_html=True)
-            a2.markdown(ui_kpi("Ingresos registrados", str(ingresos_cnt), "marcas de entrada"), unsafe_allow_html=True)
-            a3.markdown(ui_kpi("Puntualidad global", f"{tot_p / tot_i * 100 if tot_i else 100:.1f}%", f"{tot_p} de {tot_i} ingresos a tiempo"), unsafe_allow_html=True)
-            a4.markdown(ui_kpi("Tardanzas", str(tot_t), f"{tot_m} min acumulados"), unsafe_allow_html=True)
-            st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
-
-            por_dia = df_asist_filtrado.groupby("fecha").size().sort_index().tail(31)
-            if len(por_dia) > 1:
-                st.markdown(ui_panel("Actividad por día", "Marcaciones registradas en el período", ui_columnas([ui_dia_label(d) for d in por_dia.index], [("Marcaciones", [int(v) for v in por_dia.values], "#0F172A")], alto=190)), unsafe_allow_html=True)
-                st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
-
-            if filas_punt:
-                rk_html = ""
-                for f in sorted(filas_punt, key=lambda x: x["Pct"]):
-                    tono = "ok" if f["Pct"] >= 90 else ("warn" if f["Pct"] >= 75 else "bad")
-                    d_, ft_ = ui_dni_foto(f["Colaborador"])
-                    rk_html += (f'<div class="tp-rk">{ui_avatar(f["Colaborador"], d_, ft_, 40)}<div class="tp-rk-main"><b>{_html.escape(str(f["Colaborador"]))}</b>'
-                                f'<div class="tp-prog {tono}"><i style="width:{f["Pct"]}%"></i></div></div><div class="tp-rk-pct">{f["Pct"]:g}%</div>'
-                                f'<div class="tp-chips">{ui_chip(str(f["Ingresos"]) + " ingresos", "neutral")}{ui_chip(str(f["Tardanzas"]) + " tardanzas", "bad" if f["Tardanzas"] else "ok")}{ui_chip(str(f["Minutos"]) + " min", "warn" if f["Minutos"] else "neutral")}</div></div>')
-                rk1, rk2 = st.columns([1.5, 1])
-                rk1.markdown(ui_panel("Ranking de puntualidad", "Primero quienes necesitan más atención", rk_html), unsafe_allow_html=True)
-                top_t = sorted([(f["Colaborador"], f["Tardanzas"]) for f in filas_punt if f["Tardanzas"] > 0], key=lambda x: -x[1])[:8]
-                rk2.markdown(ui_panel("Tardanzas por colaborador", "Según el filtro aplicado", ui_hbars(top_t, "#EC3237")), unsafe_allow_html=True)
-            else:
-                st.info("No hay ingresos registrados para calcular puntualidad en este filtro.")
-
-            st.markdown("<br>", unsafe_allow_html=True)
-            st.markdown("##### Registro Detallado de Asistencias")
-            try:
-                _c_tab, _c_tar = st.container(key="vista_tabla"), st.container(key="vista_tarjetas")
-            except TypeError:
-                _c_tab, _c_tar = st.container(), None
-            with _c_tab:
-                st.dataframe(df_asist_filtrado, use_container_width=True, hide_index=True)
-            if _c_tar is not None:
-                with _c_tar:
-                    _flt = ""
-                    for _, _a in df_asist_filtrado.sort_values("fecha_hora", ascending=False).head(40).iterrows():
-                        _ing = str(_a["tipo"]) == "INGRESO"
-                        _ch = ui_chip("Ingreso" if _ing else "Salida", "ok" if _ing else "bad") + (ui_chip("Extra", "warn") if str(_a.get("es_extra", "")) == "SI" else "")
-                        _flt += f'<div class="tp-row">{ui_avatar(_a["nombre"], _a.get("dni", ""), "", 40)}<div class="tp-row-main"><b>{_html.escape(str(_a["nombre"]))}</b><span>{str(_a["fecha_hora"])[:16]}</span></div><div class="tp-chips">{_ch}</div></div>'
-                    st.markdown(_flt, unsafe_allow_html=True)
-                    st.caption("Se muestran las 40 marcaciones más recientes. Exporta a Excel para ver todo.")
-            st.download_button("Exportar Asistencias a Excel", to_excel(df_asist_filtrado), "Asistencias_General.xlsx", use_container_width=True)
-        else:
-            st.info("No se encontraron registros de asistencia para los filtros seleccionados.")
-    else:
-        st.info("No hay marcaciones de asistencia registradas en el sistema.")
+            st.info("No hay marcaciones de asistencia registradas en el sistema.")
 
 elif choice == "Centro de Alertas":
-    st.markdown("""
-        <div class="market-header">
-            <h1>Centro de Alertas y Notificaciones</h1>
-            <p>Avisos automáticos que el sistema detecta a partir de tus propios datos</p>
-        </div>
-    """, unsafe_allow_html=True)
+    premium_module_shell('Centro de Alertas', 'SEGUIMIENTO', 'Pendientes y alertas que requieren atención.')
 
-    hoy_alerta = obtener_ahora_peru().date()
-    df_emp_activos = st.session_state.empleados[st.session_state.empleados["estado"].astype(str).str.lower() == "activo"].copy()
+    with st.container(key="pm_v_centro_de_alertas"):
 
-    # --- 1. CONTRATOS POR VENCER (próximos 15 días) ---
-    contratos_por_vencer = []
-    for _, r_emp in df_emp_activos.iterrows():
-        f_cese = _parsear_fecha_nac_cumple(r_emp.get("fecha_cese", ""))
-        if f_cese:
-            dias_rest = (f_cese - hoy_alerta).days
-            if 0 <= dias_rest <= 15:
-                contratos_por_vencer.append((r_emp["nombre"], f_cese, dias_rest))
+        hoy_alerta = obtener_ahora_peru().date()
+        df_emp_activos = st.session_state.empleados[st.session_state.empleados["estado"].astype(str).str.lower() == "activo"].copy()
 
-    # --- 2. CUMPLEAÑOS EN LOS PRÓXIMOS 7 DÍAS ---
-    cumples_prox = []
-    for _, r_emp in df_emp_activos.iterrows():
-        f_nac = _parsear_fecha_nac_cumple(r_emp.get("fecha_nacimiento", ""))
-        if f_nac:
-            prox_cumple = f_nac.replace(year=hoy_alerta.year)
-            if prox_cumple < hoy_alerta:
-                prox_cumple = prox_cumple.replace(year=hoy_alerta.year + 1)
-            dias_para_cumple = (prox_cumple - hoy_alerta).days
-            if 0 <= dias_para_cumple <= 7:
-                cumples_prox.append((r_emp["nombre"], prox_cumple, dias_para_cumple))
+        # --- 1. CONTRATOS POR VENCER (próximos 15 días) ---
+        contratos_por_vencer = []
+        for _, r_emp in df_emp_activos.iterrows():
+            f_cese = _parsear_fecha_nac_cumple(r_emp.get("fecha_cese", ""))
+            if f_cese:
+                dias_rest = (f_cese - hoy_alerta).days
+                if 0 <= dias_rest <= 15:
+                    contratos_por_vencer.append((r_emp["nombre"], f_cese, dias_rest))
 
-    # --- 3. TARDANZAS RECURRENTES EN EL MES ACTUAL (3 o más) ---
-    tardanzas_recurrentes = []
-    if not st.session_state.asistencia.empty:
-        mes_actual_str = hoy_alerta.strftime("%Y-%m")
-        df_asist_mes = st.session_state.asistencia[
-            st.session_state.asistencia["fecha"].astype(str).str.startswith(mes_actual_str)
+        # --- 2. CUMPLEAÑOS EN LOS PRÓXIMOS 7 DÍAS ---
+        cumples_prox = []
+        for _, r_emp in df_emp_activos.iterrows():
+            f_nac = _parsear_fecha_nac_cumple(r_emp.get("fecha_nacimiento", ""))
+            if f_nac:
+                prox_cumple = f_nac.replace(year=hoy_alerta.year)
+                if prox_cumple < hoy_alerta:
+                    prox_cumple = prox_cumple.replace(year=hoy_alerta.year + 1)
+                dias_para_cumple = (prox_cumple - hoy_alerta).days
+                if 0 <= dias_para_cumple <= 7:
+                    cumples_prox.append((r_emp["nombre"], prox_cumple, dias_para_cumple))
+
+        # --- 3. TARDANZAS RECURRENTES EN EL MES ACTUAL (3 o más) ---
+        tardanzas_recurrentes = []
+        if not st.session_state.asistencia.empty:
+            mes_actual_str = hoy_alerta.strftime("%Y-%m")
+            df_asist_mes = st.session_state.asistencia[
+                st.session_state.asistencia["fecha"].astype(str).str.startswith(mes_actual_str)
+            ]
+            for nombre_c in df_asist_mes["nombre"].unique():
+                metrica_c = calcular_metricas_puntualidad(df_asist_mes, nombre_c)
+                if metrica_c["tardanzas"] >= 3:
+                    tardanzas_recurrentes.append((nombre_c, metrica_c["tardanzas"], metrica_c["minutos_acumulados"]))
+
+        # --- 4. SOLICITUDES PENDIENTES DE RESPUESTA ---
+        solicitudes_pend = 0
+        if not st.session_state.solicitudes.empty:
+            solicitudes_pend = len(st.session_state.solicitudes[st.session_state.solicitudes["estado"] == "Pendiente"])
+
+        # --- 5. PERMISOS DE SALUD PENDIENTES DE RECUPERAR ---
+        permisos_pend_recup = 0
+        if not st.session_state.vacaciones.empty:
+            permisos_pend_recup = len(st.session_state.vacaciones[
+                (st.session_state.vacaciones["tipo"] == "Permiso de Salud (a recuperar)") &
+                (st.session_state.vacaciones["estado_recuperacion"] != "Recuperado")
+            ])
+
+        e_ = _html.escape
+        _svg = lambda d: f"<svg width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'>{d}</svg>"
+        _IC = {
+            "contratos": _svg("<rect x='4' y='5' width='16' height='15' rx='2'/><path d='M8 3v4M16 3v4M4 10h16'/>"),
+            "tardanzas": _svg("<circle cx='12' cy='12' r='9'/><path d='M12 7v5l3 2'/>"),
+            "solicitudes": _svg("<path d='M4 13l2-8h12l2 8v6H4z'/><path d='M4 13h5l1 2h4l1-2h5'/>"),
+            "permisos": _svg("<rect x='4' y='4' width='16' height='16' rx='3'/><path d='M12 8v8M8 12h8'/>"),
+            "ok": _svg("<path d='M5 12l4 4 10-10'/>"),
+            "boletas": _svg("<path d='M7 3h7l4 4v14H7z'/><path d='M14 3v4h4M9.5 13h5M9.5 17h5'/>"),
+            "cumples": _svg("<rect x='3' y='9' width='18' height='12' rx='2'/><path d='M12 9v12M3 14h18'/><path d='M12 9c-3 0-4-4-1.5-4S12 9 12 9zM12 9c3 0 4-4 1.5-4S12 9 12 9z'/>"),
+        }
+        sol_df = st.session_state.solicitudes
+        sol_pend_df = sol_df[sol_df["estado"] == "Pendiente"] if not sol_df.empty else sol_df
+        vac_df = st.session_state.vacaciones
+        perm_df = vac_df[(vac_df["tipo"] == "Permiso de Salud (a recuperar)") & (vac_df["estado_recuperacion"] != "Recuperado")] if not vac_df.empty else vac_df
+
+        def _fila(nombre, sub, chip_html):
+            d_, f_ = ui_dni_foto(nombre)
+            return f'<div class="tp-row">{ui_avatar(nombre, d_, f_, 42)}<div class="tp-row-main"><b>{e_(str(nombre))}</b><span class="wrap">{sub}</span></div><div class="tp-chips">{chip_html}</div></div>'
+
+        g_contr = [_fila(n, f"Cese programado el {f.strftime('%d/%m/%Y')} · evaluar renovación o cese", ui_chip(f"en {d} día(s)", "bad" if d <= 5 else "warn")) for n, f, d in sorted(contratos_por_vencer, key=lambda x: x[2])]
+        g_tard = [_fila(n, f"{c} tardanzas este mes · {m} min de retraso acumulado", ui_chip(f"{c} tardanzas", "bad")) for n, c, m in sorted(tardanzas_recurrentes, key=lambda x: -x[1])]
+        g_sol = [_fila(r["nombre"], f"{e_(str(r['tipo_solicitud']))} · {str(r['fecha_registro'])[:10]}", ui_chip("Pendiente", "warn")) for _, r in sol_pend_df.sort_values("fecha_registro", ascending=False).head(6).iterrows()]
+        if len(sol_pend_df) > 6:
+            g_sol.append(f'<div class="tp-card-sub" style="padding:4px 4px 0">y {len(sol_pend_df) - 6} solicitud(es) más…</div>')
+        g_perm = [_fila(r["nombre"], f"Recuperar el {r['fecha_recuperacion']} · {e_(str(r['horario_recuperacion']) or 'horario no especificado')}", ui_chip("Sin recuperar", "warn")) for _, r in perm_df.iterrows()]
+        g_cum = [_fila(n, f"Cumple años el {f.strftime('%d/%m')}", ui_chip("¡Hoy!", "ok") if d == 0 else ui_chip(f"en {d} día(s)", "info")) for n, f, d in sorted(cumples_prox, key=lambda x: x[2])]
+
+        _bhx = st.session_state.boletas_historial
+        _obs_bol = _bhx[_bhx["estado"].astype(str) == "Observado"] if not _bhx.empty else _bhx
+        g_bol = [_fila(r["nombre"], f"{r['mes']} {r['anio']} · “{_html.escape(str(r['observacion_colaborador'])[:90])}”", ui_chip("Observada", "warn")) for _, r in _obs_bol.iterrows()]
+        grupos = [
+            {"k": "contratos", "t": "Contratos por vencer", "s": "Próximos 15 días", "n": len(contratos_por_vencer), "tono": "bad" if any(d <= 5 for _, _, d in contratos_por_vencer) else "warn", "f": g_contr, "dest": "Gestión Colaboradores", "btn": "Ir a Colaboradores"},
+            {"k": "tardanzas", "t": "Tardanzas recurrentes", "s": "3 o más en el mes actual", "n": len(tardanzas_recurrentes), "tono": "bad", "f": g_tard, "dest": "Historial de Asistencias", "btn": "Ver asistencias"},
+            {"k": "solicitudes", "t": "Solicitudes pendientes", "s": "Esperan tu respuesta", "n": len(sol_pend_df), "tono": "warn", "f": g_sol, "dest": "Solicitudes y Permisos", "btn": "Revisar solicitudes"},
+            {"k": "boletas", "t": "Boletas observadas", "s": "El colaborador pide una revisión", "n": len(_obs_bol), "tono": "warn", "f": g_bol, "dest": "Boletas de Pago", "btn": "Revisar boletas"},
+            {"k": "permisos", "t": "Permisos de salud sin recuperar", "s": "Horas por recuperar", "n": len(perm_df), "tono": "warn", "f": g_perm, "dest": "Gestión de Vacaciones", "btn": "Ir a Vacaciones"},
+            {"k": "cumples", "t": "Cumpleaños de la semana", "s": "Próximos 7 días", "n": len(cumples_prox), "tono": "info", "f": g_cum, "dest": None, "btn": ""},
         ]
-        for nombre_c in df_asist_mes["nombre"].unique():
-            metrica_c = calcular_metricas_puntualidad(df_asist_mes, nombre_c)
-            if metrica_c["tardanzas"] >= 3:
-                tardanzas_recurrentes.append((nombre_c, metrica_c["tardanzas"], metrica_c["minutos_acumulados"]))
+        urgentes = sum(g["n"] for g in grupos if g["k"] != "cumples")
+        if urgentes == 0:
+            st.markdown(f'<div class="tp-banner ok"><span class="tp-al-ico ok">{_IC["ok"]}</span><div><b>Todo en orden</b><span class="s">No hay alertas que requieran tu atención ahora mismo.</span></div></div>', unsafe_allow_html=True)
+        else:
+            resumen = "".join(ui_chip(f"{g['n']} · {g['t']}", g["tono"]) for g in grupos if g["n"] and g["k"] != "cumples")
+            st.markdown(f'<div class="tp-banner {"bad" if any(g["tono"] == "bad" and g["n"] for g in grupos) else "warn"}"><div><b>Tienes {urgentes} alerta(s) que requieren atención</b><span class="s" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">{resumen}</span></div></div>', unsafe_allow_html=True)
+        st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
 
-    # --- 4. SOLICITUDES PENDIENTES DE RESPUESTA ---
-    solicitudes_pend = 0
-    if not st.session_state.solicitudes.empty:
-        solicitudes_pend = len(st.session_state.solicitudes[st.session_state.solicitudes["estado"] == "Pendiente"])
+        for col_k, g in zip(st.columns(len(grupos)), grupos):
+            tono_k = g["tono"] if g["n"] else "ok"
+            col_k.markdown(f'<div class="tp-kpi al-{tono_k}"><div class="tp-kpi-lbl">{g["t"]}</div><div class="tp-kpi-val">{g["n"]}</div><div class="tp-kpi-sub">{"Requiere atención" if g["n"] and g["k"] != "cumples" else ("Para saludar" if g["n"] else "Sin novedades")}</div></div>', unsafe_allow_html=True)
+        st.markdown("<div style='height:18px'></div>", unsafe_allow_html=True)
 
-    # --- 5. PERMISOS DE SALUD PENDIENTES DE RECUPERAR ---
-    permisos_pend_recup = 0
-    if not st.session_state.vacaciones.empty:
-        permisos_pend_recup = len(st.session_state.vacaciones[
-            (st.session_state.vacaciones["tipo"] == "Permiso de Salud (a recuperar)") &
-            (st.session_state.vacaciones["estado_recuperacion"] != "Recuperado")
-        ])
+        orden = {"bad": 0, "warn": 1, "info": 2}
+        for g in sorted([x for x in grupos if x["n"]], key=lambda x: orden[x["tono"]]):
+            with ui_card_container(f"al_{g['k']}"):
+                st.markdown(f'<div class="tp-card flat"><div class="tp-card-head"><div class="tp-op-head" style="margin:0"><span class="tp-al-ico {g["tono"]}">{_IC[g["k"]]}</span><div><div class="tp-card-title">{g["t"]}</div><div class="tp-card-sub">{g["s"]}</div></div></div>{ui_chip(str(g["n"]), g["tono"])}</div></div><div style="height:10px"></div>' + "".join(g["f"]), unsafe_allow_html=True)
+                if g["dest"]:
+                    _b1, _b2 = st.columns([3, 1.3])
+                    _b2.button(g["btn"], key=f"al_btn_{g['k']}", on_click=_gs_ir, args=(g["dest"],), use_container_width=True)
 
-    e_ = _html.escape
-    _svg = lambda d: f"<svg width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'>{d}</svg>"
-    _IC = {
-        "contratos": _svg("<rect x='4' y='5' width='16' height='15' rx='2'/><path d='M8 3v4M16 3v4M4 10h16'/>"),
-        "tardanzas": _svg("<circle cx='12' cy='12' r='9'/><path d='M12 7v5l3 2'/>"),
-        "solicitudes": _svg("<path d='M4 13l2-8h12l2 8v6H4z'/><path d='M4 13h5l1 2h4l1-2h5'/>"),
-        "permisos": _svg("<rect x='4' y='4' width='16' height='16' rx='3'/><path d='M12 8v8M8 12h8'/>"),
-        "ok": _svg("<path d='M5 12l4 4 10-10'/>"),
-        "boletas": _svg("<path d='M7 3h7l4 4v14H7z'/><path d='M14 3v4h4M9.5 13h5M9.5 17h5'/>"),
-        "cumples": _svg("<rect x='3' y='9' width='18' height='12' rx='2'/><path d='M12 9v12M3 14h18'/><path d='M12 9c-3 0-4-4-1.5-4S12 9 12 9zM12 9c3 0 4-4 1.5-4S12 9 12 9z'/>"),
-    }
-    sol_df = st.session_state.solicitudes
-    sol_pend_df = sol_df[sol_df["estado"] == "Pendiente"] if not sol_df.empty else sol_df
-    vac_df = st.session_state.vacaciones
-    perm_df = vac_df[(vac_df["tipo"] == "Permiso de Salud (a recuperar)") & (vac_df["estado_recuperacion"] != "Recuperado")] if not vac_df.empty else vac_df
-
-    def _fila(nombre, sub, chip_html):
-        d_, f_ = ui_dni_foto(nombre)
-        return f'<div class="tp-row">{ui_avatar(nombre, d_, f_, 42)}<div class="tp-row-main"><b>{e_(str(nombre))}</b><span class="wrap">{sub}</span></div><div class="tp-chips">{chip_html}</div></div>'
-
-    g_contr = [_fila(n, f"Cese programado el {f.strftime('%d/%m/%Y')} · evaluar renovación o cese", ui_chip(f"en {d} día(s)", "bad" if d <= 5 else "warn")) for n, f, d in sorted(contratos_por_vencer, key=lambda x: x[2])]
-    g_tard = [_fila(n, f"{c} tardanzas este mes · {m} min de retraso acumulado", ui_chip(f"{c} tardanzas", "bad")) for n, c, m in sorted(tardanzas_recurrentes, key=lambda x: -x[1])]
-    g_sol = [_fila(r["nombre"], f"{e_(str(r['tipo_solicitud']))} · {str(r['fecha_registro'])[:10]}", ui_chip("Pendiente", "warn")) for _, r in sol_pend_df.sort_values("fecha_registro", ascending=False).head(6).iterrows()]
-    if len(sol_pend_df) > 6:
-        g_sol.append(f'<div class="tp-card-sub" style="padding:4px 4px 0">y {len(sol_pend_df) - 6} solicitud(es) más…</div>')
-    g_perm = [_fila(r["nombre"], f"Recuperar el {r['fecha_recuperacion']} · {e_(str(r['horario_recuperacion']) or 'horario no especificado')}", ui_chip("Sin recuperar", "warn")) for _, r in perm_df.iterrows()]
-    g_cum = [_fila(n, f"Cumple años el {f.strftime('%d/%m')}", ui_chip("¡Hoy!", "ok") if d == 0 else ui_chip(f"en {d} día(s)", "info")) for n, f, d in sorted(cumples_prox, key=lambda x: x[2])]
-
-    _bhx = st.session_state.boletas_historial
-    _obs_bol = _bhx[_bhx["estado"].astype(str) == "Observado"] if not _bhx.empty else _bhx
-    g_bol = [_fila(r["nombre"], f"{r['mes']} {r['anio']} · “{_html.escape(str(r['observacion_colaborador'])[:90])}”", ui_chip("Observada", "warn")) for _, r in _obs_bol.iterrows()]
-    grupos = [
-        {"k": "contratos", "t": "Contratos por vencer", "s": "Próximos 15 días", "n": len(contratos_por_vencer), "tono": "bad" if any(d <= 5 for _, _, d in contratos_por_vencer) else "warn", "f": g_contr, "dest": "Gestión Colaboradores", "btn": "Ir a Colaboradores"},
-        {"k": "tardanzas", "t": "Tardanzas recurrentes", "s": "3 o más en el mes actual", "n": len(tardanzas_recurrentes), "tono": "bad", "f": g_tard, "dest": "Historial de Asistencias", "btn": "Ver asistencias"},
-        {"k": "solicitudes", "t": "Solicitudes pendientes", "s": "Esperan tu respuesta", "n": len(sol_pend_df), "tono": "warn", "f": g_sol, "dest": "Solicitudes y Permisos", "btn": "Revisar solicitudes"},
-        {"k": "boletas", "t": "Boletas observadas", "s": "El colaborador pide una revisión", "n": len(_obs_bol), "tono": "warn", "f": g_bol, "dest": "Boletas de Pago", "btn": "Revisar boletas"},
-        {"k": "permisos", "t": "Permisos de salud sin recuperar", "s": "Horas por recuperar", "n": len(perm_df), "tono": "warn", "f": g_perm, "dest": "Gestión de Vacaciones", "btn": "Ir a Vacaciones"},
-        {"k": "cumples", "t": "Cumpleaños de la semana", "s": "Próximos 7 días", "n": len(cumples_prox), "tono": "info", "f": g_cum, "dest": None, "btn": ""},
-    ]
-    urgentes = sum(g["n"] for g in grupos if g["k"] != "cumples")
-    if urgentes == 0:
-        st.markdown(f'<div class="tp-banner ok"><span class="tp-al-ico ok">{_IC["ok"]}</span><div><b>Todo en orden</b><span class="s">No hay alertas que requieran tu atención ahora mismo.</span></div></div>', unsafe_allow_html=True)
-    else:
-        resumen = "".join(ui_chip(f"{g['n']} · {g['t']}", g["tono"]) for g in grupos if g["n"] and g["k"] != "cumples")
-        st.markdown(f'<div class="tp-banner {"bad" if any(g["tono"] == "bad" and g["n"] for g in grupos) else "warn"}"><div><b>Tienes {urgentes} alerta(s) que requieren atención</b><span class="s" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">{resumen}</span></div></div>', unsafe_allow_html=True)
-    st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
-
-    for col_k, g in zip(st.columns(len(grupos)), grupos):
-        tono_k = g["tono"] if g["n"] else "ok"
-        col_k.markdown(f'<div class="tp-kpi al-{tono_k}"><div class="tp-kpi-lbl">{g["t"]}</div><div class="tp-kpi-val">{g["n"]}</div><div class="tp-kpi-sub">{"Requiere atención" if g["n"] and g["k"] != "cumples" else ("Para saludar" if g["n"] else "Sin novedades")}</div></div>', unsafe_allow_html=True)
-    st.markdown("<div style='height:18px'></div>", unsafe_allow_html=True)
-
-    orden = {"bad": 0, "warn": 1, "info": 2}
-    for g in sorted([x for x in grupos if x["n"]], key=lambda x: orden[x["tono"]]):
-        with ui_card_container(f"al_{g['k']}"):
-            st.markdown(f'<div class="tp-card flat"><div class="tp-card-head"><div class="tp-op-head" style="margin:0"><span class="tp-al-ico {g["tono"]}">{_IC[g["k"]]}</span><div><div class="tp-card-title">{g["t"]}</div><div class="tp-card-sub">{g["s"]}</div></div></div>{ui_chip(str(g["n"]), g["tono"])}</div></div><div style="height:10px"></div>' + "".join(g["f"]), unsafe_allow_html=True)
-            if g["dest"]:
-                _b1, _b2 = st.columns([3, 1.3])
-                _b2.button(g["btn"], key=f"al_btn_{g['k']}", on_click=_gs_ir, args=(g["dest"],), use_container_width=True)
-
-    sin_nov = [g for g in grupos if not g["n"]]
-    if sin_nov:
-        st.markdown('<div class="tp-card"><div class="tp-note-t">Sin novedades</div><div class="tp-chips" style="justify-content:flex-start">' + "".join(ui_chip(g["t"], "ok") for g in sin_nov) + '</div></div>', unsafe_allow_html=True)
+        sin_nov = [g for g in grupos if not g["n"]]
+        if sin_nov:
+            st.markdown('<div class="tp-card"><div class="tp-note-t">Sin novedades</div><div class="tp-chips" style="justify-content:flex-start">' + "".join(ui_chip(g["t"], "ok") for g in sin_nov) + '</div></div>', unsafe_allow_html=True)
 
 
 elif choice == "Gestión de Vacaciones":
-    st.markdown("""
-        <div class="market-header">
-            <h1>Gestión de Vacaciones y Permisos de Salud</h1>
-            <p>Régimen REMYPE — 15 días de vacaciones al año (único beneficio social), único para personal en planilla</p>
-        </div>
-    """, unsafe_allow_html=True)
+    premium_module_shell('Gestión de Vacaciones', 'PERSONAS', 'Control de descansos y vacaciones.')
 
-    lista_colabs_activos = st.session_state.empleados[st.session_state.empleados["estado"].astype(str).str.lower() == "activo"]["nombre"].tolist()
+    with st.container(key="pm_v_gestion_de_vacaciones"):
 
-    with st.container(border=True):
-        st.markdown("##### Registrar Descanso / Permiso")
+        lista_colabs_activos = st.session_state.empleados[st.session_state.empleados["estado"].astype(str).str.lower() == "activo"]["nombre"].tolist()
 
-        c_tipo1, c_tipo2 = st.columns(2)
-        with c_tipo1:
-            colab_vac_sel = st.selectbox("Colaborador", lista_colabs_activos, key="vac_colab_sel")
-        with c_tipo2:
-            tipo_vac_sel = st.selectbox(
-                "Tipo",
-                ["Vacaciones", "Permiso de Salud (a recuperar)", "Licencia sin Goce"],
-                key="vac_tipo_sel",
-                help="'Permiso de Salud' no se otorga como descanso médico pagado: se registra como permiso y el trabajador debe recuperar el día, usualmente el domingo."
-            )
+        with st.container(border=True):
+            st.markdown("##### Registrar Descanso / Permiso")
 
-        fila_emp_check = st.session_state.empleados[st.session_state.empleados["nombre"] == colab_vac_sel]
-        en_planilla_check = str(fila_emp_check.iloc[0].get("en_planilla", "Sí")) if not fila_emp_check.empty else "Sí"
-        if tipo_vac_sel == "Vacaciones" and en_planilla_check.strip().lower() not in ("sí", "si"):
-            st.warning(f"**{colab_vac_sel}** no está en planilla formal, por lo que no genera beneficio vacacional. Puedes registrar igual el descanso, pero no se contabilizará contra ningún saldo.")
+            c_tipo1, c_tipo2 = st.columns(2)
+            with c_tipo1:
+                colab_vac_sel = st.selectbox("Colaborador", lista_colabs_activos, key="vac_colab_sel")
+            with c_tipo2:
+                tipo_vac_sel = st.selectbox(
+                    "Tipo",
+                    ["Vacaciones", "Permiso de Salud (a recuperar)", "Licencia sin Goce"],
+                    key="vac_tipo_sel",
+                    help="'Permiso de Salud' no se otorga como descanso médico pagado: se registra como permiso y el trabajador debe recuperar el día, usualmente el domingo."
+                )
 
-        _cd1, _cd2 = st.columns(2)
-        f_ini_vac = _cd1.date_input("Fecha de Inicio", value=obtener_ahora_peru().date(), key="vac_f_ini")
-        f_fin_vac = _cd2.date_input("Fecha de Fin", value=obtener_ahora_peru().date(), key="vac_f_fin")
-        if f_fin_vac >= f_ini_vac:
-            st.caption(f"Total del período: **{(f_fin_vac - f_ini_vac).days + 1} día(s)**")
+            fila_emp_check = st.session_state.empleados[st.session_state.empleados["nombre"] == colab_vac_sel]
+            en_planilla_check = str(fila_emp_check.iloc[0].get("en_planilla", "Sí")) if not fila_emp_check.empty else "Sí"
+            if tipo_vac_sel == "Vacaciones" and en_planilla_check.strip().lower() not in ("sí", "si"):
+                st.warning(f"**{colab_vac_sel}** no está en planilla formal, por lo que no genera beneficio vacacional. Puedes registrar igual el descanso, pero no se contabilizará contra ningún saldo.")
 
-        fecha_recup_val = ""
-        horario_recup_val = ""
-        if tipo_vac_sel == "Permiso de Salud (a recuperar)":
-            st.markdown("##### Recuperación del día (usualmente domingo)")
-            hoy_v = obtener_ahora_peru().date()
-            dias_hasta_domingo = (6 - hoy_v.weekday()) % 7
-            dias_hasta_domingo = dias_hasta_domingo if dias_hasta_domingo > 0 else 7
-            proximo_domingo = hoy_v + timedelta(days=dias_hasta_domingo)
-            r1, r2 = st.columns(2)
-            with r1:
-                fecha_recup_sel = st.date_input("Fecha a Recuperar", value=proximo_domingo, key="vac_f_recup")
-            with r2:
-                horario_recup_val = st.text_input("Horario de Recuperación", value="3:30 pm - 9:00 pm", key="vac_horario_recup")
-            fecha_recup_val = str(fecha_recup_sel)
-            dias_semana_v = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
-            st.caption(f"Se recuperará el **{fecha_recup_sel.strftime('%d/%m/%Y')} ({dias_semana_v[fecha_recup_sel.weekday()]})**, de **{horario_recup_val}**.")
-            st.info("Este horario equivale a la jornada completa del día a recuperar, según política de la empresa (no se compara minuto a minuto contra la jornada base de 5h45m usada para el cálculo de horas extras diarias).")
+            _cd1, _cd2 = st.columns(2)
+            f_ini_vac = _cd1.date_input("Fecha de Inicio", value=obtener_ahora_peru().date(), key="vac_f_ini")
+            f_fin_vac = _cd2.date_input("Fecha de Fin", value=obtener_ahora_peru().date(), key="vac_f_fin")
+            if f_fin_vac >= f_ini_vac:
+                st.caption(f"Total del período: **{(f_fin_vac - f_ini_vac).days + 1} día(s)**")
 
-        with st.form("form_registro_vacacion", clear_on_submit=True):
-            obs_vac = st.text_area("Observación (opcional)", key="vac_obs")
-            enviar_vac = st.form_submit_button("Registrar", use_container_width=True)
+            fecha_recup_val = ""
+            horario_recup_val = ""
+            if tipo_vac_sel == "Permiso de Salud (a recuperar)":
+                st.markdown("##### Recuperación del día (usualmente domingo)")
+                hoy_v = obtener_ahora_peru().date()
+                dias_hasta_domingo = (6 - hoy_v.weekday()) % 7
+                dias_hasta_domingo = dias_hasta_domingo if dias_hasta_domingo > 0 else 7
+                proximo_domingo = hoy_v + timedelta(days=dias_hasta_domingo)
+                r1, r2 = st.columns(2)
+                with r1:
+                    fecha_recup_sel = st.date_input("Fecha a Recuperar", value=proximo_domingo, key="vac_f_recup")
+                with r2:
+                    horario_recup_val = st.text_input("Horario de Recuperación", value="3:30 pm - 9:00 pm", key="vac_horario_recup")
+                fecha_recup_val = str(fecha_recup_sel)
+                dias_semana_v = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
+                st.caption(f"Se recuperará el **{fecha_recup_sel.strftime('%d/%m/%Y')} ({dias_semana_v[fecha_recup_sel.weekday()]})**, de **{horario_recup_val}**.")
+                st.info("Este horario equivale a la jornada completa del día a recuperar, según política de la empresa (no se compara minuto a minuto contra la jornada base de 5h45m usada para el cálculo de horas extras diarias).")
 
-            if enviar_vac:
-                if f_fin_vac < f_ini_vac:
-                    st.error("La fecha de fin no puede ser anterior a la fecha de inicio.")
-                else:
-                    dias_calc = (f_fin_vac - f_ini_vac).days + 1
-                    fila_emp_vac = st.session_state.empleados[st.session_state.empleados["nombre"] == colab_vac_sel].iloc[0]
-                    id_vac_nuevo = f"VAC-{int(time.time())}"
-                    estado_recup_val = "Pendiente" if tipo_vac_sel == "Permiso de Salud (a recuperar)" else ""
+            with st.form("form_registro_vacacion", clear_on_submit=True):
+                obs_vac = st.text_area("Observación (opcional)", key="vac_obs")
+                enviar_vac = st.form_submit_button("Registrar", use_container_width=True)
 
-                    guardar_vacacion_gsheets(
-                        id_vac_nuevo, fila_emp_vac["dni"], colab_vac_sel, tipo_vac_sel,
-                        f_ini_vac, f_fin_vac, dias_calc, obs_vac,
-                        obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S"), user_actual,
-                        fecha_recup_val, horario_recup_val, estado_recup_val
-                    )
-                    nuevo_row_vac = {
-                        "id_vacacion": id_vac_nuevo, "dni": fila_emp_vac["dni"], "nombre": colab_vac_sel,
-                        "tipo": tipo_vac_sel, "fecha_inicio": str(f_ini_vac), "fecha_fin": str(f_fin_vac),
-                        "dias_tomados": dias_calc, "observacion": obs_vac,
-                        "fecha_registro": obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S"), "registrado_por": user_actual,
-                        "fecha_recuperacion": fecha_recup_val, "horario_recuperacion": horario_recup_val,
-                        "estado_recuperacion": estado_recup_val
-                    }
-                    st.session_state.vacaciones = pd.concat([pd.DataFrame([nuevo_row_vac]), st.session_state.vacaciones], ignore_index=True)
-                    st.toast(f"{tipo_vac_sel} registrado(a) para {colab_vac_sel} ({dias_calc} día(s))")
-                    time.sleep(0.3)
-                    st.rerun()
+                if enviar_vac:
+                    if f_fin_vac < f_ini_vac:
+                        st.error("La fecha de fin no puede ser anterior a la fecha de inicio.")
+                    else:
+                        dias_calc = (f_fin_vac - f_ini_vac).days + 1
+                        fila_emp_vac = st.session_state.empleados[st.session_state.empleados["nombre"] == colab_vac_sel].iloc[0]
+                        id_vac_nuevo = f"VAC-{int(time.time())}"
+                        estado_recup_val = "Pendiente" if tipo_vac_sel == "Permiso de Salud (a recuperar)" else ""
 
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("##### Saldo Vacacional por Colaborador (solo personal en planilla)")
-
-    filas_saldo = []
-    filas_no_planilla = []
-    for _, r_emp_v in st.session_state.empleados[st.session_state.empleados["estado"].astype(str).str.lower() == "activo"].iterrows():
-        en_pl = str(r_emp_v.get("en_planilla", "Sí")) or "Sí"
-        saldo_info = calcular_saldo_vacacional(r_emp_v["nombre"], r_emp_v.get("fecha_inicio", ""), st.session_state.vacaciones, en_planilla=en_pl)
-        if saldo_info["aplica"]:
-            filas_saldo.append({
-                "Colaborador": r_emp_v["nombre"],
-                "Días Generados": saldo_info["dias_generados"],
-                "Días Gozados": saldo_info["dias_gozados"],
-                "Saldo Disponible": saldo_info["saldo_disponible"]
-            })
-        else:
-            filas_no_planilla.append(r_emp_v["nombre"])
-
-    if filas_saldo:
-        df_saldo_vac = pd.DataFrame(filas_saldo)
-        _cards = ""
-        for _, _fs in df_saldo_vac.sort_values("Saldo Disponible").iterrows():
-            _d, _f = ui_dni_foto(_fs["Colaborador"])
-            _cards += ui_saldo_card(_fs["Colaborador"], {"dias_generados": _fs["Días Generados"], "dias_gozados": _fs["Días Gozados"], "saldo_disponible": _fs["Saldo Disponible"]}, _d, _f)
-        st.markdown(f'<div class="tp-grid2">{_cards}</div>', unsafe_allow_html=True)
-        st.download_button("Exportar Saldos a Excel", to_excel(df_saldo_vac), "Saldos_Vacacionales.xlsx", use_container_width=True)
-    else:
-        st.info("No hay colaboradores activos en planilla con beneficio vacacional aplicable.")
-
-    if filas_no_planilla:
-        st.markdown('<div class="tp-card"><div class="tp-note-t">No están en planilla (sin beneficio vacacional)</div><div class="tp-chips" style="justify-content:flex-start">' + "".join(ui_chip(_html.escape(n), "neutral") for n in filas_no_planilla) + '</div></div>', unsafe_allow_html=True)
-
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("##### Permisos de Salud Pendientes de Recuperar")
-
-    if not st.session_state.vacaciones.empty:
-        df_pend_recup = st.session_state.vacaciones[
-            (st.session_state.vacaciones["tipo"] == "Permiso de Salud (a recuperar)") &
-            (st.session_state.vacaciones["estado_recuperacion"] != "Recuperado")
-        ]
-    else:
-        df_pend_recup = pd.DataFrame()
-
-    if not df_pend_recup.empty:
-        for idx_pr, r_pr in df_pend_recup.iterrows():
-            with ui_card_container(f"vac_{idx_pr}"):
-                st.markdown(ui_vac_card(r_pr, admin=True), unsafe_allow_html=True)
-                if st.button("Marcar Recuperado", key=f"recup_btn_{idx_pr}", use_container_width=True):
-                    st.session_state.vacaciones.at[idx_pr, "estado_recuperacion"] = "Recuperado"
-                    actualizar_hoja_completa("Vacaciones", st.session_state.vacaciones)
-                    registrar_auditoria("Marcar Permiso Recuperado", "Vacaciones", f"{r_pr['nombre']} — recuperación del {r_pr['fecha_recuperacion']}")
-                    st.toast("Marcado como recuperado")
-                    time.sleep(0.3)
-                    st.rerun()
-    else:
-        st.success("No hay permisos de salud pendientes de recuperación.")
-
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("##### Historial de Descansos Registrados")
-    if not st.session_state.vacaciones.empty:
-        _vac_ord = st.session_state.vacaciones.sort_values("fecha_registro", ascending=False)
-        try:
-            _c_tab, _c_tar = st.container(key="vista_tabla"), st.container(key="vista_tarjetas")
-        except TypeError:
-            _c_tab, _c_tar = st.container(), None
-        with _c_tab:
-            st.dataframe(_vac_ord, use_container_width=True, hide_index=True)
-        if _c_tar is not None:
-            with _c_tar:
-                st.markdown("".join(ui_vac_card(_rv, admin=True) .replace('tp-card flat', 'tp-card') for _, _rv in _vac_ord.head(30).iterrows()), unsafe_allow_html=True)
-                st.caption("Se muestran los 30 registros más recientes. Exporta a Excel para ver todo.")
-        st.download_button("Exportar Historial a Excel", to_excel(st.session_state.vacaciones), "Historial_Vacaciones.xlsx", use_container_width=True)
-
-        with st.expander("Eliminar Registro de Descanso"):
-            opciones_vac_del = [f"{i} | {r['nombre']} | {r['tipo']} | {r['fecha_inicio']} a {r['fecha_fin']}" for i, r in st.session_state.vacaciones.iterrows()]
-            sel_vac_del = st.selectbox("Seleccionar Registro a Eliminar", opciones_vac_del, key="vac_del_sel")
-            confirm_vac_del = st.checkbox("Confirmar eliminación", key="vac_del_confirm")
-            if st.button("Eliminar Registro", type="primary", use_container_width=True, key="vac_del_btn"):
-                if confirm_vac_del:
-                    idx_vac_del = int(sel_vac_del.split(" | ")[0])
-                    row_vac_del = st.session_state.vacaciones.loc[idx_vac_del]
-                    st.session_state.vacaciones = st.session_state.vacaciones.drop(idx_vac_del).reset_index(drop=True)
-                    actualizar_hoja_completa("Vacaciones", st.session_state.vacaciones)
-                    registrar_auditoria("Eliminar Registro de Descanso", "Vacaciones", f"{row_vac_del['nombre']} — {row_vac_del['tipo']} ({row_vac_del['fecha_inicio']} a {row_vac_del['fecha_fin']})")
-                    st.toast("Registro eliminado correctamente")
-                    time.sleep(0.3)
-                    st.rerun()
-                else:
-                    st.warning("Marca la casilla de confirmación antes de eliminar.")
-    else:
-        st.info("Sin descansos registrados todavía.")
-
-elif choice == "Mis Vacaciones":
-    st.markdown("""
-        <div class="market-header">
-            <h1>Mi Saldo de Vacaciones</h1>
-            <p>Consulta tus días generados, gozados y disponibles</p>
-        </div>
-    """, unsafe_allow_html=True)
-
-    fila_mi_emp = st.session_state.empleados[st.session_state.empleados["nombre"] == user_actual]
-    fecha_ingreso_mi = fila_mi_emp.iloc[0].get("fecha_inicio", "") if not fila_mi_emp.empty else ""
-    en_planilla_mi = str(fila_mi_emp.iloc[0].get("en_planilla", "Sí")) if not fila_mi_emp.empty else "Sí"
-
-    mi_saldo = calcular_saldo_vacacional(user_actual, fecha_ingreso_mi, st.session_state.vacaciones, en_planilla=en_planilla_mi)
-
-    if not mi_saldo["aplica"]:
-        st.warning("No estás registrado en planilla formal, por lo que no acumulas beneficio vacacional en el sistema. Si tienes dudas sobre tu situación laboral, consulta con administración.")
-    else:
-        st.markdown(ui_saldo_card(user_actual, mi_saldo, dni_actual, _foto_actual, hero=True), unsafe_allow_html=True)
-
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("##### Mi Historial de Descansos y Permisos")
-    if not st.session_state.vacaciones.empty:
-        df_mis_vac = st.session_state.vacaciones[st.session_state.vacaciones["nombre"] == user_actual]
-        if not df_mis_vac.empty:
-            for _, _rv in df_mis_vac.sort_values("fecha_inicio", ascending=False).iterrows():
-                st.markdown(ui_vac_card(_rv), unsafe_allow_html=True)
-        else:
-            st.info("Aún no tienes descansos registrados.")
-    else:
-        st.info("Aún no tienes descansos registrados.")
-
-elif choice == "Analítica (BI)":
-    st.markdown("""
-        <div class="market-header">
-            <h1>Analítica y Business Intelligence</h1>
-            <p>Indicadores ejecutivos para la toma de decisiones</p>
-        </div>
-    """, unsafe_allow_html=True)
-
-    tab_bi1, tab_bi2, tab_bi3 = st.tabs(["Costo de planilla", "Rotación de personal", "Tendencia de puntualidad"])
-    _hoy_bi = obtener_ahora_peru().date()
-    _a_d = lambda f: ((f.date() if hasattr(f, "date") else f) if f else None)
-    _SP = "<div style='height:14px'></div>"
-    _inicio_todo = pd.Timestamp(2000, 1, 1).date()
-    _fin_todo = pd.Timestamp(2100, 12, 31).date()
-
-    with ui_card_container("bi_filtros"):
-        fb1, fb2, fb3 = st.columns([1, 1.2, 1])
-        pre_bi = fb1.selectbox("Período", ["Todo el historial", "Este mes", "Últimos 3 meses", "Últimos 6 meses", "Este año", "Personalizado"], key="bi_pre")
-        if pre_bi == "Personalizado":
-            rg_bi = fb2.date_input("Rango de fechas (de – hasta)", value=(_hoy_bi.replace(day=1), _hoy_bi), key="bi_rango")
-            rg_bi = list(rg_bi) if isinstance(rg_bi, (tuple, list)) else [rg_bi]
-            d_ini, d_fin = rg_bi[0], (rg_bi[1] if len(rg_bi) > 1 else rg_bi[0])
-        else:
-            _m0 = pd.Timestamp(_hoy_bi.replace(day=1))
-            d_ini = {"Todo el historial": _inicio_todo, "Este mes": _m0.date(), "Últimos 3 meses": (_m0 - pd.DateOffset(months=2)).date(),
-                     "Últimos 6 meses": (_m0 - pd.DateOffset(months=5)).date(), "Este año": _hoy_bi.replace(month=1, day=1)}[pre_bi]
-            d_fin = _fin_todo if pre_bi == "Todo el historial" else _hoy_bi
-            _lbl_rg = "Se analiza todo el registro" if pre_bi == "Todo el historial" else f"{d_ini:%d/%m/%Y} – {d_fin:%d/%m/%Y}"
-            fb2.markdown(f'<div style="padding-top:27px">{ui_chip(_lbl_rg, "info")}</div>', unsafe_allow_html=True)
-        colab_bi = fb3.selectbox("Colaborador", ["Todos"] + sorted(obtener_solo_colaboradores()), key="bi_colab")
-    ym_ini, ym_fin = d_ini.strftime("%Y-%m"), d_fin.strftime("%Y-%m")
-    st.markdown(_SP, unsafe_allow_html=True)
-
-    def _cab_colab():
-        if colab_bi != "Todos":
-            _d, _f = ui_dni_foto(colab_bi)
-            st.markdown(f'<div class="tp-row">{ui_avatar(colab_bi, _d, _f, 44)}<div class="tp-row-main"><b>{_html.escape(colab_bi)}</b><span>Analítica individual dentro del período seleccionado</span></div>{ui_chip("Vista individual", "info")}</div>', unsafe_allow_html=True)
-
-    # ---------------- COSTO DE PLANILLA ----------------
-    with tab_bi1:
-        _cab_colab()
-        if st.session_state.boletas_historial.empty:
-            st.info("Aún no hay boletas guardadas en el historial. Ve a 'Boletas de Pago', genera una boleta y usa el botón 'Guardar esta Boleta en el Historial'.")
-        else:
-            df_bh = st.session_state.boletas_historial.copy()
-            df_bh = df_bh[df_bh["estado"].astype(str) != "Reemplazado"]
-            for _c in ["neto_pagar", "total_ingresos", "total_descuentos"]:
-                df_bh[_c] = pd.to_numeric(df_bh[_c], errors="coerce").fillna(0)
-            df_bh["_ym"] = pd.to_numeric(df_bh["anio"], errors="coerce").fillna(0).astype(int).astype(str) + "-" + df_bh["mes"].apply(_mes_a_num).astype(str).str.zfill(2)
-            df_bh = df_bh[(df_bh["_ym"] >= ym_ini) & (df_bh["_ym"] <= ym_fin)]
-            if colab_bi != "Todos":
-                df_bh = df_bh[df_bh["nombre"] == colab_bi]
-            if df_bh.empty:
-                st.info("No hay boletas registradas para el período y colaborador seleccionados.")
-            else:
-                res = df_bh.groupby("_ym")["neto_pagar"].sum().sort_index()
-                ing_m = df_bh.groupby("_ym")["total_ingresos"].sum().sort_index()
-                des_m = df_bh.groupby("_ym")["total_descuentos"].sum().sort_index()
-                ult, prev = float(res.iloc[-1]), (float(res.iloc[-2]) if len(res) > 1 else 0)
-                delta = ui_chip(f'{"▲" if ult >= prev else "▼"} {abs((ult - prev) / prev * 100):.1f}% vs período anterior', "neutral") if prev else ui_chip("Primer período registrado", "neutral")
-                tot_ing, tot_des = df_bh["total_ingresos"].sum(), df_bh["total_descuentos"].sum()
-                b1, b2, b3, b4 = st.columns(4)
-                b1.markdown(ui_kpi("Costo neto de planilla", f"S/. {df_bh['neto_pagar'].sum():,.2f}", f"{len(df_bh)} boletas · {df_bh['nombre'].nunique()} colaborador(es)"), unsafe_allow_html=True)
-                b2.markdown(ui_kpi("Promedio mensual", f"S/. {res.mean():,.2f}", f"{len(res)} período(s) registrados"), unsafe_allow_html=True)
-                b3.markdown(ui_kpi(f"Último período · {ui_mes_label(res.index[-1])}", f"S/. {ult:,.2f}", delta), unsafe_allow_html=True)
-                b4.markdown(ui_kpi("Descuentos acumulados", f"S/. {tot_des:,.2f}", f"{tot_des / tot_ing * 100:.1f}% de los ingresos brutos" if tot_ing else "Sin ingresos registrados"), unsafe_allow_html=True)
-                st.markdown(_SP, unsafe_allow_html=True)
-                lbl = [ui_mes_label(i) for i in res.index]
-                g1, g2 = st.columns([1.6, 1])
-                with g1:
-                    st.markdown(ui_panel("Costo neto por período", "Neto a pagar acumulado (S/.)", ui_columnas(lbl, [("Neto a pagar", [round(v) for v in res.values], "#EC3237")], fmt="{:,.0f}")), unsafe_allow_html=True)
-                    st.markdown(_SP, unsafe_allow_html=True)
-                    st.markdown(ui_panel("Ingresos vs. descuentos", "Evolución mensual (S/.)", ui_columnas(lbl, [("Ingresos", [round(v) for v in ing_m.values], "#0F172A"), ("Descuentos", [round(v) for v in des_m.values], "#F59E0B")], fmt="{:,.0f}")), unsafe_allow_html=True)
-                with g2:
-                    top = df_bh.groupby("nombre")["neto_pagar"].sum().sort_values(ascending=False).head(8)
-                    st.markdown(ui_panel("Mayor costo acumulado", "Top 8 por neto pagado", ui_hbars(list(top.items()), "#0F172A", "S/. {:,.0f}")), unsafe_allow_html=True)
-                    st.markdown(_SP, unsafe_allow_html=True)
-                    topd = df_bh.groupby("nombre")["total_descuentos"].sum().sort_values(ascending=False).head(8)
-                    st.markdown(ui_panel("Descuentos acumulados por trabajador", "Faltas, adelantos, descuadres y otros", ui_hbars([(n, v) for n, v in topd.items() if v > 0], "#F59E0B", "S/. {:,.0f}")), unsafe_allow_html=True)
-                st.markdown(_SP, unsafe_allow_html=True)
-                det = df_bh.groupby("nombre")[["total_ingresos", "total_descuentos", "neto_pagar"]].sum().sort_values("neto_pagar", ascending=False)
-                mxn = max(det["neto_pagar"].max(), 1)
-                filas_t = ""
-                for nom, r in det.iterrows():
-                    d_, f_ = ui_dni_foto(nom)
-                    pd_ = r["total_descuentos"] / r["total_ingresos"] * 100 if r["total_ingresos"] else 0
-                    filas_t += (f'<div class="tp-rk">{ui_avatar(nom, d_, f_, 40)}<div class="tp-rk-main"><b>{_html.escape(str(nom))}</b><div class="tp-prog"><i style="width:{int(r["neto_pagar"] / mxn * 100)}%"></i></div></div>'
-                                f'<div class="tp-chips">{ui_chip("Ingresos S/. " + format(r["total_ingresos"], ",.0f"), "neutral")}{ui_chip("Desc. S/. " + format(r["total_descuentos"], ",.0f"), "warn")}{ui_chip(f"{pd_:.1f}% desc.", "bad" if pd_ >= 20 else "ok")}</div>'
-                                f'<div class="tp-rk-pct" style="min-width:96px">S/. {r["neto_pagar"]:,.0f}</div></div>')
-                st.markdown(ui_panel("Detalle por trabajador", "Neto pagado, ingresos y porcentaje de descuentos", filas_t), unsafe_allow_html=True)
-                with st.expander("Ver detalle de boletas emitidas"):
-                    st.dataframe(df_bh.drop(columns=["_ym"]).sort_values("fecha_emision", ascending=False), use_container_width=True, hide_index=True)
-                    st.download_button("Exportar Historial de Boletas a Excel", to_excel(df_bh.drop(columns=["_ym"])), "Boletas_Historial.xlsx", use_container_width=True)
-
-    # ---------------- ROTACIÓN Y PERMANENCIA ----------------
-    with tab_bi2:
-        _cab_colab()
-        emp_bi = st.session_state.empleados.copy()
-        if "rol" in emp_bi.columns:
-            emp_bi = emp_bi[emp_bi["rol"] != "admin"]
-        if colab_bi != "Todos":
-            emp_bi = emp_bi[emp_bi["nombre"] == colab_bi]
-        filas_e = []
-        for _, r in emp_bi.iterrows():
-            fi = _a_d(_parsear_fecha_nac_cumple(r.get("fecha_inicio", "")))
-            fc = _a_d(_parsear_fecha_nac_cumple(r.get("fecha_cese", "")))
-            if not fi:
-                continue
-            filas_e.append({"nombre": r["nombre"], "cargo": str(r.get("cargo", "")), "fi": fi, "fc": fc,
-                            "activo": fc is None and str(r.get("estado", "")).lower() == "activo", "meses": max(0.0, ((fc or _hoy_bi) - fi).days / 30.4375)})
-        if not filas_e:
-            st.info("No hay suficientes datos de fechas de ingreso/cese para calcular rotación.")
-        else:
-            dft = pd.DataFrame(filas_e)
-            fmt_t = lambda m: f"{int(m // 12)} a {int(m % 12)} m" if m >= 12 else f"{m:.1f} meses"
-            altas_p = dft[(dft["fi"] >= d_ini) & (dft["fi"] <= d_fin)]
-            bajas_p = dft[dft["fc"].apply(lambda x: x is not None and d_ini <= x <= d_fin)]
-            n_act = int(dft["activo"].sum())
-            altas_m = altas_p["fi"].apply(lambda x: x.strftime("%Y-%m")).value_counts().to_dict()
-            bajas_m = bajas_p["fc"].apply(lambda x: x.strftime("%Y-%m")).value_counts().to_dict()
-            r1, r2, r3, r4 = st.columns(4)
-            r1.markdown(ui_kpi("Colaboradores activos", str(n_act), "equipo actual"), unsafe_allow_html=True)
-            r2.markdown(ui_kpi("Altas en el período", str(len(altas_p)), "nuevos ingresos"), unsafe_allow_html=True)
-            r3.markdown(ui_kpi("Bajas en el período", str(len(bajas_p)), "ceses registrados"), unsafe_allow_html=True)
-            r4.markdown(ui_kpi("Tasa de rotación", f"{len(bajas_p) / max(1, n_act + len(bajas_p)) * 100:.0f}%", "bajas sobre el total del equipo"), unsafe_allow_html=True)
-            st.markdown(_SP, unsafe_allow_html=True)
-            d_baja, d_act = dft[~dft["activo"]], dft[dft["activo"]]
-            mayor = dft.sort_values("meses", ascending=False).iloc[0]
-            q1, q2, q3, q4 = st.columns(4)
-            q1.markdown(ui_kpi("Permanencia promedio", fmt_t(dft["meses"].mean()), f"{len(dft)} colaborador(es) analizados"), unsafe_allow_html=True)
-            q2.markdown(ui_kpi("Permanencia de quienes se fueron", fmt_t(d_baja["meses"].mean()) if len(d_baja) else "-", f"{len(d_baja)} baja(s) registradas" if len(d_baja) else "Aún sin bajas"), unsafe_allow_html=True)
-            q3.markdown(ui_kpi("Antigüedad del personal activo", fmt_t(d_act["meses"].mean()) if len(d_act) else "-", "promedio actual"), unsafe_allow_html=True)
-            q4.markdown(ui_kpi("Mayor permanencia", fmt_t(mayor["meses"]), _html.escape(str(mayor["nombre"]))), unsafe_allow_html=True)
-            st.markdown(_SP, unsafe_allow_html=True)
-            ev = [x.strftime("%Y-%m") for x in list(dft["fi"]) + [c for c in dft["fc"] if c is not None]]
-            ini_m, fin_m = max(ym_ini, min(ev)), min(ym_fin, _hoy_bi.strftime("%Y-%m"))
-            rango = [str(x) for x in pd.period_range(ini_m, fin_m, freq="M")][-24:] if ini_m <= fin_m else []
-            g1, g2 = st.columns([1.6, 1])
-            with g1:
-                if rango:
-                    st.markdown(ui_panel("Altas y bajas por mes", "Hasta 24 meses dentro del período", ui_columnas([ui_mes_label(m) for m in rango], [("Altas", [altas_m.get(m, 0) for m in rango], "#0B8F57"), ("Bajas", [bajas_m.get(m, 0) for m in rango], "#EC3237")])), unsafe_allow_html=True)
-                else:
-                    st.info("No hay movimientos dentro del período seleccionado.")
-            with g2:
-                cargos = d_act["cargo"].value_counts()
-                st.markdown(ui_panel("Equipo activo por cargo", "Distribución actual", ui_hbars(list(cargos.items()), "#0F172A")), unsafe_allow_html=True)
-            st.markdown(_SP, unsafe_allow_html=True)
-            h1, h2 = st.columns([1.3, 1])
-            top_p = dft.sort_values("meses", ascending=False).head(12)
-            h1.markdown(ui_panel("Permanencia por colaborador", "Oscuro: activo · Rojo: dado de baja", ui_hbars([(r["nombre"], r["meses"], "#0F172A" if r["activo"] else "#EC3237") for _, r in top_p.iterrows()], fmt=fmt_t)), unsafe_allow_html=True)
-            etq = ["< 3 meses", "3–6 meses", "6–12 meses", "1–2 años", "2+ años"]
-            cat = pd.cut(dft["meses"], bins=[-0.01, 3, 6, 12, 24, 10**4], labels=etq)
-            cnt_a = cat[dft["activo"]].value_counts().reindex(etq, fill_value=0)
-            cnt_b = cat[~dft["activo"]].value_counts().reindex(etq, fill_value=0)
-            h2.markdown(ui_panel("Distribución de permanencia", "Cuántos colaboradores hay en cada tramo", ui_columnas(etq, [("Activos", [int(v) for v in cnt_a.values], "#0F172A"), ("Dados de baja", [int(v) for v in cnt_b.values], "#EC3237")], alto=210)), unsafe_allow_html=True)
-
-    # ---------------- PUNTUALIDAD ----------------
-    with tab_bi3:
-        _cab_colab()
-        if st.session_state.asistencia.empty:
-            st.info("No hay datos de asistencia registrados.")
-        else:
-            dfa = st.session_state.asistencia.copy()
-            dfa["fecha_dt"] = pd.to_datetime(dfa["fecha"], errors="coerce")
-            dfa = dfa.dropna(subset=["fecha_dt"])
-            dfa = dfa[(dfa["fecha_dt"].dt.date >= d_ini) & (dfa["fecha_dt"].dt.date <= d_fin) & (dfa["nombre"].isin(obtener_solo_colaboradores()))]
-            if colab_bi != "Todos":
-                dfa = dfa[dfa["nombre"] == colab_bi]
-            ing = dfa[(dfa["tipo"] == "INGRESO") & (dfa["es_extra"].astype(str) != "SI")].copy()
-            if ing.empty:
-                st.info("No hay ingresos registrados para el período y colaborador seleccionados.")
-            else:
-                tp = ing["fecha_hora"].apply(calcular_tardanza_ingreso)
-                ing["tard"] = tp.map(lambda t: bool(t[1]))
-                ing["mins"] = tp.map(lambda t: int(t[0]) if t[1] else 0)
-                ing["ym"] = ing["fecha_dt"].dt.strftime("%Y-%m")
-                ing["dow"] = ing["fecha_dt"].dt.dayofweek
-                tard = ing[ing["tard"]]
-                pm = ing.groupby("ym").agg(n=("tard", "size"), t=("tard", "sum"), m=("mins", "sum"))
-                meses_p = list(pm.index)
-                n_i, n_t, n_m = int(pm["n"].sum()), int(pm["t"].sum()), int(pm["m"].sum())
-                dias_n = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"]
-                dow_t = tard.groupby("dow").size().reindex(range(7), fill_value=0)
-                por_per = ing.groupby("nombre")["tard"].sum()
-                p1, p2, p3, p4 = st.columns(4)
-                p1.markdown(ui_kpi("Puntualidad global", f"{(n_i - n_t) / n_i * 100:.1f}%", f"{n_i} ingresos evaluados"), unsafe_allow_html=True)
-                p2.markdown(ui_kpi("Tardanzas totales", str(n_t), f"{n_m} min acumulados"), unsafe_allow_html=True)
-                p3.markdown(ui_kpi("Mes con más tardanzas", ui_mes_label(pm["t"].idxmax()) if n_t else "-", f"{int(pm['t'].max())} tardanza(s)" if n_t else "Sin tardanzas"), unsafe_allow_html=True)
-                p4.markdown(ui_kpi("Minutos por tardanza", f"{n_m / n_t:.1f}" if n_t else "0", "promedio"), unsafe_allow_html=True)
-                st.markdown(_SP, unsafe_allow_html=True)
-                q1, q2, q3, q4 = st.columns(4)
-                q1.markdown(ui_kpi("Colaboradores 100% puntuales", f"{int((por_per == 0).sum())} de {len(por_per)}", "sin ninguna tardanza"), unsafe_allow_html=True)
-                q2.markdown(ui_kpi("Día más crítico", dias_n[int(dow_t.idxmax())] if n_t else "-", f"{int(dow_t.max())} tardanza(s)" if n_t else "Sin tardanzas"), unsafe_allow_html=True)
-                q3.markdown(ui_kpi("Tiempo perdido", f"{n_m / 60:.1f} h", "por tardanzas en el período"), unsafe_allow_html=True)
-                q4.markdown(ui_kpi("Tardanza más larga", f"{int(tard['mins'].max())} min" if n_t else "-", _html.escape(str(tard.loc[tard['mins'].idxmax(), 'nombre'])) if n_t else "Sin tardanzas"), unsafe_allow_html=True)
-                st.markdown(_SP, unsafe_allow_html=True)
-                lbl = [ui_mes_label(m) for m in meses_p]
-                g1, g2 = st.columns(2)
-                g1.markdown(ui_panel("Tardanzas por mes", "Evolución en el período", ui_linea(lbl, [int(pm.loc[m, "t"]) for m in meses_p], "#EC3237")), unsafe_allow_html=True)
-                g2.markdown(ui_panel("Puntualidad por mes", "% de ingresos a tiempo", ui_linea(lbl, [round(100 - pm.loc[m, "t"] / pm.loc[m, "n"] * 100, 1) for m in meses_p], "#0B8F57", "{:g}", "%")), unsafe_allow_html=True)
-                st.markdown(_SP, unsafe_allow_html=True)
-                k1, k2 = st.columns(2)
-                k1.markdown(ui_panel("Tardanzas por día de la semana", "¿Qué días se llega más tarde?", ui_columnas(dias_n, [("Tardanzas", [int(v) for v in dow_t.values], "#EC3237")], alto=200)), unsafe_allow_html=True)
-                grav = pd.cut(tard["mins"], bins=[0, 5, 15, 30, 60, 10**5], labels=["1–5 min", "6–15 min", "16–30 min", "31–60 min", "+60 min"]).value_counts().reindex(["1–5 min", "6–15 min", "16–30 min", "31–60 min", "+60 min"], fill_value=0)
-                k2.markdown(ui_panel("Gravedad de las tardanzas", "Cuántos minutos se llega tarde", ui_columnas(list(grav.index), [("Tardanzas", [int(v) for v in grav.values], "#F59E0B")], alto=200)), unsafe_allow_html=True)
-                por_dia = tard.groupby("fecha")["mins"].sum().sort_index().tail(31)
-                if len(por_dia) > 1:
-                    st.markdown(_SP, unsafe_allow_html=True)
-                    st.markdown(ui_panel("Minutos de tardanza por día", "Últimos 31 días con tardanzas", ui_columnas([ui_dia_label(d) for d in por_dia.index], [("Minutos", [int(v) for v in por_dia.values], "#0F172A")], alto=190)), unsafe_allow_html=True)
-                st.markdown(_SP, unsafe_allow_html=True)
-                ext = {}
-                try:
-                    for (nom_x, f_x), gx in dfa.groupby(["nombre", "fecha"]):
-                        gx = gx.copy()
-                        gx["dt"] = pd.to_datetime(gx["fecha_hora"], errors="coerce")
-                        gx = gx.dropna(subset=["dt"])
-                        if not gx.empty:
-                            ext[str(f_x)[:7]] = ext.get(str(f_x)[:7], 0) + calcular_jornada_y_horas_extras(gx)[1]
-                except Exception:
-                    ext = {}
-                e1, e2 = st.columns(2)
-                e1.markdown(ui_panel("Horas extras por mes", f"Tiempo trabajado sobre la jornada base de {jornada_base_txt()}", ui_linea(lbl, [round(ext.get(m, 0) / 60, 1) for m in meses_p], "#F59E0B", "{:g}", " h")), unsafe_allow_html=True)
-                if colab_bi == "Todos":
-                    top_t = sorted([(n, int(v)) for n, v in por_per.items() if v > 0], key=lambda x: -x[1])[:8]
-                    e2.markdown(ui_panel("Colaboradores con más tardanzas", "Acumulado en el período", ui_hbars(top_t, "#EC3237")), unsafe_allow_html=True)
-                else:
-                    ult_t = tard.sort_values("fecha_hora", ascending=False).head(8)
-                    filas_u = "".join(f'<div class="tp-row"><div class="tp-row-time">{ui_dia_label(r["fecha"])}</div><div class="tp-row-main"><b>Ingreso a las {str(r["fecha_hora"])[11:16]}</b></div><div class="tp-chips">{ui_chip(str(int(r["mins"])) + " min tarde", "bad")}</div></div>' for _, r in ult_t.iterrows()) or '<div class="tp-card-sub">Sin tardanzas en el período.</div>'
-                    e2.markdown(ui_panel("Últimas tardanzas", "Detalle del colaborador", filas_u), unsafe_allow_html=True)
-
-
-elif choice == "Onboarding / Offboarding":
-    st.markdown("""
-        <div class="market-header">
-            <h1>Onboarding y Offboarding Estructurado</h1>
-            <p>Checklist de incorporación y salida de colaboradores</p>
-        </div>
-    """, unsafe_allow_html=True)
-
-    if st.session_state.checklist.empty:
-        ui_callout("No hay checklists generados todavía. Se crean automáticamente al registrar un nuevo colaborador o al dar de baja a uno existente.")
-    else:
-        colabs_con_checklist = sorted(st.session_state.checklist["nombre"].unique().tolist())
-        colab_chk_sel = st.selectbox("Seleccionar Colaborador", colabs_con_checklist, key="chk_colab_sel")
-
-        df_chk_colab = st.session_state.checklist[st.session_state.checklist["nombre"] == colab_chk_sel]
-        _d_ck, _f_ck = ui_dni_foto(colab_chk_sel)
-        _emp_ck = st.session_state.empleados[st.session_state.empleados["nombre"] == colab_chk_sel]
-        _cargo_ck = str(_emp_ck.iloc[0].get("cargo", "")) if not _emp_ck.empty else ""
-        _activo_ck = (not _emp_ck.empty) and str(_emp_ck.iloc[0].get("estado", "")).lower() == "activo"
-        st.markdown(f'<div class="tp-card"><div class="tp-op-head" style="margin:0">{ui_avatar(colab_chk_sel, _d_ck, _f_ck, 56)}<div><div class="tp-card-title">{_html.escape(colab_chk_sel)}</div>'
-                    f'<div class="tp-card-sub">{_html.escape(_cargo_ck)} · DNI {_html.escape(_d_ck)}</div></div>{ui_chip("Activo" if _activo_ck else "Dado de baja", "ok" if _activo_ck else "neutral")}</div></div>', unsafe_allow_html=True)
-        _pct_t = {}
-        for _t in ["Onboarding", "Offboarding"]:
-            _dt_ = df_chk_colab[df_chk_colab["tipo"] == _t]
-            _pct_t[_t] = int(len(_dt_[_dt_["estado"] == "Completado"]) * 100 / len(_dt_)) if len(_dt_) else None
-        _pend_ck = int((df_chk_colab["estado"] != "Completado").sum())
-        st.markdown('<div class="tp-gridk">' +
-                    ui_kpi_acc("Onboarding", f"{_pct_t['Onboarding']}%" if _pct_t["Onboarding"] is not None else "—", "incorporación completada" if _pct_t["Onboarding"] is not None else "No aplica", "ok" if _pct_t["Onboarding"] == 100 else "info") +
-                    ui_kpi_acc("Offboarding", f"{_pct_t['Offboarding']}%" if _pct_t["Offboarding"] is not None else "—", "salida completada" if _pct_t["Offboarding"] is not None else "No aplica", "ok" if _pct_t["Offboarding"] == 100 else "info") +
-                    ui_kpi_acc("Tareas pendientes", str(_pend_ck), "por completar" if _pend_ck else "Todo al día", "warn" if _pend_ck else "ok") + '</div>', unsafe_allow_html=True)
-
-        for tipo_chk in ["Onboarding", "Offboarding"]:
-            df_tipo_chk = df_chk_colab[df_chk_colab["tipo"] == tipo_chk]
-            if df_tipo_chk.empty:
-                continue
-
-            completados = len(df_tipo_chk[df_tipo_chk["estado"] == "Completado"])
-            total_items = len(df_tipo_chk)
-            pct_chk = int((completados / total_items) * 100) if total_items else 0
-
-            with ui_card_container(f"chk_{tipo_chk}"):
-                _tono_ck = "ok" if pct_chk == 100 else "warn"
-                st.markdown(f'<div class="tp-card flat"><div class="tp-card-head"><div><div class="tp-card-title">Checklist de {tipo_chk}</div>'
-                            f'<div class="tp-card-sub">{"Incorporación del colaborador" if tipo_chk == "Onboarding" else "Proceso de salida del colaborador"}</div></div>'
-                            f'{ui_chip(str(completados) + " de " + str(total_items) + " completadas", _tono_ck)}</div>'
-                            f'<div class="tp-prog {_tono_ck}" style="margin:14px 0 4px"><i style="width:{pct_chk}%"></i></div></div>', unsafe_allow_html=True)
-
-                for idx_chk, row_chk in df_tipo_chk.iterrows():
-                    marcado = row_chk["estado"] == "Completado"
-                    nuevo_marcado = st.checkbox(row_chk["tarea"], value=marcado, key=f"chk_{row_chk['id_item']}")
-                    if nuevo_marcado != marcado:
-                        st.session_state.checklist.at[idx_chk, "estado"] = "Completado" if nuevo_marcado else "Pendiente"
-                        st.session_state.checklist.at[idx_chk, "fecha_completado"] = obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S") if nuevo_marcado else ""
-                        actualizar_hoja_completa("Checklist", st.session_state.checklist)
-                        registrar_auditoria(f"Actualizar Ítem de {tipo_chk}", "Checklist", f"{colab_chk_sel}: '{row_chk['tarea']}' → {'Completado' if nuevo_marcado else 'Pendiente'}")
+                        guardar_vacacion_gsheets(
+                            id_vac_nuevo, fila_emp_vac["dni"], colab_vac_sel, tipo_vac_sel,
+                            f_ini_vac, f_fin_vac, dias_calc, obs_vac,
+                            obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S"), user_actual,
+                            fecha_recup_val, horario_recup_val, estado_recup_val
+                        )
+                        nuevo_row_vac = {
+                            "id_vacacion": id_vac_nuevo, "dni": fila_emp_vac["dni"], "nombre": colab_vac_sel,
+                            "tipo": tipo_vac_sel, "fecha_inicio": str(f_ini_vac), "fecha_fin": str(f_fin_vac),
+                            "dias_tomados": dias_calc, "observacion": obs_vac,
+                            "fecha_registro": obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S"), "registrado_por": user_actual,
+                            "fecha_recuperacion": fecha_recup_val, "horario_recuperacion": horario_recup_val,
+                            "estado_recuperacion": estado_recup_val
+                        }
+                        st.session_state.vacaciones = pd.concat([pd.DataFrame([nuevo_row_vac]), st.session_state.vacaciones], ignore_index=True)
+                        st.toast(f"{tipo_vac_sel} registrado(a) para {colab_vac_sel} ({dias_calc} día(s))")
+                        time.sleep(0.3)
                         st.rerun()
 
         st.markdown("<br>", unsafe_allow_html=True)
-        st.download_button("Exportar Checklists a Excel", to_excel(st.session_state.checklist), "Checklists.xlsx", use_container_width=True)
+        st.markdown("##### Saldo Vacacional por Colaborador (solo personal en planilla)")
 
-elif choice == "Auditoría y Configuración":
-    st.markdown("""
-        <div class="market-header">
-            <h1>Auditoría y Configuración del Sistema</h1>
-            <p>Trazabilidad de cambios y ajustes de seguridad</p>
-        </div>
-    """, unsafe_allow_html=True)
-
-    tab_aud, tab_hor, tab_cfg = st.tabs(["Registro de auditoría", "Horarios y turnos", "Configuración"])
-
-    with tab_aud:
-        if not st.session_state.auditoria.empty:
-            df_aud = st.session_state.auditoria.copy()
-            fa1, fa2 = st.columns(2)
-            with fa1:
-                usuarios_aud_disp = ["Todos"] + sorted(df_aud["usuario"].dropna().unique().tolist())
-                usuario_aud_filtro = st.selectbox("Filtrar por Usuario", usuarios_aud_disp)
-            with fa2:
-                acciones_aud_disp = ["Todas"] + sorted(df_aud["accion"].dropna().unique().tolist())
-                accion_aud_filtro = st.selectbox("Filtrar por Acción", acciones_aud_disp)
-
-            if usuario_aud_filtro != "Todos":
-                df_aud = df_aud[df_aud["usuario"] == usuario_aud_filtro]
-            if accion_aud_filtro != "Todas":
-                df_aud = df_aud[df_aud["accion"] == accion_aud_filtro]
-
-            _aud_ord = df_aud.sort_values("fecha_hora", ascending=False)
-            if _aud_ord.empty:
-                ui_callout("No hay eventos con los filtros seleccionados.")
+        filas_saldo = []
+        filas_no_planilla = []
+        for _, r_emp_v in st.session_state.empleados[st.session_state.empleados["estado"].astype(str).str.lower() == "activo"].iterrows():
+            en_pl = str(r_emp_v.get("en_planilla", "Sí")) or "Sí"
+            saldo_info = calcular_saldo_vacacional(r_emp_v["nombre"], r_emp_v.get("fecha_inicio", ""), st.session_state.vacaciones, en_planilla=en_pl)
+            if saldo_info["aplica"]:
+                filas_saldo.append({
+                    "Colaborador": r_emp_v["nombre"],
+                    "Días Generados": saldo_info["dias_generados"],
+                    "Días Gozados": saldo_info["dias_gozados"],
+                    "Saldo Disponible": saldo_info["saldo_disponible"]
+                })
             else:
-                _top_acc = _aud_ord["accion"].value_counts().index[0]
-                st.markdown('<div class="tp-gridk">' + ui_kpi_acc("Eventos registrados", str(len(_aud_ord)), "según el filtro", "info") +
-                            ui_kpi_acc("Usuarios distintos", str(_aud_ord["usuario"].nunique()), "con actividad", "info") +
-                            ui_kpi_acc("Acción más frecuente", _html.escape(str(_top_acc)), f"{int((_aud_ord['accion'] == _top_acc).sum())} vez/veces", "warn") +
-                            ui_kpi_acc("Último evento", str(_aud_ord.iloc[0]["fecha_hora"])[:16], _html.escape(str(_aud_ord.iloc[0]["usuario"])), "ok") + '</div>', unsafe_allow_html=True)
+                filas_no_planilla.append(r_emp_v["nombre"])
+
+        if filas_saldo:
+            df_saldo_vac = pd.DataFrame(filas_saldo)
+            _cards = ""
+            for _, _fs in df_saldo_vac.sort_values("Saldo Disponible").iterrows():
+                _d, _f = ui_dni_foto(_fs["Colaborador"])
+                _cards += ui_saldo_card(_fs["Colaborador"], {"dias_generados": _fs["Días Generados"], "dias_gozados": _fs["Días Gozados"], "saldo_disponible": _fs["Saldo Disponible"]}, _d, _f)
+            st.markdown(f'<div class="tp-grid2">{_cards}</div>', unsafe_allow_html=True)
+            st.download_button("Exportar Saldos a Excel", to_excel(df_saldo_vac), "Saldos_Vacacionales.xlsx", use_container_width=True)
+        else:
+            st.info("No hay colaboradores activos en planilla con beneficio vacacional aplicable.")
+
+        if filas_no_planilla:
+            st.markdown('<div class="tp-card"><div class="tp-note-t">No están en planilla (sin beneficio vacacional)</div><div class="tp-chips" style="justify-content:flex-start">' + "".join(ui_chip(_html.escape(n), "neutral") for n in filas_no_planilla) + '</div></div>', unsafe_allow_html=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("##### Permisos de Salud Pendientes de Recuperar")
+
+        if not st.session_state.vacaciones.empty:
+            df_pend_recup = st.session_state.vacaciones[
+                (st.session_state.vacaciones["tipo"] == "Permiso de Salud (a recuperar)") &
+                (st.session_state.vacaciones["estado_recuperacion"] != "Recuperado")
+            ]
+        else:
+            df_pend_recup = pd.DataFrame()
+
+        if not df_pend_recup.empty:
+            for idx_pr, r_pr in df_pend_recup.iterrows():
+                with ui_card_container(f"vac_{idx_pr}"):
+                    st.markdown(ui_vac_card(r_pr, admin=True), unsafe_allow_html=True)
+                    if st.button("Marcar Recuperado", key=f"recup_btn_{idx_pr}", use_container_width=True):
+                        st.session_state.vacaciones.at[idx_pr, "estado_recuperacion"] = "Recuperado"
+                        actualizar_hoja_completa("Vacaciones", st.session_state.vacaciones)
+                        registrar_auditoria("Marcar Permiso Recuperado", "Vacaciones", f"{r_pr['nombre']} — recuperación del {r_pr['fecha_recuperacion']}")
+                        st.toast("Marcado como recuperado")
+                        time.sleep(0.3)
+                        st.rerun()
+        else:
+            st.success("No hay permisos de salud pendientes de recuperación.")
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("##### Historial de Descansos Registrados")
+        if not st.session_state.vacaciones.empty:
+            _vac_ord = st.session_state.vacaciones.sort_values("fecha_registro", ascending=False)
             try:
                 _c_tab, _c_tar = st.container(key="vista_tabla"), st.container(key="vista_tarjetas")
             except TypeError:
                 _c_tab, _c_tar = st.container(), None
             with _c_tab:
-                st.dataframe(_aud_ord, use_container_width=True, hide_index=True)
+                premium_table(_vac_ord, use_container_width=True, hide_index=True)
             if _c_tar is not None:
                 with _c_tar:
-                    _filas_a = ""
-                    for _, _ra in _aud_ord.head(40).iterrows():
-                        _du, _fu = ui_dni_foto(str(_ra["usuario"]))
-                        _sub = " · ".join(x for x in [str(_ra["usuario"]), str(_ra.get("modulo", "")).strip(), str(_ra.get("detalle", "")).strip()] if x and x != "nan")
-                        _filas_a += (f'<div class="tp-row">{ui_avatar(str(_ra["usuario"]), _du, _fu, 40)}<div class="tp-row-main"><b>{_html.escape(str(_ra["accion"]))}</b>'
-                                     f'<span class="wrap">{_html.escape(_sub)}</span></div><div class="tp-chips">{ui_chip(str(_ra["fecha_hora"])[5:16], "neutral")}</div></div>')
-                    st.markdown(_filas_a, unsafe_allow_html=True)
-                    st.caption("Se muestran los 40 eventos más recientes. Exporta a Excel para ver todo.")
-            st.download_button("Exportar Auditoría a Excel", to_excel(df_aud), "Auditoria.xlsx", use_container_width=True)
+                    st.markdown("".join(ui_vac_card(_rv, admin=True) .replace('tp-card flat', 'tp-card') for _, _rv in _vac_ord.head(30).iterrows()), unsafe_allow_html=True)
+                    st.caption("Se muestran los 30 registros más recientes. Exporta a Excel para ver todo.")
+            st.download_button("Exportar Historial a Excel", to_excel(st.session_state.vacaciones), "Historial_Vacaciones.xlsx", use_container_width=True)
+
+            with st.expander("Eliminar Registro de Descanso"):
+                opciones_vac_del = [f"{i} | {r['nombre']} | {r['tipo']} | {r['fecha_inicio']} a {r['fecha_fin']}" for i, r in st.session_state.vacaciones.iterrows()]
+                sel_vac_del = st.selectbox("Seleccionar Registro a Eliminar", opciones_vac_del, key="vac_del_sel")
+                confirm_vac_del = st.checkbox("Confirmar eliminación", key="vac_del_confirm")
+                if st.button("Eliminar Registro", type="primary", use_container_width=True, key="vac_del_btn"):
+                    if confirm_vac_del:
+                        idx_vac_del = int(sel_vac_del.split(" | ")[0])
+                        row_vac_del = st.session_state.vacaciones.loc[idx_vac_del]
+                        st.session_state.vacaciones = st.session_state.vacaciones.drop(idx_vac_del).reset_index(drop=True)
+                        actualizar_hoja_completa("Vacaciones", st.session_state.vacaciones)
+                        registrar_auditoria("Eliminar Registro de Descanso", "Vacaciones", f"{row_vac_del['nombre']} — {row_vac_del['tipo']} ({row_vac_del['fecha_inicio']} a {row_vac_del['fecha_fin']})")
+                        st.toast("Registro eliminado correctamente")
+                        time.sleep(0.3)
+                        st.rerun()
+                    else:
+                        st.warning("Marca la casilla de confirmación antes de eliminar.")
         else:
-            ui_callout("Aún no hay eventos registrados en la auditoría.")
+            st.info("Sin descansos registrados todavía.")
 
-    with tab_hor:
-        st.markdown('<div class="tp-sec"><div><div class="tp-sec-title">Horarios y turnos</div><div class="tp-sec-sub">Define a qué hora empieza cada turno y cuántas horas cubre el sueldo. Las tardanzas y las horas extra se miden con el horario que regía en la fecha de cada marcación.</div></div></div>', unsafe_allow_html=True)
-        _hoy_h = obtener_ahora_peru().strftime("%Y-%m-%d")
-        _vig_h = _regla_para_fecha(_hoy_h)
-        _hdf = st.session_state.horarios.copy()
-        st.markdown('<div class="tp-gridk">' +
-                    ui_kpi_acc("Horario vigente hoy", _html.escape(_vig_h["nombre"]), f"rige desde {_vig_h['vigente_desde'] if _vig_h['vigente_desde'] > '1900-01-01' else 'el inicio'}", "ok") +
-                    ui_kpi_acc("Jornada base", jornada_base_txt(), "lo que cubre el sueldo; el resto es extra", "info") +
-                    ui_kpi_acc("Turnos", str(len(_vig_h["turnos"])), "en el horario vigente", "info") +
-                    ui_kpi_acc("Reglas registradas", str(len(_hdf)), "incluye borradores y anteriores", "info") + '</div>', unsafe_allow_html=True)
-        ui_callout("Al cambiar un horario, **solo cambia lo que se mida desde la fecha indicada**. Las marcaciones anteriores se siguen midiendo con el horario que regía entonces, así el historial no se altera.", "warn")
+elif choice == "Mis Vacaciones":
+    premium_module_shell('Mis Vacaciones', 'MI PERFIL', 'Consulta tu historial de vacaciones y descansos.')
 
-        st.markdown("<div class='tp-note-t' style='margin:18px 0 10px'>Reglas de horario</div>", unsafe_allow_html=True)
-        _filas_h = []
-        for _, _rh in _hdf.iterrows():
-            _filas_h.append((_norm_fecha_h(_rh.get("vigente_desde", "")), _rh))
-        for _desde, _rh in sorted(_filas_h, key=lambda x: x[0], reverse=True):
-            try:
-                _tur = _json_h.loads(str(_rh.get("turnos_json", "")))
-            except Exception:
-                _tur = []
-            _est = str(_rh.get("estado", "")).strip()
-            _base = int(float(_rh.get("jornada_base_min") or JORNADA_MINUTOS_BASE))
-            if _est == "Activa":
-                _chip = ui_chip("Vigente hoy", "ok") if str(_rh.get("id_regla", "")) == _vig_h.get("id_regla") else (ui_chip("Programada", "info") if _desde > _hoy_h else ui_chip("Anterior", "neutral"))
+    with st.container(key="pm_v_mis_vacaciones"):
+
+        fila_mi_emp = st.session_state.empleados[st.session_state.empleados["nombre"] == user_actual]
+        fecha_ingreso_mi = fila_mi_emp.iloc[0].get("fecha_inicio", "") if not fila_mi_emp.empty else ""
+        en_planilla_mi = str(fila_mi_emp.iloc[0].get("en_planilla", "Sí")) if not fila_mi_emp.empty else "Sí"
+
+        mi_saldo = calcular_saldo_vacacional(user_actual, fecha_ingreso_mi, st.session_state.vacaciones, en_planilla=en_planilla_mi)
+
+        if not mi_saldo["aplica"]:
+            st.warning("No estás registrado en planilla formal, por lo que no acumulas beneficio vacacional en el sistema. Si tienes dudas sobre tu situación laboral, consulta con administración.")
+        else:
+            st.markdown(ui_saldo_card(user_actual, mi_saldo, dni_actual, _foto_actual, hero=True), unsafe_allow_html=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("##### Mi Historial de Descansos y Permisos")
+        if not st.session_state.vacaciones.empty:
+            df_mis_vac = st.session_state.vacaciones[st.session_state.vacaciones["nombre"] == user_actual]
+            if not df_mis_vac.empty:
+                for _, _rv in df_mis_vac.sort_values("fecha_inicio", ascending=False).iterrows():
+                    st.markdown(ui_vac_card(_rv), unsafe_allow_html=True)
             else:
-                _chip = ui_chip(_html.escape(_est or "Borrador"), "neutral")
-            _lineas = ""
-            for _t in _tur:
+                st.info("Aún no tienes descansos registrados.")
+        else:
+            st.info("Aún no tienes descansos registrados.")
+
+elif choice == "Analítica (BI)":
+    premium_module_shell('Analítica (BI)', 'ANALÍTICA', 'Indicadores y tableros para la toma de decisiones.')
+
+    with st.container(key="pm_v_analitica_bi"):
+
+        tab_bi1, tab_bi2, tab_bi3 = st.tabs(["Costo de planilla", "Rotación de personal", "Tendencia de puntualidad"])
+        _hoy_bi = obtener_ahora_peru().date()
+        _a_d = lambda f: ((f.date() if hasattr(f, "date") else f) if f else None)
+        _SP = "<div style='height:14px'></div>"
+        _inicio_todo = pd.Timestamp(2000, 1, 1).date()
+        _fin_todo = pd.Timestamp(2100, 12, 31).date()
+
+        with ui_card_container("bi_filtros"):
+            fb1, fb2, fb3 = st.columns([1, 1.2, 1])
+            pre_bi = fb1.selectbox("Período", ["Todo el historial", "Este mes", "Últimos 3 meses", "Últimos 6 meses", "Este año", "Personalizado"], key="bi_pre")
+            if pre_bi == "Personalizado":
+                rg_bi = fb2.date_input("Rango de fechas (de – hasta)", value=(_hoy_bi.replace(day=1), _hoy_bi), key="bi_rango")
+                rg_bi = list(rg_bi) if isinstance(rg_bi, (tuple, list)) else [rg_bi]
+                d_ini, d_fin = rg_bi[0], (rg_bi[1] if len(rg_bi) > 1 else rg_bi[0])
+            else:
+                _m0 = pd.Timestamp(_hoy_bi.replace(day=1))
+                d_ini = {"Todo el historial": _inicio_todo, "Este mes": _m0.date(), "Últimos 3 meses": (_m0 - pd.DateOffset(months=2)).date(),
+                         "Últimos 6 meses": (_m0 - pd.DateOffset(months=5)).date(), "Este año": _hoy_bi.replace(month=1, day=1)}[pre_bi]
+                d_fin = _fin_todo if pre_bi == "Todo el historial" else _hoy_bi
+                _lbl_rg = "Se analiza todo el registro" if pre_bi == "Todo el historial" else f"{d_ini:%d/%m/%Y} – {d_fin:%d/%m/%Y}"
+                fb2.markdown(f'<div style="padding-top:27px">{ui_chip(_lbl_rg, "info")}</div>', unsafe_allow_html=True)
+            colab_bi = fb3.selectbox("Colaborador", ["Todos"] + sorted(obtener_solo_colaboradores()), key="bi_colab")
+        ym_ini, ym_fin = d_ini.strftime("%Y-%m"), d_fin.strftime("%Y-%m")
+        st.markdown(_SP, unsafe_allow_html=True)
+
+        def _cab_colab():
+            if colab_bi != "Todos":
+                _d, _f = ui_dni_foto(colab_bi)
+                st.markdown(f'<div class="tp-row">{ui_avatar(colab_bi, _d, _f, 44)}<div class="tp-row-main"><b>{_html.escape(colab_bi)}</b><span>Analítica individual dentro del período seleccionado</span></div>{ui_chip("Vista individual", "info")}</div>', unsafe_allow_html=True)
+
+        # ---------------- COSTO DE PLANILLA ----------------
+        with tab_bi1:
+            _cab_colab()
+            if st.session_state.boletas_historial.empty:
+                st.info("Aún no hay boletas guardadas en el historial. Ve a 'Boletas de Pago', genera una boleta y usa el botón 'Guardar esta Boleta en el Historial'.")
+            else:
+                df_bh = st.session_state.boletas_historial.copy()
+                df_bh = df_bh[df_bh["estado"].astype(str) != "Reemplazado"]
+                for _c in ["neto_pagar", "total_ingresos", "total_descuentos"]:
+                    df_bh[_c] = pd.to_numeric(df_bh[_c], errors="coerce").fillna(0)
+                df_bh["_ym"] = pd.to_numeric(df_bh["anio"], errors="coerce").fillna(0).astype(int).astype(str) + "-" + df_bh["mes"].apply(_mes_a_num).astype(str).str.zfill(2)
+                df_bh = df_bh[(df_bh["_ym"] >= ym_ini) & (df_bh["_ym"] <= ym_fin)]
+                if colab_bi != "Todos":
+                    df_bh = df_bh[df_bh["nombre"] == colab_bi]
+                if df_bh.empty:
+                    st.info("No hay boletas registradas para el período y colaborador seleccionados.")
+                else:
+                    res = df_bh.groupby("_ym")["neto_pagar"].sum().sort_index()
+                    ing_m = df_bh.groupby("_ym")["total_ingresos"].sum().sort_index()
+                    des_m = df_bh.groupby("_ym")["total_descuentos"].sum().sort_index()
+                    ult, prev = float(res.iloc[-1]), (float(res.iloc[-2]) if len(res) > 1 else 0)
+                    delta = ui_chip(f'{"▲" if ult >= prev else "▼"} {abs((ult - prev) / prev * 100):.1f}% vs período anterior', "neutral") if prev else ui_chip("Primer período registrado", "neutral")
+                    tot_ing, tot_des = df_bh["total_ingresos"].sum(), df_bh["total_descuentos"].sum()
+                    b1, b2, b3, b4 = st.columns(4)
+                    b1.markdown(ui_kpi("Costo neto de planilla", f"S/. {df_bh['neto_pagar'].sum():,.2f}", f"{len(df_bh)} boletas · {df_bh['nombre'].nunique()} colaborador(es)"), unsafe_allow_html=True)
+                    b2.markdown(ui_kpi("Promedio mensual", f"S/. {res.mean():,.2f}", f"{len(res)} período(s) registrados"), unsafe_allow_html=True)
+                    b3.markdown(ui_kpi(f"Último período · {ui_mes_label(res.index[-1])}", f"S/. {ult:,.2f}", delta), unsafe_allow_html=True)
+                    b4.markdown(ui_kpi("Descuentos acumulados", f"S/. {tot_des:,.2f}", f"{tot_des / tot_ing * 100:.1f}% de los ingresos brutos" if tot_ing else "Sin ingresos registrados"), unsafe_allow_html=True)
+                    st.markdown(_SP, unsafe_allow_html=True)
+                    lbl = [ui_mes_label(i) for i in res.index]
+                    g1, g2 = st.columns([1.6, 1])
+                    with g1:
+                        st.markdown(ui_panel("Costo neto por período", "Neto a pagar acumulado (S/.)", ui_columnas(lbl, [("Neto a pagar", [round(v) for v in res.values], "#EC3237")], fmt="{:,.0f}")), unsafe_allow_html=True)
+                        st.markdown(_SP, unsafe_allow_html=True)
+                        st.markdown(ui_panel("Ingresos vs. descuentos", "Evolución mensual (S/.)", ui_columnas(lbl, [("Ingresos", [round(v) for v in ing_m.values], "#0F172A"), ("Descuentos", [round(v) for v in des_m.values], "#F59E0B")], fmt="{:,.0f}")), unsafe_allow_html=True)
+                    with g2:
+                        top = df_bh.groupby("nombre")["neto_pagar"].sum().sort_values(ascending=False).head(8)
+                        st.markdown(ui_panel("Mayor costo acumulado", "Top 8 por neto pagado", ui_hbars(list(top.items()), "#0F172A", "S/. {:,.0f}")), unsafe_allow_html=True)
+                        st.markdown(_SP, unsafe_allow_html=True)
+                        topd = df_bh.groupby("nombre")["total_descuentos"].sum().sort_values(ascending=False).head(8)
+                        st.markdown(ui_panel("Descuentos acumulados por trabajador", "Faltas, adelantos, descuadres y otros", ui_hbars([(n, v) for n, v in topd.items() if v > 0], "#F59E0B", "S/. {:,.0f}")), unsafe_allow_html=True)
+                    st.markdown(_SP, unsafe_allow_html=True)
+                    det = df_bh.groupby("nombre")[["total_ingresos", "total_descuentos", "neto_pagar"]].sum().sort_values("neto_pagar", ascending=False)
+                    mxn = max(det["neto_pagar"].max(), 1)
+                    filas_t = ""
+                    for nom, r in det.iterrows():
+                        d_, f_ = ui_dni_foto(nom)
+                        pd_ = r["total_descuentos"] / r["total_ingresos"] * 100 if r["total_ingresos"] else 0
+                        filas_t += (f'<div class="tp-rk">{ui_avatar(nom, d_, f_, 40)}<div class="tp-rk-main"><b>{_html.escape(str(nom))}</b><div class="tp-prog"><i style="width:{int(r["neto_pagar"] / mxn * 100)}%"></i></div></div>'
+                                    f'<div class="tp-chips">{ui_chip("Ingresos S/. " + format(r["total_ingresos"], ",.0f"), "neutral")}{ui_chip("Desc. S/. " + format(r["total_descuentos"], ",.0f"), "warn")}{ui_chip(f"{pd_:.1f}% desc.", "bad" if pd_ >= 20 else "ok")}</div>'
+                                    f'<div class="tp-rk-pct" style="min-width:96px">S/. {r["neto_pagar"]:,.0f}</div></div>')
+                    st.markdown(ui_panel("Detalle por trabajador", "Neto pagado, ingresos y porcentaje de descuentos", filas_t), unsafe_allow_html=True)
+                    with st.expander("Ver detalle de boletas emitidas"):
+                        premium_table(df_bh.drop(columns=["_ym"]).sort_values("fecha_emision", ascending=False), use_container_width=True, hide_index=True)
+                        st.download_button("Exportar Historial de Boletas a Excel", to_excel(df_bh.drop(columns=["_ym"])), "Boletas_Historial.xlsx", use_container_width=True)
+
+        # ---------------- ROTACIÓN Y PERMANENCIA ----------------
+        with tab_bi2:
+            _cab_colab()
+            emp_bi = st.session_state.empleados.copy()
+            if "rol" in emp_bi.columns:
+                emp_bi = emp_bi[emp_bi["rol"] != "admin"]
+            if colab_bi != "Todos":
+                emp_bi = emp_bi[emp_bi["nombre"] == colab_bi]
+            filas_e = []
+            for _, r in emp_bi.iterrows():
+                fi = _a_d(_parsear_fecha_nac_cumple(r.get("fecha_inicio", "")))
+                fc = _a_d(_parsear_fecha_nac_cumple(r.get("fecha_cese", "")))
+                if not fi:
+                    continue
+                filas_e.append({"nombre": r["nombre"], "cargo": str(r.get("cargo", "")), "fi": fi, "fc": fc,
+                                "activo": fc is None and str(r.get("estado", "")).lower() == "activo", "meses": max(0.0, ((fc or _hoy_bi) - fi).days / 30.4375)})
+            if not filas_e:
+                st.info("No hay suficientes datos de fechas de ingreso/cese para calcular rotación.")
+            else:
+                dft = pd.DataFrame(filas_e)
+                fmt_t = lambda m: f"{int(m // 12)} a {int(m % 12)} m" if m >= 12 else f"{m:.1f} meses"
+                altas_p = dft[(dft["fi"] >= d_ini) & (dft["fi"] <= d_fin)]
+                bajas_p = dft[dft["fc"].apply(lambda x: x is not None and d_ini <= x <= d_fin)]
+                n_act = int(dft["activo"].sum())
+                altas_m = altas_p["fi"].apply(lambda x: x.strftime("%Y-%m")).value_counts().to_dict()
+                bajas_m = bajas_p["fc"].apply(lambda x: x.strftime("%Y-%m")).value_counts().to_dict()
+                r1, r2, r3, r4 = st.columns(4)
+                r1.markdown(ui_kpi("Colaboradores activos", str(n_act), "equipo actual"), unsafe_allow_html=True)
+                r2.markdown(ui_kpi("Altas en el período", str(len(altas_p)), "nuevos ingresos"), unsafe_allow_html=True)
+                r3.markdown(ui_kpi("Bajas en el período", str(len(bajas_p)), "ceses registrados"), unsafe_allow_html=True)
+                r4.markdown(ui_kpi("Tasa de rotación", f"{len(bajas_p) / max(1, n_act + len(bajas_p)) * 100:.0f}%", "bajas sobre el total del equipo"), unsafe_allow_html=True)
+                st.markdown(_SP, unsafe_allow_html=True)
+                d_baja, d_act = dft[~dft["activo"]], dft[dft["activo"]]
+                mayor = dft.sort_values("meses", ascending=False).iloc[0]
+                q1, q2, q3, q4 = st.columns(4)
+                q1.markdown(ui_kpi("Permanencia promedio", fmt_t(dft["meses"].mean()), f"{len(dft)} colaborador(es) analizados"), unsafe_allow_html=True)
+                q2.markdown(ui_kpi("Permanencia de quienes se fueron", fmt_t(d_baja["meses"].mean()) if len(d_baja) else "-", f"{len(d_baja)} baja(s) registradas" if len(d_baja) else "Aún sin bajas"), unsafe_allow_html=True)
+                q3.markdown(ui_kpi("Antigüedad del personal activo", fmt_t(d_act["meses"].mean()) if len(d_act) else "-", "promedio actual"), unsafe_allow_html=True)
+                q4.markdown(ui_kpi("Mayor permanencia", fmt_t(mayor["meses"]), _html.escape(str(mayor["nombre"]))), unsafe_allow_html=True)
+                st.markdown(_SP, unsafe_allow_html=True)
+                ev = [x.strftime("%Y-%m") for x in list(dft["fi"]) + [c for c in dft["fc"] if c is not None]]
+                ini_m, fin_m = max(ym_ini, min(ev)), min(ym_fin, _hoy_bi.strftime("%Y-%m"))
+                rango = [str(x) for x in pd.period_range(ini_m, fin_m, freq="M")][-24:] if ini_m <= fin_m else []
+                g1, g2 = st.columns([1.6, 1])
+                with g1:
+                    if rango:
+                        st.markdown(ui_panel("Altas y bajas por mes", "Hasta 24 meses dentro del período", ui_columnas([ui_mes_label(m) for m in rango], [("Altas", [altas_m.get(m, 0) for m in rango], "#0B8F57"), ("Bajas", [bajas_m.get(m, 0) for m in rango], "#EC3237")])), unsafe_allow_html=True)
+                    else:
+                        st.info("No hay movimientos dentro del período seleccionado.")
+                with g2:
+                    cargos = d_act["cargo"].value_counts()
+                    st.markdown(ui_panel("Equipo activo por cargo", "Distribución actual", ui_hbars(list(cargos.items()), "#0F172A")), unsafe_allow_html=True)
+                st.markdown(_SP, unsafe_allow_html=True)
+                h1, h2 = st.columns([1.3, 1])
+                top_p = dft.sort_values("meses", ascending=False).head(12)
+                h1.markdown(ui_panel("Permanencia por colaborador", "Oscuro: activo · Rojo: dado de baja", ui_hbars([(r["nombre"], r["meses"], "#0F172A" if r["activo"] else "#EC3237") for _, r in top_p.iterrows()], fmt=fmt_t)), unsafe_allow_html=True)
+                etq = ["< 3 meses", "3–6 meses", "6–12 meses", "1–2 años", "2+ años"]
+                cat = pd.cut(dft["meses"], bins=[-0.01, 3, 6, 12, 24, 10**4], labels=etq)
+                cnt_a = cat[dft["activo"]].value_counts().reindex(etq, fill_value=0)
+                cnt_b = cat[~dft["activo"]].value_counts().reindex(etq, fill_value=0)
+                h2.markdown(ui_panel("Distribución de permanencia", "Cuántos colaboradores hay en cada tramo", ui_columnas(etq, [("Activos", [int(v) for v in cnt_a.values], "#0F172A"), ("Dados de baja", [int(v) for v in cnt_b.values], "#EC3237")], alto=210)), unsafe_allow_html=True)
+
+        # ---------------- PUNTUALIDAD ----------------
+        with tab_bi3:
+            _cab_colab()
+            if st.session_state.asistencia.empty:
+                st.info("No hay datos de asistencia registrados.")
+            else:
+                dfa = st.session_state.asistencia.copy()
+                dfa["fecha_dt"] = pd.to_datetime(dfa["fecha"], errors="coerce")
+                dfa = dfa.dropna(subset=["fecha_dt"])
+                dfa = dfa[(dfa["fecha_dt"].dt.date >= d_ini) & (dfa["fecha_dt"].dt.date <= d_fin) & (dfa["nombre"].isin(obtener_solo_colaboradores()))]
+                if colab_bi != "Todos":
+                    dfa = dfa[dfa["nombre"] == colab_bi]
+                ing = dfa[(dfa["tipo"] == "INGRESO") & (dfa["es_extra"].astype(str) != "SI")].copy()
+                if ing.empty:
+                    st.info("No hay ingresos registrados para el período y colaborador seleccionados.")
+                else:
+                    tp = ing["fecha_hora"].apply(calcular_tardanza_ingreso)
+                    ing["tard"] = tp.map(lambda t: bool(t[1]))
+                    ing["mins"] = tp.map(lambda t: int(t[0]) if t[1] else 0)
+                    ing["ym"] = ing["fecha_dt"].dt.strftime("%Y-%m")
+                    ing["dow"] = ing["fecha_dt"].dt.dayofweek
+                    tard = ing[ing["tard"]]
+                    pm = ing.groupby("ym").agg(n=("tard", "size"), t=("tard", "sum"), m=("mins", "sum"))
+                    meses_p = list(pm.index)
+                    n_i, n_t, n_m = int(pm["n"].sum()), int(pm["t"].sum()), int(pm["m"].sum())
+                    dias_n = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"]
+                    dow_t = tard.groupby("dow").size().reindex(range(7), fill_value=0)
+                    por_per = ing.groupby("nombre")["tard"].sum()
+                    p1, p2, p3, p4 = st.columns(4)
+                    p1.markdown(ui_kpi("Puntualidad global", f"{(n_i - n_t) / n_i * 100:.1f}%", f"{n_i} ingresos evaluados"), unsafe_allow_html=True)
+                    p2.markdown(ui_kpi("Tardanzas totales", str(n_t), f"{n_m} min acumulados"), unsafe_allow_html=True)
+                    p3.markdown(ui_kpi("Mes con más tardanzas", ui_mes_label(pm["t"].idxmax()) if n_t else "-", f"{int(pm['t'].max())} tardanza(s)" if n_t else "Sin tardanzas"), unsafe_allow_html=True)
+                    p4.markdown(ui_kpi("Minutos por tardanza", f"{n_m / n_t:.1f}" if n_t else "0", "promedio"), unsafe_allow_html=True)
+                    st.markdown(_SP, unsafe_allow_html=True)
+                    q1, q2, q3, q4 = st.columns(4)
+                    q1.markdown(ui_kpi("Colaboradores 100% puntuales", f"{int((por_per == 0).sum())} de {len(por_per)}", "sin ninguna tardanza"), unsafe_allow_html=True)
+                    q2.markdown(ui_kpi("Día más crítico", dias_n[int(dow_t.idxmax())] if n_t else "-", f"{int(dow_t.max())} tardanza(s)" if n_t else "Sin tardanzas"), unsafe_allow_html=True)
+                    q3.markdown(ui_kpi("Tiempo perdido", f"{n_m / 60:.1f} h", "por tardanzas en el período"), unsafe_allow_html=True)
+                    q4.markdown(ui_kpi("Tardanza más larga", f"{int(tard['mins'].max())} min" if n_t else "-", _html.escape(str(tard.loc[tard['mins'].idxmax(), 'nombre'])) if n_t else "Sin tardanzas"), unsafe_allow_html=True)
+                    st.markdown(_SP, unsafe_allow_html=True)
+                    lbl = [ui_mes_label(m) for m in meses_p]
+                    g1, g2 = st.columns(2)
+                    g1.markdown(ui_panel("Tardanzas por mes", "Evolución en el período", ui_linea(lbl, [int(pm.loc[m, "t"]) for m in meses_p], "#EC3237")), unsafe_allow_html=True)
+                    g2.markdown(ui_panel("Puntualidad por mes", "% de ingresos a tiempo", ui_linea(lbl, [round(100 - pm.loc[m, "t"] / pm.loc[m, "n"] * 100, 1) for m in meses_p], "#0B8F57", "{:g}", "%")), unsafe_allow_html=True)
+                    st.markdown(_SP, unsafe_allow_html=True)
+                    k1, k2 = st.columns(2)
+                    k1.markdown(ui_panel("Tardanzas por día de la semana", "¿Qué días se llega más tarde?", ui_columnas(dias_n, [("Tardanzas", [int(v) for v in dow_t.values], "#EC3237")], alto=200)), unsafe_allow_html=True)
+                    grav = pd.cut(tard["mins"], bins=[0, 5, 15, 30, 60, 10**5], labels=["1–5 min", "6–15 min", "16–30 min", "31–60 min", "+60 min"]).value_counts().reindex(["1–5 min", "6–15 min", "16–30 min", "31–60 min", "+60 min"], fill_value=0)
+                    k2.markdown(ui_panel("Gravedad de las tardanzas", "Cuántos minutos se llega tarde", ui_columnas(list(grav.index), [("Tardanzas", [int(v) for v in grav.values], "#F59E0B")], alto=200)), unsafe_allow_html=True)
+                    por_dia = tard.groupby("fecha")["mins"].sum().sort_index().tail(31)
+                    if len(por_dia) > 1:
+                        st.markdown(_SP, unsafe_allow_html=True)
+                        st.markdown(ui_panel("Minutos de tardanza por día", "Últimos 31 días con tardanzas", ui_columnas([ui_dia_label(d) for d in por_dia.index], [("Minutos", [int(v) for v in por_dia.values], "#0F172A")], alto=190)), unsafe_allow_html=True)
+                    st.markdown(_SP, unsafe_allow_html=True)
+                    ext = {}
+                    try:
+                        for (nom_x, f_x), gx in dfa.groupby(["nombre", "fecha"]):
+                            gx = gx.copy()
+                            gx["dt"] = pd.to_datetime(gx["fecha_hora"], errors="coerce")
+                            gx = gx.dropna(subset=["dt"])
+                            if not gx.empty:
+                                ext[str(f_x)[:7]] = ext.get(str(f_x)[:7], 0) + calcular_jornada_y_horas_extras(gx)[1]
+                    except Exception:
+                        ext = {}
+                    e1, e2 = st.columns(2)
+                    e1.markdown(ui_panel("Horas extras por mes", f"Tiempo trabajado sobre la jornada base de {jornada_base_txt()}", ui_linea(lbl, [round(ext.get(m, 0) / 60, 1) for m in meses_p], "#F59E0B", "{:g}", " h")), unsafe_allow_html=True)
+                    if colab_bi == "Todos":
+                        top_t = sorted([(n, int(v)) for n, v in por_per.items() if v > 0], key=lambda x: -x[1])[:8]
+                        e2.markdown(ui_panel("Colaboradores con más tardanzas", "Acumulado en el período", ui_hbars(top_t, "#EC3237")), unsafe_allow_html=True)
+                    else:
+                        ult_t = tard.sort_values("fecha_hora", ascending=False).head(8)
+                        filas_u = "".join(f'<div class="tp-row"><div class="tp-row-time">{ui_dia_label(r["fecha"])}</div><div class="tp-row-main"><b>Ingreso a las {str(r["fecha_hora"])[11:16]}</b></div><div class="tp-chips">{ui_chip(str(int(r["mins"])) + " min tarde", "bad")}</div></div>' for _, r in ult_t.iterrows()) or '<div class="tp-card-sub">Sin tardanzas en el período.</div>'
+                        e2.markdown(ui_panel("Últimas tardanzas", "Detalle del colaborador", filas_u), unsafe_allow_html=True)
+
+
+elif choice == "Onboarding / Offboarding":
+    premium_module_shell('Onboarding / Offboarding', 'PERSONAS', 'Altas, bajas y seguimiento de colaboradores.')
+
+    with st.container(key="pm_v_onboarding_offboarding"):
+
+        if st.session_state.checklist.empty:
+            ui_callout("No hay checklists generados todavía. Se crean automáticamente al registrar un nuevo colaborador o al dar de baja a uno existente.")
+        else:
+            colabs_con_checklist = sorted(st.session_state.checklist["nombre"].unique().tolist())
+            colab_chk_sel = st.selectbox("Seleccionar Colaborador", colabs_con_checklist, key="chk_colab_sel")
+
+            df_chk_colab = st.session_state.checklist[st.session_state.checklist["nombre"] == colab_chk_sel]
+            _d_ck, _f_ck = ui_dni_foto(colab_chk_sel)
+            _emp_ck = st.session_state.empleados[st.session_state.empleados["nombre"] == colab_chk_sel]
+            _cargo_ck = str(_emp_ck.iloc[0].get("cargo", "")) if not _emp_ck.empty else ""
+            _activo_ck = (not _emp_ck.empty) and str(_emp_ck.iloc[0].get("estado", "")).lower() == "activo"
+            st.markdown(f'<div class="tp-card"><div class="tp-op-head" style="margin:0">{ui_avatar(colab_chk_sel, _d_ck, _f_ck, 56)}<div><div class="tp-card-title">{_html.escape(colab_chk_sel)}</div>'
+                        f'<div class="tp-card-sub">{_html.escape(_cargo_ck)} · DNI {_html.escape(_d_ck)}</div></div>{ui_chip("Activo" if _activo_ck else "Dado de baja", "ok" if _activo_ck else "neutral")}</div></div>', unsafe_allow_html=True)
+            _pct_t = {}
+            for _t in ["Onboarding", "Offboarding"]:
+                _dt_ = df_chk_colab[df_chk_colab["tipo"] == _t]
+                _pct_t[_t] = int(len(_dt_[_dt_["estado"] == "Completado"]) * 100 / len(_dt_)) if len(_dt_) else None
+            _pend_ck = int((df_chk_colab["estado"] != "Completado").sum())
+            st.markdown('<div class="tp-gridk">' +
+                        ui_kpi_acc("Onboarding", f"{_pct_t['Onboarding']}%" if _pct_t["Onboarding"] is not None else "—", "incorporación completada" if _pct_t["Onboarding"] is not None else "No aplica", "ok" if _pct_t["Onboarding"] == 100 else "info") +
+                        ui_kpi_acc("Offboarding", f"{_pct_t['Offboarding']}%" if _pct_t["Offboarding"] is not None else "—", "salida completada" if _pct_t["Offboarding"] is not None else "No aplica", "ok" if _pct_t["Offboarding"] == 100 else "info") +
+                        ui_kpi_acc("Tareas pendientes", str(_pend_ck), "por completar" if _pend_ck else "Todo al día", "warn" if _pend_ck else "ok") + '</div>', unsafe_allow_html=True)
+
+            for tipo_chk in ["Onboarding", "Offboarding"]:
+                df_tipo_chk = df_chk_colab[df_chk_colab["tipo"] == tipo_chk]
+                if df_tipo_chk.empty:
+                    continue
+
+                completados = len(df_tipo_chk[df_tipo_chk["estado"] == "Completado"])
+                total_items = len(df_tipo_chk)
+                pct_chk = int((completados / total_items) * 100) if total_items else 0
+
+                with ui_card_container(f"chk_{tipo_chk}"):
+                    _tono_ck = "ok" if pct_chk == 100 else "warn"
+                    st.markdown(f'<div class="tp-card flat"><div class="tp-card-head"><div><div class="tp-card-title">Checklist de {tipo_chk}</div>'
+                                f'<div class="tp-card-sub">{"Incorporación del colaborador" if tipo_chk == "Onboarding" else "Proceso de salida del colaborador"}</div></div>'
+                                f'{ui_chip(str(completados) + " de " + str(total_items) + " completadas", _tono_ck)}</div>'
+                                f'<div class="tp-prog {_tono_ck}" style="margin:14px 0 4px"><i style="width:{pct_chk}%"></i></div></div>', unsafe_allow_html=True)
+
+                    for idx_chk, row_chk in df_tipo_chk.iterrows():
+                        marcado = row_chk["estado"] == "Completado"
+                        nuevo_marcado = st.checkbox(row_chk["tarea"], value=marcado, key=f"chk_{row_chk['id_item']}")
+                        if nuevo_marcado != marcado:
+                            st.session_state.checklist.at[idx_chk, "estado"] = "Completado" if nuevo_marcado else "Pendiente"
+                            st.session_state.checklist.at[idx_chk, "fecha_completado"] = obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S") if nuevo_marcado else ""
+                            actualizar_hoja_completa("Checklist", st.session_state.checklist)
+                            registrar_auditoria(f"Actualizar Ítem de {tipo_chk}", "Checklist", f"{colab_chk_sel}: '{row_chk['tarea']}' → {'Completado' if nuevo_marcado else 'Pendiente'}")
+                            st.rerun()
+
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.download_button("Exportar Checklists a Excel", to_excel(st.session_state.checklist), "Checklists.xlsx", use_container_width=True)
+
+elif choice == "Auditoría y Configuración":
+    premium_module_shell('Auditoría y Configuración', 'ADMINISTRACIÓN', 'Configuración, controles y trazabilidad del sistema.')
+
+    with st.container(key="pm_v_auditoria_y_configuracion"):
+
+        tab_aud, tab_hor, tab_cfg = st.tabs(["Registro de auditoría", "Horarios y turnos", "Configuración"])
+
+        with tab_aud:
+            if not st.session_state.auditoria.empty:
+                df_aud = st.session_state.auditoria.copy()
+                fa1, fa2 = st.columns(2)
+                with fa1:
+                    usuarios_aud_disp = ["Todos"] + sorted(df_aud["usuario"].dropna().unique().tolist())
+                    usuario_aud_filtro = st.selectbox("Filtrar por Usuario", usuarios_aud_disp)
+                with fa2:
+                    acciones_aud_disp = ["Todas"] + sorted(df_aud["accion"].dropna().unique().tolist())
+                    accion_aud_filtro = st.selectbox("Filtrar por Acción", acciones_aud_disp)
+
+                if usuario_aud_filtro != "Todos":
+                    df_aud = df_aud[df_aud["usuario"] == usuario_aud_filtro]
+                if accion_aud_filtro != "Todas":
+                    df_aud = df_aud[df_aud["accion"] == accion_aud_filtro]
+
+                _aud_ord = df_aud.sort_values("fecha_hora", ascending=False)
+                if _aud_ord.empty:
+                    ui_callout("No hay eventos con los filtros seleccionados.")
+                else:
+                    _top_acc = _aud_ord["accion"].value_counts().index[0]
+                    st.markdown('<div class="tp-gridk">' + ui_kpi_acc("Eventos registrados", str(len(_aud_ord)), "según el filtro", "info") +
+                                ui_kpi_acc("Usuarios distintos", str(_aud_ord["usuario"].nunique()), "con actividad", "info") +
+                                ui_kpi_acc("Acción más frecuente", _html.escape(str(_top_acc)), f"{int((_aud_ord['accion'] == _top_acc).sum())} vez/veces", "warn") +
+                                ui_kpi_acc("Último evento", str(_aud_ord.iloc[0]["fecha_hora"])[:16], _html.escape(str(_aud_ord.iloc[0]["usuario"])), "ok") + '</div>', unsafe_allow_html=True)
                 try:
-                    _dur = _min_hhmm(_t["salida"]) - _min_hhmm(_t["entrada"])
-                    _lineas += (f'<div class="tp-row"><div class="tp-row-main"><b>{_html.escape(str(_t["nombre"]))}</b><span class="wrap">{_t["entrada"]} – {_t["salida"]} · tolerancia {int(_t.get("tolerancia_min", 10))} min · '
-                                f'{_fmt_min(_dur)} de turno</span></div><div class="tp-chips">{ui_chip(_fmt_min(max(0, _dur - _base)) + " extra", "warn" if _dur > _base else "neutral")}</div></div>')
+                    _c_tab, _c_tar = st.container(key="vista_tabla"), st.container(key="vista_tarjetas")
+                except TypeError:
+                    _c_tab, _c_tar = st.container(), None
+                with _c_tab:
+                    premium_table(_aud_ord, use_container_width=True, hide_index=True)
+                if _c_tar is not None:
+                    with _c_tar:
+                        _filas_a = ""
+                        for _, _ra in _aud_ord.head(40).iterrows():
+                            _du, _fu = ui_dni_foto(str(_ra["usuario"]))
+                            _sub = " · ".join(x for x in [str(_ra["usuario"]), str(_ra.get("modulo", "")).strip(), str(_ra.get("detalle", "")).strip()] if x and x != "nan")
+                            _filas_a += (f'<div class="tp-row">{ui_avatar(str(_ra["usuario"]), _du, _fu, 40)}<div class="tp-row-main"><b>{_html.escape(str(_ra["accion"]))}</b>'
+                                         f'<span class="wrap">{_html.escape(_sub)}</span></div><div class="tp-chips">{ui_chip(str(_ra["fecha_hora"])[5:16], "neutral")}</div></div>')
+                        st.markdown(_filas_a, unsafe_allow_html=True)
+                        st.caption("Se muestran los 40 eventos más recientes. Exporta a Excel para ver todo.")
+                st.download_button("Exportar Auditoría a Excel", to_excel(df_aud), "Auditoria.xlsx", use_container_width=True)
+            else:
+                ui_callout("Aún no hay eventos registrados en la auditoría.")
+
+        with tab_hor:
+            st.markdown('<div class="tp-sec"><div><div class="tp-sec-title">Horarios y turnos</div><div class="tp-sec-sub">Define a qué hora empieza cada turno y cuántas horas cubre el sueldo. Las tardanzas y las horas extra se miden con el horario que regía en la fecha de cada marcación.</div></div></div>', unsafe_allow_html=True)
+            _hoy_h = obtener_ahora_peru().strftime("%Y-%m-%d")
+            _vig_h = _regla_para_fecha(_hoy_h)
+            _hdf = st.session_state.horarios.copy()
+            st.markdown('<div class="tp-gridk">' +
+                        ui_kpi_acc("Horario vigente hoy", _html.escape(_vig_h["nombre"]), f"rige desde {_vig_h['vigente_desde'] if _vig_h['vigente_desde'] > '1900-01-01' else 'el inicio'}", "ok") +
+                        ui_kpi_acc("Jornada base", jornada_base_txt(), "lo que cubre el sueldo; el resto es extra", "info") +
+                        ui_kpi_acc("Turnos", str(len(_vig_h["turnos"])), "en el horario vigente", "info") +
+                        ui_kpi_acc("Reglas registradas", str(len(_hdf)), "incluye borradores y anteriores", "info") + '</div>', unsafe_allow_html=True)
+            ui_callout("Al cambiar un horario, **solo cambia lo que se mida desde la fecha indicada**. Las marcaciones anteriores se siguen midiendo con el horario que regía entonces, así el historial no se altera.", "warn")
+
+            st.markdown("<div class='tp-note-t' style='margin:18px 0 10px'>Reglas de horario</div>", unsafe_allow_html=True)
+            _filas_h = []
+            for _, _rh in _hdf.iterrows():
+                _filas_h.append((_norm_fecha_h(_rh.get("vigente_desde", "")), _rh))
+            for _desde, _rh in sorted(_filas_h, key=lambda x: x[0], reverse=True):
+                try:
+                    _tur = _json_h.loads(str(_rh.get("turnos_json", "")))
+                except Exception:
+                    _tur = []
+                _est = str(_rh.get("estado", "")).strip()
+                _base = int(float(_rh.get("jornada_base_min") or JORNADA_MINUTOS_BASE))
+                if _est == "Activa":
+                    _chip = ui_chip("Vigente hoy", "ok") if str(_rh.get("id_regla", "")) == _vig_h.get("id_regla") else (ui_chip("Programada", "info") if _desde > _hoy_h else ui_chip("Anterior", "neutral"))
+                else:
+                    _chip = ui_chip(_html.escape(_est or "Borrador"), "neutral")
+                _lineas = ""
+                for _t in _tur:
+                    try:
+                        _dur = _min_hhmm(_t["salida"]) - _min_hhmm(_t["entrada"])
+                        _lineas += (f'<div class="tp-row"><div class="tp-row-main"><b>{_html.escape(str(_t["nombre"]))}</b><span class="wrap">{_t["entrada"]} – {_t["salida"]} · tolerancia {int(_t.get("tolerancia_min", 10))} min · '
+                                    f'{_fmt_min(_dur)} de turno</span></div><div class="tp-chips">{ui_chip(_fmt_min(max(0, _dur - _base)) + " extra", "warn" if _dur > _base else "neutral")}</div></div>')
+                    except Exception:
+                        continue
+                st.markdown(f'<div class="tp-card"><div class="tp-card-head"><div><div class="tp-card-title">{_html.escape(str(_rh.get("nombre", "")))}</div>'
+                            f'<div class="tp-card-sub">Rige desde {_desde if _desde > "1900-01-01" else "el inicio"} · jornada base {_fmt_min(_base)}</div></div>{_chip}</div><div style="height:10px"></div>{_lineas}</div>', unsafe_allow_html=True)
+
+            if not _hdf.empty:
+                _opc_h = {f"{r.get('nombre', '')} · desde {_norm_fecha_h(r.get('vigente_desde', ''))} · {r.get('estado', '')}": str(r.get("id_regla", "")) for _, r in _hdf.iterrows()}
+                _ch1, _ch2, _ch3 = st.columns([2.2, 1, 1])
+                _sel_h = _ch1.selectbox("Cambiar el estado de una regla", list(_opc_h.keys()), key="hor_sel_estado")
+                _nuevo_h = _ch2.selectbox("Nuevo estado", ["Activa", "Borrador", "Archivada"], key="hor_nuevo_estado")
+                _ch3.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
+                if _ch3.button("Aplicar", key="hor_aplicar", use_container_width=True):
+                    if actualizar_estado_horario_gsheets(_opc_h[_sel_h], _nuevo_h):
+                        registrar_auditoria("Cambiar Estado de Horario", "Horarios", f"{_sel_h} → {_nuevo_h}")
+                        st.session_state.horarios = obtener_horarios_gsheets()
+                        st.toast("Estado del horario actualizado")
+                        time.sleep(0.3)
+                        st.rerun()
+
+            st.markdown("<div class='tp-note-t' style='margin:26px 0 10px'>Nueva regla de horarios</div>", unsafe_allow_html=True)
+            _plantillas = {
+                "2 turnos (horario actual)": (345, [{"Turno": "Mañana", "Entrada": "07:45", "Salida": "13:30", "Tolerancia (min)": 10, "Ventana desde": "00:00"},
+                                                    {"Turno": "Tarde", "Entrada": "15:15", "Salida": "21:00", "Tolerancia (min)": 10, "Ventana desde": "13:00"}]),
+                "3 turnos (7:00 · 13:00 · 18:45)": (285, [{"Turno": "Turno 1", "Entrada": "07:00", "Salida": "13:00", "Tolerancia (min)": 10, "Ventana desde": ""},
+                                                           {"Turno": "Turno 2", "Entrada": "13:00", "Salida": "18:45", "Tolerancia (min)": 10, "Ventana desde": ""},
+                                                           {"Turno": "Turno 3", "Entrada": "18:45", "Salida": "23:45", "Tolerancia (min)": 10, "Ventana desde": ""}]),
+                "En blanco": (345, [{"Turno": "", "Entrada": "", "Salida": "", "Tolerancia (min)": 10, "Ventana desde": ""}]),
+            }
+            for _, _rc in _hdf.iterrows():
+                try:
+                    _tc = _json_h.loads(str(_rc.get("turnos_json", "")))
+                    _plantillas[f"Copiar: {_rc.get('nombre', '')} (desde {_norm_fecha_h(_rc.get('vigente_desde', ''))})"] = (
+                        int(float(_rc.get("jornada_base_min") or JORNADA_MINUTOS_BASE)),
+                        [{"Turno": t["nombre"], "Entrada": t["entrada"], "Salida": t["salida"], "Tolerancia (min)": int(t.get("tolerancia_min", 10)), "Ventana desde": t.get("ventana_desde", "")} for t in _tc])
                 except Exception:
                     continue
-            st.markdown(f'<div class="tp-card"><div class="tp-card-head"><div><div class="tp-card-title">{_html.escape(str(_rh.get("nombre", "")))}</div>'
-                        f'<div class="tp-card-sub">Rige desde {_desde if _desde > "1900-01-01" else "el inicio"} · jornada base {_fmt_min(_base)}</div></div>{_chip}</div><div style="height:10px"></div>{_lineas}</div>', unsafe_allow_html=True)
-
-        if not _hdf.empty:
-            _opc_h = {f"{r.get('nombre', '')} · desde {_norm_fecha_h(r.get('vigente_desde', ''))} · {r.get('estado', '')}": str(r.get("id_regla", "")) for _, r in _hdf.iterrows()}
-            _ch1, _ch2, _ch3 = st.columns([2.2, 1, 1])
-            _sel_h = _ch1.selectbox("Cambiar el estado de una regla", list(_opc_h.keys()), key="hor_sel_estado")
-            _nuevo_h = _ch2.selectbox("Nuevo estado", ["Activa", "Borrador", "Archivada"], key="hor_nuevo_estado")
-            _ch3.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
-            if _ch3.button("Aplicar", key="hor_aplicar", use_container_width=True):
-                if actualizar_estado_horario_gsheets(_opc_h[_sel_h], _nuevo_h):
-                    registrar_auditoria("Cambiar Estado de Horario", "Horarios", f"{_sel_h} → {_nuevo_h}")
-                    st.session_state.horarios = obtener_horarios_gsheets()
-                    st.toast("Estado del horario actualizado")
-                    time.sleep(0.3)
-                    st.rerun()
-
-        st.markdown("<div class='tp-note-t' style='margin:26px 0 10px'>Nueva regla de horarios</div>", unsafe_allow_html=True)
-        _plantillas = {
-            "2 turnos (horario actual)": (345, [{"Turno": "Mañana", "Entrada": "07:45", "Salida": "13:30", "Tolerancia (min)": 10, "Ventana desde": "00:00"},
-                                                {"Turno": "Tarde", "Entrada": "15:15", "Salida": "21:00", "Tolerancia (min)": 10, "Ventana desde": "13:00"}]),
-            "3 turnos (7:00 · 13:00 · 18:45)": (285, [{"Turno": "Turno 1", "Entrada": "07:00", "Salida": "13:00", "Tolerancia (min)": 10, "Ventana desde": ""},
-                                                       {"Turno": "Turno 2", "Entrada": "13:00", "Salida": "18:45", "Tolerancia (min)": 10, "Ventana desde": ""},
-                                                       {"Turno": "Turno 3", "Entrada": "18:45", "Salida": "23:45", "Tolerancia (min)": 10, "Ventana desde": ""}]),
-            "En blanco": (345, [{"Turno": "", "Entrada": "", "Salida": "", "Tolerancia (min)": 10, "Ventana desde": ""}]),
-        }
-        for _, _rc in _hdf.iterrows():
-            try:
-                _tc = _json_h.loads(str(_rc.get("turnos_json", "")))
-                _plantillas[f"Copiar: {_rc.get('nombre', '')} (desde {_norm_fecha_h(_rc.get('vigente_desde', ''))})"] = (
-                    int(float(_rc.get("jornada_base_min") or JORNADA_MINUTOS_BASE)),
-                    [{"Turno": t["nombre"], "Entrada": t["entrada"], "Salida": t["salida"], "Tolerancia (min)": int(t.get("tolerancia_min", 10)), "Ventana desde": t.get("ventana_desde", "")} for t in _tc])
-            except Exception:
-                continue
-        _pl = st.selectbox("Partir de", list(_plantillas.keys()), key="hor_plantilla")
-        _base_pl, _tabla_pl = _plantillas[_pl]
-        _s1, _s2 = st.columns([1, 2])
-        _delta = _s1.number_input("Mover todas las entradas (minutos)", min_value=-240, max_value=240, value=0, step=5, key="hor_delta",
-                                  help="Negativo = más temprano. Ejemplo: -60 adelanta todos los turnos una hora.")
-        _mover_sal = _s2.checkbox("Mover también las salidas (cada turno dura lo mismo)", value=True, key="hor_mover_sal")
-        _s2.caption("Ajuste rápido sobre la plantilla o regla elegida. Después puedes afinar cada hora en la tabla.")
-        if _delta:
-            _tabla_pl = _aplicar_delta(_tabla_pl, _delta, _mover_sal)
-        _k = str(abs(hash(_pl)) % 10**6) + str(len(_tabla_pl))
-        _kd = f"{_k}_{_delta}_{int(_mover_sal)}"
-        _n1, _n2, _n3 = st.columns([2, 1, 1])
-        _nom_h = _n1.text_input("Nombre de la regla", key=f"hor_nom_{_k}", placeholder="Ej.: Horario desde octubre")
-        _desde_h = _n2.date_input("Rige desde", value=obtener_ahora_peru().date(), key=f"hor_desde_{_k}")
-        _est_h = _n3.selectbox("Estado", ["Activa", "Borrador"], key=f"hor_est_{_k}", help="Una regla en Borrador no se aplica hasta que la actives.")
-        _b1, _b2 = st.columns(2)
-        _bh = _b1.number_input("Jornada base: horas", min_value=0, max_value=12, value=_base_pl // 60, key=f"hor_bh_{_k}")
-        _bm = _b2.number_input("Jornada base: minutos", min_value=0, max_value=59, value=_base_pl % 60, key=f"hor_bm_{_k}")
-        _ed = st.data_editor(pd.DataFrame(_tabla_pl), num_rows="dynamic", use_container_width=True, hide_index=True, key=f"hor_ed_{_kd}",
-                             column_config={"Turno": st.column_config.TextColumn("Turno", required=True), "Entrada": st.column_config.TextColumn("Entrada (HH:MM)"),
-                                            "Salida": st.column_config.TextColumn("Salida (HH:MM)"), "Tolerancia (min)": st.column_config.NumberColumn("Tolerancia (min)", min_value=0, max_value=60, step=1),
-                                            "Ventana desde": st.column_config.TextColumn("Ventana desde (opcional)", help="Hora desde la que una marcación se asigna a este turno. Vacío = 60 minutos antes de la entrada.")})
-        st.caption("Todo lo que se trabaje sobre la jornada base cuenta como hora extra. Cada turno debe terminar antes de las 24:00.")
-        if st.button("Guardar regla de horarios", key=f"hor_guardar_{_k}", use_container_width=True):
-            _turnos_ok, _errs = _validar_turnos(_ed)
-            _desde_iso = _desde_h.strftime("%Y-%m-%d")
-            if not _nom_h.strip():
-                _errs.append("Escribe un nombre para la regla.")
-            if int(_bh) * 60 + int(_bm) <= 0:
-                _errs.append("La jornada base debe ser mayor que cero.")
-            if _est_h == "Activa" and any(_norm_fecha_h(r.get("vigente_desde", "")) == _desde_iso and str(r.get("estado", "")) == "Activa" for _, r in _hdf.iterrows()):
-                _errs.append("Ya existe otra regla Activa con esa fecha de inicio. Cambia la fecha o archiva la otra.")
-            if _errs:
-                for _e in _errs:
-                    st.error(_e)
-            else:
-                _idr = crear_regla_horario_gsheets(_nom_h.strip(), _desde_iso, int(_bh) * 60 + int(_bm), _turnos_ok, _est_h, user_real)
-                if _idr:
-                    registrar_auditoria("Crear Regla de Horario", "Horarios", f"{_nom_h.strip()} · desde {_desde_iso} · {len(_turnos_ok)} turno(s) · base {_fmt_min(int(_bh) * 60 + int(_bm))}")
-                    st.session_state.horarios = obtener_horarios_gsheets()
-                    st.toast("Regla de horarios guardada")
-                    time.sleep(0.3)
-                    st.rerun()
-
-        st.markdown("<div class='tp-note-t' style='margin:26px 0 10px'>Probar un horario</div>", unsafe_allow_html=True)
-        _t1, _t2 = st.columns(2)
-        _f_t = _t1.date_input("Fecha de la marcación", value=obtener_ahora_peru().date(), key="hor_test_f")
-        _h_t = _t2.time_input("Hora de la marcación", value=dt_time(7, 50), key="hor_test_h", step=60)
-        _mi, _tard, _tn = calcular_tardanza_ingreso(f"{_f_t} {_h_t.strftime('%H:%M')}:00")
-        _rg = _regla_para_fecha(_f_t)
-        ui_callout(f"Con la regla **{_rg['nombre']}**, una marcación a las {_h_t.strftime('%H:%M')} del {_f_t.strftime('%d/%m/%Y')} corresponde al turno **{_tn}** y " + (f"tiene una **tardanza de {_mi} min**." if _tard else "está **a tiempo**."), "warn" if _tard else "ok")
-
-    with tab_cfg:
-        st.markdown('<div class="tp-sec"><div><div class="tp-sec-title">Sesión y seguridad</div><div class="tp-sec-sub">Reglas de acceso al sistema</div></div></div>', unsafe_allow_html=True)
-        ui_callout(f"Las sesiones se cierran automáticamente tras 30 minutos de inactividad o 10 horas desde el inicio de sesión. Sesión actual iniciada: {datetime.fromtimestamp(st.session_state.login_timestamp).strftime('%d/%m/%Y %H:%M:%S')}.")
-
-        st.markdown('<div class="tp-sec" style="margin-top:18px"><div><div class="tp-sec-title">Protección de contraseñas</div><div class="tp-sec-sub">Las contraseñas nuevas se guardan cifradas. Las antiguas se convierten al ingresar o con este botón</div></div></div>', unsafe_allow_html=True)
-        _cl = st.session_state.empleados["clave"].astype(str) if not st.session_state.empleados.empty else pd.Series([], dtype=str)
-        _n_prot = int(_cl.apply(_clave_protegida).sum())
-        _n_plan = int((~_cl.apply(_clave_protegida) & (_cl.str.strip() != "")).sum())
-        st.markdown('<div class="tp-gridk">' + ui_kpi_acc("Contraseñas protegidas", str(_n_prot), "guardadas de forma cifrada", "ok") +
-                    ui_kpi_acc("Pendientes de proteger", str(_n_plan), "aún en texto plano en la hoja", "ok" if _n_plan == 0 else "bad") + '</div>', unsafe_allow_html=True)
-        if _n_plan:
-            if st.button("Proteger todas las contraseñas ahora", key="proteger_claves", use_container_width=True, disabled=bool(st.session_state.get("ver_como"))):
-                with st.spinner("Protegiendo contraseñas…"):
-                    _n_cambio = _proteger_todas_las_claves()
-                if _n_cambio is None:
-                    st.error("No se pudo completar. No se perdió ninguna contraseña: inténtalo de nuevo en unos segundos.")
+            _pl = st.selectbox("Partir de", list(_plantillas.keys()), key="hor_plantilla")
+            _base_pl, _tabla_pl = _plantillas[_pl]
+            _s1, _s2 = st.columns([1, 2])
+            _delta = _s1.number_input("Mover todas las entradas (minutos)", min_value=-240, max_value=240, value=0, step=5, key="hor_delta",
+                                      help="Negativo = más temprano. Ejemplo: -60 adelanta todos los turnos una hora.")
+            _mover_sal = _s2.checkbox("Mover también las salidas (cada turno dura lo mismo)", value=True, key="hor_mover_sal")
+            _s2.caption("Ajuste rápido sobre la plantilla o regla elegida. Después puedes afinar cada hora en la tabla.")
+            if _delta:
+                _tabla_pl = _aplicar_delta(_tabla_pl, _delta, _mover_sal)
+            _k = str(abs(hash(_pl)) % 10**6) + str(len(_tabla_pl))
+            _kd = f"{_k}_{_delta}_{int(_mover_sal)}"
+            _n1, _n2, _n3 = st.columns([2, 1, 1])
+            _nom_h = _n1.text_input("Nombre de la regla", key=f"hor_nom_{_k}", placeholder="Ej.: Horario desde octubre")
+            _desde_h = _n2.date_input("Rige desde", value=obtener_ahora_peru().date(), key=f"hor_desde_{_k}")
+            _est_h = _n3.selectbox("Estado", ["Activa", "Borrador"], key=f"hor_est_{_k}", help="Una regla en Borrador no se aplica hasta que la actives.")
+            _b1, _b2 = st.columns(2)
+            _bh = _b1.number_input("Jornada base: horas", min_value=0, max_value=12, value=_base_pl // 60, key=f"hor_bh_{_k}")
+            _bm = _b2.number_input("Jornada base: minutos", min_value=0, max_value=59, value=_base_pl % 60, key=f"hor_bm_{_k}")
+            _ed = st.data_editor(pd.DataFrame(_tabla_pl), num_rows="dynamic", use_container_width=True, hide_index=True, key=f"hor_ed_{_kd}",
+                                 column_config={"Turno": st.column_config.TextColumn("Turno", required=True), "Entrada": st.column_config.TextColumn("Entrada (HH:MM)"),
+                                                "Salida": st.column_config.TextColumn("Salida (HH:MM)"), "Tolerancia (min)": st.column_config.NumberColumn("Tolerancia (min)", min_value=0, max_value=60, step=1),
+                                                "Ventana desde": st.column_config.TextColumn("Ventana desde (opcional)", help="Hora desde la que una marcación se asigna a este turno. Vacío = 60 minutos antes de la entrada.")})
+            st.caption("Todo lo que se trabaje sobre la jornada base cuenta como hora extra. Cada turno debe terminar antes de las 24:00.")
+            if st.button("Guardar regla de horarios", key=f"hor_guardar_{_k}", use_container_width=True):
+                _turnos_ok, _errs = _validar_turnos(_ed)
+                _desde_iso = _desde_h.strftime("%Y-%m-%d")
+                if not _nom_h.strip():
+                    _errs.append("Escribe un nombre para la regla.")
+                if int(_bh) * 60 + int(_bm) <= 0:
+                    _errs.append("La jornada base debe ser mayor que cero.")
+                if _est_h == "Activa" and any(_norm_fecha_h(r.get("vigente_desde", "")) == _desde_iso and str(r.get("estado", "")) == "Activa" for _, r in _hdf.iterrows()):
+                    _errs.append("Ya existe otra regla Activa con esa fecha de inicio. Cambia la fecha o archiva la otra.")
+                if _errs:
+                    for _e in _errs:
+                        st.error(_e)
                 else:
-                    registrar_auditoria("Contraseñas protegidas", "Usuarios", f"Se cifraron {_n_cambio} contraseñas que estaban en texto plano.")
-                    st.success(f"Listo: {_n_cambio} contraseñas quedaron protegidas.")
-                    time.sleep(0.8)
-                    st.rerun()
-        else:
-            ui_callout("Todas las contraseñas están protegidas.")
+                    _idr = crear_regla_horario_gsheets(_nom_h.strip(), _desde_iso, int(_bh) * 60 + int(_bm), _turnos_ok, _est_h, user_real)
+                    if _idr:
+                        registrar_auditoria("Crear Regla de Horario", "Horarios", f"{_nom_h.strip()} · desde {_desde_iso} · {len(_turnos_ok)} turno(s) · base {_fmt_min(int(_bh) * 60 + int(_bm))}")
+                        st.session_state.horarios = obtener_horarios_gsheets()
+                        st.toast("Regla de horarios guardada")
+                        time.sleep(0.3)
+                        st.rerun()
+
+            st.markdown("<div class='tp-note-t' style='margin:26px 0 10px'>Probar un horario</div>", unsafe_allow_html=True)
+            _t1, _t2 = st.columns(2)
+            _f_t = _t1.date_input("Fecha de la marcación", value=obtener_ahora_peru().date(), key="hor_test_f")
+            _h_t = _t2.time_input("Hora de la marcación", value=dt_time(7, 50), key="hor_test_h", step=60)
+            _mi, _tard, _tn = calcular_tardanza_ingreso(f"{_f_t} {_h_t.strftime('%H:%M')}:00")
+            _rg = _regla_para_fecha(_f_t)
+            ui_callout(f"Con la regla **{_rg['nombre']}**, una marcación a las {_h_t.strftime('%H:%M')} del {_f_t.strftime('%d/%m/%Y')} corresponde al turno **{_tn}** y " + (f"tiene una **tardanza de {_mi} min**." if _tard else "está **a tiempo**."), "warn" if _tard else "ok")
+
+        with tab_cfg:
+            st.markdown('<div class="tp-sec"><div><div class="tp-sec-title">Sesión y seguridad</div><div class="tp-sec-sub">Reglas de acceso al sistema</div></div></div>', unsafe_allow_html=True)
+            ui_callout(f"Las sesiones se cierran automáticamente tras 30 minutos de inactividad o 10 horas desde el inicio de sesión. Sesión actual iniciada: {datetime.fromtimestamp(st.session_state.login_timestamp).strftime('%d/%m/%Y %H:%M:%S')}.")
+
+            st.markdown('<div class="tp-sec" style="margin-top:18px"><div><div class="tp-sec-title">Protección de contraseñas</div><div class="tp-sec-sub">Las contraseñas nuevas se guardan cifradas. Las antiguas se convierten al ingresar o con este botón</div></div></div>', unsafe_allow_html=True)
+            _cl = st.session_state.empleados["clave"].astype(str) if not st.session_state.empleados.empty else pd.Series([], dtype=str)
+            _n_prot = int(_cl.apply(_clave_protegida).sum())
+            _n_plan = int((~_cl.apply(_clave_protegida) & (_cl.str.strip() != "")).sum())
+            st.markdown('<div class="tp-gridk">' + ui_kpi_acc("Contraseñas protegidas", str(_n_prot), "guardadas de forma cifrada", "ok") +
+                        ui_kpi_acc("Pendientes de proteger", str(_n_plan), "aún en texto plano en la hoja", "ok" if _n_plan == 0 else "bad") + '</div>', unsafe_allow_html=True)
+            if _n_plan:
+                if st.button("Proteger todas las contraseñas ahora", key="proteger_claves", use_container_width=True, disabled=bool(st.session_state.get("ver_como"))):
+                    with st.spinner("Protegiendo contraseñas…"):
+                        _n_cambio = _proteger_todas_las_claves()
+                    if _n_cambio is None:
+                        st.error("No se pudo completar. No se perdió ninguna contraseña: inténtalo de nuevo en unos segundos.")
+                    else:
+                        registrar_auditoria("Contraseñas protegidas", "Usuarios", f"Se cifraron {_n_cambio} contraseñas que estaban en texto plano.")
+                        st.success(f"Listo: {_n_cambio} contraseñas quedaron protegidas.")
+                        time.sleep(0.8)
+                        st.rerun()
+            else:
+                ui_callout("Todas las contraseñas están protegidas.")
 
 # --- PIE DE PÁGINA (FOOTER ESTILO WEB/APP) ---
 st.markdown("""
@@ -8772,3 +8496,5 @@ try:
                        "Si «Esta ejecución» es alta con pocas lecturas, el cuello de botella está en los cálculos, no en Google Sheets.")
 except Exception:
     pass
+
+# Fin del sistema visual 4.0. Lógica y conexiones originales conservadas.
