@@ -73,9 +73,9 @@ st.set_page_config(
 
 # ================= PREMIUM MARKET · DISEÑO ÚNICO =================
 PREMIUM_CSS = r"""<style>
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Material+Symbols+Rounded&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Material+Symbols+Rounded&display=swap");
 :root{
-  --pm-font: 'Plus Jakarta Sans',system-ui,-apple-system,sans-serif;
+  --pm-font: "Plus Jakarta Sans",system-ui,-apple-system,sans-serif;
   --pm4-border: #e5eaf0;
   --pm4-dark: #8d1725;
   --pm4-muted: #64748b;
@@ -422,7 +422,7 @@ a.tp-link:hover{text-decoration:underline;}
 .btn-ingreso button{background:#00A959!important;color:#fff!important;border-color:#00A959!important;}
 .btn-salida > button{background-color:#EC3237!important;background:#EC3237!important;color:#fff!important;border-color:#EC3237!important;}
 .btn-salida button{background:#EC3237!important;color:#fff!important;border-color:#EC3237!important;}
-.st-key-tp_chat_fab button{border-radius:50%!important;background-color:#EC3237!important;}
+
 .st-key-tp_bottomnav button:not([kind="primary"]){background:transparent!important;border:none!important;box-shadow:none!important;}
 [data-testid="stSidebar"] a.tp-negosy{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;margin:6px 0 12px;text-decoration:none;background:linear-gradient(120deg,#EC3237 0%,#D52C32 100%)!important;border:1px solid #C9272D!important;border-radius:12px!important;box-shadow:0 4px 12px rgba(236,50,55,.18)!important;transition:transform .15s ease,box-shadow .15s ease!important;}
 [data-testid="stSidebar"] a.tp-negosy:hover{transform:translateY(-2px)!important;box-shadow:0 7px 17px rgba(236,50,55,.26)!important;}
@@ -462,14 +462,14 @@ a.tp-link:hover{text-decoration:underline;}
 .tp-cal-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
 .tp-cal-day{min-height:125px;}
 }
-.st-key-tpc_login_form [data-testid="stButton"] button{background:#EC3237!important;border:1px solid #EC3237!important;color:#111827!important;opacity:1!important;box-shadow:none!important;}
+
 .st-key-login_btn button{background:#EC3237!important;border:1px solid #EC3237!important;color:#111827!important;opacity:1!important;box-shadow:none!important;}
 .st-key-login_btn button[kind="secondary"]{background:#EC3237!important;border:1px solid #EC3237!important;color:#111827!important;opacity:1!important;box-shadow:none!important;}
-.st-key-tpc_login_form [data-testid="stButton"] button *{color:#111827!important;opacity:1!important;}
+
 .st-key-login_btn button *{color:#111827!important;opacity:1!important;}
-.st-key-tpc_login_form [data-testid="stButton"] button:disabled{background:#EEF0F4!important;border:1px solid #D8DEE7!important;color:#253044!important;opacity:1!important;}
+
 .st-key-login_btn button:disabled{background:#EEF0F4!important;border:1px solid #D8DEE7!important;color:#253044!important;opacity:1!important;}
-.st-key-tpc_login_form [data-testid="stButton"] button:disabled *{color:#253044!important;opacity:1!important;}
+
 .st-key-login_btn button:disabled *{color:#253044!important;opacity:1!important;}
 .tp-shift-detail-wrap{display:block;width:100%;max-width:100%;overflow-x:auto;overflow-y:visible;background:#fff;border:1px solid #D9E0E9;border-radius:0!important;padding:0;box-shadow:none;box-sizing:border-box;}
 table.tp-shift-detail{display:table!important;width:100%!important;min-width:1000px!important;height:auto!important;max-height:none!important;overflow:visible!important;border-collapse:collapse!important;border-spacing:0!important;border-radius:0!important;table-layout:fixed;font-size:.76rem;line-height:1.4;background:#fff;}
@@ -523,16 +523,16 @@ table.tp-shift-detail{min-width:950px!important;border-radius:0!important;}
 .tp-id-grid{grid-template-columns:1fr!important;}
 .tp-hb{display:flex!important;flex-wrap:wrap!important;gap:8px!important;}
 .tp-hb-t{flex-basis:100%!important;}
-.tp-lg-hero{padding:16px!important;min-height:0!important;border-radius:16px!important;}
-.tp-lg-h{font-size:1.32rem!important;line-height:1.25!important;}
-.tp-lg-p{font-size:.88rem!important;line-height:1.5!important;}
-.tp-lg-quote{margin-top:12px!important;padding:12px!important;}
-.tp-lg-quote p{font-size:.86rem!important;}
-.tp-lg-who .tp-avatar{width:64px!important;height:64px!important;}
-.tp-lg-t{font-size:1.2rem!important;}
-.tp-lg-note{font-size:.71rem!important;line-height:1.4!important;}
-.st-key-tp_chat_fab{right:10px!important;top:60px!important;}
-.st-key-tp_chat_panel{right:8px!important;top:125px!important;width:calc(100vw - 16px)!important;max-height:65dvh!important;}
+
+
+
+
+
+
+
+
+
+
 }
 @media screen and (max-width:380px){
 .tp-cal-grid{grid-template-columns:1fr!important;}
@@ -558,15 +558,15 @@ table.tp-shift-detail{min-width:950px!important;border-radius:0!important;}
 .tp-shift-detail-wrap{max-width:100%!important;overflow-x:auto!important;-webkit-overflow-scrolling:touch;}
 .cal-card{min-width:0!important;box-sizing:border-box!important;overflow-wrap:anywhere;max-width:100%!important;overflow-x:auto!important;-webkit-overflow-scrolling:touch;}
 .boleta-container{min-width:0!important;box-sizing:border-box!important;overflow-wrap:anywhere;max-width:100%!important;overflow-x:auto!important;-webkit-overflow-scrolling:touch;}
-.st-key-tp_chat_fab{right:12px!important;top:70px!important;}
-.st-key-tp_chat_panel{right:8px!important;top:135px!important;width:calc(100vw - 16px)!important;max-width:calc(100vw - 16px)!important;max-height:calc(100dvh - 150px)!important;overflow-y:auto!important;}
+
+
 }
 @media (max-width: 390px){
 .tp-cal-grid{grid-template-columns:minmax(0,1fr)!important;}
 .tp-cal-day{min-height:0!important;}
 }
 @media (orientation: landscape) and (max-height: 480px){
-.st-key-tp_chat_panel{top:65px!important;max-height:calc(100dvh - 75px)!important;}
+
 }
 .market-header::before{background:var(--tp-red);content:""!important;position:absolute!important;inset:0!important;width:auto!important;height:auto!important;left:0!important;top:0!important;border-radius:0!important;pointer-events:none;background-image:linear-gradient(rgba(255,255,255,.055) 1px,transparent 1px),
    linear-gradient(90deg,rgba(255,255,255,.055) 1px,transparent 1px)!important;background-size:42px 42px!important;opacity:.7!important;}
@@ -624,44 +624,44 @@ section[data-testid="stSidebar"] div.st-key-tp_acc_bot button{background:#FEE2E2
 section[data-testid="stSidebar"] div.st-key-tp_acc_bot button *{color:#991B1B!important;font-weight:700!important;}
 section[data-testid="stSidebar"] div.st-key-tp_acc_sol button{background:#FEF3C7!important;border:1px solid #F8DE95!important;}
 section[data-testid="stSidebar"] div.st-key-tp_acc_sol button *{color:#92400E!important;font-weight:700!important;}
-.stApp:has(.tp-lg-hero){background:radial-gradient(1100px 560px at 8% -10%,#FDECEC 0%,transparent 60%),radial-gradient(900px 520px at 100% 110%,#E4EBF8 0%,transparent 58%),var(--tp-bg);}
-.stApp:has(.tp-lg-hero) .block-container{padding-top:1.6rem;max-width:1180px;}
-.tp-lg-hero{position:relative;overflow:hidden;border-radius:28px;padding:36px 38px;min-height:640px;color:#fff;display:flex;flex-direction:column;justify-content:space-between;background:linear-gradient(150deg,#0B1220 0%,#111C33 55%,#1B2A4A 100%);box-shadow:0 30px 60px -30px rgba(15,23,42,.6);}
-.tp-lg-hero::before{content:"";position:absolute;width:540px;height:540px;right:-190px;top:-170px;border-radius:50%;background:radial-gradient(circle,rgba(236,50,55,.55),rgba(236,50,55,0) 68%);}
-.tp-lg-hero::after{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px);background-size:44px 44px;-webkit-mask-image:linear-gradient(180deg,#000,transparent 88%);mask-image:linear-gradient(180deg,#000,transparent 88%);}
-.tp-lg-hero>*{position:relative;z-index:1;}
-.tp-lg-logo{display:inline-flex;background:#fff;border-radius:16px;padding:10px 18px;box-shadow:0 12px 30px -12px rgba(0,0,0,.6);}
-.tp-lg-k{font-size:.72rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#FF8A8E;margin:34px 0 10px;}
-.tp-lg-h{font-size:2.2rem;font-weight:800;line-height:1.14;letter-spacing:-.02em;margin:0 0 14px;color:#fff;}
-.tp-lg-h em{font-style:normal;color:#FF6B70;}
-.tp-lg-p{color:#B7C2D9;font-size:.98rem;line-height:1.65;max-width:440px;margin:0;}
-.tp-lg-feat{display:grid;gap:10px;margin-top:26px;max-width:460px;}
-.tp-lg-feat div{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:12px 14px;font-size:.87rem;font-weight:600;color:#E6ECF8;}
-.tp-lg-feat i{flex:0 0 auto;width:32px;height:32px;border-radius:10px;background:rgba(236,50,55,.2);color:#FF8A8E;display:flex;align-items:center;justify-content:center;}
-.tp-lg-quote{position:relative;margin-top:26px;padding:18px 20px 18px 24px;border-radius:16px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);}
-.tp-lg-quote::before{content:"";position:absolute;left:0;top:16px;bottom:16px;width:4px;border-radius:4px;background:#EC3237;}
-.tp-lg-quote small{display:block;font-size:.68rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#FF8A8E;margin-bottom:8px;}
-.tp-lg-quote p{margin:0;font-size:1.1rem;font-weight:600;line-height:1.5;color:#fff;}
-.tp-lg-spacer{height:64px;}
-.tp-lg-who{display:flex;flex-direction:column;align-items:center;text-align:center;margin-bottom:10px;animation:tpPop .4s ease;}
-.tp-lg-who .tp-avatar{box-shadow:0 0 0 3px #fff,0 0 0 6px var(--tp-red),0 14px 30px -10px rgba(236,50,55,.55);}
-.tp-lg-t{font-size:1.45rem;font-weight:800;color:var(--tp-ink);margin-top:16px;letter-spacing:-.01em;}
-.tp-lg-s{font-size:.86rem;color:var(--tp-mute);margin-top:4px;}
-.tp-lg-lock{width:58px;height:58px;border-radius:18px;background:var(--tp-red-soft);color:var(--tp-red);display:flex;align-items:center;justify-content:center;}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 @keyframes tpPop{from{opacity:0;transform:translateY(8px) scale(.97);}to{opacity:1;transform:none;}}
-.st-key-tpc_login_form{padding:32px 30px 26px!important;border-radius:26px!important;box-shadow:var(--tp-sh-2)!important;}
-.st-key-tpc_login_form [data-baseweb="input"]{min-height:50px;background:#F6F7FA!important;}
-.st-key-tpc_login_form .stButton>button *{color:#111827!important;font-weight:700;}
-.st-key-tpc_login_form .stButton>button{opacity:1!important;box-shadow:none!important;min-height:52px;border:none!important;background:linear-gradient(135deg,#EC3237,#C9262B)!important;color:#111827!important;}
-.tp-lg-note{display:flex;gap:8px;align-items:center;justify-content:center;font-size:.76rem;color:var(--tp-mute);margin-top:14px;}
+
+
+
+
+
 @media (max-width:900px){
-.tp-lg-hero{min-height:0;padding:22px;border-radius:22px;}
-.tp-lg-k{margin-top:20px;}
-.tp-lg-h{font-size:1.5rem;}
-.tp-lg-feat{display:none;}
-.tp-lg-spacer{display:none;}
-.tp-lg-quote{margin-top:16px;padding:14px 16px 14px 20px;}
-.tp-lg-quote p{font-size:.95rem;}
+
+
+
+
+
+
+
 }
 [data-testid="stSidebar"] .tp-brand{margin-bottom:12px!important;}
 .market-header::after{width:280px;height:280px;right:-65px;top:-125px;border-radius:50%;background:rgba(255,132,139,.19);filter:blur(30px);content:"";position:absolute;inset:0;pointer-events:none;opacity:.2;background-image:linear-gradient(rgba(255,255,255,.12) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.12) 1px,transparent 1px);background-size:44px 44px;}
@@ -808,7 +808,7 @@ section[data-testid="stSidebar"] .tp-brand{margin-bottom:14px!important;}
   --pm-radius: 18px;
   --pm-shadow: 0 12px 32px -23px rgba(15,23,42,.29);
   --pm-shadow-hover: 0 22px 45px -25px rgba(15,23,42,.27);
-  --pm-font: 'Plus Jakarta Sans',system-ui,-apple-system,sans-serif;
+  --pm-font: "Plus Jakarta Sans",system-ui,-apple-system,sans-serif;
 }
 html {scroll-behavior:smooth;}
 body,.stApp,[data-testid="stMarkdownContainer"],button,input,textarea,select,
@@ -816,8 +816,8 @@ body,.stApp,[data-testid="stMarkdownContainer"],button,input,textarea,select,
 /* CRÍTICO: no sobrescribir la fuente de iconos con la fuente de texto. */
 .material-icons,.material-symbols-outlined,.material-symbols-rounded,
 [data-testid="stIconMaterial"], [data-testid="stIconMaterial"] * {
-  font-family:'Material Symbols Rounded','Material Symbols Outlined','Material Icons'!important;
-  font-style:normal!important; font-weight:normal!important; font-feature-settings:'liga' 1!important;
+  font-family:"Material Symbols Rounded","Material Symbols Outlined","Material Icons"!important;
+  font-style:normal!important; font-weight:normal!important; font-feature-settings:"liga" 1!important;
   letter-spacing:normal!important;white-space:nowrap!important;text-transform:none!important;
 }
 .stApp,[data-testid="stAppViewContainer"],section[data-testid="stMain"]{background:var(--pm-bg)!important;}
@@ -842,9 +842,9 @@ body,.stApp,[data-testid="stMarkdownContainer"],button,input,textarea,select,
   border-radius:25px!important;padding:35px 39px!important;margin:0 0 19px!important;
   background:linear-gradient(117deg,#752337 0%,#a7243a 48%,#dc3b4e 100%)!important;
   box-shadow:0 25px 55px -32px rgba(120,28,46,.65)!important;color:#fff!important; }
-.pm7-banner:before,.market-header:before {content:'';position:absolute;inset:0;pointer-events:none;opacity:.28;
+.pm7-banner:before,.market-header:before {content:"";position:absolute;inset:0;pointer-events:none;opacity:.28;
   background-image:linear-gradient(rgba(255,255,255,.12) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.12) 1px,transparent 1px);background-size:45px 45px;mask-image:linear-gradient(90deg,transparent,black);}
-.pm7-banner:after,.market-header:after { content:'';pointer-events:none;position:absolute;border-radius:50%;width:290px;height:290px;right:-90px;top:-130px;background:rgba(255,255,255,.12);filter:blur(25px); }
+.pm7-banner:after,.market-header:after { content:"";pointer-events:none;position:absolute;border-radius:50%;width:290px;height:290px;right:-90px;top:-130px;background:rgba(255,255,255,.12);filter:blur(25px); }
 .pm7-banner h1,.market-header h1 {position:relative!important;z-index:1!important;margin:7px 0 10px!important;color:#fff!important;
   font-size:clamp(1.62rem,2.7vw,2.35rem)!important;font-weight:800!important;line-height:1.2!important;letter-spacing:-.045em!important;}
 .pm7-banner p,.market-header p{position:relative!important;z-index:1!important;color:#ffe6ea!important;line-height:1.58!important;font-size:.93rem!important;max-width:740px!important;margin:0!important;}
@@ -962,14 +962,14 @@ section[data-testid="stSidebar"] .tp-brand {margin-bottom:12px;}
  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important;}
 }
 
-.st-key-tp_chat_fab{position:fixed!important;right:22px!important;top:72px!important;z-index:100000!important;width:64px!important;height:64px!important;}
-.st-key-tp_chat_fab button{width:62px!important;height:62px!important;min-height:62px!important;border-radius:50%!important;border:3px solid #fff!important;background-color:#ca2b40!important;background-size:cover!important;background-position:center!important;background-repeat:no-repeat!important;box-shadow:0 8px 24px rgba(15,23,42,.24)!important;color:transparent!important;padding:0!important;transition:transform .2s ease!important;}
-.st-key-tp_chat_fab button:hover{transform:translateY(-3px) scale(1.06)!important;}
-.st-key-tp_chat_panel{position:fixed!important;right:22px!important;top:145px!important;width:min(440px,calc(100vw - 28px))!important;max-height:calc(100dvh - 166px)!important;overflow-y:auto!important;z-index:99999!important;background:#fff!important;border:1px solid #e7eaf0!important;border-radius:22px!important;padding:16px!important;box-shadow:0 18px 55px rgba(15,23,42,.2)!important;}
-.st-key-tp_chat_panel [data-testid="stChatMessage"]{padding:9px!important;border-radius:12px!important;}
-.st-key-tp_chat_panel [data-testid="stDataFrame"]{max-height:200px!important;}
-.st-key-tp_chat_panel [data-testid="stForm"]{padding:0!important;border:0!important;box-shadow:none!important;}
-@media(max-width:600px){.st-key-tp_chat_fab{right:12px!important;top:66px!important;}.st-key-tp_chat_panel{right:8px!important;top:136px!important;width:calc(100vw - 16px)!important;max-height:calc(100dvh - 150px)!important;padding:12px!important;}}
+
+
+
+
+
+
+
+@media(max-width:600px){}
 
 
 /* 22 ESPACIOS DE TRABAJO — reconstrucción de la estructura interior */
@@ -1022,8 +1022,172 @@ section[data-testid="stSidebar"] .tp-brand {margin-bottom:12px;}
 @media(max-width:700px){
  [class*="st-key-pm_v_"] [data-testid="stForm"]{padding:14px!important;}
  .st-key-pm_v_dashboard_general .cal-card{padding:10px!important;}
- .cal-title::after{content:'Desliza para ver todos los días →';display:block;color:#64748b;font-size:.68rem;font-weight:650;margin-left:auto;}
+ .cal-title::after{content:"Desliza para ver todos los días →";display:block;color:#64748b;font-size:.68rem;font-weight:650;margin-left:auto;}
 }
+
+
+/* ================================================================
+   PREMIUM WORKSPACE · UNIFIED PRODUCT EXPERIENCE
+   Visual shell v2026.10 — ONE stylesheet, no JS-driven DOM hacks.
+   ================================================================ */
+:root{
+ --pm-brand:#d82f43;--pm-brand-strong:#aa1f33;--pm-brand-soft:#fff1f3;
+ --pm-ink:#18243b;--pm-text:#27364c;--pm-muted:#758198;
+ --pm-line:#e8ecf2;--pm-soft:#f6f8fc;
+ --pm-shadow:0 8px 28px -19px rgba(20,32,54,.22);
+ --pm-shadow-hover:0 16px 32px -18px rgba(20,32,54,.25);
+ --pm-font:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+}
+html,body,.stApp{font-family:var(--pm-font)!important;}
+.stApp{background:#f7f9fc!important;color:var(--pm-ink)!important;}
+#MainMenu,footer,[data-testid="stToolbar"],[data-testid="stDecoration"]{display:none!important;}
+header[data-testid="stHeader"]{background:transparent!important;box-shadow:none!important;}
+[data-testid="stMain"] .block-container{max-width:1470px!important;padding-top:1.5rem!important;padding-bottom:5rem!important;}
+/* Sidebar as a real application navigation rail */
+section[data-testid="stSidebar"]{background:#fff!important;border-right:1px solid #e8edf4!important;}
+section[data-testid="stSidebar"] [data-testid="stSidebarContent"]{padding:13px 12px 20px!important;overflow-x:hidden!important;}
+section[data-testid="stSidebar"] [role="radiogroup"]{gap:3px!important;}
+section[data-testid="stSidebar"] [role="radiogroup"]>label{
+ border-radius:11px!important;min-height:43px!important;padding:10px 12px!important;
+ border:1px solid transparent!important;margin:0!important;transition:background-color .15s ease!important;
+}
+section[data-testid="stSidebar"] [role="radiogroup"]>label:has(input:checked){background:#fff0f2!important;border-color:#f7dbe0!important;}
+section[data-testid="stSidebar"] [role="radiogroup"]>label p{font-size:.83rem!important;font-weight:700!important;letter-spacing:-.015em!important;}
+section[data-testid="stSidebar"] [role="radiogroup"]>label:has(input:checked) p{color:#a41e33!important;}
+section[data-testid="stSidebar"] [role="radiogroup"]>label [data-testid="stIconMaterial"]{display:none!important;}
+section[data-testid="stSidebar"] .tp-brand{padding:2px 12px 8px!important;margin:0 0 12px!important;}
+section[data-testid="stSidebar"] .tp-brand-name{font-size:1.03rem!important;}
+section[data-testid="stSidebar"] .tp-user{background:#f7f9fc!important;border:1px solid #e7edf3!important;border-radius:14px!important;padding:12px!important;margin-bottom:16px!important;}
+section[data-testid="stSidebar"] .tp-user b{color:#1f2b40!important;}
+section[data-testid="stSidebar"] .tp-user span{color:#67788b!important;}
+.st-key-pm_logout_area{padding:0!important;margin-top:8px!important;}
+.st-key-pm_logout_area button{width:100%!important;min-height:45px!important;background:#fff!important;border:1px solid #e9dce0!important;border-radius:11px!important;box-shadow:none!important;color:#a72538!important;font-weight:750!important;}
+.st-key-pm_logout_area button:hover{background:#fff1f3!important;border-color:#e9aeb8!important;transform:none!important;}
+.st-key-pm_logout_area button *{color:#a72538!important;}
+/* Compact consistent header for all 22 workspaces */
+.pm-workspace-head{background:#fff;border:1px solid #e7ebf1;border-radius:19px;padding:20px 26px 22px;margin:3px 0 19px;box-shadow:0 7px 24px -18px rgba(15,23,42,.18);}
+.pm-workspace-top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px;}
+.pm-workspace-breadcrumb{font-size:.74rem;font-weight:650;color:#778398;}
+.pm-workspace-breadcrumb b{color:#c7cbd5;margin:0 8px;}
+.pm-workspace-badge{font-size:.66rem;letter-spacing:.095em;font-weight:800;color:#ad293c;background:#fff2f3;padding:6px 9px;border-radius:7px;white-space:nowrap;}
+.pm-workspace-main{display:flex;align-items:center;justify-content:space-between;gap:16px;}
+.pm-workspace-main h1{font-weight:800!important;font-size:clamp(1.45rem,2.6vw,2rem)!important;letter-spacing:-.055em!important;line-height:1.23!important;color:#1d2a3d!important;margin:0 0 6px!important;}
+.pm-workspace-main p{color:#748197!important;font-size:.86rem!important;margin:0!important;line-height:1.55!important;}
+.pm-workspace-glyph{width:49px;height:49px;flex:none;border-radius:14px;display:grid;place-items:center;background:#fff0f2;color:#c02a3c;}
+.pm-workspace-glyph .material-symbols-rounded{font-family:'Material Symbols Rounded'!important;font-size:26px!important;line-height:1!important;color:inherit!important;}
+.pm8-context,.pm7-view{display:none!important;}
+/* Sidebar always clickable: prevent old overlay animations covering controls. */
+section[data-testid="stSidebar"] button{pointer-events:auto!important;}
+/* Chat as an unobtrusive floating product action */
+.st-key-tp_chat_fab{position:fixed!important;right:24px!important;bottom:23px!important;top:auto!important;width:56px!important;height:56px!important;z-index:1500!important;}
+.st-key-tp_chat_fab button{width:56px!important;height:56px!important;min-height:56px!important;border-radius:17px!important;border:1px solid rgba(255,255,255,.28)!important;padding:0!important;background-color:#d52d41!important;background-size:cover!important;background-position:center!important;background-repeat:no-repeat!important;box-shadow:0 14px 30px rgba(175,40,61,.25)!important;color:#fff!important;font-size:26px!important;line-height:1!important;}
+.st-key-tp_chat_fab button *{color:#fff!important;}
+.st-key-tp_chat_fab button:hover{transform:translateY(-2px)!important;box-shadow:0 18px 35px rgba(175,40,61,.29)!important;}
+.st-key-tp_chat_panel{position:fixed!important;right:24px!important;bottom:91px!important;top:auto!important;width:min(410px,calc(100vw - 28px))!important;max-height:min(680px,calc(100dvh - 115px))!important;overflow-y:auto!important;z-index:1499!important;background:#fff!important;border:1px solid #e5eaf0!important;border-radius:19px!important;padding:16px!important;box-shadow:0 24px 60px rgba(23,35,51,.17)!important;}
+.st-key-tp_chat_panel [data-testid="stForm"]{padding:0!important;border:0!important;box-shadow:none!important;}
+/* Auth portal: full replacement of old oversized split card */
+.stApp:has(.st-key-pm_auth_page){background:radial-gradient(ellipse at 90% -15%,#fff2f1 0%,transparent 44%),#f7f9fc!important;}
+.stApp:has(.st-key-pm_auth_page) [data-testid="stSidebar"],
+.stApp:has(.st-key-pm_auth_page) [data-testid="stSidebarCollapsedControl"],
+.stApp:has(.st-key-pm_auth_page) [data-testid="stHeader"]{display:none!important;}
+.stApp:has(.st-key-pm_auth_page) [data-testid="stMain"] .block-container{max-width:1240px!important;padding:0 24px 18px!important;}
+.st-key-pm_auth_page{padding-top:0!important;}
+.st-key-pm_auth_page [data-testid="stHorizontalBlock"]{align-items:center!important;gap:clamp(30px,7vw,95px)!important;}
+.st-key-pm_auth_page [data-testid="stColumn"]{min-width:0!important;}
+.pm-auth-navbar{display:flex;align-items:center;gap:12px;padding:26px 0 14px;margin-bottom:24px;}
+.pm-auth-navlogo{display:flex;align-items:center;justify-content:center;padding:8px 12px;background:#fff;border:1px solid #eef0f4;border-radius:13px;box-shadow:0 8px 24px -20px rgba(24,34,53,.28);}
+.pm-auth-navlogo img{height:36px!important;max-width:110px!important;}
+.pm-auth-navlabel{display:flex;flex-direction:column;gap:2px;line-height:1.35;}
+.pm-auth-navlabel b{font-size:.74rem;letter-spacing:.10em;color:#25344a;}
+.pm-auth-navlabel span{font-size:.72rem;color:#8491a3;}
+.pm-auth-navright{margin-left:auto;font-size:.73rem;color:#718098;font-weight:700;display:flex;align-items:center;gap:8px;}
+.pm-auth-online,.pm-auth-dot{width:8px;height:8px;background:#d42b42;border-radius:50%;display:inline-block;flex:none;}
+.pm-auth-online{background:#16a374;box-shadow:0 0 0 4px #e5f7ef;}
+.pm-auth-hero{padding:17px 0 12px;}
+.pm-auth-eyebrow{display:flex;align-items:center;gap:9px;color:#a72d40;font-size:.7rem;letter-spacing:.10em;font-weight:800;margin-bottom:19px;}
+.pm-auth-hero h1{font-size:clamp(2.1rem,4.1vw,3.6rem)!important;font-weight:800!important;letter-spacing:-.072em!important;line-height:1.14!important;color:#19283e!important;margin:0 0 17px!important;}
+.pm-auth-hero h1 span{color:#d22f44!important;}
+.pm-auth-description{max-width:540px;color:#738199!important;line-height:1.8;font-size:clamp(.9rem,1.25vw,1rem);margin:0 0 26px;}
+.pm-auth-preview{max-width:515px;background:#fff;border:1px solid #e8ecf3;border-radius:19px;box-shadow:0 18px 54px -35px rgba(24,34,53,.36);padding:8px 20px 6px;}
+.pm-auth-preview-top{display:flex;align-items:center;justify-content:space-between;padding:13px 0 15px;border-bottom:1px solid #f0f2f6;gap:12px;}
+.pm-auth-preview-app{display:flex;align-items:center;gap:9px;color:#26364d;font-size:.81rem;font-weight:800;}
+.pm-auth-preview-app i{width:21px;height:21px;display:inline-block;background:#dc2e43;border-radius:7px;box-shadow:inset 0 0 0 6px #f5afb9;}
+.pm-auth-preview-live{font-size:.57rem;font-weight:800;letter-spacing:.09em;color:#9ca5b5;}
+.pm-auth-preview-row{display:flex;align-items:center;gap:13px;padding:15px 0;border-bottom:1px solid #f0f2f6;}
+.pm-auth-preview-row:last-child{border-bottom:0;}
+.pm-auth-symbol{width:39px;height:39px;flex:none;display:grid;place-items:center;background:#fff3f4;border-radius:11px;}
+.pm-auth-symbol svg,.pm-auth-signin-icon svg,.pm-auth-secure svg{width:20px;height:20px;fill:none;stroke:#c82c40;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+.pm-auth-preview-row>div:nth-child(2){min-width:0;display:flex;flex-direction:column;gap:3px;}
+.pm-auth-preview-row b{font-size:.83rem;color:#29364a;font-weight:800;}
+.pm-auth-preview-row span{font-size:.71rem;color:#8491a2;line-height:1.45;}
+.pm-auth-arrow{margin-left:auto;color:#b8c2cf;font-size:1rem;font-style:normal;}
+.pm-auth-hero-foot{color:#8390a2;font-size:.76rem;line-height:1.5;margin-top:20px;display:flex;align-items:center;gap:8px;}
+.pm-auth-foot-icon{color:#d22f44;font-size:17px;}
+.st-key-pm_login_panel{background:#fff!important;border:1px solid #e8ecf1!important;border-radius:23px!important;padding:clamp(25px,3.6vw,44px)!important;box-shadow:0 26px 80px -45px rgba(30,42,64,.26)!important;max-width:505px!important;margin:0 auto!important;}
+.pm-auth-signin-icon{width:44px;height:44px;background:#fff1f3;border:1px solid #ffe5e9;border-radius:13px;display:grid;place-items:center;margin-bottom:23px;}
+.pm-auth-signin-icon svg{width:22px;height:22px;}
+.pm-auth-formk{font-size:.67rem;font-weight:800;letter-spacing:.12em;color:#c12c40;margin-bottom:10px;}
+.pm-auth-formhead h2{font-size:clamp(1.5rem,2.4vw,2rem)!important;letter-spacing:-.06em!important;line-height:1.2!important;color:#203047!important;margin:0 0 10px!important;font-weight:800!important;}
+.pm-auth-formhead p{font-size:.86rem;color:#8190a2;margin:0 0 23px;}
+.st-key-pm_login_panel [data-testid="stForm"]{background:transparent!important;border:0!important;padding:0!important;box-shadow:none!important;}
+.st-key-pm_login_panel [data-testid="stWidgetLabel"] p{color:#3a475b!important;font-size:.83rem!important;font-weight:800!important;}
+.st-key-pm_login_panel [data-baseweb="input"]{background:#fbfcfe!important;border:1px solid #e4e9f1!important;min-height:51px!important;border-radius:11px!important;}
+.st-key-pm_login_panel [data-baseweb="input"]:focus-within{border-color:#d95162!important;box-shadow:0 0 0 3px #fae5e9!important;}
+.st-key-pm_login_panel input{font-family:var(--pm-font)!important;font-size:.89rem!important;color:#253449!important;}
+.st-key-pm_login_panel [data-testid="stFormSubmitButton"] button{background:#d52d41!important;color:#fff!important;border:1px solid #d52d41!important;border-radius:11px!important;min-height:51px!important;box-shadow:0 10px 22px -13px rgba(201,34,58,.6)!important;font-weight:800!important;font-size:.89rem!important;}
+.st-key-pm_login_panel [data-testid="stFormSubmitButton"] button *{color:#fff!important;}
+.st-key-pm_login_panel [data-testid="stFormSubmitButton"] button:hover{background:#b92739!important;transform:translateY(-1px)!important;}
+.pm-auth-secure{display:flex;justify-content:center;align-items:center;gap:8px;margin-top:23px;color:#94a0ae;font-size:.7rem;font-weight:600;}
+.pm-auth-secure svg{width:15px;height:15px;stroke:#8795a5;}
+.st-key-pm_login_panel [data-testid="stExpander"]{margin-top:16px!important;border:1px solid #edf0f4!important;border-radius:11px!important;}
+.st-key-pm_login_panel [data-testid="stExpander"] summary{font-size:.8rem!important;}
+.pm-auth-copyright{text-align:center;margin:28px 0 0;font-size:.71rem;color:#9da8b5;}
+@media(max-width:900px){
+ .stApp:has(.st-key-pm_auth_page) [data-testid="stMain"] .block-container{padding:0 20px 18px!important;}
+ .pm-auth-navbar{margin-bottom:16px;}
+ .pm-auth-hero{padding:0!important;}
+ .pm-auth-hero h1{font-size:clamp(2.0rem,4vw,2.7rem)!important;}
+ .pm-auth-preview{padding:6px 14px;}
+ .st-key-pm_login_panel{padding:27px!important;}
+ .st-key-tp_chat_fab{right:14px!important;bottom:calc(78px + env(safe-area-inset-bottom,0px))!important;}
+ .st-key-tp_chat_panel{right:8px!important;bottom:calc(147px + env(safe-area-inset-bottom,0px))!important;width:calc(100vw - 16px)!important;max-height:calc(100dvh - 175px)!important;}
+}
+@media(max-width:690px){
+ .pm-auth-navright{display:none;}
+ .pm-auth-navbar{padding:17px 0 12px;margin-bottom:5px;}
+ .st-key-pm_auth_page [data-testid="stHorizontalBlock"]{gap:8px!important;}
+ .stApp:has(.st-key-pm_auth_page) [data-testid="stMain"] .block-container{padding:0 14px 22px!important;}
+ .pm-auth-hero{padding:0 1px!important;}
+ .pm-auth-eyebrow{margin-bottom:8px;}
+ .pm-auth-hero h1{font-size:1.8rem!important;margin-bottom:8px!important;}
+ .pm-auth-description{font-size:.82rem;line-height:1.55;margin-bottom:12px;}
+ .pm-auth-preview,.pm-auth-hero-foot{display:none;}
+ .st-key-pm_login_panel{max-width:none!important;padding:22px!important;margin-top:6px!important;border-radius:19px!important;}
+ .pm-auth-signin-icon{margin-bottom:12px;width:37px;height:37px;}
+ .pm-auth-formhead p{margin-bottom:14px;}
+ .pm-workspace-head{padding:16px 17px;margin-bottom:14px;}
+ .pm-workspace-top{margin-bottom:12px;}
+ .pm-workspace-main h1{font-size:1.37rem!important;}
+ .pm-workspace-main p{font-size:.78rem!important;}
+ .pm-workspace-glyph{width:38px;height:38px;border-radius:10px;}
+ .pm-workspace-glyph .material-symbols-rounded{font-size:21px!important;}
+ .pm-auth-copyright{margin:16px 0 0;}
+}
+@media(prefers-reduced-motion:reduce){.stApp *{transition:none!important;animation:none!important;}}
+
+/* Dashboard ejecutivo — cifras reales tomadas de session_state */
+.pm-exec-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:0 0 21px;}
+.pm-exec-stat{background:#fff;border:1px solid #e7ebf1;box-shadow:0 7px 22px -19px rgba(20,35,55,.25);border-radius:17px;padding:19px 20px;min-width:0;transition:transform .2s ease,box-shadow .2s ease;}
+.pm-exec-stat:hover{transform:translateY(-2px);box-shadow:0 15px 26px -18px rgba(20,35,55,.3);}
+.pm-exec-stat-head{display:flex;align-items:center;justify-content:space-between;gap:10px;color:#738099;font-size:.76rem;font-weight:750;line-height:1.4;}
+.pm-exec-stat-head .material-symbols-rounded{width:37px;height:37px;display:grid;place-items:center;background:#fff1f3;color:#c63446;border-radius:11px;font-size:20px!important;font-family:'Material Symbols Rounded'!important;flex:none;}
+.pm-exec-asistencia .pm-exec-stat-head .material-symbols-rounded{background:#e9f8f3;color:#148e65;}
+.pm-exec-solicitudes .pm-exec-stat-head .material-symbols-rounded{background:#fff5e5;color:#b7791f;}
+.pm-exec-fiados .pm-exec-stat-head .material-symbols-rounded{background:#eaf3ff;color:#3975bb;}
+.pm-exec-stat-number{color:#1b293d;font-size:2.12rem;font-weight:800;line-height:1.2;letter-spacing:-.06em;margin:10px 0 5px;font-variant-numeric:tabular-nums;}
+.pm-exec-stat-detail{color:#97a2b1;font-size:.72rem;font-weight:600;line-height:1.4;}
+@media(max-width:1080px){.pm-exec-kpis{grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media(max-width:570px){.pm-exec-kpis{gap:9px;margin-bottom:14px;}.pm-exec-stat{padding:13px 14px;border-radius:13px;}.pm-exec-stat-head{font-size:.66rem;}.pm-exec-stat-head .material-symbols-rounded{width:30px;height:30px;font-size:17px!important;}.pm-exec-stat-number{font-size:1.55rem;margin:8px 0 4px;}.pm-exec-stat-detail{font-size:.63rem;}}
 </style>"""
 
 # El ícono opcional del asistente se incluye en el mismo bloque CSS.
@@ -3544,110 +3708,101 @@ _AC_USER = {"autocomplete": "username"} if _AC_OK else {}
 _AC_PASS = {"autocomplete": "current-password"} if _AC_OK else {}
 
 if not st.session_state.usuario_login:
-
-    _ico = lambda d: f'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">{d}</svg>'
-    _i1 = _ico("<circle cx='12' cy='12' r='9'/><path d='M12 7v5l3 2'/>")
-    _i2 = _ico("<path d='M7 3h7l4 4v14H7z'/><path d='M14 3v4h4M9.5 13h5M9.5 17h5'/>")
-    _i3 = _ico("<path d='M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z'/><path d='M9 12l2 2 4-4'/>")
-    _lock = _ico("<rect x='5' y='11' width='14' height='9' rx='2'/><path d='M8 11V8a4 4 0 018 0v3'/>")
-    _FRASES = [
-        "Cada cliente que sale con una sonrisa es una venta que vuelve.",
-        "Hoy es un buen día para superar la meta de ayer.",
-        "Una buena actitud vende más que cualquier oferta.",
-        "Atender con ganas es la mejor estrategia de ventas.",
-        "Saluda, sonríe y ofrece: los pequeños detalles hacen grandes ventas.",
-        "El éxito del equipo se construye una venta a la vez.",
-        "Tu energía se contagia: empieza con pilas y se nota en la caja.",
-        "Cada cliente es una oportunidad de hacerle el día mejor.",
-        "La constancia convierte un buen turno en un gran mes.",
-        "Trabajando en equipo, las metas se hacen más pequeñas.",
-        "Una venta bien atendida es un cliente para toda la vida.",
-        "Actitud positiva, ventas positivas.",
-        "Tú eres la cara de Premium: haz que te recuerden.",
-        "Hoy cuenta: ofrece, sonríe y deja huella.",
-    ]
+    # Portal de acceso independiente: controles nativos seguros dentro de un formulario.
+    # El envío ocurre SOLO al pulsar Acceder (o Enter); escribir nunca autentica.
     _ahora_lg = obtener_ahora_peru()
-    _frase = _FRASES[_ahora_lg.toordinal() % len(_FRASES)]
     _saludo_h = "Buenos días" if _ahora_lg.hour < 12 else ("Buenas tardes" if _ahora_lg.hour < 19 else "Buenas noches")
-    _hero = f"""<div class="tp-lg-hero"><div>
-<span class="tp-lg-logo">{logo_tag_app39(40)}</span>
-<div class="tp-lg-k">{_saludo_h}, equipo Premium</div>
-<div class="tp-lg-h">Tu equipo y tu operación, <em>en un solo lugar.</em></div>
-<p class="tp-lg-p">Asistencia, planillas, vacaciones y solicitudes de Tiendas Premium, con información clara y al instante.</p>
-<div class="tp-lg-feat">
-<div><i>{_i1}</i>Asistencia y jornada en tiempo real</div>
-<div><i>{_i2}</i>Boletas, vacaciones y permisos en línea</div>
-<div><i>{_i3}</i>Acceso protegido con cierre automático de sesión</div>
-</div></div>
-<div class="tp-lg-quote"><small>Frase del día</small><p>{_frase}</p></div></div>"""
-    c_hero, c_form = st.columns([1.15, 1], gap="large")
-    with c_hero:
-        st.markdown("".join(x.strip() for x in _hero.splitlines()), unsafe_allow_html=True)
-    with c_form:
-        st.markdown('<div class="tp-lg-spacer"></div>', unsafe_allow_html=True)
-        with ui_card_container("login_form"):
-            _saludo = st.empty()
-            dni_input = st.text_input("DNI", placeholder="Tu número de DNI", max_chars=12, key="login_dni", **_AC_USER)
-            clave_input = st.text_input("Contraseña", type="password", placeholder="Tu contraseña", key="login_clave", **_AC_PASS)
-            _u = next((n for n, d in USUARIOS.items() if str(d["dni"]).strip() == dni_input.strip()), None) if dni_input.strip() else None
-            if _u and LOGIN_MOSTRAR_FOTO:
-                _d, _f = ui_dni_foto(_u)
-                _saludo.markdown(f'<div class="tp-lg-who">{ui_avatar(_u, _d, _f, 96)}<div class="tp-lg-t">Hola, {_html.escape(_u.split()[0])}</div><div class="tp-lg-s">Ingresa tu contraseña para continuar</div></div>', unsafe_allow_html=True)
-            else:
-                _saludo.markdown(f'<div class="tp-lg-who"><div class="tp-lg-lock">{_lock}</div><div class="tp-lg-t">Bienvenido</div><div class="tp-lg-s">Ingresa con tu DNI y tu contraseña</div></div>', unsafe_allow_html=True)
-            st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
-            _clic = st.button("Ingresar al sistema", use_container_width=True, key="login_btn")
-            if _clic or (dni_input.strip() and clave_input):
-                _dni_k = dni_input.strip()
-                _g = _login_guard()
-                _ahora_l = time.time()
-                with _g["lock"]:
-                    _hasta = _g["locked_until"].get(_dni_k, 0)
-                if _hasta > _ahora_l:
-                    st.error(f"Demasiados intentos fallidos. Por seguridad, espera {int((_hasta - _ahora_l) // 60) + 1} minuto(s) e inténtalo de nuevo.")
-                else:
-                    usuario_sel = next((n for n, d in USUARIOS.items() if str(d["dni"]).strip() == _dni_k), None)
-                    if usuario_sel and _verificar_clave(clave_input, USUARIOS[usuario_sel]["clave"]):
-                        with _g["lock"]:
-                            _g["fails"].pop(_dni_k, None)
-                        _almacenada = USUARIOS[usuario_sel]["clave"]
-                        if not _clave_protegida(_almacenada):      # migración automática de contraseñas antiguas
-                            _h_nuevo = _hash_clave(clave_input)
-                            if _guardar_clave_protegida_gsheets(_dni_k, _almacenada, _h_nuevo):
-                                _emp_m = st.session_state.empleados
-                                _mask = (_emp_m["dni"].astype(str).str.strip() == _dni_k) & (_emp_m["clave"].astype(str) == _almacenada)
-                                st.session_state.empleados.loc[_mask, "clave"] = _h_nuevo
-                        st.session_state.usuario_login = usuario_sel
-                        st.session_state.pop("_tp_botellas_aviso_login", None)
-                        st.session_state.pop("_tp_cumple_dialogo_abierto", None)
-                        st.session_state["ver_como"] = None
-                        st.session_state["ver_como_sel"] = "Mi vista (admin)"
-                        st.session_state.login_timestamp = time.time()
-                        st.session_state.ultima_actividad = time.time()
-                        st.success("Acceso concedido")
-                        st.rerun()
+    with st.container(key="pm_auth_page"):
+        with st.container(key="pm_auth_brandbar"):
+            st.markdown(
+                '<div class="pm-auth-navbar"><div class="pm-auth-navlogo">'
+                + logo_tag_app39(44)
+                + '</div><div class="pm-auth-navlabel"><b>PREMIUM MARKET</b><span>Portal de operaciones</span></div>'
+                '<div class="pm-auth-navright"><span class="pm-auth-online"></span> Plataforma interna</div></div>',
+                unsafe_allow_html=True,
+            )
+        col_hero, col_form = st.columns([1.2, 1], gap="large", vertical_alignment="center")
+        with col_hero:
+            st.markdown("""<div class="pm-auth-hero">
+              <div class="pm-auth-eyebrow"><span class="pm-auth-dot"></span> TECNOLOGÍA PARA TU EQUIPO</div>
+              <h1>Todo tu equipo.<br><span>Una sola plataforma.</span></h1>
+              <p class="pm-auth-description">Tu centro de trabajo para gestionar asistencias, colaboradores, turnos, solicitudes y documentos desde un mismo lugar.</p>
+              <div class="pm-auth-preview" aria-label="Funciones de la plataforma">
+                <div class="pm-auth-preview-top"><span class="pm-auth-preview-app"><i></i> Premium Workspace</span><span class="pm-auth-preview-live">ESPACIO DE TRABAJO</span></div>
+                <div class="pm-auth-preview-row"><div class="pm-auth-symbol"><svg viewBox="0 0 24 24"><path d="M5 3v3M19 3v3M4 9h16M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z"/><path d="m9 15 2 2 4-4"/></svg></div><div><b>Asistencia y horarios</b><span>Marcaciones y programación del equipo</span></div><i class="pm-auth-arrow">↗</i></div>
+                <div class="pm-auth-preview-row"><div class="pm-auth-symbol"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M2 20v-2a7 7 0 0 1 14 0v2M17 8h5M19.5 5.5v5"/></svg></div><div><b>Gestión de colaboradores</b><span>Información y procesos centralizados</span></div><i class="pm-auth-arrow">↗</i></div>
+                <div class="pm-auth-preview-row"><div class="pm-auth-symbol"><svg viewBox="0 0 24 24"><path d="M8 3h8l4 4v14H4V3h4ZM15 3v5h5M8 13h8M8 17h6"/></svg></div><div><b>Solicitudes y documentos</b><span>Seguimiento sin perder el contexto</span></div><i class="pm-auth-arrow">↗</i></div>
+              </div>
+              <div class="pm-auth-hero-foot"><span class="pm-auth-foot-icon">✦</span> Diseñado para que tu trabajo sea más simple, cada día.</div>
+            </div>""", unsafe_allow_html=True)
+        with col_form:
+            with st.container(key="pm_login_panel"):
+                st.markdown(
+                    '<div class="pm-auth-formhead"><div class="pm-auth-signin-icon">'
+                    '<svg viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>'
+                    '</div><div class="pm-auth-formk">ACCESO AL SISTEMA</div>'
+                    '<h2>Bienvenido de nuevo</h2><p>Ingresa tus credenciales para continuar.</p></div>',
+                    unsafe_allow_html=True,
+                )
+                with st.form("pm_login_form", clear_on_submit=False):
+                    dni_input = st.text_input("DNI", placeholder="Ingresa tu documento", max_chars=12, key="login_dni", **_AC_USER)
+                    clave_input = st.text_input("Contraseña", type="password", placeholder="Ingresa tu contraseña", key="login_clave", **_AC_PASS)
+                    _clic = st.form_submit_button("Ingresar a Premium", use_container_width=True, type="primary")
+                if _clic:
+                    if not dni_input.strip() or not clave_input:
+                        st.warning("Ingresa tu DNI y contraseña para continuar.")
                     else:
-                        _bloqueado = False
-                        if st.session_state.get("login_ult_intento") != (_dni_k, clave_input):   # solo cuenta intentos distintos
-                            st.session_state["login_ult_intento"] = (_dni_k, clave_input)
-                            with _g["lock"]:
-                                _lista = [t for t in _g["fails"].get(_dni_k, []) if _ahora_l - t < LOGIN_VENTANA_SEG] + [_ahora_l]
-                                if len(_lista) >= LOGIN_MAX_INTENTOS:
-                                    _g["locked_until"][_dni_k] = _ahora_l + LOGIN_BLOQUEO_SEG
-                                    _g["fails"][_dni_k] = []
-                                    _bloqueado = True
-                                else:
-                                    _g["fails"][_dni_k] = _lista
-                            if _bloqueado:
-                                registrar_auditoria("Bloqueo temporal de acceso", "Usuarios", f"DNI {_dni_k}: {LOGIN_MAX_INTENTOS} intentos fallidos. Bloqueado {LOGIN_BLOQUEO_SEG // 60} min.")
-                        if _bloqueado:
-                            st.error(f"Demasiados intentos fallidos. Por seguridad, espera {LOGIN_BLOQUEO_SEG // 60} minutos e inténtalo de nuevo.")
+                        _dni_k = dni_input.strip()
+                        _g = _login_guard()
+                        _ahora_l = time.time()
+                        with _g["lock"]:
+                            _hasta = _g["locked_until"].get(_dni_k, 0)
+                        if _hasta > _ahora_l:
+                            st.error(f"Demasiados intentos fallidos. Por seguridad, espera {int((_hasta - _ahora_l) // 60) + 1} minuto(s) e inténtalo de nuevo.")
                         else:
-                            with _g["lock"]:
-                                _quedan = max(0, LOGIN_MAX_INTENTOS - len([t for t in _g["fails"].get(_dni_k, []) if _ahora_l - t < LOGIN_VENTANA_SEG]))
-                            st.error(f"DNI o contraseña incorrectos. Te quedan {_quedan} intento(s) antes de un bloqueo temporal.")
-            st.markdown('<div class="tp-lg-note">Conexión protegida · La sesión se cierra tras 30 min de inactividad</div>', unsafe_allow_html=True)
-        ui_guia_instalar(st)
+                            usuario_sel = next((n for n, d in USUARIOS.items() if str(d["dni"]).strip() == _dni_k), None)
+                            if usuario_sel and _verificar_clave(clave_input, USUARIOS[usuario_sel]["clave"]):
+                                with _g["lock"]:
+                                    _g["fails"].pop(_dni_k, None)
+                                _almacenada = USUARIOS[usuario_sel]["clave"]
+                                if not _clave_protegida(_almacenada):      # migración automática de contraseñas antiguas
+                                    _h_nuevo = _hash_clave(clave_input)
+                                    if _guardar_clave_protegida_gsheets(_dni_k, _almacenada, _h_nuevo):
+                                        _emp_m = st.session_state.empleados
+                                        _mask = (_emp_m["dni"].astype(str).str.strip() == _dni_k) & (_emp_m["clave"].astype(str) == _almacenada)
+                                        st.session_state.empleados.loc[_mask, "clave"] = _h_nuevo
+                                st.session_state.usuario_login = usuario_sel
+                                st.session_state.pop("_tp_botellas_aviso_login", None)
+                                st.session_state.pop("_tp_cumple_dialogo_abierto", None)
+                                st.session_state["ver_como"] = None
+                                st.session_state["ver_como_sel"] = "Mi vista (admin)"
+                                st.session_state.login_timestamp = time.time()
+                                st.session_state.ultima_actividad = time.time()
+                                st.success("Acceso concedido")
+                                st.rerun()
+                            else:
+                                _bloqueado = False
+                                if st.session_state.get("login_ult_intento") != (_dni_k, clave_input):   # solo cuenta intentos distintos
+                                    st.session_state["login_ult_intento"] = (_dni_k, clave_input)
+                                    with _g["lock"]:
+                                        _lista = [t for t in _g["fails"].get(_dni_k, []) if _ahora_l - t < LOGIN_VENTANA_SEG] + [_ahora_l]
+                                        if len(_lista) >= LOGIN_MAX_INTENTOS:
+                                            _g["locked_until"][_dni_k] = _ahora_l + LOGIN_BLOQUEO_SEG
+                                            _g["fails"][_dni_k] = []
+                                            _bloqueado = True
+                                        else:
+                                            _g["fails"][_dni_k] = _lista
+                                    if _bloqueado:
+                                        registrar_auditoria("Bloqueo temporal de acceso", "Usuarios", f"DNI {_dni_k}: {LOGIN_MAX_INTENTOS} intentos fallidos. Bloqueado {LOGIN_BLOQUEO_SEG // 60} min.")
+                                if _bloqueado:
+                                    st.error(f"Demasiados intentos fallidos. Por seguridad, espera {LOGIN_BLOQUEO_SEG // 60} minutos e inténtalo de nuevo.")
+                                else:
+                                    with _g["lock"]:
+                                        _quedan = max(0, LOGIN_MAX_INTENTOS - len([t for t in _g["fails"].get(_dni_k, []) if _ahora_l - t < LOGIN_VENTANA_SEG]))
+                                    st.error(f"DNI o contraseña incorrectos. Te quedan {_quedan} intento(s) antes de un bloqueo temporal.")
+                st.markdown('<div class="pm-auth-secure"><svg viewBox="0 0 24 24"><path d="M12 22c6-2 9-6 9-12V5l-9-3-9 3v5c0 6 3 10 9 12Z"/><path d="m9 12 2 2 4-4"/></svg><span>Acceso privado · Sesión protegida</span></div>', unsafe_allow_html=True)
+                ui_guia_instalar(st)
+        st.markdown('<div class="pm-auth-copyright">© Premium Market · Plataforma de gestión interna</div>', unsafe_allow_html=True)
     st.stop()
 
 # --- NUEVO: CONTROL DE EXPIRACIÓN DE SESIÓN ---
@@ -4870,11 +5025,31 @@ st.sidebar.markdown(
     "<svg width='18' height='18' viewBox='0 0 24 24' fill='none' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M7 17L17 7M9 7h8v8'/></svg></a>",
     unsafe_allow_html=True)
 ui_guia_instalar(st.sidebar)
-if st.sidebar.button("Cerrar Sesión", use_container_width=True):
-    registrar_auditoria("Cierre de Sesión", "Usuarios", f"{user_actual} cerró sesión.")
-    st.session_state.usuario_login = None
-    st.session_state.login_auditado = False
-    st.rerun()
+def _pm_cerrar_sesion():
+    """El cierre es incondicional aunque falle o tarde la auditoría remota."""
+    _usuario = st.session_state.get("usuario_login")
+    try:
+        registrar_auditoria("Cierre de Sesión", "Usuarios", f"{_usuario} cerró sesión.")
+    except Exception as _exc:
+        print("Premium: no se pudo completar auditoría de cierre:", type(_exc).__name__)
+    finally:
+        # El callback se ejecuta ANTES de reconstruir los widgets en el rerun.
+        st.session_state["usuario_login"] = None
+        st.session_state["login_auditado"] = False
+        st.session_state["ver_como"] = None
+        st.session_state["ver_como_sel"] = "Mi vista (admin)"
+        st.session_state["chat_flotante_abierto"] = False
+        st.session_state.pop("_tp_botellas_aviso_login", None)
+        st.session_state.pop("_tp_cumple_dialogo_abierto", None)
+        st.session_state.pop("login_clave", None)
+        st.session_state.pop("login_dni", None)
+        st.session_state.pop("login_ult_intento", None)
+        st.session_state.pop("nav_radio", None)
+        st.session_state.pop("gs_q", None)
+
+with st.sidebar.container(key="pm_logout_area"):
+    st.button("Cerrar sesión", key="pm_logout", icon=":material/logout:",
+              on_click=_pm_cerrar_sesion, use_container_width=True)
 st.sidebar.markdown('</div>', unsafe_allow_html=True)
 
 # Notificación de botellas: se abre una sola vez por inicio de sesión.
@@ -5126,7 +5301,7 @@ if "chat_flotante_abierto" not in st.session_state:
 if "chat_datos_historial" not in st.session_state:
     st.session_state.chat_datos_historial = []
 with st.container(key="tp_chat_fab"):
-    if st.button(_bot_texto, key="abrir_chat_flotante", help="Hablar con Premium"):
+    if st.button("✦", key="abrir_chat_flotante", help="Abrir asistente Premium IA"):
         st.session_state.chat_flotante_abierto = not st.session_state.chat_flotante_abierto
         st.rerun()
 
@@ -5228,19 +5403,71 @@ def premium_module_context(titulo):
     )
 
 def premium_module_shell(titulo, categoria, descripcion):
-    """Encabezado estructural específico para cada vista, seguro ante HTML arbitrario."""
+    """Una sola cabecera clara para cada módulo, con datos escapados para HTML."""
     from html import escape as esc
-    icon = PM7_MODULES.get(titulo, 'apps')
+    icono = PM7_MODULES.get(titulo, "apps")
     st.markdown(
-        '<section class="pm7-view" aria-label="Información de la sección">'
-        '<div class="pm7-topline"><div class="pm7-breadcrumb">Premium Market'
-        '<span class="pm7-chevron">/</span><strong>' + esc(titulo) + '</strong></div>'
-        '<span class="pm7-category">' + esc(categoria) + '</span></div>'
-        '<div class="pm7-banner"><div><div class="pm7-kicker">ESPACIO DE TRABAJO · PREMIUM MARKET</div>'
-        '<h1>' + esc(titulo) + '</h1><p>' + esc(descripcion) + '</p></div>'
-        '<div class="pm7-emblem" aria-hidden="true"><span class="material-symbols-rounded">' + esc(icon) + '</span></div>'
-        '</div></section>', unsafe_allow_html=True)
-    premium_module_context(titulo)
+        '<header class="pm-workspace-head">'
+        '<div class="pm-workspace-top"><span class="pm-workspace-breadcrumb">Premium Market <b>/</b> '
+        + esc(titulo) + '</span><span class="pm-workspace-badge">' + esc(categoria) + '</span></div>'
+        '<div class="pm-workspace-main"><div><h1>' + esc(titulo) + '</h1>'
+        '<p>' + esc(descripcion) + '</p></div>'
+        '<div class="pm-workspace-glyph" aria-hidden="true"><span class="material-symbols-rounded">'
+        + esc(icono) + '</span></div></div></header>',
+        unsafe_allow_html=True,
+    )
+
+def pm_render_dashboard_kpis():
+    """Indicadores reales, de solo lectura; faltantes no se interpretan como registros.
+
+    Se leen exclusivamente los DataFrames ya cargados en memoria y no se
+    hacen consultas adicionales a Google Sheets ni cambios en los datos.
+    """
+    from html import escape as esc
+    hoy = obtener_ahora_peru().strftime("%Y-%m-%d")
+    emp = st.session_state.get("empleados", pd.DataFrame())
+    asi = st.session_state.get("asistencia", pd.DataFrame())
+    sol = st.session_state.get("solicitudes", pd.DataFrame())
+    bot = st.session_state.get("botellas_fiadas", pd.DataFrame())
+
+    def _cuenta(df, columna, predicado):
+        if not isinstance(df, pd.DataFrame) or df.empty or columna not in df.columns:
+            return 0
+        try:
+            return int(predicado(df[columna].fillna("").astype(str).str.strip()).sum())
+        except Exception:
+            return 0
+
+    activos = _cuenta(emp, "estado", lambda v: v.str.casefold().eq("activo"))
+    pendientes = _cuenta(sol, "estado", lambda v: v.str.casefold().eq("pendiente"))
+    fiados = _cuenta(bot, "estado", lambda v: ~v.str.casefold().eq("devuelta"))
+    ingresos = 0
+    if isinstance(asi, pd.DataFrame) and {"fecha", "tipo", "dni"} <= set(asi.columns):
+        try:
+            de_hoy = asi[
+                asi["fecha"].fillna("").astype(str).str.startswith(hoy)
+                & asi["tipo"].fillna("").astype(str).str.upper().eq("INGRESO")
+            ]
+            ingresos = int(de_hoy["dni"].astype(str).str.strip().nunique())
+        except Exception:
+            ingresos = 0
+    kpis = [
+        ("Colaboradores activos", activos, "Personal registrado", "groups", "personas"),
+        ("Ingresos registrados hoy", ingresos, "Colaboradores únicos", "how_to_reg", "asistencia"),
+        ("Solicitudes pendientes", pendientes, "Por revisar", "inbox", "solicitudes"),
+        ("Fiados pendientes", fiados, "Sin devolución confirmada", "inventory_2", "fiados"),
+    ]
+    cajas = []
+    for titulo, valor, detalle, icono, tono in kpis:
+        cajas.append(
+            '<div class="pm-exec-stat pm-exec-' + tono + '">'
+            '<div class="pm-exec-stat-head"><span>' + esc(titulo) + '</span>'
+            '<span class="material-symbols-rounded" aria-hidden="true">' + icono + '</span></div>'
+            '<div class="pm-exec-stat-number">' + str(valor) + '</div>'
+            '<div class="pm-exec-stat-detail">' + esc(detalle) + '</div></div>'
+        )
+    st.markdown('<div class="pm-exec-kpis">' + ''.join(cajas) + '</div>', unsafe_allow_html=True)
+
 
 def premium_section(text, *args, **kwargs):
     """Semantic section heading: consistent hierarchy across modules."""
@@ -5945,6 +6172,7 @@ elif choice == "Dashboard General":
 
     with st.container(key="pm_v_dashboard_general"):
 
+        pm_render_dashboard_kpis()
         _tp_panel_operacion_hoy()
 
         col_f1, col_f2 = st.columns([1.5, 1])
