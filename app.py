@@ -1609,6 +1609,145 @@ section[data-testid="stSidebar"]{z-index:10005!important;}
 }
 @media(prefers-reduced-motion:reduce){.st-key-tp_chat_panel,.st-key-tp_chat_fab button{animation:none!important;transition:none!important;}}
 
+
+/* ============================================================
+   PREMIUM MARKET · SIDEBAR SIGNATURE 2026
+   SOLO PANTALLAS AUTENTICADAS. No modifica portada ni login.
+   ============================================================ */
+section[data-testid="stSidebar"]{
+  background:#fff!important;
+  border-right:1px solid #e9edf3!important;
+  box-shadow:7px 0 34px -32px rgba(24,39,66,.3)!important;
+}
+section[data-testid="stSidebar"] [data-testid="stSidebarContent"]{
+  padding:11px 13px 18px!important;
+  overflow-x:hidden!important;
+  scrollbar-width:thin;
+  scrollbar-color:#dae0e9 transparent;
+}
+section[data-testid="stSidebar"] [data-testid="stVerticalBlock"]{gap:.32rem!important;}
+section[data-testid="stSidebar"] [data-testid="stElementContainer"]:has(.pm-side-brand),
+section[data-testid="stSidebar"] [data-testid="stElementContainer"]:has(.pm-side-profile){margin:0!important;}
+.pm-side-brand{
+  background:linear-gradient(123deg,#111d34 0%,#212740 53%,#6c2b43 100%)!important;
+  position:relative;isolation:isolate;overflow:hidden;
+  border-radius:20px;padding:19px 15px 12px;margin:0 0 10px;
+  border:1px solid rgba(255,255,255,.1);
+  box-shadow:0 15px 34px -23px rgba(14,30,54,.59);
+}
+.pm-side-brand::after{content:"";position:absolute;z-index:-1;right:-47px;top:-53px;width:180px;height:180px;border-radius:50%;background:radial-gradient(circle,rgba(255,90,114,.29),transparent 70%);}
+.pm-side-brand-inner{display:flex;align-items:center;gap:12px;min-width:0;}
+.pm-side-logo{flex:none;background:white;border:1px solid rgba(255,255,255,.7);border-radius:13px;width:86px;height:56px;display:flex;justify-content:center;align-items:center;padding:6px 8px;box-shadow:0 6px 14px rgba(4,12,32,.15);}
+.pm-side-logo img{max-width:100%!important;height:auto!important;max-height:43px!important;object-fit:contain!important;}
+.pm-side-brand-copy{display:flex;flex-direction:column;gap:5px;min-width:0;}
+.pm-side-brand-copy b{font-size:1.04rem;line-height:1.18;letter-spacing:-.045em;color:#fff!important;font-weight:840;}
+.pm-side-brand-copy b span{color:#ffa8b7!important;}
+.pm-side-brand-copy small{font-size:.59rem;letter-spacing:.15em;color:#d4d9e4!important;font-weight:780;}
+.pm-side-brand-bottom{border-top:1px solid rgba(255,255,255,.13);padding-top:11px;margin-top:14px;font-size:.65rem;letter-spacing:.01em;color:#d4dce8!important;display:flex;align-items:center;gap:8px;font-weight:630;}
+.pm-side-live,.pm-side-online-dot{display:inline-block;width:7px;height:7px;border-radius:50%;flex:none;background:#41cca0;box-shadow:0 0 0 3px rgba(65,204,160,.14);}
+.pm-side-brand-shine{margin-left:auto;color:#ffa8b7!important;font-size:13px;}
+.pm-side-profile{display:flex;align-items:center;gap:11px;position:relative;padding:13px 12px;margin:0 0 13px;border-radius:16px;border:1px solid #e8edf3;background:linear-gradient(125deg,#fbfcfe,#f7f9fc);}
+.pm-side-profile-photo{width:48px;height:48px;flex:none;display:grid;place-items:center;}
+.pm-side-profile-photo .tp-avatar{width:45px!important;height:45px!important;object-fit:cover!important;box-shadow:0 0 0 2px #e64760!important;border:2px solid white!important;}
+.pm-side-profile-info{flex:1;min-width:0;}
+.pm-side-profile-info strong{color:#202d42!important;font-weight:810;font-size:.77rem;line-height:1.4;letter-spacing:-.02em;display:block;overflow-wrap:anywhere;}
+.pm-side-profile-info span{display:block;margin-top:4px;color:#8390a3!important;font-size:.64rem;line-height:1.4;overflow-wrap:anywhere;}
+.pm-side-online{width:7px;height:7px;border-radius:50%;background:#18a67b;position:absolute;top:12px;right:13px;border:1px solid white;box-shadow:0 0 0 3px #e5f8f1;}
+.pm-side-caption,.pm-side-section-heading{margin:7px 3px 6px!important;font-size:.64rem;font-weight:860;letter-spacing:.115em;color:#8a97a8!important;line-height:1.45;}
+.pm-side-caption-search{margin-top:9px!important;}
+.pm-side-section-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px!important;}
+.pm-side-section-count,.pm-side-nav-sub{height:22px;min-width:22px;display:inline-flex;align-items:center;justify-content:center;padding:2px 7px;border-radius:9px;background:#f2f4f8;color:#68768b!important;font-size:.65rem;letter-spacing:0;}
+.pm-side-section-count:not(:empty){background:#fff0f2;color:#c32e43!important;}
+.pm-side-allclear{border:1px solid #e0f2eb;background:#f6fcf9;color:#3d8b6d;font-size:.71rem;font-weight:730;line-height:1.5;display:flex;align-items:center;gap:9px;padding:11px 12px;border-radius:12px;}
+.pm-side-allclear-dot{background:#25a779;box-shadow:0 0 0 3px #dff4ea;width:7px;height:7px;border-radius:50%;flex:none;}
+section[data-testid="stSidebar"] [data-testid="stSelectbox"] [data-baseweb="select"]>div,
+section[data-testid="stSidebar"] [data-testid="stTextInput"] [data-baseweb="input"]{
+  border:1px solid #e7ebf2!important;border-radius:12px!important;background:#f7f9fc!important;
+  box-shadow:none!important;min-height:41px!important;
+}
+section[data-testid="stSidebar"] [data-testid="stTextInput"] input{font-size:.75rem!important;color:#34425a!important;}
+section[data-testid="stSidebar"] [data-testid="stSelectbox"] [data-baseweb="select"]>div:focus-within,
+section[data-testid="stSidebar"] [data-testid="stTextInput"] [data-baseweb="input"]:focus-within{border-color:#e17c8c!important;box-shadow:0 0 0 3px #fff0f2!important;}
+section[data-testid="stSidebar"] [role="radiogroup"]{gap:2px!important;}
+section[data-testid="stSidebar"] [role="radiogroup"]>label{
+  min-height:39px!important;padding:8px 10px!important;margin:0!important;gap:10px!important;
+  border-radius:11px!important;transition:background .17s ease,border-color .17s ease,transform .17s ease!important;
+}
+section[data-testid="stSidebar"] [role="radiogroup"]>label::before{min-width:20px!important;width:20px!important;height:20px!important;background-size:contain!important;}
+section[data-testid="stSidebar"] [role="radiogroup"]>label p{font-size:.76rem!important;color:#536176!important;line-height:1.35!important;font-weight:700!important;margin:0!important;}
+section[data-testid="stSidebar"] [role="radiogroup"]>label:hover{background:#f5f7fb!important;transform:translateX(1px);}
+section[data-testid="stSidebar"] [role="radiogroup"]>label:has(input:checked){background:linear-gradient(95deg,#ffeff2,#fff8f9)!important;border-color:#f5d7de!important;box-shadow:inset 3px 0 0 #d52f46!important;}
+section[data-testid="stSidebar"] [role="radiogroup"]>label:has(input:checked) p{color:#c32d43!important;font-weight:830!important;}
+/* The two native pending buttons continue to navigate to their real destinations. */
+section[data-testid="stSidebar"] .st-key-tp_acc_bot button,
+section[data-testid="stSidebar"] .st-key-tp_acc_sol button{border-radius:12px!important;min-height:43px!important;padding:9px 11px!important;justify-content:flex-start!important;box-shadow:none!important;}
+section[data-testid="stSidebar"] .st-key-tp_acc_bot button{background:#fff0f2!important;border:1px solid #f6d1d9!important;}
+section[data-testid="stSidebar"] .st-key-tp_acc_sol button{background:#fff8ed!important;border:1px solid #f6dfbd!important;}
+section[data-testid="stSidebar"] .st-key-tp_acc_bot button:hover,
+section[data-testid="stSidebar"] .st-key-tp_acc_sol button:hover{transform:translateY(-1px)!important;box-shadow:0 7px 16px -12px rgba(16,27,44,.25)!important;}
+section[data-testid="stSidebar"] .st-key-tp_acc_bot button p,
+section[data-testid="stSidebar"] .st-key-tp_acc_sol button p{font-size:.75rem!important;font-weight:820!important;}
+/* Tools, external sales app and user session are in the sidebar, not a popover. */
+.st-key-pm_sidebar_utilities{margin-top:11px!important;padding:12px 0 1px!important;border-top:1px solid #edf0f5!important;}
+.pm-side-tools-title{margin-top:0!important;}
+section[data-testid="stSidebar"] a.pm-side-negosy{
+  display:flex;align-items:center;gap:10px;text-decoration:none!important;
+  padding:11px 11px;margin:4px 0 7px;background:linear-gradient(112deg,#d82f46,#b9253d)!important;
+  border:1px solid #c12d43;border-radius:14px;box-shadow:0 9px 20px -16px rgba(184,37,59,.75)!important;
+  transition:transform .18s ease,box-shadow .18s ease!important;
+}
+section[data-testid="stSidebar"] a.pm-side-negosy:hover{transform:translateY(-2px)!important;box-shadow:0 12px 25px -12px rgba(184,37,59,.6)!important;}
+.pm-side-negosy-icon{width:38px;height:38px;flex:none;border-radius:11px;background:rgba(255,255,255,.18);display:grid;place-items:center;color:#fff!important;}
+.pm-side-negosy-icon svg{height:21px;width:21px;stroke:currentColor;}
+.pm-side-negosy-copy{display:flex;flex-direction:column;gap:4px;flex:1;min-width:0;}
+.pm-side-negosy-copy strong{color:#fff!important;font-size:.8rem!important;font-weight:850!important;line-height:1.2;}
+.pm-side-negosy-copy small{color:#ffe5ea!important;font-size:.64rem!important;line-height:1.4;}
+.pm-side-negosy-arrow{height:16px;width:16px;flex:none;stroke:#fff;}
+.st-key-pm_sidebar_utilities [data-testid="stExpander"]{border-radius:12px!important;border:1px solid #e7ecf2!important;background:#fff!important;margin:4px 0 8px!important;box-shadow:none!important;}
+.st-key-pm_sidebar_utilities [data-testid="stExpander"] summary{padding:10px 12px!important;min-height:44px!important;}
+.st-key-pm_sidebar_utilities [data-testid="stExpander"] summary p{font-size:.75rem!important;color:#35455d!important;font-weight:760!important;}
+.st-key-pm_sidebar_utilities [data-testid="stExpander"] summary:hover{background:#f8f9fc!important;}
+.st-key-pm_sidebar_utilities .st-key-pm_logout_area button{
+  min-height:43px!important;border:1px solid #f1dce0!important;background:#fffafa!important;
+  color:#a62c3e!important;border-radius:12px!important;font-size:.75rem!important;font-weight:850!important;
+}
+.st-key-pm_sidebar_utilities .st-key-pm_logout_area button:hover{background:#fff0f2!important;border-color:#ecc2cb!important;}
+.pm-side-footer-micro{font-size:.6rem;color:#a0aabb!important;text-align:center;margin:11px 0 0;display:flex;align-items:center;justify-content:center;gap:8px;}
+.pm-side-footer-micro .pm-side-online-dot{width:6px;height:6px;}
+/* Native collapsed-state control is the permanent entry to the full sidebar. */
+.stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stSidebarCollapsedControl"]{
+  top:13px!important;left:13px!important;min-width:114px!important;width:114px!important;height:44px!important;
+  justify-content:flex-start!important;padding:0 4px!important;z-index:100020!important;
+  background:#fff!important;border:1px solid #e2e7ef!important;border-radius:13px!important;
+  box-shadow:0 7px 22px -12px rgba(18,32,54,.3)!important;
+}
+.stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stSidebarCollapsedControl"] button{
+  width:105px!important;height:40px!important;justify-content:flex-start!important;padding:0 9px!important;
+  gap:9px!important;color:#27344c!important;
+}
+.stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stSidebarCollapsedControl"] button::after{
+  content:"Abrir menú";font-family:var(--pm-font)!important;white-space:nowrap;
+  font-size:.72rem;font-weight:820;color:#27344c!important;
+}
+.stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stSidebarCollapseButton"]{
+  z-index:100030!important;
+}
+.stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stSidebarCollapseButton"] button{
+  min-height:33px!important;height:33px!important;width:33px!important;
+  border-radius:10px!important;background:#fff!important;color:#42516a!important;
+}
+.stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stSidebarCollapseButton"] button:hover{background:#fff0f2!important;color:#c02d42!important;}
+@media(max-width:700px){
+  section[data-testid="stSidebar"] [data-testid="stSidebarContent"]{padding:10px 12px 28px!important;}
+  .pm-side-brand{padding:17px 13px 12px;}
+  .stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stSidebarCollapsedControl"]{left:8px!important;top:8px!important;}
+  .pm-side-brand-copy b{font-size:1rem;}
+  section[data-testid="stSidebar"] [role="radiogroup"]>label{min-height:42px!important;}
+}
+@media(prefers-reduced-motion:reduce){
+ .pm-side-brand,.pm-side-negosy,section[data-testid="stSidebar"] [role="radiogroup"]>label{transition:none!important;}
+}
+
 </style>"""
 
 # El ícono opcional del asistente se incluye en el mismo bloque CSS.
@@ -5215,8 +5354,19 @@ def renderizar_calendario_colaborador(nombre_colab, anio, mes):
 # =============================================================
 
 # --- SIDEBAR ---
-st.sidebar.markdown(f'<div class="pm-sidebar-logo">{logo_tag_app39(51)}</div>', unsafe_allow_html=True)
-st.sidebar.markdown('<div class="tp-brand"><div class="tp-brand-name">Premium <span>Workspace</span></div><div class="tp-brand-sub">Panel de operaciones</div></div>', unsafe_allow_html=True)
+# Cabecera de marca: replica el lenguaje visual de la portada sin cambiarla.
+st.sidebar.markdown(f"""
+<div class="pm-side-brand" aria-label="Premium Market, plataforma de gestión">
+  <div class="pm-side-brand-inner">
+    <div class="pm-side-logo">{logo_tag_app39(47)}</div>
+    <div class="pm-side-brand-copy">
+      <b>Premium <span>Market</span></b>
+      <small>WORKSPACE</small>
+    </div>
+  </div>
+  <div class="pm-side-brand-bottom"><span class="pm-side-live"></span> Plataforma de operaciones <span class="pm-side-brand-shine">✦</span></div>
+</div>
+""", unsafe_allow_html=True)
 
 _dni_real = USUARIOS[user_real]["dni"]
 _foto_real = ui_dni_foto(user_real)[1]
@@ -5234,9 +5384,13 @@ else:
 _bf_total_pendientes = len(_bf_pendientes_aviso)
 
 st.sidebar.markdown(f"""
-    <div class="tp-user">
-        {ui_avatar(user_real, _dni_real, _foto_real)}
-        <div><b>{user_real}</b><span>{str(rol_real).capitalize()} · DNI {_dni_real}</span></div>
+    <div class="pm-side-profile">
+      <div class="pm-side-profile-photo">{ui_avatar(user_real, _dni_real, _foto_real)}</div>
+      <div class="pm-side-profile-info">
+        <strong>{_html.escape(str(user_real))}</strong>
+        <span>{_html.escape(str(rol_real).capitalize())} · DNI {_html.escape(str(_dni_real))}</span>
+      </div>
+      <span class="pm-side-online" title="Sesión activa"></span>
     </div>
 """, unsafe_allow_html=True)
 _sol_pend_n = 0
@@ -5422,8 +5576,9 @@ if rol_real == "admin":
     _opc_vc = ["Mi vista (admin)"] + sorted(n for n, d in USUARIOS.items() if d["rol"] != "admin")
     if st.session_state.get("ver_como_sel") not in _opc_vc:
         st.session_state["ver_como_sel"] = "Mi vista (admin)"
-    st.sidebar.markdown('<div class="tp-note-t" style="margin:2px 2px 6px">Ver como colaborador</div>', unsafe_allow_html=True)
+    st.sidebar.markdown('<div class="pm-side-caption">VISTA DE TRABAJO</div>', unsafe_allow_html=True)
     st.sidebar.selectbox("Ver como colaborador", _opc_vc, key="ver_como_sel", on_change=_cambiar_preview, label_visibility="collapsed")
+st.sidebar.markdown('<div class="pm-side-caption pm-side-caption-search">BÚSQUEDA RÁPIDA</div>', unsafe_allow_html=True)
 st.sidebar.text_input("Buscar", key="gs_q", placeholder="Buscar personas, solicitudes, secciones…", label_visibility="collapsed")
 if st.session_state.get("nav_radio") not in menu:
     st.session_state["nav_radio"] = menu[0]
@@ -5439,16 +5594,26 @@ def _btn_pendiente(etiqueta, key, destino, icono):
     except TypeError:   # versiones antiguas de Streamlit sin parámetro icon
         st.sidebar.button(etiqueta, key=key, use_container_width=True, on_click=_ir_a, args=(destino,))
 
+_pm_n_alertas = int(_sol_pend_n) + int(_bf_total_pendientes)
+st.sidebar.markdown(
+    f'<div class="pm-side-section-heading"><span>PENDIENTES</span>'
+    f'<b class="pm-side-section-count">{_pm_n_alertas}</b></div>',
+    unsafe_allow_html=True,
+)
 if _sol_pend_n:
     _btn_pendiente(f"{'Solicitudes por revisar' if rol_actual == 'admin' else 'Tus solicitudes en revisión'} · {_sol_pend_n}",
                    "tp_acc_sol", "Solicitudes y Permisos" if rol_actual == "admin" else "Solicitar Permiso / Adelanto", ":material/inbox:")
 if _bf_total_pendientes:
     _btn_pendiente(f"Botellas por devolver · {_bf_total_pendientes}", "tp_acc_bot", "Botellas Fiadas", ":material/liquor:")
+if not _pm_n_alertas:
+    st.sidebar.markdown('<div class="pm-side-allclear"><span class="pm-side-allclear-dot"></span> Sin pendientes por atender</div>', unsafe_allow_html=True)
 
 # Semántica de menú para iconos por CSS, sin cambiar los valores de navegación.
+st.sidebar.markdown('<div class="pm-side-section-heading pm-side-nav-title"><span>EXPLORAR MÓDULOS</span><span class="pm-side-nav-sub">' + str(len(menu)) + '</span></div>', unsafe_allow_html=True)
 st.sidebar.markdown('<div class="pm-nav-kind-' + ('admin' if rol_actual == 'admin' else 'employee') + '"></div>', unsafe_allow_html=True)
-# Menú original, conserva los mismos nombres para no romper los módulos.
-choice = st.sidebar.radio("Navegación", menu, key="nav_radio", on_change=_limpiar_busqueda, format_func=_tp_nav_label)
+# La selección roja y los iconos SVG se dibujan sobre este control accesible.
+# Conservamos los nombres y la misma clave para los 22 módulos.
+choice = st.sidebar.radio("Navegación", menu, key="nav_radio", on_change=_limpiar_busqueda, format_func=_tp_nav_label, label_visibility="collapsed")
 
 if rol_actual == "admin":
     _nav_items = [("Dashboard General", "Resumen", ":material/dashboard:"), ("Centro de Alertas", "Alertas", ":material/notifications:"),
@@ -5465,18 +5630,8 @@ try:
 except Exception:
     pass  # versiones antiguas de Streamlit: se usa solo el menú lateral
 
-# Acceso alternativo siempre disponible si el sidebar se oculta.
-# Usa los mismos destinos y callbacks que la navegación original.
-with st.container(key="pm_nav_recovery"):
-    with st.popover("☰ Menú", help="Abrir navegación rápida de Premium Market"):
-        st.markdown('<div class="pm-nav-popover-marker"></div>', unsafe_allow_html=True)
-        st.caption("IR A UNA SECCIÓN")
-        for _idx, _dest_nav in enumerate(menu):
-            st.button(
-                _tp_nav_label(_dest_nav), key=f"pm_nav_quick_{_idx}",
-                on_click=_ir_a, args=(_dest_nav,),
-                use_container_width=True, type="primary" if choice == _dest_nav else "secondary",
-            )
+# Navegación exclusivamente en el sidebar (sin popover que cubra el contenido).
+# El control nativo de Streamlit se mantiene visible para reabrirlo al cerrarlo.
 
 # Barra de ubicación: indica en qué sección estás y la fecha de hoy (hora de Perú).
 _chev = "<svg width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><path d='M9 6l6 6-6 6'/></svg>"
@@ -5486,13 +5641,6 @@ st.markdown(
     f'<span class="tp-pill"><i></i>{_html.escape(str(rol_actual).capitalize())}</span></div></div>',
     unsafe_allow_html=True)
 
-st.sidebar.markdown("<br><br>", unsafe_allow_html=True)
-st.sidebar.markdown('<div class="btn-logout">', unsafe_allow_html=True)
-st.sidebar.markdown(
-    f'<a class="tp-negosy" href="{NEGOSY_URL}" target="_blank" rel="noopener noreferrer"><span><span class="tp-negosy-t">Negosy</span><span class="tp-negosy-s">Sistema de ventas</span></span>'
-    "<svg width='18' height='18' viewBox='0 0 24 24' fill='none' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M7 17L17 7M9 7h8v8'/></svg></a>",
-    unsafe_allow_html=True)
-ui_guia_instalar(st.sidebar)
 def _pm_cerrar_sesion():
     """El cierre es incondicional aunque falle o tarde la auditoría remota."""
     _usuario = st.session_state.get("usuario_login")
@@ -5518,10 +5666,21 @@ def _pm_cerrar_sesion():
         st.session_state.pop("nav_radio", None)
         st.session_state.pop("gs_q", None)
 
-with st.sidebar.container(key="pm_logout_area"):
-    st.button("Cerrar sesión", key="pm_logout", icon=":material/logout:",
-              on_click=_pm_cerrar_sesion, use_container_width=True)
-st.sidebar.markdown('</div>', unsafe_allow_html=True)
+# Accesos de trabajo, instalación móvil y salida segura: en el propio sidebar.
+with st.sidebar.container(key="pm_sidebar_utilities"):
+    st.markdown('<div class="pm-side-section-heading pm-side-tools-title"><span>HERRAMIENTAS</span></div>', unsafe_allow_html=True)
+    st.markdown(
+        f'<a class="pm-side-negosy" href="{_html.escape(NEGOSY_URL, quote=True)}" target="_blank" rel="noopener noreferrer" aria-label="Abrir Negosy, plataforma de ventas">'
+        '<span class="pm-side-negosy-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><path d="M7 15l4-4 3 2 3-5"/><path d="M15 8h2v2"/></svg></span>'
+        '<span class="pm-side-negosy-copy"><strong>Negosy</strong><small>Ir a plataforma de ventas</small></span>'
+        '<svg class="pm-side-negosy-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg></a>',
+        unsafe_allow_html=True,
+    )
+    ui_guia_instalar(st)
+    with st.container(key="pm_logout_area"):
+        st.button("Cerrar sesión", key="pm_logout", icon=":material/logout:",
+                  on_click=_pm_cerrar_sesion, use_container_width=True)
+    st.markdown('<div class="pm-side-footer-micro"><span class="pm-side-online-dot"></span> Premium Market · Acceso protegido</div>', unsafe_allow_html=True)
 
 # Notificación de botellas: se abre una sola vez por inicio de sesión.
 # Debe invocarse en el cuerpo principal, nunca dentro de st.sidebar ni st.columns.
