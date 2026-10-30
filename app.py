@@ -6660,12 +6660,18 @@ for _pos, _nombre_mod in enumerate(menu,1):
     _pm_icon_rules.append(f'section[data-testid="stSidebar"] [role="radiogroup"]>label:nth-child({_pos})' + '{--pm-icon:url("' + _url + '")!important;}')
 st.markdown('<style>' + ''.join(_pm_icon_rules) + '</style>', unsafe_allow_html=True)
 
+# Navegación táctil: mismos destinos del menú real, cuatro accesos prioritarios.
+# Los botones son nativos de Streamlit y mantienen permisos y callbacks.
 if rol_actual == "admin":
-    _nav_items = [("Dashboard General", "Resumen", ":material/dashboard:"), ("Centro de Alertas", "Alertas", ":material/notifications:"),
-                  ("Rutinas Operativas", "Rutinas", ":material/fact_check:"), ("Solicitudes y Permisos", "Solicitudes", ":material/inbox:")]
+    _nav_items = [("Dashboard General", "Inicio", ":material/home:"),
+                  ("Rutinas Operativas", "Rutinas", ":material/fact_check:"),
+                  ("Centro de Alertas", "Avisos", ":material/notifications:"),
+                  ("Gestión Colaboradores", "Equipo", ":material/groups:")]
 else:
-    _nav_items = [("Mis Rutinas", "Rutinas", ":material/fact_check:"), ("Marcar Asistencia", "Marcar", ":material/fingerprint:"),
-                  ("Solicitar Permiso / Adelanto", "Permisos", ":material/edit_note:"), ("Mi Dashboard Mensual", "Mi mes", ":material/calendar_month:")]
+    _nav_items = [("Marcar Asistencia", "Inicio", ":material/home:"),
+                  ("Mis Rutinas", "Rutinas", ":material/fact_check:"),
+                  ("Solicitar Permiso / Adelanto", "Avisos", ":material/notifications:"),
+                  ("Mi Ficha Técnica", "Perfil", ":material/person:")]
 try:
     with st.container(key="tp_bottomnav"):
         for _col, (_dest, _lbl, _ico) in zip(st.columns(len(_nav_items)), _nav_items):
@@ -6674,6 +6680,25 @@ try:
                           type="primary" if choice == _dest else "secondary", on_click=_ir_a, args=(_dest,))
 except Exception:
     pass  # versiones antiguas de Streamlit: se usa solo el menú lateral
+
+# Cabecera de la app móvil: sólo presentación, sin botones HTML decorativos.
+# Se renderiza después de establecer permisos y destinos de navegación.
+with st.container(key="pm_mobile_topbar"):
+    _pm_m_first = _html.escape(str(user_actual).split()[0] if user_actual else "equipo")
+    _pm_m_role = "Administración" if rol_actual == "admin" else "Colaborador"
+    _pm_m_logo = logo_tag_app39(34)
+    _pm_m_avatar = ui_avatar(user_actual, dni_actual, _foto_actual, 38)
+    st.markdown(
+        '<div class="pm-mobile-top-inner">'
+        '<div class="pm-mobile-top-brand">'
+        f'<span class="pm-mobile-logo">{_pm_m_logo or "<b>PM</b>"}</span>'
+        '<div><strong>Premium Market</strong>'
+        f'<small>{_pm_m_role} · Hola, {_pm_m_first}</small></div></div>'
+        '<div class="pm-mobile-top-right"><span class="pm-mobile-top-meta" aria-label="Portal privado">'
+        '<span class="pm-mobile-live"></span> Mi espacio</span>'
+        f'{_pm_m_avatar}</div></div>',
+        unsafe_allow_html=True,
+    )
 
 # Navegación exclusivamente en el sidebar (sin popover que cubra el contenido).
 # El control nativo de Streamlit se mantiene visible para reabrirlo al cerrarlo.
@@ -6722,6 +6747,248 @@ st.sidebar.markdown(
 ui_guia_instalar(st.sidebar)
 st.sidebar.button("Cerrar sesión", key="pm_logout", icon=":material/logout:",
                   on_click=_pm_cerrar_sesion, use_container_width=True)
+
+
+# PREMIUM MARKET · MOBILE EXPERIENCE 2026
+# Una sola aplicación, dos presentaciones: conserva todo el escritorio.
+_PM_MOBILE_EXPERIENCE_CSS = """
+<style>
+/* Estructura sólo móvil y con sesión iniciada. */
+.st-key-pm_mobile_topbar,.st-key-pm_mobile_employee_home,.st-key-pm_mobile_notices{display:none!important;}
+@media screen and (max-width: 780px){
+  .stApp:not(:has(.st-key-pm_auth_page)){background:#f5f7fb!important;}
+  .stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stAppViewContainer"],
+  .stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stMain"],
+  .stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stMainBlockContainer"]{
+    width:100%!important;min-width:0!important;max-width:100%!important;
+    margin:0!important;box-sizing:border-box!important;
+  }
+  .stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stMain"] .block-container{
+    width:100%!important;min-width:0!important;max-width:100%!important;
+    margin:0 auto!important;padding:70px 14px calc(118px + env(safe-area-inset-bottom,0px))!important;
+    box-sizing:border-box!important;
+  }
+  .stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stMain"] .block-container > div,
+  .stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stMain"] [data-testid="stElementContainer"]{
+    min-width:0!important;max-width:100%!important;box-sizing:border-box!important;
+  }
+  /* Dar espacio al control nativo de abrir el menú, sin duplicarlo. */
+  .stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stExpandSidebarButton"],
+  .stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stSidebarCollapsedControl"]{
+    top:12px!important;left:11px!important;width:43px!important;min-width:43px!important;height:43px!important;min-height:43px!important;
+    border-radius:14px!important;z-index:100030!important;background:#fff!important;
+  }
+  .stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stHeader"]{height:64px!important;background:rgba(245,247,251,.94)!important;backdrop-filter:blur(15px)!important;}
+  .stApp:not(:has(.st-key-pm_auth_page)) .st-key-pm_mobile_topbar{display:block!important;position:relative!important;margin:0 0 13px!important;}
+  .pm-mobile-top-inner{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;padding:8px 0;}
+  .pm-mobile-top-brand{display:flex;align-items:center;gap:11px;min-width:0;}
+  .pm-mobile-logo{width:57px;height:43px;display:grid;place-items:center;flex:none;background:#fff;border:1px solid #e8ebf2;border-radius:13px;padding:5px;}
+  .pm-mobile-logo img{width:100%!important;height:100%!important;object-fit:contain;}
+  .pm-mobile-top-right{display:flex;align-items:center;gap:9px;flex:none;}
+  .pm-mobile-top-right .tp-avatar{width:38px!important;height:38px!important;object-fit:cover!important;border-radius:50%!important;box-shadow:0 0 0 2px #fff,0 0 0 3px #f2c8cf!important;}
+  .pm-mobile-top-brand strong{display:block;color:#19293f;font-size:.89rem;font-weight:860;line-height:1.3;letter-spacing:-.035em;}
+  .pm-mobile-top-brand small{display:block;font-size:.70rem;line-height:1.3;margin-top:3px;color:#7a8799;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px;}
+  .pm-mobile-top-meta{display:inline-flex;align-items:center;gap:6px;flex:none;color:#597467;background:#edf9f2;border:1px solid #d7f1e2;padding:7px 9px;border-radius:999px;font-size:.67rem;font-weight:750;}
+  .pm-mobile-live{width:6px;height:6px;background:#16a46e;border-radius:50%;}
+  .stApp:not(:has(.st-key-pm_auth_page)) .pm-workspace-head{padding:15px 16px!important;margin:0 0 13px!important;border-radius:19px!important;box-shadow:0 8px 26px -22px rgba(21,34,55,.16)!important;}
+  .stApp:not(:has(.st-key-pm_auth_page)) .pm-workspace-top{display:none!important;}
+  .stApp:not(:has(.st-key-pm_auth_page)) .pm-workspace-main{gap:11px!important;align-items:center!important;}
+  .stApp:not(:has(.st-key-pm_auth_page)) .pm-workspace-main h1{font-size:1.25rem!important;letter-spacing:-.045em!important;line-height:1.26!important;margin:0 0 3px!important;}
+  .stApp:not(:has(.st-key-pm_auth_page)) .pm-workspace-main p{font-size:.75rem!important;line-height:1.45!important;}
+  .stApp:not(:has(.st-key-pm_auth_page)) .pm-workspace-glyph{width:37px!important;height:37px!important;border-radius:11px!important;}
+  .stApp:not(:has(.st-key-pm_auth_page)) .pm-workspace-glyph .material-symbols-rounded{font-size:21px!important;}
+  /* No dejar que columnas de escritorio compriman los formularios del móvil. */
+  .stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stMain"] [data-testid="stHorizontalBlock"]:not(.pm-mobile-ignore){
+    flex-wrap:wrap!important;gap:11px!important;align-items:stretch!important;
+  }
+  .stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stMain"] [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]{
+    min-width:0!important;max-width:100%!important;width:100%!important;flex:1 1 100%!important;
+  }
+  .stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stMain"] [data-testid="stForm"],
+  .stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stMain"] [data-testid="stExpander"]{
+    min-width:0!important;max-width:100%!important;box-sizing:border-box!important;border-radius:17px!important;
+  }
+  .stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stMain"] [data-testid="stForm"]{padding:13px!important;}
+  .stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stMain"] [data-testid="stButton"] button,
+  .stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stMain"] [data-testid="stFormSubmitButton"] button{
+    min-height:46px!important;border-radius:13px!important;touch-action:manipulation!important;
+  }
+  .stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stMain"] input,
+  .stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stMain"] textarea,
+  .stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stMain"] [role="combobox"]{
+    font-size:16px!important;max-width:100%!important;
+  }
+  /* Indicadores compactos, tarjetas con espacio suficiente. */
+  .stApp:not(:has(.st-key-pm_auth_page)) .tp-gridk,
+  .stApp:not(:has(.st-key-pm_auth_page)) .pm-exec-kpis,
+  .stApp:not(:has(.st-key-pm_auth_page)) .pm2-stats{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px!important;}
+  .stApp:not(:has(.st-key-pm_auth_page)) .tp-kpi,
+  .stApp:not(:has(.st-key-pm_auth_page)) .pm-exec-stat,
+  .stApp:not(:has(.st-key-pm_auth_page)) .pm2-stat{padding:12px!important;min-width:0!important;min-height:0!important;border-radius:17px!important;}
+  .stApp:not(:has(.st-key-pm_auth_page)) .tp-kpi-val,
+  .stApp:not(:has(.st-key-pm_auth_page)) .pm-exec-stat-number{font-size:1.55rem!important;line-height:1.18!important;}
+  .stApp:not(:has(.st-key-pm_auth_page)) .tp-kpi-lbl,
+  .stApp:not(:has(.st-key-pm_auth_page)) .pm-exec-stat-head{font-size:.72rem!important;overflow-wrap:anywhere;}
+  .stApp:not(:has(.st-key-pm_auth_page)) .pm2-staff{padding:13px!important;border-radius:17px!important;}
+  .stApp:not(:has(.st-key-pm_auth_page)) .pm2-task-meta{gap:5px!important;}
+  .stApp:not(:has(.st-key-pm_auth_page)) .pm2-pill{font-size:.71rem!important;white-space:normal!important;}
+  .stApp:not(:has(.st-key-pm_auth_page)) .pm2-hero{padding:16px!important;border-radius:18px!important;margin-bottom:10px!important;}
+  .stApp:not(:has(.st-key-pm_auth_page)) .pm2-hero h2{font-size:1.33rem!important;line-height:1.25!important;margin:0!important;}
+  .stApp:not(:has(.st-key-pm_auth_page)) .st-key-pm_v_mis_rutinas .pm2-hero h2{color:#fff!important;font-weight:850!important;text-shadow:none!important;}
+  .stApp:not(:has(.st-key-pm_auth_page)) .st-key-pm_v_mis_rutinas .pm2-hero p{display:none!important;}
+  .stApp:not(:has(.st-key-pm_auth_page)) .st-key-pm_v_mis_rutinas .pm2-kicker{margin-bottom:7px!important;font-size:.64rem!important;}
+  /* Filas de registro y cantidad alineadas, nunca pegadas al borde. */
+  .stApp:not(:has(.st-key-pm_auth_page)) .tp-row{min-width:0!important;max-width:100%!important;padding:13px!important;gap:10px!important;display:flex!important;align-items:center!important;flex-wrap:wrap!important;}
+  .stApp:not(:has(.st-key-pm_auth_page)) .tp-row-time{flex:0 0 68px!important;width:68px!important;min-width:68px!important;margin:0!important;padding:0 8px!important;text-align:center!important;box-sizing:border-box!important;font-variant-numeric:tabular-nums!important;}
+  .stApp:not(:has(.st-key-pm_auth_page)) .tp-row-main{min-width:0!important;flex:1 1 125px!important;}
+  .stApp:not(:has(.st-key-pm_auth_page)) .tp-row-main span{white-space:normal!important;overflow-wrap:anywhere!important;}
+  .stApp:not(:has(.st-key-pm_auth_page)) .tp-row .tp-chips{margin-left:auto!important;flex:0 1 auto!important;max-width:100%!important;justify-content:flex-end!important;}
+  .stApp:not(:has(.st-key-pm_auth_page)) .tp-row .tp-chip{white-space:nowrap!important;}
+  .stApp:not(:has(.st-key-pm_auth_page)) .tp-focus{padding:15px!important;border-radius:18px!important;}
+  .stApp:not(:has(.st-key-pm_auth_page)) .tp-focus-main{flex-wrap:wrap!important;}
+  .stApp:not(:has(.st-key-pm_auth_page)) .pm2-staff-name{overflow-wrap:anywhere!important;}
+  .stApp:not(:has(.st-key-pm_auth_page)) .tp-table-wrap,
+  .stApp:not(:has(.st-key-pm_auth_page)) .tp-calendar-scroll,
+  .stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stDataFrame"],
+  .stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stTable"]{width:100%!important;max-width:100%!important;min-width:0!important;overflow-x:auto!important;-webkit-overflow-scrolling:touch!important;}
+  .stApp:not(:has(.st-key-pm_auth_page)) .st-key-tp_bottomnav{
+    display:block!important;position:fixed!important;left:0!important;right:0!important;bottom:0!important;
+    width:100%!important;max-width:100%!important;margin:0!important;
+    background:rgba(255,255,255,.96)!important;backdrop-filter:blur(17px) saturate(170%)!important;
+    border-top:1px solid #e7eaf1!important;border-radius:21px 21px 0 0!important;
+    box-shadow:0 -12px 35px rgba(25,37,62,.09)!important;
+    z-index:1000!important;padding:8px 8px calc(9px + env(safe-area-inset-bottom,0px))!important;
+    box-sizing:border-box!important;
+  }
+  .stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stMain"] .st-key-tp_bottomnav [data-testid="stHorizontalBlock"]{
+    display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;gap:3px!important;
+    justify-content:space-between!important;align-items:stretch!important;
+  }
+  .stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stMain"] .st-key-tp_bottomnav [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]{
+    display:block!important;flex:1 1 0!important;min-width:0!important;width:25%!important;max-width:25%!important;
+    padding:0!important;
+  }
+  .stApp:not(:has(.st-key-pm_auth_page)) .st-key-tp_bottomnav button{
+    display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;
+    min-height:60px!important;width:100%!important;gap:5px!important;padding:7px 2px!important;
+    border:0!important;border-radius:14px!important;background:transparent!important;
+    box-shadow:none!important;color:#78859a!important;transition:background .15s ease,color .15s ease!important;
+    font-size:.73rem!important;font-weight:780!important;line-height:1.2!important;
+  }
+  .stApp:not(:has(.st-key-pm_auth_page)) .st-key-tp_bottomnav button[kind="primary"],
+  .stApp:not(:has(.st-key-pm_auth_page)) .st-key-tp_bottomnav button[data-testid="stBaseButton-primary"]{
+    background:#fff0f3!important;color:#ce2c47!important;
+  }
+  .stApp:not(:has(.st-key-pm_auth_page)) .st-key-tp_bottomnav button>div{display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:3px!important;}
+  .stApp:not(:has(.st-key-pm_auth_page)) .st-key-tp_bottomnav [data-testid="stIconMaterial"]{
+    display:inline-flex!important;font-family:'Material Symbols Rounded'!important;font-size:21px!important;line-height:1!important;color:inherit!important;
+  }
+  .stApp:not(:has(.st-key-pm_auth_page)) .st-key-tp_bottomnav button p{font-size:.73rem!important;font-weight:780!important;line-height:1.2!important;margin:0!important;color:inherit!important;white-space:nowrap!important;}
+  /* Premium IA vive en la cabecera móvil: no tapa la lista de tareas ni la barra inferior. */
+  .stApp:not(:has(.st-key-pm_auth_page)) .st-key-tp_chat_fab{
+    top:12px!important;bottom:auto!important;right:11px!important;left:auto!important;
+    transform:none!important;width:45px!important;height:45px!important;min-height:45px!important;z-index:100060!important;
+  }
+  .stApp:not(:has(.st-key-pm_auth_page)) .st-key-tp_chat_fab button{
+    width:44px!important;height:44px!important;min-width:44px!important;min-height:44px!important;border-radius:50%!important;
+  }
+  .stApp:not(:has(.st-key-pm_auth_page)) .st-key-tp_chat_panel{
+    top:67px!important;bottom:calc(87px + env(safe-area-inset-bottom,0px))!important;
+    left:10px!important;right:10px!important;transform:none!important;
+    width:calc(100vw - 20px)!important;max-width:calc(100vw - 20px)!important;
+    max-height:calc(100dvh - 160px - env(safe-area-inset-bottom,0px))!important;
+    padding:13px!important;border-radius:21px!important;z-index:100050!important;
+    overflow-y:auto!important;overflow-x:hidden!important;box-sizing:border-box!important;
+  }
+  /* Sidebar: ocupa el ancho correcto sin bloquear la barra de apertura al cerrarse. */
+  .stApp:not(:has(.st-key-pm_auth_page)) section[data-testid="stSidebar"]:not([aria-expanded="false"]){z-index:10020!important;}
+  .stApp:not(:has(.st-key-pm_auth_page)) section[data-testid="stSidebar"] [data-testid="stSidebarContent"]{overscroll-behavior:contain!important;}
+  /* Mensajes y diálogos respetan los bordes del móvil. */
+  .stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stDialog"] [role="dialog"]{max-width:calc(100vw - 24px)!important;max-height:calc(100dvh - 30px)!important;overflow-y:auto!important;}
+}
+@media screen and (max-width: 420px){
+  .pm-mobile-top-meta{display:none!important;}
+  .stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stMain"] .block-container{padding-left:11px!important;padding-right:11px!important;}
+  .pm-mobile-top-brand small{max-width:205px;}
+  .stApp:not(:has(.st-key-pm_auth_page)) .st-key-tp_bottomnav{padding-left:6px!important;padding-right:6px!important;}
+  .stApp:not(:has(.st-key-pm_auth_page)) .st-key-tp_bottomnav button{min-height:60px!important;}
+  .stApp:not(:has(.st-key-pm_auth_page)) .tp-gridk,
+  .stApp:not(:has(.st-key-pm_auth_page)) .pm-exec-kpis,
+  .stApp:not(:has(.st-key-pm_auth_page)) .pm2-stats{gap:8px!important;}
+  .stApp:not(:has(.st-key-pm_auth_page)) .pm-exec-stat,
+  .stApp:not(:has(.st-key-pm_auth_page)) .pm2-stat{padding:10px!important;}
+}
+@media screen and (min-width:781px){
+  .st-key-tp_bottomnav{display:none!important;}
+}
+/* Componentes nuevos para la portada operativa del celular. */
+.pm-m-home-hero{background:linear-gradient(125deg,#14253f 0%,#243656 62%,#b72c47 145%);padding:20px 19px;border-radius:23px;color:#fff;margin:0 0 11px;box-shadow:0 20px 36px -28px rgba(19,39,70,.55);}
+.pm-m-eyebrow{color:#ffc4d0;font-size:.66rem;font-weight:850;letter-spacing:.14em;margin:0 0 9px;}
+.pm-m-home-hero h2{font-size:clamp(1.36rem,5.2vw,1.65rem)!important;line-height:1.21!important;letter-spacing:-.045em;color:#fff!important;margin:0 0 8px!important;}
+.pm-m-home-hero p{color:#d9e1ef;font-size:.82rem;line-height:1.58;margin:0 0 13px;}
+.pm-m-home-tags{display:flex;flex-wrap:wrap;gap:7px;}
+.pm-m-home-tags span{padding:7px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.11);color:#f7f9fd;font-size:.71rem;font-weight:760;}
+.pm-m-home-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:0 0 11px;}
+.pm-m-home-metrics>div{display:flex;flex-direction:column;min-width:0;gap:3px;padding:13px;background:#fff;border:1px solid #e8edf4;border-radius:17px;box-shadow:0 9px 24px -23px rgba(20,35,60,.25);}
+.pm-m-home-metrics small{font-size:.69rem;font-weight:700;color:#75839a;line-height:1.35;}
+.pm-m-home-metrics strong{font-size:1.7rem;font-weight:850;color:#192b46;line-height:1.2;font-variant-numeric:tabular-nums;}
+.pm-m-home-metrics span{font-size:.67rem;color:#97a3b3;line-height:1.35;}
+.pm-m-home-title{font-size:.91rem;font-weight:840;color:#25334b;margin:12px 0 8px;}
+.pm-m-home-task{display:flex;flex-direction:column;gap:4px;border:1px solid #e7edf5;background:#fff;border-radius:16px;padding:13px;margin:0 0 8px;}
+.pm-m-home-task small{font-size:.71rem;color:#ce2f49;font-weight:780;}
+.pm-m-home-task strong{color:#203149;font-size:.87rem;line-height:1.42;font-weight:830;}
+.pm-m-home-task span{font-size:.71rem;color:#7d8b9b;}
+.pm-m-notice-heading{background:#fff;border:1px solid #e7edf4;border-radius:19px;padding:17px;margin-bottom:10px;}
+.pm-m-notice-heading .pm-m-eyebrow{color:#cf304a;margin-bottom:5px;}
+.pm-m-notice-heading h2{color:#203048;font-size:1.12rem!important;line-height:1.3!important;margin:0 0 6px!important;font-weight:840!important;}
+.pm-m-notice-heading p{color:#7b899c;font-size:.79rem;line-height:1.55;margin:0;}
+.pm-m-notice-row{display:flex;justify-content:space-between;gap:12px;align-items:center;border:1px solid #e9edf4;border-radius:16px;padding:14px;background:#fff;margin-bottom:8px;}
+.pm-m-notice-row strong{display:block;font-size:.87rem;color:#21324b;margin-bottom:4px;}
+.pm-m-notice-row span{display:block;font-size:.73rem;line-height:1.45;color:#7e899b;}
+.pm-m-notice-row .pm-m-notice-count{flex:none;display:grid;place-items:center;background:#fff0f3;color:#c82e47;width:37px;height:37px;border-radius:12px;font-weight:860;font-size:.92rem;}
+
+@media screen and (max-width:780px){
+  .stApp:not(:has(.st-key-pm_auth_page)) .st-key-pm_mobile_employee_home{display:block!important;margin-bottom:15px!important;}
+  .stApp:not(:has(.st-key-pm_auth_page)) .st-key-pm_mobile_notices{display:block!important;margin-bottom:12px!important;}
+  .stApp:not(:has(.st-key-pm_auth_page)) .st-key-pm_mobile_employee_home [data-testid="stHorizontalBlock"]{
+    display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;gap:8px!important;
+  }
+  .stApp:not(:has(.st-key-pm_auth_page)) .st-key-pm_mobile_employee_home [data-testid="stColumn"]{
+    flex:1 1 0!important;min-width:0!important;width:50%!important;max-width:50%!important;
+  }
+  .stApp:not(:has(.st-key-pm_auth_page)) .st-key-pm_mobile_employee_home [data-testid="stButton"] button{min-height:47px!important;}
+  /* El saludo anterior se reemplaza sólo en móvil; sus controles siguen intactos. */
+  .stApp:not(:has(.st-key-pm_auth_page)) .st-key-pm_v_marcar_asistencia .tp-hero{display:none!important;}
+}
+@media (prefers-reduced-motion:reduce){
+ .pm-m-home-hero,.pm-m-home-task,.pm-m-home-metrics>div{animation:none!important;transition:none!important;}
+}
+</style>
+"""
+st.markdown(_PM_MOBILE_EXPERIENCE_CSS, unsafe_allow_html=True)
+
+# Iconografía SVG local en la barra inferior: no depende de descargar Material Symbols.
+# El orden coincide con _nav_items y los botones conservan sus on_click nativos.
+_pm_mobile_icons = ["home", "list", "bell", "users"] if rol_actual == "admin" else ["home", "list", "bell", "user"]
+_pm_mobile_icon_rules = []
+for _index_m, _icon_m in enumerate(_pm_mobile_icons, 1):
+    _symbol = _PM_NAV_SVG[_icon_m]
+    _svg_icon = ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" '
+                 'fill="none" stroke="black" stroke-width="1.8" stroke-linecap="round" '
+                 'stroke-linejoin="round">' + _symbol + '</svg>')
+    _uri_icon = "data:image/svg+xml," + _pm_quote_svg(_svg_icon, safe="")
+    _pm_mobile_icon_rules.append(
+        '.stApp:not(:has(.st-key-pm_auth_page)) .st-key-tp_bottomnav '
+        f'[data-testid="stColumn"]:nth-child({_index_m}) button::before'
+        '{content:""!important;display:block!important;flex:none!important;width:21px!important;'
+        'height:21px!important;background:currentColor!important;'
+        f'-webkit-mask:url("{_uri_icon}") center/contain no-repeat!important;'
+        f'mask:url("{_uri_icon}") center/contain no-repeat!important;}}'
+    )
+st.markdown('<style>@media(max-width:780px){'
+            '.stApp:not(:has(.st-key-pm_auth_page)) .st-key-tp_bottomnav [data-testid="stIconMaterial"]'
+            '{display:none!important;}' + ''.join(_pm_mobile_icon_rules) + '}</style>',
+            unsafe_allow_html=True)
 
 # Notificación de botellas: se abre una sola vez por inicio de sesión.
 # Debe invocarse en el cuerpo principal, nunca dentro de st.sidebar ni st.columns.
@@ -7292,11 +7559,153 @@ def premium_table(data, *args, **kwargs):
 
 
 # ============================================================
+# -----------------------------------------------------------------------
+# MOBILE FIRST · MI JORNADA
+# Se muestra únicamente en móvil y no modifica la pantalla de escritorio.
+# Los indicadores provienen de los mismos DataFrames de la app.
+# -----------------------------------------------------------------------
+def _pm_mobile_home_context():
+    hoy = obtener_ahora_peru().strftime("%Y-%m-%d")
+    dni = _pm2_dni(dni_actual)
+    turnos = st.session_state.get("programacion", pd.DataFrame())
+    turno_txt, tienda_txt = "Sin turno programado", "Mi tienda"
+    if isinstance(turnos, pd.DataFrame) and not turnos.empty and {"dni", "fecha"} <= set(turnos.columns):
+        coincidencias = turnos[
+            (turnos["dni"].astype(str).map(_pm2_dni) == dni)
+            & (turnos["fecha"].astype(str).apply(_norm_fecha_h) == hoy)
+        ]
+        if not coincidencias.empty:
+            turno_txt = str(coincidencias.iloc[0].get("turno", "Turno asignado"))
+            tienda_txt = str(coincidencias.iloc[0].get("tienda", "Mi tienda")) or "Mi tienda"
+    asistencia = st.session_state.get("asistencia", pd.DataFrame())
+    ingreso_txt = "Sin marcar ingreso"
+    if isinstance(asistencia, pd.DataFrame) and not asistencia.empty and {"dni", "fecha", "tipo"} <= set(asistencia.columns):
+        registros = asistencia[
+            (asistencia["dni"].astype(str).map(_pm2_dni) == dni)
+            & (asistencia["fecha"].astype(str) == hoy)
+            & (asistencia["tipo"].astype(str).str.upper() == "INGRESO")
+        ]
+        if not registros.empty:
+            hh = str(registros.sort_values("fecha_hora").iloc[0].get("fecha_hora", ""))[11:16]
+            ingreso_txt = f"Ingreso {hh}" if hh else "Ingreso registrado"
+    solicitudes = st.session_state.get("solicitudes", pd.DataFrame())
+    pendientes_sol = 0
+    if isinstance(solicitudes, pd.DataFrame) and not solicitudes.empty and {"dni", "estado"} <= set(solicitudes.columns):
+        pendientes_sol = int((
+            (solicitudes["dni"].astype(str).map(_pm2_dni) == dni)
+            & (solicitudes["estado"].astype(str).str.casefold() == "pendiente")
+        ).sum())
+    tareas, error_rutinas = _pm2_load()
+    tareas_hoy = pd.DataFrame()
+    pendientes_rut = 0
+    if error_rutinas is None and isinstance(tareas, pd.DataFrame) and not tareas.empty:
+        tareas_hoy = tareas[
+            (tareas["dni"].astype(str).map(_pm2_dni) == dni)
+            & (tareas["fecha"].astype(str) == hoy)
+            & (tareas["estado"].astype(str) != "Cancelada")
+        ].copy()
+        pendientes_rut = int((tareas_hoy["estado"].astype(str) != "Completada").sum())
+    return {
+        "turno": turno_txt, "tienda": tienda_txt,
+        "asistencia": ingreso_txt, "pendientes_sol": pendientes_sol,
+        "tareas_hoy": tareas_hoy, "pendientes_rut": pendientes_rut,
+        "error_rutinas": error_rutinas,
+    }
+
+
+def _pm_mobile_home():
+    context = _pm_mobile_home_context()
+    first_name = _html.escape(str(user_actual).split()[0] if user_actual else "equipo")
+    now = obtener_ahora_peru()
+    saludo = "Buenos días" if now.hour < 12 else ("Buenas tardes" if now.hour < 19 else "Buenas noches")
+    escape = _html.escape
+    with st.container(key="pm_mobile_employee_home"):
+        st.markdown(
+            '<div class="pm-m-home-hero">'
+            '<div class="pm-m-eyebrow">MI JORNADA · PREMIUM MARKET</div>'
+            f'<h2>{saludo}, {first_name}</h2>'
+            '<p>Organiza tu turno, marca tu asistencia y revisa tus actividades.</p>'
+            '<div class="pm-m-home-tags">'
+            f'<span>{escape(context["turno"])}</span>'
+            f'<span>{escape(context["asistencia"])}</span>'
+            '</div></div>', unsafe_allow_html=True,
+        )
+        rutinas_dato = "—" if context["error_rutinas"] else str(context["pendientes_rut"])
+        st.markdown(
+            '<div class="pm-m-home-metrics">'
+            '<div><small>Mis rutinas pendientes</small>'
+            f'<strong>{rutinas_dato}</strong><span>Para hoy</span></div>'
+            '<div><small>Solicitudes en revisión</small>'
+            f'<strong>{context["pendientes_sol"]}</strong><span>En seguimiento</span></div>'
+            '</div>', unsafe_allow_html=True,
+        )
+        if context["error_rutinas"]:
+            st.caption("No se pudieron actualizar las rutinas; consulta la sección Mis Rutinas para reintentar.")
+        else:
+            pendientes = context["tareas_hoy"]
+            if not pendientes.empty:
+                pendientes = pendientes[pendientes["estado"].astype(str) != "Completada"]
+            if not pendientes.empty:
+                st.markdown('<div class="pm-m-home-title">Próximas actividades</div>', unsafe_allow_html=True)
+                for _, t in pendientes.sort_values(["hora_inicio", "titulo"]).head(2).iterrows():
+                    hora = str(t.get("hora_inicio", ""))
+                    sitio = str(t.get("zona", ""))
+                    meta = " · ".join(x for x in [hora, sitio] if x)
+                    st.markdown(
+                        '<article class="pm-m-home-task">'
+                        f'<small>{escape(meta)}</small>'
+                        f'<strong>{escape(str(t.get("titulo", "Actividad")))}</strong>'
+                        f'<span>{escape(str(t.get("prioridad", "Normal")))} · {escape(str(t.get("estado", "Pendiente")))}</span>'
+                        '</article>', unsafe_allow_html=True,
+                    )
+        col_r, col_s = st.columns(2)
+        with col_r:
+            st.button("Mis rutinas", key="pm_mobile_go_rutinas", use_container_width=True,
+                      type="primary", on_click=_ir_a, args=("Mis Rutinas",), icon=":material/checklist:")
+        with col_s:
+            st.button("Solicitudes", key="pm_mobile_go_solicitudes", use_container_width=True,
+                      on_click=_ir_a, args=("Solicitar Permiso / Adelanto",), icon=":material/inbox:")
+
+# Resumen táctil de avisos, sin alterar la lógica de Solicitudes existente.
+def _pm_mobile_notices():
+    dni = _pm2_dni(dni_actual)
+    sol = st.session_state.get("solicitudes", pd.DataFrame())
+    pendientes = 0
+    aprobadas = 0
+    if isinstance(sol, pd.DataFrame) and not sol.empty and {"dni", "estado"} <= set(sol.columns):
+        mis_sol = sol[sol["dni"].astype(str).map(_pm2_dni) == dni]
+        estados = mis_sol["estado"].astype(str).str.strip().str.casefold()
+        pendientes = int((estados == "pendiente").sum())
+        aprobadas = int((estados == "aprobado").sum())
+    bot = st.session_state.get("botellas_fiadas", pd.DataFrame())
+    botellas_pend = 0
+    if isinstance(bot, pd.DataFrame) and not bot.empty and "estado" in bot.columns:
+        botellas_pend = int((bot["estado"].astype(str).str.strip().str.casefold() != "devuelta").sum())
+    with st.container(key="pm_mobile_notices"):
+        st.markdown(
+            '<section class="pm-m-notice-heading"><div class="pm-m-eyebrow">MIS AVISOS</div>'
+            '<h2>Lo que necesitas revisar</h2>'
+            '<p>Consulta tus solicitudes y los pendientes operativos sin perderte entre pantallas.</p></section>'
+            '<div class="pm-m-home-metrics">'
+            f'<div><small>En revisión</small><strong>{pendientes}</strong><span>Mis solicitudes</span></div>'
+            f'<div><small>Aprobadas</small><strong>{aprobadas}</strong><span>Mi historial</span></div>'
+            '</div>'
+            '<article class="pm-m-notice-row"><div><strong>Botellas por devolver</strong>'
+            f'<span>{botellas_pend} registro(s) pendiente(s) en las tiendas.</span></div>'
+            '<span class="pm-m-notice-count">' + str(botellas_pend) + '</span></article>',
+            unsafe_allow_html=True,
+        )
+        st.button("Revisar botellas", key="pm_mobile_bottles", use_container_width=True,
+                  on_click=_ir_a, args=("Botellas Fiadas",), icon=":material/inventory_2:")
+
 # PREMIUM MARKET 8.0 — CAPA FINAL DE COMPONENTES Y ACCESIBILIDAD
 # ============================================================
 
 if choice == "Marcar Asistencia":
     premium_module_shell('Marcar Asistencia', 'MI JORNADA', 'Registra y consulta tus marcaciones.')
+
+    # Panel específico para teléfonos; conserva el formulario existente y su lógica.
+    _pm_mobile_home()
 
     with st.container(key="pm_v_marcar_asistencia"):
 
@@ -7617,6 +8026,9 @@ elif choice == "Mi Ficha Técnica":
 
 elif choice == "Solicitar Permiso / Adelanto":
     premium_module_shell('Solicitar Permiso / Adelanto', 'SOLICITUDES', 'Registra tus solicitudes y consulta su estado.')
+
+    # Cuando se abre desde «Avisos» en celular, presenta un resumen útil.
+    _pm_mobile_notices()
 
     with st.container(key="pm_v_solicitar_permiso_adelanto"):
 
