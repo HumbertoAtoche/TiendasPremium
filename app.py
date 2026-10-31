@@ -2313,35 +2313,45 @@ def guardar_botella_fiada_gsheets(id_bf, cliente_nombre, cliente_dni, cliente_di
         return False
 
 def guardar_solicitud_gsheets(id_sol, fecha_reg, dni, nombre, tipo_sol, f_permiso, monto_adel, motivo, estado="Pendiente", respuesta="", requiere_recuperacion="No", fecha_recuperacion=""):
+    """Retorna True solo cuando Sheets confirma el append; jamás finge guardado."""
     if st.session_state.get("ver_como"):
-        st.toast("Vista previa: no se guardó ningún dato")
-        return
-    if doc_sheets:
-        try:
-            hoja = doc_sheets.worksheet("Solicitudes")
-            encabezados_actuales = hoja.row_values(1)
-            for col in ["requiere_recuperacion", "fecha_recuperacion"]:
-                if col not in encabezados_actuales:
-                    hoja.update_cell(1, len(encabezados_actuales) + 1, col)
-                    encabezados_actuales.append(col)
-            hoja.append_row([str(id_sol), str(fecha_reg), str(dni), nombre, tipo_sol, str(f_permiso), float(monto_adel), motivo, estado, respuesta, str(requiere_recuperacion), str(fecha_recuperacion)])
-        except Exception as e:
-            st.error(f"Error al guardar solicitud: {e}")
+        st.warning("Vista previa: no se guardó ningún dato")
+        return False
+    if not doc_sheets:
+        st.error("Sin conexión a Google Sheets. La solicitud no fue enviada.")
+        return False
+    try:
+        hoja = doc_sheets.worksheet("Solicitudes")
+        encabezados_actuales = hoja.row_values(1)
+        for col in ["requiere_recuperacion", "fecha_recuperacion"]:
+            if col not in encabezados_actuales:
+                hoja.update_cell(1, len(encabezados_actuales) + 1, col)
+                encabezados_actuales.append(col)
+        hoja.append_row([str(id_sol), str(fecha_reg), str(dni), nombre, tipo_sol, str(f_permiso), float(monto_adel), motivo, estado, respuesta, str(requiere_recuperacion), str(fecha_recuperacion)])
+        return True
+    except Exception as e:
+        st.error(f"No se pudo confirmar el envío en Google Sheets: {e}. Verifica la hoja antes de reintentar.")
+        return False
 
 def guardar_feriado_gsheets(fecha, descripcion):
+    """Confirma la escritura antes de anunciar el alta del feriado."""
     if st.session_state.get("ver_como"):
-        st.toast("Vista previa: no se guardó ningún dato")
-        return
-    if doc_sheets:
+        st.warning("Vista previa: no se guardó ningún dato")
+        return False
+    if not doc_sheets:
+        st.error("Sin conexión a Google Sheets. No se registró el feriado.")
+        return False
+    try:
         try:
-            try:
-                hoja = doc_sheets.worksheet("Feriados")
-            except Exception:
-                hoja = doc_sheets.add_worksheet(title="Feriados", rows="100", cols="5")
-                hoja.append_row(["fecha", "descripcion"])
-            hoja.append_row([str(fecha), descripcion])
-        except Exception as e:
-            st.error(f"Error al guardar feriado: {e}")
+            hoja = doc_sheets.worksheet("Feriados")
+        except gspread.WorksheetNotFound:
+            hoja = doc_sheets.add_worksheet(title="Feriados", rows="100", cols="5")
+            hoja.append_row(["fecha", "descripcion"])
+        hoja.append_row([str(fecha), descripcion])
+        return True
+    except Exception as e:
+        st.error(f"No se pudo confirmar el feriado: {e}. Comprueba Sheets antes de reintentar.")
+        return False
 # =========================================================
 # NUEVO MÓDULO: GESTIÓN DE VACACIONES / DESCANSO MÉDICO
 # Agregado sin alterar ninguna función ni hoja existente.
@@ -7232,6 +7242,37 @@ def _pm2_state_visual(row):
     return "Pendiente", "warning"
 
 
+# PREMIUM MARKET 6.2 · CONFIRMACIONES DURADERAS
+# Las alertas transitorias emitidas justo antes de st.rerun() desaparecen.
+# Aquí el mensaje se entrega una sola vez en la siguiente ejecución, en la
+# misma vista y sesión autenticada. No envía notificaciones externas.
+def _pm62_confirmar_despues_de_actualizar(mensaje, vista=None):
+    st.session_state["_pm62_confirmacion_pendiente"] = {
+        "mensaje": str(mensaje).strip()[:320],
+        "vista": str(vista if vista is not None else st.session_state.get("nav_radio", "")),
+        "usuario": str(st.session_state.get("usuario_login", "")),
+        "momento": time.time(),
+    }
+
+
+def _pm62_mostrar_confirmacion(vista):
+    aviso = st.session_state.get("_pm62_confirmacion_pendiente")
+    if not isinstance(aviso, dict):
+        return
+    if (str(aviso.get("usuario", "")) != str(st.session_state.get("usuario_login", ""))
+            or time.time() - float(aviso.get("momento", 0)) > 180):
+        st.session_state.pop("_pm62_confirmacion_pendiente", None)
+        return
+    if str(aviso.get("vista", "")) != str(vista):
+        return  # una navegación intermedia no pierde la confirmación
+    st.session_state.pop("_pm62_confirmacion_pendiente", None)
+    # Toast flotante visible incluso si el usuario sigue desplazado al fondo.
+    # El banner también permanece visible en la página hasta la siguiente acción.
+    texto = str(aviso.get("mensaje", "Operación confirmada."))
+    st.toast(texto)
+    st.success(texto)
+
+
 def _pm2_notice(ok, msg):
     (st.success if ok else st.error)(msg)
 
@@ -9136,6 +9177,9 @@ def _pm_mobile_notices():
         st.button("Revisar botellas", key="pm_mobile_bottles", use_container_width=True,
                   on_click=_ir_a, args=("Botellas Fiadas",), icon=":material/inventory_2:")
 
+# Mostrar las confirmaciones de la ejecución anterior antes del módulo activo.
+_pm62_mostrar_confirmacion(choice)
+
 # PREMIUM MARKET 8.0 — CAPA FINAL DE COMPONENTES Y ACCESIBILIDAD
 # ============================================================
 
@@ -9203,14 +9247,14 @@ if choice == "Marcar Asistencia":
                     st.markdown('<div class="btn-ingreso">', unsafe_allow_html=True)
                     if st.button("Marcar Ingreso", use_container_width=True):
                         if registrar_marca(dni_actual, user_actual, "INGRESO", obs_marca, es_turno_extra):
-                            st.toast("Ingreso registrado correctamente")
+                            _pm62_confirmar_despues_de_actualizar("Ingreso registrado correctamente")
                             st.rerun()
     
                 with c2:
                     st.markdown('<div class="btn-salida">', unsafe_allow_html=True)
                     if st.button("Marcar Salida", use_container_width=True):
                         if registrar_marca(dni_actual, user_actual, "SALIDA", obs_marca, es_turno_extra):
-                            st.toast("Salida registrada correctamente")
+                            _pm62_confirmar_despues_de_actualizar("Salida registrada correctamente")
                             st.rerun()
     
         with col_preview:
@@ -9378,7 +9422,7 @@ elif choice == "Registrar Descuadre":
                     st.session_state.descuadres = pd.concat(
                         [pd.DataFrame([nuevo_row]), st.session_state.descuadres], ignore_index=True
                     )
-                    st.toast("Descuadre registrado correctamente")
+                    _pm62_confirmar_despues_de_actualizar("Descuadre registrado correctamente")
                     st.rerun()
 
         if not _mio.empty:
@@ -9458,8 +9502,7 @@ elif choice == "Registrar Incidencia":
                     }
                     st.session_state.incidencias = pd.concat([pd.DataFrame([nueva_fila_inc]), st.session_state.incidencias], ignore_index=True)
                     registrar_auditoria("Registrar Incidencia", "Incidencias", f"{user_actual}: {tipo_inc_sel} — S/. {valor_inc:.2f}")
-                    st.toast("Incidencia registrada correctamente")
-                    time.sleep(0.3)
+                    _pm62_confirmar_despues_de_actualizar("Incidencia registrada correctamente")
                     st.rerun()
 
         st.markdown("<br>", unsafe_allow_html=True)
@@ -9612,16 +9655,18 @@ elif choice == "Solicitar Permiso / Adelanto":
                             "fecha_recuperacion": fecha_recuperacion_val
                         }
 
-                        st.session_state.solicitudes = pd.concat([pd.DataFrame([nueva_peticion]), st.session_state.solicitudes], ignore_index=True)
-                        guardar_solicitud_gsheets(
+                        guardado_confirmado = guardar_solicitud_gsheets(
                             id_nuevo, f_reg_now, dni_actual, user_actual, tipo_sol,
                             f_permiso_val, monto_adel_val, motivo_sol.strip(),
                             requiere_recuperacion=("Sí" if (tipo_sol == "Permiso Laboral" and requiere_recuperacion) else "No"),
                             fecha_recuperacion=fecha_recuperacion_val
                         )
-                        st.success("Solicitud enviada con éxito. Un administrador la revisará pronto.")
-                        time.sleep(0.5)
-                        st.rerun()
+                        if guardado_confirmado:
+                            st.session_state.solicitudes = pd.concat(
+                                [pd.DataFrame([nueva_peticion]), st.session_state.solicitudes], ignore_index=True
+                            )
+                            _pm62_confirmar_despues_de_actualizar("Solicitud enviada con éxito. Un administrador la revisará pronto.")
+                            st.rerun()
 
         with t_hist:
             st.markdown("<h4 style='font-size:1rem; color:#111827; margin-bottom:12px;'>Historial de Solicitudes</h4>", unsafe_allow_html=True)
@@ -9722,8 +9767,7 @@ elif choice == "Mis Boletas":
                                                          "firma_dispositivo": _ua, "codigo_verificacion": _cod}):
                                 registrar_auditoria("Firma de Boleta", "Boletas", f"{user_actual} firmó su boleta de {_dm['periodo']}")
                                 st.session_state.boletas_historial = obtener_boletas_historial_gsheets()
-                                st.toast("Boleta firmada. ¡Gracias!")
-                                time.sleep(0.3)
+                                _pm62_confirmar_despues_de_actualizar("Boleta firmada. ¡Gracias!")
                                 st.rerun()
                     with st.expander("¿No puedes firmar en pantalla?"):
                         st.caption("Puedes dar tu conformidad sin firma. Quedará registrada la fecha y hora, pero sin firma manuscrita.")
@@ -9731,15 +9775,14 @@ elif choice == "Mis Boletas":
                             if _actualizar_boleta(_idb, {"estado": "Conforme", "fecha_conformidad": obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S")}):
                                 registrar_auditoria("Conformidad de Boleta", "Boletas", f"{user_actual} — {_dm['periodo']} (sin firma)")
                                 st.session_state.boletas_historial = obtener_boletas_historial_gsheets()
-                                st.toast("Conformidad registrada. ¡Gracias!")
-                                time.sleep(0.3)
+                                _pm62_confirmar_despues_de_actualizar("Conformidad registrada. ¡Gracias!")
                                 st.rerun()
                     _obs = st.text_area("Describe qué parte de tu boleta no está correcta", key=f"misbol_obs_{_idb}", placeholder="Ej.: Me descontaron una tardanza del día 12, pero llegué a tiempo.")
                     if st.button("Enviar observación", key=f"misbol_obsbtn_{_idb}", disabled=len(_obs.strip()) < 10, use_container_width=True):
                         if _actualizar_boleta(_idb, {"estado": "Observado", "observacion_colaborador": _obs.strip(), "fecha_observacion": obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S")}):
                             registrar_auditoria("Observación de Boleta", "Boletas", f"{user_actual} — {_dm['periodo']}: {_obs.strip()[:120]}")
                             st.session_state.boletas_historial = obtener_boletas_historial_gsheets()
-                            st.toast("Observación enviada a administración")
+                            _pm62_confirmar_despues_de_actualizar("Observación enviada a administración")
                             st.rerun()
                     st.caption("La observación debe tener al menos 10 caracteres.")
                 elif _est_m == "Observado":
@@ -10293,8 +10336,7 @@ elif choice == "Gestión Colaboradores":
                         )
                         registrar_auditoria("Crear Colaborador", "Colaboradores", f"{nom_in.strip()} (DNI {dni_in}) — cargo: {cargo_in}")
                         crear_checklist_onboarding(str(dni_in).strip(), nom_in.strip())
-                        st.toast("Colaborador y Ficha Técnica registrados")
-                        time.sleep(0.3)
+                        _pm62_confirmar_despues_de_actualizar("Colaborador y Ficha Técnica registrados")
                         st.rerun()
 
         with tab_directorio:
@@ -10340,7 +10382,7 @@ elif choice == "Gestión Colaboradores":
                                 st.session_state.pop("empleados", None)
                                 st.stop()
                             registrar_auditoria("Actualizar Estado de Planilla", "Colaboradores", f"{colab_ep_sel} → en_planilla={nuevo_ep}")
-                            st.toast(f"Estado de planilla de {colab_ep_sel} actualizado a '{nuevo_ep}'")
+                            _pm62_confirmar_despues_de_actualizar(f"Estado de planilla de {colab_ep_sel} actualizado a '{nuevo_ep}'")
                             st.rerun()
 
             if rol_actual == "admin" and not st.session_state.empleados.empty:
@@ -10365,8 +10407,7 @@ elif choice == "Gestión Colaboradores":
                                         st.stop()
                                     registrar_auditoria("Dar de Baja Colaborador", "Colaboradores", f"{colab_a_desactivar} — cese: {f_cese_input}")
                                     crear_checklist_offboarding(dni_baja_ep, colab_a_desactivar)
-                                    st.toast(f"Colaborador {colab_a_desactivar} desactivado correctamente")
-                                    time.sleep(0.3)
+                                    _pm62_confirmar_despues_de_actualizar(f"Colaborador {colab_a_desactivar} desactivado correctamente")
                                     st.rerun()
                             else:
                                 st.warning("Marca la casilla de confirmación antes de dar de baja.")
@@ -10495,11 +10536,12 @@ elif choice == "Boletas de Pago":
                                 st.warning("Esa fecha ya se encuentra registrada como feriado.")
                             else:
                                 nuevo_f = {"fecha": str_f_fer, "descripcion": desc_feriado.strip()}
-                                st.session_state.feriados = pd.concat([st.session_state.feriados, pd.DataFrame([nuevo_f])], ignore_index=True)
-                                guardar_feriado_gsheets(str_f_fer, desc_feriado.strip())
-                                st.toast("Feriado agregado con éxito")
-                                time.sleep(0.3)
-                                st.rerun()
+                                if guardar_feriado_gsheets(str_f_fer, desc_feriado.strip()):
+                                    st.session_state.feriados = pd.concat(
+                                        [st.session_state.feriados, pd.DataFrame([nuevo_f])], ignore_index=True
+                                    )
+                                    _pm62_confirmar_despues_de_actualizar("Feriado agregado con éxito")
+                                    st.rerun()
 
             with c_f2:
                 if not st.session_state.feriados.empty:
@@ -10880,8 +10922,7 @@ elif choice == "Boletas de Pago":
                 elif _res:
                     registrar_auditoria("Emitir Boleta", "Boletas", f"{colab_b_sel} — {datos_boleta['periodo']} — Neto: S/. {neto_pagar_calc:.2f}")
                     st.session_state.boletas_historial = obtener_boletas_historial_gsheets()
-                    st.toast("Boleta emitida: ya es visible para el colaborador")
-                    time.sleep(0.3)
+                    _pm62_confirmar_despues_de_actualizar("Boleta emitida: ya es visible para el colaborador")
                     st.rerun()
 elif choice == "Programación de Turnos":
     premium_module_shell('Programación de Turnos', 'PLANIFICACIÓN', 'Organización de horarios y cobertura operativa.')
@@ -10958,14 +10999,18 @@ elif choice == "Programación de Turnos":
                         _ca.markdown(f"**{_html.escape(str(_pend_r.get('nombre', 'Colaborador')))}**  \nDomingo {_domingo_panel:%d/%m/%Y} · 15:15–21:00")
                         if _cb.button("Aprobar", key=f"turn_ap_{_id_p}", use_container_width=True):
                             _ok, _msg = _resolver_solicitud_administrativa(_id_p, "Aprobado")
-                            (st.success if _ok else st.error)(_msg)
                             if _ok:
+                                _pm62_confirmar_despues_de_actualizar(_msg)
                                 st.rerun()
+                            else:
+                                st.error(_msg)
                         if _cc.button("Rechazar", key=f"turn_rec_{_id_p}", use_container_width=True):
                             _ok, _msg = _resolver_solicitud_administrativa(_id_p, "Rechazado")
-                            (st.success if _ok else st.error)(_msg)
                             if _ok:
+                                _pm62_confirmar_despues_de_actualizar(_msg)
                                 st.rerun()
+                            else:
+                                st.error(_msg)
             else:
                 st.caption("Sin solicitudes dominicales pendientes esta semana.")
             with st.expander("Editar programación semanal", expanded=False):
@@ -11079,8 +11124,7 @@ elif choice == "Programación de Turnos":
                 registrar_auditoria("Guardar Programación de Turnos", "Programación", f"Semana del {_lunes_iso}: {len(_nuevas)} casilla(s)")
                 st.session_state.programacion = obtener_programacion_gsheets()
                 st.session_state.pop(f"prog_base_{_lunes_iso}", None)
-                st.toast("Programación de la semana guardada. Los colaboradores ya ven su turno.")
-                time.sleep(0.3)
+                _pm62_confirmar_despues_de_actualizar("Programación de la semana guardada. Los colaboradores ya ven su turno.")
                 st.rerun()
 
 elif choice == "Solicitudes y Permisos":
@@ -11183,14 +11227,18 @@ elif choice == "Solicitudes y Permisos":
                         resp_admin_input = c_obs.text_input("Observación", key=f"resp_{id_s}", placeholder="Observación para el colaborador (opcional)", label_visibility="collapsed")
                         if c_ap.button("Aprobar", key=f"ap_{id_s}", use_container_width=True):
                             _ok, _msg = _resolver_solicitud_administrativa(id_s, "Aprobado", resp_admin_input)
-                            (st.success if _ok else st.error)(_msg)
                             if _ok:
+                                _pm62_confirmar_despues_de_actualizar(_msg)
                                 st.rerun()
+                            else:
+                                st.error(_msg)
                         if c_rc.button("Rechazar", key=f"rec_{id_s}", use_container_width=True):
                             _ok, _msg = _resolver_solicitud_administrativa(id_s, "Rechazado", resp_admin_input)
-                            (st.success if _ok else st.error)(_msg)
                             if _ok:
+                                _pm62_confirmar_despues_de_actualizar(_msg)
                                 st.rerun()
+                            else:
+                                st.error(_msg)
 
             st.markdown("<br>", unsafe_allow_html=True)
             st.download_button("Exportar Solicitudes Filtradas a Excel", to_excel(df_sol), "Solicitudes.xlsx", use_container_width=True)
@@ -11366,8 +11414,7 @@ elif choice == "Historial de Descuadres":
                                     st.session_state.pop("descuadres", None)
                                     st.stop()
                                 registrar_auditoria("Editar Descuadre", "Descuadres", f"{row_mod['nombre']} ({row_mod['fecha']}): {valor_anterior_desc} → S/. {nuevo_monto} ({nuevo_tipo})")
-                                st.toast("Descuadre actualizado correctamente")
-                                time.sleep(0.3)
+                                _pm62_confirmar_despues_de_actualizar("Descuadre actualizado correctamente")
                                 st.rerun()
 
                 with col_del:
@@ -11385,8 +11432,7 @@ elif choice == "Historial de Descuadres":
                                     st.stop()
                                 st.session_state.descuadres = st.session_state.descuadres.drop(idx_del).reset_index(drop=True)
                                 registrar_auditoria("Eliminar Descuadre", "Descuadres", f"{row_del_desc['nombre']} ({row_del_desc['fecha']}): S/. {row_del_desc['monto']} ({row_del_desc['tipo']})")
-                                st.toast("Descuadre eliminado correctamente")
-                                time.sleep(0.3)
+                                _pm62_confirmar_despues_de_actualizar("Descuadre eliminado correctamente")
                                 st.rerun()
                             else:
                                 st.warning("Marca la casilla de confirmación antes de eliminar.")
@@ -11465,8 +11511,7 @@ elif choice == "Incidencias y Daños":
                             st.session_state.pop("incidencias", None)
                             st.stop()
                         registrar_auditoria("Actualizar Estado de Incidencia", "Incidencias", f"Incidencia #{idx_inc_resolver} → {_nuevo}")
-                        st.toast("Estado actualizado")
-                        time.sleep(0.3)
+                        _pm62_confirmar_despues_de_actualizar("Estado actualizado")
                         st.rerun()
         else:
             ui_callout("No hay incidencias registradas todavía.")
@@ -11531,7 +11576,7 @@ elif choice == "Botellas Fiadas":
                             }
                             st.session_state.botellas_fiadas = pd.concat([pd.DataFrame([nueva_fila_bf]), st.session_state.botellas_fiadas], ignore_index=True)
                             registrar_auditoria("Registrar Botellas Fiadas", "BotellasFiadas", f"{cliente_nombre_bf.strip()} — {cantidad_bf} botella(s) de {tipo_botella_bf}")
-                            st.toast("Botellas fiadas registradas correctamente")
+                            _pm62_confirmar_despues_de_actualizar("Botellas fiadas registradas correctamente")
                             st.rerun()
 
         st.markdown("<br>", unsafe_allow_html=True)
@@ -11562,7 +11607,7 @@ elif choice == "Botellas Fiadas":
                                 st.session_state.pop("botellas_fiadas", None)
                                 st.stop()
                             registrar_auditoria("Marcar Botellas Devueltas", "BotellasFiadas", f"{r_bf['cliente_nombre']} — {r_bf['cantidad_botellas']} botella(s)")
-                            st.toast("Botellas marcadas como devueltas")
+                            _pm62_confirmar_despues_de_actualizar("Botellas marcadas como devueltas")
                             st.rerun()
             else:
                 ui_callout("No hay botellas pendientes de devolución en este momento.", "ok")
@@ -11903,8 +11948,7 @@ elif choice == "Gestión de Vacaciones":
                             "estado_recuperacion": estado_recup_val
                         }
                         st.session_state.vacaciones = pd.concat([pd.DataFrame([nuevo_row_vac]), st.session_state.vacaciones], ignore_index=True)
-                        st.toast(f"{tipo_vac_sel} registrado(a) para {colab_vac_sel} ({dias_calc} día(s))")
-                        time.sleep(0.3)
+                        _pm62_confirmar_despues_de_actualizar(f"{tipo_vac_sel} registrado(a) para {colab_vac_sel} ({dias_calc} día(s))")
                         st.rerun()
 
         st.markdown("<br>", unsafe_allow_html=True)
@@ -11960,8 +12004,7 @@ elif choice == "Gestión de Vacaciones":
                             st.session_state.pop("vacaciones", None)
                             st.stop()
                         registrar_auditoria("Marcar Permiso Recuperado", "Vacaciones", f"{r_pr['nombre']} — recuperación del {r_pr['fecha_recuperacion']}")
-                        st.toast("Marcado como recuperado")
-                        time.sleep(0.3)
+                        _pm62_confirmar_despues_de_actualizar("Marcado como recuperado")
                         st.rerun()
         else:
             st.success("No hay permisos de salud pendientes de recuperación.")
@@ -11995,8 +12038,7 @@ elif choice == "Gestión de Vacaciones":
                             st.stop()
                         st.session_state.vacaciones = st.session_state.vacaciones.drop(idx_vac_del).reset_index(drop=True)
                         registrar_auditoria("Eliminar Registro de Descanso", "Vacaciones", f"{row_vac_del['nombre']} — {row_vac_del['tipo']} ({row_vac_del['fecha_inicio']} a {row_vac_del['fecha_fin']})")
-                        st.toast("Registro eliminado correctamente")
-                        time.sleep(0.3)
+                        _pm62_confirmar_despues_de_actualizar("Registro eliminado correctamente")
                         st.rerun()
                     else:
                         st.warning("Marca la casilla de confirmación antes de eliminar.")
@@ -12313,6 +12355,7 @@ elif choice == "Onboarding / Offboarding":
                                 st.session_state.pop("checklist", None)
                                 st.stop()
                             registrar_auditoria(f"Actualizar Ítem de {tipo_chk}", "Checklist", f"{colab_chk_sel}: '{row_chk['tarea']}' → {'Completado' if nuevo_marcado else 'Pendiente'}")
+                            _pm62_confirmar_despues_de_actualizar("Checklist actualizado correctamente.")
                             st.rerun()
 
             st.markdown("<br>", unsafe_allow_html=True)
@@ -12418,8 +12461,7 @@ elif choice == "Auditoría y Configuración":
                     if actualizar_estado_horario_gsheets(_opc_h[_sel_h], _nuevo_h):
                         registrar_auditoria("Cambiar Estado de Horario", "Horarios", f"{_sel_h} → {_nuevo_h}")
                         st.session_state.horarios = obtener_horarios_gsheets()
-                        st.toast("Estado del horario actualizado")
-                        time.sleep(0.3)
+                        _pm62_confirmar_despues_de_actualizar("Estado del horario actualizado")
                         st.rerun()
 
             st.markdown("<div class='tp-note-t' style='margin:26px 0 10px'>Nueva regla de horarios</div>", unsafe_allow_html=True)
@@ -12479,8 +12521,7 @@ elif choice == "Auditoría y Configuración":
                     if _idr:
                         registrar_auditoria("Crear Regla de Horario", "Horarios", f"{_nom_h.strip()} · desde {_desde_iso} · {len(_turnos_ok)} turno(s) · base {_fmt_min(int(_bh) * 60 + int(_bm))}")
                         st.session_state.horarios = obtener_horarios_gsheets()
-                        st.toast("Regla de horarios guardada")
-                        time.sleep(0.3)
+                        _pm62_confirmar_despues_de_actualizar("Regla de horarios guardada")
                         st.rerun()
 
             st.markdown("<div class='tp-note-t' style='margin:26px 0 10px'>Probar un horario</div>", unsafe_allow_html=True)
@@ -12509,8 +12550,7 @@ elif choice == "Auditoría y Configuración":
                         st.error("No se pudo completar. No se perdió ninguna contraseña: inténtalo de nuevo en unos segundos.")
                     else:
                         registrar_auditoria("Contraseñas protegidas", "Usuarios", f"Se cifraron {_n_cambio} contraseñas que estaban en texto plano.")
-                        st.success(f"Listo: {_n_cambio} contraseñas quedaron protegidas.")
-                        time.sleep(0.8)
+                        _pm62_confirmar_despues_de_actualizar(f"Listo: {_n_cambio} contraseñas quedaron protegidas.")
                         st.rerun()
             else:
                 ui_callout("Todas las contraseñas están protegidas.")
@@ -12642,21 +12682,27 @@ elif choice == "Rutinas Operativas":
                                             edit_submitted = st.form_submit_button("Guardar cambios", use_container_width=True)
                                         if edit_submitted:
                                             ok, msg = _pm2_edit_task(task_id, edate, estore, ezone, etitle, edesc, ebegin.strftime("%H:%M"), eend.strftime("%H:%M"), epri, ereq)
-                                            _pm2_notice(ok, msg)
                                             if ok:
+                                                _pm62_confirmar_despues_de_actualizar(msg)
                                                 st.rerun()
+                                            else:
+                                                _pm2_notice(False, msg)
                                 if current not in ("Completada", "Cancelada", "Por validar"):
                                     if st.button("Cancelar actividad", key="pm2_cancel_" + task_id, use_container_width=True):
                                         ok, msg = _pm2_update_progress(task_id, "Cancelada", str(task.get("observacion", "")))
-                                        _pm2_notice(ok, msg)
                                         if ok:
+                                            _pm62_confirmar_despues_de_actualizar(msg)
                                             st.rerun()
+                                        else:
+                                            _pm2_notice(False, msg)
                                 elif current in ("Cancelada", "Completada"):
                                     if st.button("Reabrir actividad", key="pm2_reopen_" + task_id, use_container_width=True):
                                         ok, msg = _pm2_update_progress(task_id, "Pendiente", str(task.get("observacion", "")))
-                                        _pm2_notice(ok, msg)
                                         if ok:
+                                            _pm62_confirmar_despues_de_actualizar(msg)
                                             st.rerun()
+                                        else:
+                                            _pm2_notice(False, msg)
 
         with t_create:
             st.markdown('<div class="pm2-split-title">Nueva asignación personalizada</div>', unsafe_allow_html=True)
@@ -12725,9 +12771,11 @@ elif choice == "Rutinas Operativas":
                 st.warning(f"Se encontraron {count_old} actividades del checklist antiguo. Puedes importarlas sin borrar sus registros de origen. Las actividades históricas no tenían horarios ni ubicaciones definidos.")
                 if st.button("Importar actividades anteriores", key="pm2_import_old"):
                     ok, msg, count = _pm2_import_legacy()
-                    _pm2_notice(ok, msg)
                     if ok and count:
+                        _pm62_confirmar_despues_de_actualizar(msg)
                         st.rerun()
+                    else:
+                        _pm2_notice(ok, msg)
 
 
 # --- PIE DE PÁGINA (FOOTER ESTILO WEB/APP) ---
