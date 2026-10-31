@@ -7377,6 +7377,123 @@ def _pm3_show_flash(scope, task_id):
             st.toast(notice[1])
 
 
+def _pm_attendance_ui_styles():
+    """Visual de Marcaciones: se invoca explícitamente dentro de Marcar Asistencia.
+
+    No depender de _pm2_css(): esa hoja solo se utiliza en Rutinas.
+    """
+    st.markdown(r"""<style>
+    .st-key-pm_attendance_form{background:linear-gradient(180deg,#fff 0%,#fbfcff 100%)!important;
+      border-color:#e1e9f3!important;border-top:3px solid #d13b54!important;border-radius:21px!important;
+      box-shadow:0 16px 32px -29px rgba(29,45,75,.32)!important}
+    .pm-att-form-head,.pm-att-section-head{display:flex;align-items:center;gap:12px;margin:0 0 13px}
+    .pm-att-form-glyph,.pm-att-section-glyph{flex:none;display:grid;place-items:center;width:42px;height:42px;
+      border-radius:13px;border:1px solid #f6dce2;background:#fff0f3;color:#c5324d}
+    .pm-att-section-glyph{background:#edf5ff;border-color:#dbeafb;color:#326eae}
+    .pm-att-form-glyph svg,.pm-att-section-glyph svg{width:24px;height:24px;display:block}
+    .pm-att-form-head strong,.pm-att-section-head strong{display:block;color:#1f3049;font-size:1.02rem;font-weight:850;line-height:1.3}
+    .pm-att-form-head small,.pm-att-section-head small{display:block;color:#8190a5;font-size:.74rem;margin-top:4px;line-height:1.35}
+    .pm-att-section-head{margin:1px 0 14px}
+    .st-key-pm_v_marcar_asistencia .tp-row{
+      display:flex!important;align-items:center!important;min-width:0!important;
+      gap:14px!important;padding:13px 15px!important;margin-bottom:10px!important;
+      border:1px solid #e2eaf4!important;border-radius:18px!important;
+      background:linear-gradient(135deg,#fff 0%,#fafdff 100%)!important;
+      box-shadow:0 12px 28px -25px rgba(28,43,72,.36)!important;
+    }
+    .st-key-pm_v_marcar_asistencia .tp-row-time{
+      display:flex!important;align-items:center!important;justify-content:center!important;
+      flex:0 0 70px!important;width:70px!important;min-width:70px!important;
+      min-height:52px!important;margin:0!important;padding:8px!important;
+      box-sizing:border-box!important;text-align:center!important;
+      background:#f4f8fe!important;border:1px solid #dfebf9!important;
+      border-radius:14px!important;color:#31557f!important;
+      font-weight:850!important;font-size:.98rem!important;font-variant-numeric:tabular-nums!important;
+    }
+    .st-key-pm_v_marcar_asistencia .tp-row-main{flex:1 1 auto!important;min-width:0!important}
+    .st-key-pm_v_marcar_asistencia .tp-row .tp-chips{flex:none!important}
+    .st-key-pm_v_marcar_asistencia .pm-att-summary{
+      display:block!important;margin:16px 0 0!important;padding:18px!important;
+      border:1px solid #e0e9f4!important;border-radius:21px!important;
+      background:linear-gradient(130deg,#f6faff 0%,#fff 60%,#fff7f9 100%)!important;
+      box-shadow:0 16px 33px -28px rgba(28,44,73,.36)!important;
+    }
+    .st-key-pm_v_marcar_asistencia .pm-att-summary-head{
+      display:flex!important;align-items:center!important;justify-content:space-between!important;
+      gap:12px!important;flex-wrap:wrap!important;margin:0 0 15px!important;
+    }
+    .st-key-pm_v_marcar_asistencia .pm-att-summary-head small{
+      display:block!important;font-size:.7rem!important;font-weight:850!important;
+      letter-spacing:.10em!important;color:#c12f48!important;margin-bottom:5px!important;
+    }
+    .st-key-pm_v_marcar_asistencia .pm-att-summary-head strong{
+      display:block!important;color:#1c2f49!important;font-size:1.04rem!important;
+      font-weight:850!important;line-height:1.32!important;
+    }
+    .st-key-pm_v_marcar_asistencia .pm-att-summary-head b{
+      display:inline-flex!important;align-items:center!important;gap:6px!important;
+      color:#137957!important;background:#eaf9f1!important;
+      border:1px solid #cdebdc!important;border-radius:999px!important;
+      padding:8px 12px!important;font-size:.74rem!important;white-space:nowrap!important;
+    }
+    .st-key-pm_v_marcar_asistencia .pm-att-summary-grid{
+      display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important;
+    }
+    .st-key-pm_v_marcar_asistencia .pm-att-summary-card{
+      min-width:0!important;box-sizing:border-box!important;padding:14px!important;
+      border-radius:16px!important;border:1px solid #e4ebf5!important;background:#fff!important;
+    }
+    .st-key-pm_v_marcar_asistencia .pm-att-summary-card.accent{
+      background:#f7fbff!important;border-color:#dbe9fa!important;
+    }
+    .st-key-pm_v_marcar_asistencia .pm-att-summary-card.ok{
+      background:#f0fbf6!important;border-color:#d4eee0!important;
+    }
+    .st-key-pm_v_marcar_asistencia .pm-att-summary-card.warn{
+      background:#fff9ef!important;border-color:#f2e2c4!important;
+    }
+    .st-key-pm_v_marcar_asistencia .pm-att-summary-card small{
+      display:block!important;color:#718198!important;font-size:.74rem!important;
+      font-weight:750!important;line-height:1.35!important;margin:0 0 7px!important;
+    }
+    .st-key-pm_v_marcar_asistencia .pm-att-summary-card strong{
+      display:block!important;color:#1b2c45!important;font-size:1.4rem!important;
+      font-weight:870!important;line-height:1.15!important;letter-spacing:-.04em!important;
+      font-variant-numeric:tabular-nums!important;margin:0 0 6px!important;
+    }
+    .st-key-pm_v_marcar_asistencia .pm-att-summary-card span{
+      display:block!important;font-size:.73rem!important;color:#728198!important;
+      line-height:1.45!important;
+    }
+    .st-key-pm_v_marcar_asistencia .pm-att-progress{margin-top:14px!important}
+    .st-key-pm_v_marcar_asistencia .pm-att-progress-label{
+      display:flex!important;align-items:center!important;justify-content:space-between!important;
+      font-size:.73rem!important;color:#657992!important;font-weight:780!important;margin-bottom:8px!important;
+    }
+    .st-key-pm_v_marcar_asistencia .pm-att-progress-label b{color:#167e60!important}
+    .st-key-pm_v_marcar_asistencia .pm-att-progress-track{
+      display:block!important;height:9px!important;border-radius:999px!important;
+      background:#e8eff6!important;overflow:hidden!important;
+    }
+    .st-key-pm_v_marcar_asistencia .pm-att-progress-track i{
+      display:block!important;height:100%!important;border-radius:inherit!important;
+      background:linear-gradient(90deg,#15a879,#48d0a4)!important;
+    }
+    @media(max-width:660px){
+      .st-key-pm_v_marcar_asistencia .pm-att-summary{padding:15px!important;border-radius:18px!important}
+      .st-key-pm_v_marcar_asistencia .pm-att-summary-grid{gap:8px!important}
+      .st-key-pm_v_marcar_asistencia .pm-att-summary-card{padding:12px!important}
+      .st-key-pm_v_marcar_asistencia .pm-att-summary-card strong{font-size:1.18rem!important}
+      .st-key-pm_v_marcar_asistencia .tp-row{gap:9px!important;padding:10px!important}
+      .st-key-pm_v_marcar_asistencia .tp-row-time{flex-basis:56px!important;width:56px!important;min-width:56px!important;min-height:48px!important;font-size:.85rem!important}
+    }
+    @media(max-width:350px){
+      .st-key-pm_v_marcar_asistencia .pm-att-summary-card{padding:10px!important}
+      .st-key-pm_v_marcar_asistencia .pm-att-summary-card strong{font-size:1.05rem!important}
+    }
+    </style>""", unsafe_allow_html=True)
+
+
 def _pm2_css():
     st.markdown("""
     <style>
@@ -9272,6 +9389,124 @@ def _pmc_employee_ui():
                             st.rerun()
 
 
+def _pmc_monitor_summary_html(n, counts):
+    """Resumen visual de un comunicado; no repite el contenido ni descarga Drive."""
+    state = str(n.get("estado", "Borrador"))
+    start = str(n.get("publicar_desde", ""))
+    expired = str(n.get("vigente_hasta", ""))
+    if state == "Publicado":
+        if start > _pmc_today():
+            label, tone = "Programado", "scheduled"
+        elif expired and expired < _pmc_today():
+            label, tone = "Vencido", "archived"
+        else:
+            label, tone = "Publicado", "published"
+    elif state == "Archivado":
+        label, tone = "Archivado", "archived"
+    else:
+        label, tone = "Borrador", "draft"
+    confirmed = int(counts.get("confirmados", 0))
+    total = int(counts.get("total", 0))
+    pending = int(counts.get("pendientes", 0))
+    percentage = min(100, max(0, int(counts.get("porcentaje", 0))))
+    pending_text = (f"{pending} por confirmar" if pending else "Sin pendientes")
+    if label in ("Borrador", "Programado"):
+        pending_text = "Sin publicar · no se exigen lecturas todavía"
+    elif not total:
+        pending_text = "Sin destinatarios"
+    meta = " · ".join(x for x in (
+        str(n.get("categoria") or "General"),
+        (start[:16] if start else "Sin fecha programada"),
+        str(n.get("prioridad") or "Normal"),
+    ) if x)
+    icon = ('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" '
+            'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+            '<path d="M4 10v4a2 2 0 0 0 2 2h3l9 4V4l-9 4H6a2 2 0 0 0-2 2Z"/>'
+            '<path d="m9 16 1.5 4M20 9a4 4 0 0 1 0 6"/></svg>')
+    return (
+        '<article class="pmc-monitor-card">'
+        '<div class="pmc-monitor-head"><span class="pmc-monitor-icon">' + icon + '</span>'
+        '<div class="pmc-monitor-main"><strong>' + _pmc_e(n.get("titulo")) + '</strong>'
+        '<small>' + _pmc_e(meta) + '</small></div>'
+        '<span class="pmc-monitor-status pmc-monitor-status--' + tone + '">' + _pmc_e(label) + '</span></div>'
+        '<div class="pmc-monitor-bottom"><div class="pmc-monitor-track">'
+        '<i style="width:' + str(percentage) + '%"></i></div>'
+        '<span>' + str(confirmed) + '/' + str(total) + ' lecturas · ' + _pmc_e(pending_text) + '</span>'
+        '<b>' + str(percentage) + '%</b></div></article>'
+    )
+
+
+def _pmc_monitor_ui_styles():
+    """Se inyecta en esta vista, no en páginas no relacionadas."""
+    st.markdown(r"""<style>
+    .st-key-pmc_admin_monitor_filters{
+      background:#fff!important;border:1px solid #e3eaf2!important;border-radius:19px!important;
+      padding:15px 17px 6px!important;margin:13px 0 17px!important;
+      box-shadow:0 14px 29px -28px rgba(22,40,68,.35)!important;
+    }
+    .st-key-pmc_admin_monitor_filters label{font-size:.79rem!important;font-weight:800!important;color:#263852!important}
+    .pmc-monitor-guide{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+      margin:8px 0 15px;padding:1px 2px;color:#77879d;font-size:.79rem}
+    .pmc-monitor-guide b{color:#243650;font-size:.85rem}
+    [class*="st-key-pmc_admin_notice_"]{
+      border:1px solid #e2eaf3!important;border-radius:20px!important;
+      background:#fff!important;padding:15px 16px 13px!important;
+      margin:0 0 13px!important;box-shadow:0 13px 30px -28px rgba(25,42,70,.32)!important;
+      min-width:0!important;
+    }
+    .pmc-monitor-card{min-width:0}
+    .pmc-monitor-head{display:flex;align-items:center;gap:13px;min-width:0}
+    .pmc-monitor-icon{display:grid;place-items:center;flex:none;width:43px;height:43px;
+      border:1px solid #f5dbe0;border-radius:13px;background:#fff3f6;color:#c4304b}
+    .pmc-monitor-icon svg{width:23px;height:23px}
+    .pmc-monitor-main{flex:1;min-width:0}
+    .pmc-monitor-main strong{display:block;color:#21344e;font-size:1rem;font-weight:850;line-height:1.45;overflow-wrap:anywhere}
+    .pmc-monitor-main small{display:block;color:#8190a4;font-size:.73rem;margin-top:5px;overflow-wrap:anywhere;line-height:1.5}
+    .pmc-monitor-status{flex:none;display:inline-flex;align-items:center;justify-content:center;
+      padding:7px 11px;border-radius:999px;font-size:.69rem;font-weight:830;white-space:nowrap;
+      border:1px solid #d0e8dd;background:#eaf9f2;color:#168562}
+    .pmc-monitor-status--draft{border-color:#e6e8f1;background:#f3f5fa;color:#64748b}
+    .pmc-monitor-status--scheduled{border-color:#d9e7fa;background:#eff6ff;color:#346bad}
+    .pmc-monitor-status--archived{border-color:#e6e8ed;background:#f5f6f9;color:#7a8796}
+    .pmc-monitor-bottom{display:flex;align-items:center;gap:11px;margin:16px 0 0;min-width:0}
+    .pmc-monitor-track{height:8px;flex:1;min-width:45px;background:#ecf1f7;border-radius:999px;overflow:hidden}
+    .pmc-monitor-track i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#1cad80,#4cd1a6)}
+    .pmc-monitor-bottom span{font-size:.72rem;color:#76879e;white-space:nowrap}
+    .pmc-monitor-bottom b{font-size:.78rem;color:#148361;min-width:37px;text-align:right}
+    [class*="st-key-pmc_admin_notice_"] [data-testid="stButton"] button{
+      min-height:40px!important;border:1px solid #e4eaf2!important;background:#f8fafc!important;
+      border-radius:12px!important;font-size:.78rem!important;font-weight:790!important;
+      color:#344b65!important;box-shadow:none!important;margin-top:8px!important;
+    }
+    [class*="st-key-pmc_admin_notice_"] [data-testid="stButton"] button:hover{background:#f0f5fa!important}
+    [class*="st-key-pmc_admin_notice_"] [data-testid="stButton"] button[kind="primary"]{
+      background:#c9324d!important;border-color:#c9324d!important;color:#fff!important;
+    }
+    [class*="st-key-pmc_admin_detail_"]{margin:0 0 12px!important;padding:14px!important;
+      background:linear-gradient(180deg,#fbfdff,#fff)!important;border:1px solid #e7edf4!important;
+      border-radius:16px!important;min-width:0!important}
+    .pmc-monitor-message{padding:17px;background:#fff;border:1px solid #e3eaf2;border-radius:15px;margin:5px 0 15px}
+    .pmc-monitor-message small{display:block;color:#c7324c;font-size:.69rem;letter-spacing:.08em;font-weight:850;margin-bottom:8px}
+    .pmc-monitor-message p{color:#3c506c;font-size:.88rem;line-height:1.72;white-space:pre-wrap;overflow-wrap:anywhere;margin:0}
+    @media(max-width:740px){
+      .st-key-pmc_admin_monitor_filters{padding:14px 13px 5px!important}
+      .st-key-pmc_admin_monitor_filters [data-testid="stHorizontalBlock"]{flex-direction:column!important;gap:6px!important}
+      .st-key-pmc_admin_monitor_filters [data-testid="stColumn"]{flex:1 1 auto!important;width:100%!important;max-width:100%!important;min-width:0!important}
+      [class*="st-key-pmc_admin_notice_"]{padding:12px!important;border-radius:17px!important}
+      .pmc-monitor-icon{width:38px;height:38px;border-radius:12px}
+      .pmc-monitor-head{gap:10px;align-items:flex-start;flex-wrap:wrap}
+      .pmc-monitor-main strong{font-size:.92rem}
+      .pmc-monitor-status{font-size:.65rem;padding:6px 9px}
+      .pmc-monitor-bottom{flex-wrap:wrap;gap:8px;margin-top:13px}
+      .pmc-monitor-track{flex:1 1 100%;order:2}
+      .pmc-monitor-bottom span{flex:1;min-width:0;white-space:normal;order:1}
+      .pmc-monitor-bottom b{order:1}
+      [class*="st-key-pmc_admin_detail_"]{padding:11px!important}
+    }
+    @media(max-width:390px){.pmc-monitor-status{margin-left:48px}}
+    </style>""", unsafe_allow_html=True)
+
+
 def _pmc_admin_ui():
     premium_module_shell("Gestión de Comunicados", "COMUNICACIÓN", "Publica anuncios oficiales y verifica quién confirmó su lectura.")
     _pmc_ui_styles()
@@ -9337,106 +9572,142 @@ def _pmc_admin_ui():
                 else:
                     st.error(msg)
     with t_monitor:
-        status_f = st.selectbox("Estado", ["Todos", "Publicado", "Borrador", "Archivado"], key="pmc_admin_status")
-        search_admin = st.text_input("Buscar comunicado", key="pmc_admin_search",
-                                     placeholder="Buscar por título o contenido").strip().casefold()
+        _pmc_monitor_ui_styles()
+        with st.container(key="pmc_admin_monitor_filters"):
+            _mleft, _mright = st.columns([1, 1.65], gap="medium")
+            with _mleft:
+                status_f = st.selectbox("Estado", ["Todos", "Publicado", "Borrador", "Archivado"], key="pmc_admin_status")
+            with _mright:
+                search_admin = st.text_input("Buscar comunicado", key="pmc_admin_search",
+                                             placeholder="Buscar por título o contenido").strip().casefold()
         filtered = [x for x in notices if status_f == "Todos" or x.get("estado") == status_f]
         if search_admin:
             filtered = [x for x in filtered if search_admin in (str(x.get("titulo", "")) + " " +
                                                             str(x.get("contenido", ""))).casefold()]
         filtered.sort(key=lambda x: x.get("creado_el", ""), reverse=True)
-        if len(filtered) > 100:
-            st.caption("Mostrando los últimos 100 registros. Puedes buscar otro comunicado por título.")
         if not filtered:
-            st.info("Todavía no hay comunicados para el filtro seleccionado.")
-        for n in filtered[:100]:
-            rid = n["id_comunicado"]
-            counts = _pmc_receipt_stats(n, reads)
-            st.markdown(_pmc_card_html(n, admin=True), unsafe_allow_html=True)
-            with st.expander("Leer contenido del comunicado"):
-                st.markdown(_pmc_detail_html(n, admin=True), unsafe_allow_html=True)
-            st.markdown('<div class="pmc-kpis"><div><small>Destinatarios</small><strong>' + str(counts["total"]) +
-                        '</strong></div><div><small>Confirmaron</small><strong>' + str(counts["confirmados"]) +
-                        '</strong></div><div><small>Pendientes</small><strong>' + str(counts["pendientes"]) +
-                        '</strong></div></div>', unsafe_allow_html=True)
-            st.progress(counts["porcentaje"] / 100, text=f"{counts['porcentaje']} % de lecturas confirmadas")
-            with st.expander("Ver destinatarios y sus confirmaciones"):
-                persons = {_pm2_dni(p["dni"]): p["nombre"] for p in _pmc_personas()}
-                targets = sorted(_pmc_recipients(n))
-                detail_rows = []
-                for dni in targets:
-                    receipt = _pmc_receipt(reads, rid, dni)
-                    detail_rows.append({"Colaborador": persons.get(dni, "Colaborador"),
-                                       "DNI (últimos 4)": dni[-4:],
-                                       "Estado": "Confirmado" if receipt and receipt.get("confirmado_el") else
-                                       ("Visto" if receipt else "Pendiente"),
-                                       "Visto": receipt.get("visto_el", "") if receipt else "",
-                                       "Confirmado": receipt.get("confirmado_el", "") if receipt else ""})
-                st.dataframe(pd.DataFrame(detail_rows), use_container_width=True, hide_index=True)
-            _pmc_render_attach(n, "admin")
-            if n["estado"] == "Borrador":
-                with st.expander("Editar este borrador"):
-                    persons_edit = _pmc_personas()
-                    opt_edit = {p["nombre"] + " · " + p["dni"]: p["dni"] for p in persons_edit}
-                    old_dnis = _pmc_recipients(n)
-                    default_edit = [label for label, dni in opt_edit.items() if dni in old_dnis]
-                    selected_edit = st.multiselect("Destinatarios del borrador", list(opt_edit),
-                                                   default=default_edit, key="pmc_edit_dest_" + rid)
-                    with st.form("pmc_edit_form_" + rid):
-                        e_title = st.text_input("Título", value=str(n.get("titulo", "")), max_chars=130)
-                        e_body = st.text_area("Mensaje", value=str(n.get("contenido", "")), height=155, max_chars=6000)
-                        e_c1, e_c2 = st.columns(2)
-                        cat_saved = str(n.get("categoria", "General"))
-                        priority_saved = str(n.get("prioridad", "Normal"))
-                        e_cat = e_c1.selectbox("Categoría", _PMC_CATEGORIES,
-                                               index=_PMC_CATEGORIES.index(cat_saved) if cat_saved in _PMC_CATEGORIES else 0)
-                        e_priority = e_c2.selectbox("Prioridad", _PMC_PRIORITIES,
-                                                    index=_PMC_PRIORITIES.index(priority_saved) if priority_saved in _PMC_PRIORITIES else 0)
-                        try:
-                            e_dt = datetime.strptime(str(n.get("publicar_desde", "")), "%Y-%m-%d %H:%M:%S")
-                        except ValueError:
-                            e_dt = obtener_ahora_peru()
-                        e_d, e_t = st.columns(2)
-                        e_pub_date = e_d.date_input("Fecha de publicación", value=e_dt.date())
-                        e_pub_time = e_t.time_input("Hora", value=e_dt.time())
-                        try:
-                            e_old_exp = datetime.strptime(str(n.get("vigente_hasta", "")), "%Y-%m-%d %H:%M:%S").date()
-                        except ValueError:
-                            e_old_exp = None
-                        e_exp = st.date_input("Fecha de vencimiento (opcional)", value=e_old_exp)
-                        e_save = st.form_submit_button("Guardar cambios del borrador", type="primary", use_container_width=True)
-                    if e_save:
-                        edit_fields = {
-                            "titulo": e_title, "contenido": e_body, "categoria": e_cat, "prioridad": e_priority,
-                            "destinatarios": [opt_edit[x] for x in selected_edit],
-                            "audiencia": "Seleccionados", "publicar_desde":
-                                datetime.combine(e_pub_date, e_pub_time).strftime("%Y-%m-%d %H:%M:%S"),
-                            "vigente_hasta": datetime.combine(e_exp, dt_time(23,59,59)).strftime("%Y-%m-%d %H:%M:%S") if e_exp else "",
-                        }
-                        ok, msg = _pmc_edit_draft(rid, edit_fields)
-                        if ok:
-                            _pm62_confirmar_despues_de_actualizar(msg, "Gestión de Comunicados")
-                            st.rerun()
-                        st.error(msg)
-                if st.button("Publicar este borrador", key="pmc_publish_" + rid, use_container_width=True):
-                    ok, msg = _pmc_row_update(rid, "Publicado")
-                    if ok:
-                        _pm62_confirmar_despues_de_actualizar(msg, "Gestión de Comunicados")
+            st.info("No se encontraron comunicados para el filtro seleccionado.")
+        else:
+            page_size = 8
+            pages = (len(filtered) + page_size - 1) // page_size
+            st.markdown('<div class="pmc-monitor-guide"><b>' + str(len(filtered)) +
+                        ' comunicado(s) encontrados</b><span>Selecciona uno para revisar sus detalles y lecturas.</span></div>',
+                        unsafe_allow_html=True)
+            if pages > 1:
+                page_num = st.selectbox("Página del historial", list(range(1, pages + 1)),
+                                         key="pmc_admin_monitor_page")
+            else:
+                page_num = 1
+            page_rows = filtered[(page_num - 1) * page_size : page_num * page_size]
+            for n in page_rows:
+                rid = str(n["id_comunicado"])
+                counts = _pmc_receipt_stats(n, reads)
+                is_selected = str(st.session_state.get("pmc_admin_monitor_selected", "")) == rid
+                with st.container(key="pmc_admin_notice_" + rid):
+                    st.markdown(_pmc_monitor_summary_html(n, counts), unsafe_allow_html=True)
+                    if st.button("Cerrar gestión" if is_selected else "Ver seguimiento y gestionar",
+                                 key="pmc_admin_monitor_open_" + rid, use_container_width=True,
+                                 icon=":material/expand_less:" if is_selected else ":material/arrow_forward:"):
+                        st.session_state["pmc_admin_monitor_selected"] = "" if is_selected else rid
                         st.rerun()
-                    st.error(msg)
-            elif n["estado"] == "Publicado":
-                with st.expander("Archivar este comunicado"):
-                    st.caption("Al archivarlo dejará de aparecer a los colaboradores; las lecturas se conservan en el historial.")
-                    approve_archive = st.checkbox("Confirmo que quiero archivar este comunicado",
-                                                  key="pmc_archive_check_" + rid)
-                    if st.button("Archivar definitivamente", key="pmc_archive_" + rid,
-                                 disabled=not approve_archive, use_container_width=True):
-                        ok, msg = _pmc_row_update(rid, "Archivado")
-                        if ok:
-                            _pm62_confirmar_despues_de_actualizar(msg, "Gestión de Comunicados")
-                            st.rerun()
-                        st.error(msg)
-            st.markdown('<div style="height:13px"></div>', unsafe_allow_html=True)
+                    if not is_selected:
+                        continue
+                    with st.container(key="pmc_admin_detail_" + rid):
+                        tab_stats, tab_content, tab_actions = st.tabs(("Lecturas", "Mensaje y adjunto", "Administrar"))
+                        with tab_stats:
+                            st.caption(f"{counts['confirmados']} de {counts['total']} confirmaron su lectura · "
+                                       f"{counts['pendientes']} pendiente(s).")
+                            st.progress(counts["porcentaje"] / 100,
+                                        text=f"{counts['porcentaje']} % de lecturas confirmadas")
+                            persons = {_pm2_dni(p["dni"]): p["nombre"] for p in _pmc_personas()}
+                            targets = sorted(_pmc_recipients(n))
+                            detail_rows = []
+                            for dni in targets:
+                                receipt = _pmc_receipt(reads, rid, dni)
+                                detail_rows.append({
+                                    "Colaborador": persons.get(dni, "Colaborador"),
+                                    "DNI (últimos 4)": dni[-4:],
+                                    "Estado": "Confirmado" if receipt and receipt.get("confirmado_el") else
+                                              ("Visto" if receipt else "Pendiente"),
+                                    "Visto": receipt.get("visto_el", "") if receipt else "",
+                                    "Confirmado": receipt.get("confirmado_el", "") if receipt else "",
+                                })
+                            if detail_rows:
+                                st.dataframe(pd.DataFrame(detail_rows), use_container_width=True, hide_index=True)
+                            else:
+                                st.info("Este comunicado todavía no tiene destinatarios asignados.")
+                        with tab_content:
+                            st.markdown('<div class="pmc-monitor-message"><small>MENSAJE DEL COMUNICADO</small><p>' +
+                                        _pmc_e(n.get("contenido", "")) + '</p></div>', unsafe_allow_html=True)
+                            if n.get("adjunto_drive_id"):
+                                _pmc_render_attach(n, "admin")
+                            else:
+                                st.caption("Este comunicado no tiene archivos adjuntos.")
+                        with tab_actions:
+                            if n["estado"] == "Borrador":
+                                with st.expander("Editar este borrador"):
+                                    persons_edit = _pmc_personas()
+                                    opt_edit = {p["nombre"] + " · " + p["dni"]: p["dni"] for p in persons_edit}
+                                    old_dnis = _pmc_recipients(n)
+                                    default_edit = [label for label, dni in opt_edit.items() if dni in old_dnis]
+                                    selected_edit = st.multiselect("Destinatarios del borrador", list(opt_edit),
+                                                                   default=default_edit, key="pmc_edit_dest_" + rid)
+                                    with st.form("pmc_edit_form_" + rid):
+                                        e_title = st.text_input("Título", value=str(n.get("titulo", "")), max_chars=130)
+                                        e_body = st.text_area("Mensaje", value=str(n.get("contenido", "")), height=155, max_chars=6000)
+                                        e_c1, e_c2 = st.columns(2)
+                                        cat_saved = str(n.get("categoria", "General"))
+                                        priority_saved = str(n.get("prioridad", "Normal"))
+                                        e_cat = e_c1.selectbox("Categoría", _PMC_CATEGORIES,
+                                                               index=_PMC_CATEGORIES.index(cat_saved) if cat_saved in _PMC_CATEGORIES else 0)
+                                        e_priority = e_c2.selectbox("Prioridad", _PMC_PRIORITIES,
+                                                                    index=_PMC_PRIORITIES.index(priority_saved) if priority_saved in _PMC_PRIORITIES else 0)
+                                        try:
+                                            e_dt = datetime.strptime(str(n.get("publicar_desde", "")), "%Y-%m-%d %H:%M:%S")
+                                        except ValueError:
+                                            e_dt = obtener_ahora_peru()
+                                        e_d, e_t = st.columns(2)
+                                        e_pub_date = e_d.date_input("Fecha de publicación", value=e_dt.date())
+                                        e_pub_time = e_t.time_input("Hora", value=e_dt.time())
+                                        try:
+                                            e_old_exp = datetime.strptime(str(n.get("vigente_hasta", "")), "%Y-%m-%d %H:%M:%S").date()
+                                        except ValueError:
+                                            e_old_exp = None
+                                        e_exp = st.date_input("Fecha de vencimiento (opcional)", value=e_old_exp)
+                                        e_save = st.form_submit_button("Guardar cambios del borrador", type="primary", use_container_width=True)
+                                    if e_save:
+                                        edit_fields = {
+                                            "titulo": e_title, "contenido": e_body, "categoria": e_cat, "prioridad": e_priority,
+                                            "destinatarios": [opt_edit[x] for x in selected_edit],
+                                            "audiencia": "Seleccionados", "publicar_desde":
+                                                datetime.combine(e_pub_date, e_pub_time).strftime("%Y-%m-%d %H:%M:%S"),
+                                            "vigente_hasta": datetime.combine(e_exp, dt_time(23,59,59)).strftime("%Y-%m-%d %H:%M:%S") if e_exp else "",
+                                        }
+                                        ok, msg = _pmc_edit_draft(rid, edit_fields)
+                                        if ok:
+                                            _pm62_confirmar_despues_de_actualizar(msg, "Gestión de Comunicados")
+                                            st.rerun()
+                                        st.error(msg)
+                                if st.button("Publicar este borrador", key="pmc_publish_" + rid, use_container_width=True):
+                                    ok, msg = _pmc_row_update(rid, "Publicado")
+                                    if ok:
+                                        _pm62_confirmar_despues_de_actualizar(msg, "Gestión de Comunicados")
+                                        st.rerun()
+                                    st.error(msg)
+                            elif n["estado"] == "Publicado":
+                                with st.expander("Archivar este comunicado"):
+                                    st.caption("Al archivarlo dejará de aparecer a los colaboradores; las lecturas se conservan en el historial.")
+                                    approve_archive = st.checkbox("Confirmo que quiero archivar este comunicado",
+                                                                  key="pmc_archive_check_" + rid)
+                                    if st.button("Archivar definitivamente", key="pmc_archive_" + rid,
+                                                 disabled=not approve_archive, use_container_width=True):
+                                        ok, msg = _pmc_row_update(rid, "Archivado")
+                                        if ok:
+                                            _pm62_confirmar_despues_de_actualizar(msg, "Gestión de Comunicados")
+                                            st.rerun()
+                                        st.error(msg)
+                            if n["estado"] == "Archivado":
+                                st.info("Comunicado archivado. Las lecturas se conservan en el historial.")
 
 
 if rol_actual == "admin":
@@ -10828,6 +11099,7 @@ elif choice == "Mis Comunicados":
     _pmc_employee_ui()
 elif choice == "Marcar Asistencia":
     premium_module_shell('Marcar Asistencia', 'MI JORNADA', 'Registra y consulta tus marcaciones.')
+    _pm_attendance_ui_styles()
 
     # Recordatorio breve al abrir la jornada: no compite con los diálogos
     # existentes ni invade otras vistas. Se puede descartar durante el día.
@@ -10867,8 +11139,15 @@ elif choice == "Marcar Asistencia":
         col_main, col_preview = st.columns([1.1, 1])
 
         with col_main:
-            with st.container(border=True):
-                st.markdown("<h4 style='margin:0; font-size:1rem; color:#111827;'>Registro de Turno</h4>", unsafe_allow_html=True)
+            with st.container(border=True, key="pm_attendance_form"):
+                st.markdown('<div class="pm-att-form-head"><span class="pm-att-form-glyph">'
+                            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" '
+                            'stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 0 0-9 9v3"/>'
+                            '<path d="M12 7a5 5 0 0 0-5 5v3"/><path d="M12 11a1 1 0 0 0-1 1v8"/>'
+                            '<path d="M16 8a5 5 0 0 1 1 4c0 3 .1 5 2 7"/><path d="M19 6a9 9 0 0 1 2 6"/>'
+                            '</svg></span><div><strong>Registro de turno</strong>'
+                            '<small>Ingresa o cierra tu jornada de forma segura.</small></div></div>',
+                            unsafe_allow_html=True)
                 st.caption("Selecciona el tipo de marcación que deseas realizar:")
             
                 es_turno_extra = st.checkbox("Marcación Fuera de Horario / Turno Adicional")
@@ -10905,7 +11184,12 @@ elif choice == "Marcar Asistencia":
                             st.rerun()
     
         with col_preview:
-            st.markdown("<h4 style='margin:0; font-size:1rem; color:#111827; margin-bottom:12px;'>Marcaciones de Hoy</h4>", unsafe_allow_html=True)
+            st.markdown('<div class="pm-att-section-head"><span class="pm-att-section-glyph">'
+                        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" '
+                        'stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/>'
+                        '<path d="M8 2v4M16 2v4M3 10h18m-13 5 2 2 5-5"/></svg></span>'
+                        '<div><strong>Marcaciones de hoy</strong><small>Registro de entradas, salidas y jornada.</small></div></div>',
+                        unsafe_allow_html=True)
             hoy_str = obtener_ahora_peru().strftime("%Y-%m-%d")
         
             if not st.session_state.asistencia.empty:
@@ -10941,6 +11225,10 @@ elif choice == "Marcar Asistencia":
                                 <div class="pm-att-summary-card accent"><small>Jornada efectiva</small><strong>{formatear_horas_minutos(mins_lab)}</strong><span>de {jornada_base_txt()}</span></div>
                                 <div class="pm-att-summary-card {'ok' if mins_ext > 0 else 'accent'}"><small>Horas extra</small><strong>{_extra_lbl}</strong><span>{_extra_sub}</span></div>
                                 <div class="pm-att-summary-card warn"><small>Avance de jornada</small><strong>{_pct_turno}%</strong><span>Progreso sobre tu jornada base</span></div>
+                              </div>
+                              <div class="pm-att-progress">
+                                <div class="pm-att-progress-label"><span>Progreso de la jornada</span><b>{_pct_turno}%</b></div>
+                                <div class="pm-att-progress-track"><i style="width:{_pct_turno}%"></i></div>
                               </div>
                             </div>''',
                         unsafe_allow_html=True
