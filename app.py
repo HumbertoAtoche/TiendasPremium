@@ -8397,7 +8397,11 @@ def _pmc_e(value):
 
 
 def _pmc_card_html(row, receipt=None, admin=False, expanded=False):
-    """Tarjeta del listado; solo presentación. Estados y permisos proceden de Sheets."""
+    """Tarjeta de comunicado tipo Rutinas: un único título, detalle integrado.
+
+    La información ya procede de _pmc_visible / controles administrativos.
+    Todos los valores de Sheets se escapan antes de insertarse en HTML.
+    """
     priority = str(row.get("prioridad", "Normal"))
     tone = {"Urgente": "urgent", "Importante": "important"}.get(priority, "normal")
     if admin:
@@ -8410,31 +8414,53 @@ def _pmc_card_html(row, receipt=None, admin=False, expanded=False):
         label = ("Confirmado" if receipt and receipt.get("confirmado_el") else
                  "Leído" if receipt else "Sin confirmar")
     status = "done" if label == "Confirmado" else ("read" if label == "Leído" else tone)
-    full = str(row.get("contenido", ""))
-    preview = full[:230]
     svg = ('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" '
            'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
            '<path d="M4 10v4a2 2 0 0 0 2 2h3l9 4V4l-9 4H6a2 2 0 0 0-2 2Z"/>'
            '<path d="m9 16 1.5 4M20 9a4 4 0 0 1 0 6"/></svg>')
-    attachment = ('<span class="pmc-card-chip pmc-card-chip--file">Adjunto disponible</span>'
-                  if row.get("adjunto_drive_id") else '')
-    excerpt = ('' if expanded else '<p class="pmc-card-excerpt">' + _pmc_e(preview) +
-               ('…' if len(full) > 230 else '') + '</p>')
-    meta = ('<span class="pmc-card-chip">Publicado · ' +
-            _pmc_e(str(row.get("publicar_desde", ""))[:16]) + '</span>'
-            '<span class="pmc-card-chip pmc-card-chip--priority">Prioridad · ' +
-            _pmc_e(priority) + '</span>' + attachment)
-    return ('<article class="pmc-card pmc-card--' + tone +
+    is_attached = bool(row.get("adjunto_drive_id"))
+    published = str(row.get("publicar_desde", ""))[:16]
+    category = str(row.get("categoria", "General"))
+    info = [("Fecha de publicación", published, "date"),
+            ("Prioridad", priority, "priority"),
+            ("Categoría", category, "category"),
+            ("Documento", "Adjunto disponible" if is_attached else "Sin adjunto", "file")]
+    icons = {
+        "date": '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18"/>',
+        "priority": '<path d="M12 3 2 21h20L12 3Z"/><path d="M12 9v5m0 3h.01"/>',
+        "category": '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h10"/>',
+        "file": '<path d="M6 2h9l4 4v16H6zM15 2v5h4M9 12h7m-7 4h7"/>',
+    }
+    metas = "".join(
+        '<div class="pmc-task-info"><span class="pmc-task-info-icon" aria-hidden="true">'
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'
+        + icons[icon] + '</svg></span><div><small>' + _pmc_e(key) +
+        '</small><strong>' + _pmc_e(value) + '</strong></div></div>'
+        for key, value, icon in info
+    )
+    content = str(row.get("contenido", ""))
+    excerpt = content if expanded else content[:230] + ("…" if len(content) > 230 else "")
+    # En modo abierto se muestra el texto completo aquí, NO en una segunda tarjeta.
+    message = ('<div class="pmc-task-message"><div class="pmc-task-message-head">'
+               '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" '
+               'stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/>'
+               '<path d="M8 8h8M8 12h8M8 16h5"/></svg>'
+               '<strong>' + ("Mensaje completo" if expanded else "Mensaje del comunicado") +
+               '</strong></div><p>' + _pmc_e(excerpt) + '</p></div>')
+    note = ('<div class="pmc-task-foot">'
+            + ("Lectura confirmada · " + _pmc_e(str(receipt.get("confirmado_el", ""))[:16])
+               if not admin and receipt and receipt.get("confirmado_el")
+               else "Revisa el mensaje y confirma su lectura" if not admin
+               else "Seguimiento y lectura del equipo")
+            + '</div>')
+    return ('<article class="pmc-card pmc-task-card pmc-card--' + tone +
             (' pmc-card--opened' if expanded else '') + '">'
-            '<div class="pmc-card-top"><div class="pmc-card-topgroup">'
-            '<span class="pmc-card-glyph">' + svg + '</span>'
-            '<div class="pmc-card-toptext"><small>PREMIUM MARKET · COMUNICACIÓN</small>'
-            '<strong>Comunicado oficial</strong></div></div>'
-            '<span class="pmc-state pmc-state--' + status + '">' + _pmc_e(label) + '</span></div>'
-            '<div class="pmc-card-body"><div class="pmc-card-category">'
-            '<span class="pmc-card-category-dot"></span>' + _pmc_e(row.get("categoria")) + '</div>'
-            '<h3>' + _pmc_e(row.get("titulo")) + '</h3>' + excerpt +
-            '<div class="pmc-card-meta">' + meta + '</div></div></article>')
+            '<div class="pmc-task-hero"><span class="pmc-task-hero-icon">' + svg + '</span>'
+            '<div class="pmc-task-hero-text"><small>COMUNICADO OFICIAL</small><h3>' +
+            _pmc_e(row.get("titulo", "")) + '</h3></div>'
+            '<span class="pmc-task-status pmc-task-status--' + status + '">' + _pmc_e(label) + '</span></div>'
+            '<div class="pmc-task-main"><div class="pmc-task-grid">' + metas + '</div>'
+            + message + note + '</div></article>')
 
 
 def _pmc_detail_html(row, receipt=None, admin=False):
@@ -8471,6 +8497,8 @@ def _pmc_home_toast_can_show():
     if st.session_state.get("_tp_cumple_dialogo_abierto", False):
         return False
     if globals().get("_pm_modal_botellas_este_rerun", False):
+        return False
+    if st.session_state.get("_pm_bottle_notice_started") is not None:
         return False
     if globals().get("_pm_modal_motivacion_este_rerun", False):
         return False
@@ -8684,6 +8712,54 @@ def _pmc_ui_styles():
       .pmc-state{font-size:.62rem;padding:7px 8px}
     }
     @media(max-width:390px){.pmc-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.pmc-kpis>div{padding:13px 8px}.pmc-kpis small{font-size:.65rem;line-height:1.35}.pmc-kpis strong{font-size:1.36rem}}
+    /* Premium Market · Comunicados como tarjetas de Rutinas, sin el hero azul/rojo. */
+    .pmc-card.pmc-task-card{overflow:hidden;border:1px solid #e2e9f2;border-radius:23px;background:linear-gradient(180deg,#fff,#fbfdff);box-shadow:0 18px 36px -29px rgba(23,40,71,.32);margin:13px 0 0;min-width:0}
+    .pmc-task-hero{display:flex;align-items:center;gap:15px;padding:20px 22px;min-width:0;background:linear-gradient(112deg,#f1f7ff 0%,#fff 56%,#e7f9f1 113%);border:1px solid #d6e8f9;border-radius:21px;margin:14px 15px 0}
+    .pmc-card--urgent .pmc-task-hero{background:linear-gradient(105deg,#fff5f5,#fff 56%,#fff0f1);border-color:#f4dce2}
+    .pmc-card--important .pmc-task-hero{background:linear-gradient(105deg,#fffcf0,#fff 56%,#fff5e5);border-color:#f0e2bc}
+    .pmc-task-hero-icon{width:64px;height:64px;display:grid;place-items:center;flex:none;border-radius:19px;background:#e9f3ff;color:#2869a9;border:1px solid #d4e7fd;box-shadow:0 14px 28px -25px rgba(34,83,137,.5)}
+    .pmc-task-hero-icon svg{width:30px;height:30px}
+    .pmc-card--urgent .pmc-task-hero-icon{background:#ffecf0;color:#c5314b;border-color:#f7dce3}
+    .pmc-card--important .pmc-task-hero-icon{background:#fff3d7;color:#a97719;border-color:#f7e6be}
+    .pmc-task-hero-text{flex:1;min-width:0}.pmc-task-hero-text small{display:block;color:#7589a6;font-size:.69rem;font-weight:800;letter-spacing:.09em;margin-bottom:7px}
+    .pmc-card.pmc-task-card .pmc-task-hero-text h3{margin:0!important;color:#1c2e47!important;font-weight:850!important;font-size:clamp(1.09rem,1.85vw,1.4rem)!important;line-height:1.38!important;overflow-wrap:anywhere}
+    .pmc-task-status{flex:none;padding:9px 13px;border-radius:999px;font-size:.73rem;font-weight:820;white-space:nowrap;line-height:1.2;border:1px solid #e1e8f3;background:#eaf3ff;color:#33699e}
+    .pmc-task-status--done{color:#078761;background:#dff8ed;border-color:#b8e9d2}.pmc-task-status--read{color:#936114;background:#fff2d9;border-color:#efd6a7}
+    .pmc-task-status--urgent{color:#bd2d47;background:#ffecef;border-color:#f4d5dd}.pmc-task-status--important{color:#a16a16;background:#fff3dc;border-color:#f0ddb8}
+    .pmc-task-main{padding:15px 19px 18px}
+    .pmc-task-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+    .pmc-task-info{display:flex;align-items:center;gap:11px;min-width:0;padding:13px;border:1px solid #e4eaf4;border-radius:16px;background:#fff;box-shadow:0 12px 25px -24px #334b6e70}
+    .pmc-task-info-icon{width:37px;height:37px;display:grid;place-items:center;flex:none;border-radius:11px;background:#ebf4ff;color:#366caa}
+    .pmc-task-info-icon svg{width:20px;height:20px}.pmc-task-info>div{min-width:0}
+    .pmc-task-info small{display:block;color:#8495ac;font-size:.72rem;line-height:1.35;margin-bottom:3px;font-weight:740}
+    .pmc-task-info strong{display:block;color:#293c56;font-size:.82rem;font-weight:820;line-height:1.35;overflow-wrap:anywhere}
+    .pmc-task-message{padding:16px 17px;border:1px solid #e4ebf5;background:#f7faff;border-radius:16px;margin:14px 0 0}
+    .pmc-task-message-head{display:flex;align-items:center;gap:9px;color:#2c5386;font-weight:800;font-size:.82rem;margin:0 0 9px}
+    .pmc-task-message-head svg{width:19px;height:19px}.pmc-task-message p{white-space:pre-wrap;color:#667a95;line-height:1.7;font-size:.86rem;margin:0;overflow-wrap:anywhere}
+    .pmc-task-foot{font-size:.73rem;color:#7890a5;font-weight:700;margin-top:13px}
+    [class*="st-key-pmc_notice_"]{margin-bottom:24px!important;min-width:0!important}
+    [class*="st-key-pmc_read_action_"] [data-testid="stButton"] button{border-radius:13px!important;margin-top:9px!important;min-height:49px!important;background:#edf5ff!important;border:1px solid #d6e6fa!important;color:#285f99!important;font-weight:820!important;box-shadow:none!important}
+    [class*="st-key-pmc_read_action_"] [data-testid="stButton"] button:hover{background:#e2efff!important;border-color:#bcd8fa!important}
+    [class*="st-key-pmc_attach_"]{border:1px solid #d9e8e3;background:linear-gradient(115deg,#f9fffc,#f0fbf6);border-radius:19px;padding:14px;margin:12px 0 15px}
+    .pmc-task-attach-title{display:flex;align-items:center;gap:11px;margin-bottom:12px;min-width:0}
+    .pmc-task-attach-symbol{flex:none;width:39px;height:39px;display:grid;place-items:center;border-radius:11px;color:#168765;background:#e3f7ee;border:1px solid #cdebdc}
+    .pmc-task-attach-symbol svg{width:21px;height:21px}
+    .pmc-task-attach-title>span:last-child{min-width:0}.pmc-task-attach-title strong{display:block;font-size:.81rem;font-weight:840;color:#167b5c}.pmc-task-attach-title small{display:block;font-size:.74rem;color:#718a84;margin-top:4px;overflow-wrap:anywhere}
+    [class*="st-key-pmc_attach_"] [data-testid="stButton"] button{min-height:46px!important;border-radius:12px!important;border:1px solid #c9e4d7!important;color:#137e5d!important;background:#fff!important;font-weight:800!important}
+    [class*="st-key-pmc_attach_"] [data-testid="stImage"] img{max-height:260px!important;object-fit:contain!important;border-radius:13px;border:1px solid #d8e4ec}
+    .st-key-pm_bottle_toast_card{position:fixed!important;bottom:25px;right:22px;z-index:990!important;width:min(410px,calc(100vw - 40px));max-width:410px;min-width:0;padding:17px 17px 14px!important;border:1px solid #e5dce1!important;border-left:4px solid #cc3452!important;border-radius:21px!important;background:#fff!important;box-shadow:0 20px 54px -20px rgba(23,40,65,.34)!important}
+    .pm-bottle-toast-hero{display:flex;gap:11px;align-items:center;margin-bottom:12px}
+    .pm-bottle-toast-icon{display:grid;place-items:center;flex:none;border-radius:12px;width:44px;height:44px;background:#fff1f4;color:#c73049}
+    .pm-bottle-toast-icon svg{width:23px;height:23px}
+    .pm-bottle-toast-copy{min-width:0}.pm-bottle-toast-copy small{display:block;font-size:.65rem;letter-spacing:.07em;font-weight:850;color:#c3314a;margin-bottom:3px}
+    .pm-bottle-toast-copy strong{display:block;font-size:.99rem;font-weight:850;color:#1f3048;line-height:1.3}
+    .pm-bottle-toast-copy p{margin:4px 0 0;color:#7d8a9c;font-size:.75rem;line-height:1.4;overflow-wrap:anywhere}
+    .st-key-pm_bottle_toast_card [data-testid="stButton"] button{min-height:41px!important;border-radius:12px!important;font-size:.78rem!important;font-weight:800!important}
+    .st-key-pm_bottle_toast_card [data-testid="stButton"] button[kind="primary"]{background:#ce304b!important;color:#fff!important;border-color:#ce304b!important}
+    @media(max-width:1000px){.pmc-task-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:780px){.pmc-task-hero{padding:15px 13px;margin:11px 10px 0;gap:11px;border-radius:17px}.pmc-task-hero-icon{width:47px;height:47px;border-radius:14px}.pmc-task-hero-icon svg{width:25px;height:25px}.pmc-task-main{padding:12px 11px 14px}.pmc-task-grid{gap:8px}.pmc-task-info{padding:10px 9px;gap:8px;border-radius:13px}.pmc-task-info-icon{width:32px;height:32px;border-radius:9px}.pmc-task-info-icon svg{width:17px;height:17px}.pmc-task-info strong{font-size:.74rem}.pmc-task-info small{font-size:.68rem}.pmc-task-message{padding:13px;border-radius:14px}.pmc-task-message p{font-size:.82rem}.pmc-task-status{padding:7px 9px;font-size:.66rem}.st-key-pm_bottle_toast_card{bottom:calc(91px + env(safe-area-inset-bottom,0px));left:12px;right:12px;width:auto;max-width:none;padding:14px!important}}
+    @media(max-width:520px){.pmc-task-hero{display:grid;grid-template-columns:44px minmax(0,1fr);grid-template-rows:auto auto;align-items:start;gap:7px 11px}.pmc-task-hero-icon{grid-column:1;grid-row:1 / span 2;width:44px;height:44px}.pmc-task-hero-text{grid-column:2;grid-row:1;min-width:0}.pmc-task-status{grid-column:2;grid-row:2;justify-self:start;white-space:normal}.pmc-task-hero-text small{font-size:.61rem}.pmc-card.pmc-task-card .pmc-task-hero-text h3{font-size:1.07rem!important;line-height:1.35!important}}
+    @media(max-width:390px){.pmc-task-info{gap:6px}.pmc-task-info-icon{width:28px;height:28px}.pmc-task-info-icon svg{width:16px;height:16px}.pmc-task-info strong{font-size:.71rem}.pmc-task-status{font-size:.62rem}}
     </style>''', unsafe_allow_html=True)
 
 
@@ -8699,51 +8775,142 @@ def _pmc_attachment_kind(mime, name=""):
     return "file"
 
 
-def _pmc_preview_attachment(data, name, mime, key):
+def _pmc_get_private_attachment(row, prefix):
+    """Carga privada bajo demanda; caché breve por usuario y archivo en ESTA sesión."""
+    import hashlib as _pmc_hash
+    raw_key = "|".join((str(prefix), str(st.session_state.get("usuario_login", "")),
+                        str(dni_actual), str(row.get("id_comunicado", "")),
+                        str(row.get("adjunto_drive_id", ""))))
+    key = "_pmc_private_" + _pmc_hash.sha256(raw_key.encode("utf-8")).hexdigest()[:24]
+    cached = st.session_state.get(key)
+    if isinstance(cached, dict) and time.time() - float(cached.get("created", 0)) < 240:
+        # La vista del usuario ya fue verificada por _pmc_visible() / _pmc_admin_ui().
+        return cached["content"]
+    content = _pmc_file_download(row)
+    st.session_state[key] = {"created": time.time(), "content": content}
+    return content
+
+
+def _pmc_pdf_page(data, page_index=0):
+    """Renderiza UNA página bajo demanda (iPhone / ahorro de memoria)."""
+    try:
+        import pymupdf as _pdf_backend
+    except ImportError:
+        try:
+            import fitz as _pdf_backend
+        except ImportError:
+            return None
+    with _pdf_backend.open(stream=data, filetype="pdf") as document:
+        if len(document) == 0:
+            raise ValueError("PDF vacío")
+        page_index = max(0, min(int(page_index), len(document)-1))
+        page = document[page_index]
+        # No generar lienzos desmesurados de archivos PDF con páginas gigantes.
+        factor = min(1.35, 1400 / max(page.rect.width, page.rect.height, 1))
+        pix = page.get_pixmap(matrix=_pdf_backend.Matrix(factor, factor), alpha=False)
+        return len(document), pix.tobytes("png")
+
+
+def _pmc_pdf_viewer(data, key):
+    """Visor nativo cuando está disponible; respaldo con renderizado de páginas."""
+    # streamlit>=1.50 y el extra streamlit-pdf permiten st.pdf.
+    native_pdf = getattr(st, "pdf", None)
+    if callable(native_pdf):
+        try:
+            native_pdf(data, height=570, key=key + "_pdf")
+            st.caption("Si tu iPhone no muestra el visor, utiliza «Ver páginas como imágenes».")
+        except Exception:
+            st.info("Visor PDF no disponible. Puedes usar la vista por páginas o descargar el archivo.")
+    else:
+        st.info("Para activar el visor PDF nativo, agrega streamlit-pdf a requirements.txt.")
+    if st.button("Ver páginas como imágenes", key=key + "_pages", use_container_width=True,
+                 icon=":material/visibility:"):
+        st.session_state[key + "_page_view_enabled"] = True
+    if st.session_state.get(key + "_page_view_enabled"):
+        try:
+            initial = _pmc_pdf_page(data, 0)
+            if initial is None:
+                st.warning("Agrega PyMuPDF a requirements.txt para activar el visor por páginas.")
+            else:
+                total, preview_image = initial
+                index = st.selectbox("Página del documento", range(min(total, 200)),
+                                     format_func=lambda i: f"Página {i+1}", key=key + "_page_index")
+                if index != 0:
+                    _, preview_image = _pmc_pdf_page(data, index)
+                st.caption(f"Página {index+1} de {total}" +
+                           (" · Para ver más de 200 páginas, descarga el PDF." if total > 200 else ""))
+                st.image(preview_image, use_container_width=True)
+        except Exception:
+            st.error("No se pudo representar el PDF. Puedes descargarlo para abrirlo en tu dispositivo.")
+
+
+@st.dialog("Vista previa de documento", width="large", **_pm_dialog_dismiss_kwargs())
+def _pmc_attachment_dialog(row, data, prefix):
+    """Vista ampliada solicitada por el usuario. No abre el diálogo al cargar la lista."""
+    name = str(row.get("adjunto_nombre") or "Archivo")
+    mime = str(row.get("adjunto_mime") or "application/octet-stream")
     kind = _pmc_attachment_kind(mime, name)
-    with st.container(key=key + "_preview_box"):
-        st.markdown('<div class="pmc-attach-shell">', unsafe_allow_html=True)
-        if kind == "image":
-            st.image(data, caption=str(name or "Adjunto"), use_container_width=True)
-        elif kind == "pdf":
-            b64 = base64.b64encode(data).decode("utf-8")
-            st.markdown(
-                '<div class="pmc-file-title">Vista previa del PDF</div>'
-                f'<iframe class="pmc-file-frame" src="data:application/pdf;base64,{b64}"></iframe>',
-                unsafe_allow_html=True,
-            )
-        elif kind == "text":
-            try:
-                preview = data.decode("utf-8")
-            except UnicodeDecodeError:
-                preview = data.decode("latin-1", errors="replace")
-            st.markdown('<div class="pmc-file-title">Vista previa del archivo</div>', unsafe_allow_html=True)
-            st.code(preview[:5000] + ("\n..." if len(preview) > 5000 else ""))
-        else:
-            st.info("Este adjunto no tiene vista previa integrada. Puedes descargarlo desde aquí.")
-        st.markdown('</div>', unsafe_allow_html=True)
+    key = "pmc_dialog_" + str(prefix) + "_" + str(row.get("id_comunicado", ""))
+    st.markdown("**" + _pmc_e(name) + "**")
+    if kind == "image":
+        st.image(data, caption=name, use_container_width=True)
+    elif kind == "pdf":
+        _pmc_pdf_viewer(data, key)
+    elif kind == "text":
+        try:
+            body = data.decode("utf-8")
+        except UnicodeDecodeError:
+            body = data.decode("latin-1", errors="replace")
+        st.code(body[:15000] + ("\n…" if len(body) > 15000 else ""))
+    else:
+        st.info("Este documento no admite vista previa. Descárgalo para abrirlo.")
+    st.download_button("Descargar archivo", data=data, file_name=name, mime=mime,
+                       use_container_width=True, key=key + "_download")
+    if st.button("Cerrar vista previa", key=key + "_close", use_container_width=True):
+        st.rerun()
 
 
 def _pmc_render_attach(row, prefix):
+    """Imagen: miniatura inmediata + lupa; PDF: un solo clic en el ojo.
+
+    Solo descarga de Drive al abrir el detalle (imagen del trabajador) o
+    al solicitar la vista previa (PDF y administración). No expone URLs.
+    """
     if not row.get("adjunto_drive_id"):
         return
-    file_name = str(row.get("adjunto_nombre", "Archivo"))
-    file_mime = str(row.get("adjunto_mime") or "application/octet-stream")
-    kind = _pmc_attachment_kind(file_mime, file_name)
-    kind_label = {"image": "Imagen privada", "pdf": "PDF privado", "text": "Documento privado"}.get(kind, "Adjunto privado")
-    st.markdown('<div class="pmc-attach-note">' + _pmc_e(kind_label) + ' · ' + _pmc_e(file_name) + '</div>', unsafe_allow_html=True)
-    key = f"pmc_file_{prefix}_{row['id_comunicado']}"
-    if st.button("Abrir adjunto en la app", key=key + "_open", use_container_width=True):
-        try:
-            st.session_state[key] = _pmc_file_download(row)
-        except Exception:
-            st.error("No se pudo recuperar el adjunto privado. Revisa Drive y tus permisos.")
-    if st.session_state.get(key):
-        _pmc_preview_attachment(st.session_state[key], file_name, file_mime, key)
-        st.download_button("Descargar adjunto", data=st.session_state[key],
-                           file_name=file_name,
-                           mime=file_mime,
-                           use_container_width=True, key=key + "_save")
+    name = str(row.get("adjunto_nombre") or "Archivo")
+    mime = str(row.get("adjunto_mime") or "application/octet-stream")
+    kind = _pmc_attachment_kind(mime, name)
+    key = "pmc_attach_" + prefix + "_" + str(row.get("id_comunicado", ""))
+    with st.container(key=key):
+        label = {"image": "IMAGEN ADJUNTA", "pdf": "DOCUMENTO PDF", "text": "DOCUMENTO DE TEXTO"}.get(kind, "ARCHIVO ADJUNTO")
+        st.markdown('<div class="pmc-task-attach-title"><span class="pmc-task-attach-symbol">'
+                    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" '
+                    'stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="3"/>'
+                    '<path d="M8 14l3-3 3 2 2-2 2 3M8 8h.01"/></svg></span>'
+                    '<span><strong>' + _pmc_e(label) + '</strong><small>' + _pmc_e(name) +
+                    '</small></span></div>', unsafe_allow_html=True)
+        data = None
+        if kind == "image" and prefix == "worker":
+            try:
+                data = _pmc_get_private_attachment(row, prefix)
+                with st.container(key=key + "_thumbnail"):
+                    st.image(data, caption="Vista previa · " + name, width=300)
+            except Exception:
+                st.error("No se pudo recuperar la imagen. Revisa Drive y tus permisos.")
+                return
+        btn_text = "Ampliar imagen" if kind == "image" else ("Ver PDF" if kind == "pdf" else "Ver documento")
+        if st.button(btn_text, key=key + "_eye", use_container_width=True,
+                     icon=":material/visibility:"):
+            try:
+                data = data if data is not None else _pmc_get_private_attachment(row, prefix)
+            except Exception:
+                st.error("No se pudo recuperar el adjunto privado. Comprueba Drive o los permisos.")
+            else:
+                _pmc_attachment_dialog(row, data, prefix)
+        if data is not None:
+            st.download_button("Descargar adjunto", data=data, file_name=name,
+                               mime=mime, key=key + "_download", use_container_width=True)
 
 
 def _pmc_employee_ui():
@@ -8799,7 +8966,7 @@ def _pmc_employee_ui():
                             else:
                                 st.error(msg)
                 else:
-                    st.markdown(_pmc_detail_html(row, receipt=receipt, admin=False), unsafe_allow_html=True)
+                    # El mensaje ya está completo en la tarjeta principal: sin duplicar título ni contenido.
                     _pmc_render_attach(row, "worker")
                     if receipt and receipt.get("confirmado_el"):
                         st.markdown('<div class="pmc-success">Lectura confirmada el ' +
@@ -9561,57 +9728,82 @@ st.markdown('''<style>
 @media(max-width:780px){.pm3-live-card{padding:10px 12px}.pm3-live-card strong{font-size:.81rem}}
 </style>''', unsafe_allow_html=True)
 
-# Notificación de botellas: se abre una sola vez por inicio de sesión.
-# Debe invocarse en el cuerpo principal, nunca dentro de st.sidebar ni st.columns.
-@st.dialog("Botellas pendientes", width="small", **_pm_dialog_dismiss_kwargs())
-def _tp_aviso_botellas_inicio(total):
-    # Resumen compacto: solo botellas. Cumpleaños, rutinas y comunicados conservan sus avisos propios.
-    _reg = _bf_pendientes_aviso
-    _botellas = 0
-    if isinstance(_reg, pd.DataFrame) and "cantidad_botellas" in _reg.columns:
-        _botellas = int(pd.to_numeric(_reg["cantidad_botellas"], errors="coerce").fillna(0).sum())
-    _texto_b = "botella pendiente" if _botellas == 1 else "botellas pendientes"
-    _texto_r = "registro abierto" if int(total) == 1 else "registros abiertos"
-    st.markdown(
-        '<div class="pm-bottle-compact">'
-        '<div class="pm-bottle-compact-icon"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M7 10h10M10 14h4"/></svg></div>'
-        '<div class="pm-bottle-compact-copy"><small>SEGUIMIENTO DE DEVOLUCIONES</small>'
-        f'<strong>{_botellas} {_texto_b}</strong>'
-        f'<p>{int(total)} {_texto_r}. Puedes revisarlos en Botellas Fiadas.</p>'
-        '</div></div>', unsafe_allow_html=True,
-    )
-    if isinstance(_reg, pd.DataFrame) and not _reg.empty:
-        st.markdown('<div class="pm-bottle-pending-list">', unsafe_allow_html=True)
-        for _, _r in _reg.head(2).iterrows():
-            _nombre_n = _html.escape(str(_r.get("cliente_nombre", "Cliente")))
-            _cant_n = _html.escape(str(_r.get("cantidad_botellas", "—")))
-            _tipo_n = _html.escape(str(_r.get("tipo_botella", "")))
-            st.markdown('<div class="pm-bottle-pending-item"><div><strong>' + _nombre_n +
-                        '</strong><small>' + _tipo_n + '</small></div><b>' + _cant_n + ' bot.</b></div>',
-                        unsafe_allow_html=True)
-        if len(_reg) > 2:
-            st.caption(f"Y {len(_reg)-2} registro(s) más por revisar.")
-        st.markdown('</div>', unsafe_allow_html=True)
-    col_detalle, col_cerrar = st.columns([1.25, 1], gap="small")
-    with col_detalle:
-        if st.button("Ver devoluciones", key="tp_bf_modal_ver", use_container_width=True, type="primary"):
-            st.session_state["nav_radio"] = "Botellas Fiadas"
-            st.session_state["gs_q"] = ""
-            st.rerun()
-    with col_cerrar:
-        if st.button("Después", key="tp_bf_modal_cerrar", use_container_width=True):
-            st.rerun()
+# Notificación de botellas: tarjeta no modal, con cierre automático.
+# El contador de barra lateral se conserva. No se mezcla con Cumpleaños,
+# Motivación, Comunicados ni los toasts de confirmación de otras operaciones.
+_PM_BOTTLE_NOTICE_SECONDS = 18
+_PM_BOTTLE_SNOOZE_SECONDS = 2 * 60 * 60
+_pm_modal_botellas_este_rerun = False  # compatibilidad con la cola existente
 
-# El contador del perfil sigue disponible en todas las vistas, pero el diálogo
-# solo aparece al entrar y no vuelve a abrirse al navegar por el dashboard.
-_pm_modal_botellas_este_rerun = False
-if (not st.session_state.get("_tp_cumple_dialogo_abierto", False)
-        and not st.session_state.get("_tp_botellas_aviso_login", False)):
-    # Solo se consume el aviso de esta sesión cuando realmente puede mostrarse.
-    st.session_state["_tp_botellas_aviso_login"] = True
-    if _bf_total_pendientes > 0:
-        _pm_modal_botellas_este_rerun = True
-        _tp_aviso_botellas_inicio(_bf_total_pendientes)
+
+def _pm_bottle_notice_status(now=None):
+    now = float(now if now is not None else time.time())
+    if not _bf_total_pendientes:
+        return "none"
+    if st.session_state.get("_tp_cumple_dialogo_abierto", False):
+        return "waiting"
+    if st.session_state.get("_pm_motivacion_dialogo_abierto", False):
+        return "waiting"
+    if globals().get("_pm_modal_motivacion_este_rerun", False):
+        return "waiting"
+    if st.session_state.get("_pmc_home_toast_pending"):
+        return "waiting"
+    if now - float(st.session_state.get("_pm_last_toast_at", 0)) < 10:
+        return "waiting"
+    if now < float(st.session_state.get("_pm_bottle_snooze_until", 0)):
+        return "snoozed"
+    if st.session_state.get("_tp_botellas_aviso_login", False):
+        return "done"
+    started = st.session_state.get("_pm_bottle_notice_started")
+    if started is None:
+        st.session_state["_pm_bottle_notice_started"] = now
+        return "visible"
+    if now - float(started) >= _PM_BOTTLE_NOTICE_SECONDS:
+        st.session_state["_tp_botellas_aviso_login"] = True
+        st.session_state.pop("_pm_bottle_notice_started", None)
+        return "done"
+    return "visible"
+
+
+def _pm_bottle_notify_once():
+    if _pm_bottle_notice_status() != "visible":
+        return
+    pend = _bf_pendientes_aviso
+    total_b = (int(pd.to_numeric(pend["cantidad_botellas"], errors="coerce").fillna(0).sum())
+               if isinstance(pend, pd.DataFrame) and "cantidad_botellas" in pend.columns else _bf_total_pendientes)
+    nombre = ""
+    if isinstance(pend, pd.DataFrame) and not pend.empty:
+        nombre = _html.escape(str(pend.iloc[0].get("cliente_nombre", "")))
+    with st.container(key="pm_bottle_toast_card"):
+        st.markdown(
+            '<div class="pm-bottle-toast-hero"><div class="pm-bottle-toast-icon" aria-hidden="true">'
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" '
+            'stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/>'
+            '<path d="M7 10h10M10 14h4"/></svg></div><div class="pm-bottle-toast-copy">'
+            '<small>DEVOLUCIONES PENDIENTES</small><strong>' + str(total_b) +
+            (' botella por devolver' if total_b == 1 else ' botellas por devolver') + '</strong>'
+            '<p>' + (f'{nombre} · ' if nombre else '') + str(_bf_total_pendientes) +
+            (' registro abierto.' if _bf_total_pendientes == 1 else ' registros abiertos.') +
+            '</p></div></div>', unsafe_allow_html=True)
+        b_go, b_close = st.columns([1.3,1],gap="small")
+        with b_go:
+            if st.button("Ver devoluciones", key="pm_bottle_toast_go", type="primary", use_container_width=True):
+                st.session_state["_tp_botellas_aviso_login"] = True
+                st.session_state.pop("_pm_bottle_notice_started", None)
+                st.session_state["nav_radio"] = "Botellas Fiadas"
+                st.session_state["gs_q"] = ""
+                st.rerun()
+        with b_close:
+            if st.button("Después", key="pm_bottle_toast_later", use_container_width=True):
+                st.session_state["_pm_bottle_snooze_until"] = time.time() + _PM_BOTTLE_SNOOZE_SECONDS
+                st.session_state.pop("_pm_bottle_notice_started", None)
+                st.rerun()
+
+# El fragmento comprueba únicamente Session State cada 3 s. No llama a Sheets.
+# La notificación se cierra sola después de 18 s, incluso sin interacción.
+_pm_bottle_fragment = getattr(st, "fragment", None)
+if callable(_pm_bottle_fragment):
+    _pm_bottle_notify_once = _pm_bottle_fragment(run_every="3s")(_pm_bottle_notify_once)
 
 # Mensaje de bienvenida diario. No compite con el modal de cumpleaños o botellas.
 def _pm_frase_dia(nombre, dni, hoy):
@@ -9659,7 +9851,10 @@ def _pm_diario_registro_proceso():
     import threading
     return {"vistos": set(), "lock": threading.Lock()}
 
-@st.dialog("Un mensaje para ti", width="small", **_pm_dialog_dismiss_kwargs())
+def _pm_motivo_dismiss():
+    st.session_state["_pm_motivacion_dialogo_abierto"] = False
+
+@st.dialog("Un mensaje para ti", width="small", **_pm_dialog_dismiss_kwargs(_pm_motivo_dismiss))
 def _pm_dialogo_motivacion(nombre, frase):
     _nombre_esc = _html.escape(str(nombre).split()[0].capitalize() if nombre else "equipo")
     _frase_esc = _html.escape(frase)
@@ -9675,6 +9870,7 @@ def _pm_dialogo_motivacion(nombre, frase):
         unsafe_allow_html=True,
     )
     if st.button("¡Vamos por un gran día!", key="pm_diario_continuar", type="primary", use_container_width=True):
+        st.session_state["_pm_motivacion_dialogo_abierto"] = False
         st.rerun()
 
 # La frase se muestra una vez por usuario/día en la sesión y, mientras siga
@@ -9695,6 +9891,7 @@ if (not st.session_state.get("_tp_cumple_dialogo_abierto", False)
         st.session_state[_pm_flag_dia] = True
         if not _pm_ya_visto:
             _pm_modal_motivacion_este_rerun = True
+            st.session_state["_pm_motivacion_dialogo_abierto"] = True
             _pm_dialogo_motivacion(user_real, _pm_frase_dia(user_real, _pm_clave_dia[0], _pm_hoy_dia))
 
 # -------------------- ASISTENTE PREMIUM IA · V2 --------------------
@@ -10316,6 +10513,22 @@ def _pm_mobile_notices():
         st.button("Revisar botellas", key="pm_mobile_bottles", use_container_width=True,
                   on_click=_ir_a, args=("Botellas Fiadas",), icon=":material/inventory_2:")
 
+# Los estilos de la notificación se cargan globalmente, sin tener que abrir Comunicados.
+st.markdown(r"""<style>
+.st-key-pm_bottle_toast_card{position:fixed!important;bottom:25px;right:22px;z-index:990!important;width:min(410px,calc(100vw - 40px));max-width:410px;min-width:0;padding:17px 17px 14px!important;border:1px solid #e5dce1!important;border-left:4px solid #cc3452!important;border-radius:21px!important;background:#fff!important;box-shadow:0 20px 54px -20px rgba(23,40,65,.34)!important}
+.pm-bottle-toast-hero{display:flex;gap:11px;align-items:center;margin-bottom:12px}.pm-bottle-toast-icon{display:grid;place-items:center;flex:none;border-radius:12px;width:44px;height:44px;background:#fff1f4;color:#c73049}
+.pm-bottle-toast-icon svg{width:23px;height:23px}.pm-bottle-toast-copy{min-width:0}.pm-bottle-toast-copy small{display:block;font-size:.65rem;letter-spacing:.07em;font-weight:850;color:#c3314a;margin-bottom:3px}
+.pm-bottle-toast-copy strong{display:block;font-size:.99rem;font-weight:850;color:#1f3048;line-height:1.3}.pm-bottle-toast-copy p{margin:4px 0 0;color:#7d8a9c;font-size:.75rem;line-height:1.4;overflow-wrap:anywhere}
+.st-key-pm_bottle_toast_card [data-testid="stButton"] button{min-height:41px!important;border-radius:12px!important;font-size:.78rem!important;font-weight:800!important}
+.st-key-pm_bottle_toast_card [data-testid="stButton"] button[kind="primary"]{background:#ce304b!important;color:#fff!important;border-color:#ce304b!important}
+@media(max-width:780px){.st-key-pm_bottle_toast_card{bottom:calc(91px + env(safe-area-inset-bottom,0px));left:12px;right:12px;width:auto;max-width:none;padding:14px!important}}
+</style>""", unsafe_allow_html=True)
+
+# Tarjeta de botellas: notificación flotante no modal (18 s) en la sesión actual.
+# Se posiciona por CSS y no altera los componentes ni permisos de cada vista.
+if choice != "Marcar Asistencia":
+    _pm_bottle_notify_once()
+
 # Mostrar las confirmaciones de la ejecución anterior antes del módulo activo.
 _pm62_mostrar_confirmacion(choice)
 
@@ -10336,8 +10549,9 @@ elif choice == "Marcar Asistencia":
     # Panel específico para teléfonos; conserva el formulario existente y su lógica.
     _pm_mobile_home()
 
-    # Recordatorio independiente de comunicados: banner visible + aviso breve.
+    # Comunicados primero: la tarjeta de botellas espera a que finalice el aviso.
     _pmc_home_notice()
+    _pm_bottle_notify_once()
 
     with st.container(key="pm_v_marcar_asistencia"):
 
