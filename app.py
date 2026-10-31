@@ -9283,7 +9283,8 @@ def _pmc_unified_attachment_panel(row, prefix):
     with st.container(key="pmcu_attachment_panel_" + str(row["id_comunicado"])):
         st.markdown('<div class="pmcu-attachment-title"><span class="pmcu-attachment-icon">'
                     + icon + '</span><span><strong>' + _pmc_e(label) + '</strong>'
-                    '<small>' + _pmc_e(name) + '</small></span></div>', unsafe_allow_html=True)
+                    '<small title="' + _pmc_e(name) + '">' + _pmc_e(name)
+                    + '</small></span></div>', unsafe_allow_html=True)
         try:
             data = _pmc_get_private_attachment(row, prefix)
         except Exception:
@@ -9292,8 +9293,8 @@ def _pmc_unified_attachment_panel(row, prefix):
         if kind == "image":
             with st.container(key="pmcu_image_thumbnail_" + str(row["id_comunicado"])):
                 st.image(data, use_container_width=True)
-            st.markdown('<div class="pmcu-attachment-caption">Vista previa · '
-                        + _pmc_e(name) + '</div>', unsafe_allow_html=True)
+            st.markdown('<div class="pmcu-attachment-caption">Vista previa de la imagen</div>',
+                        unsafe_allow_html=True)
         elif kind == "pdf":
             try:
                 first_page = _pmc_pdf_page(data, 0)
@@ -9307,23 +9308,26 @@ def _pmc_unified_attachment_panel(row, prefix):
             else:
                 with st.container(key="pmcu_pdf_thumbnail_" + str(row["id_comunicado"])):
                     st.image(first_page[1], use_container_width=True)
-                st.markdown('<div class="pmcu-attachment-caption">Vista previa de la primera página · '
-                            + _pmc_e(name) + '</div>', unsafe_allow_html=True)
+                st.markdown('<div class="pmcu-attachment-caption">Primera página del PDF</div>',
+                            unsafe_allow_html=True)
         else:
             st.markdown('<div class="pmcu-file-placeholder"><strong>Documento disponible</strong>'
                         '<small>Utiliza el botón de vista previa o descárgalo.</small></div>',
                         unsafe_allow_html=True)
+        # El ojo y la descarga quedan DENTRO de la misma tarjeta del adjunto.
+        if data is not None:
+            _pmc_unified_attachment_actions(row, data, kind, prefix)
     return data, kind
 
 
 def _pmc_unified_attachment_actions(row, data, kind, prefix):
-    """Dos acciones reales, horizontales en PC y apiladas en móvil."""
+    """Dos acciones reales, alineadas dentro del panel del adjunto."""
     rid = str(row["id_comunicado"])
     name = str(row.get("adjunto_nombre") or "Archivo")
     mime = str(row.get("adjunto_mime") or "application/octet-stream")
     label = {"image": "Ampliar imagen", "pdf": "Ver PDF"}.get(kind, "Ver documento")
     with st.container(key="pmcu_actions_" + rid):
-        left, right = st.columns([1, 1], gap="medium")
+        left, right = st.columns([1, 1], gap="small", vertical_alignment="center")
         with left:
             if st.button(label, key="pmcu_eye_" + rid, use_container_width=True,
                          icon=":material/visibility:"):
@@ -9455,6 +9459,63 @@ def _pmc_reference_styles():
       [class*="st-key-pmr_worker_preview_columns_"] [data-testid="stHorizontalBlock"]{flex-direction:column!important}
       [class*="st-key-pmr_worker_preview_columns_"] [data-testid="stColumn"]{flex:1 1 auto!important;width:100%!important;max-width:100%!important}
     }
+
+    /* COMUNICADOS: detalle privado, tarjeta de adjunto compacta y botones simétricos. */
+    [class*="st-key-pmcu_attachment_panel_"]{min-width:0!important;max-width:100%!important;overflow:hidden!important;}
+    [class*="st-key-pmcu_attachment_panel_"] .pmcu-attachment-title{
+      min-width:0!important;max-width:100%!important;display:flex!important;align-items:center!important;gap:10px!important;
+      overflow:hidden!important;margin-bottom:12px!important;
+    }
+    [class*="st-key-pmcu_attachment_panel_"] .pmcu-attachment-title>span:last-child{
+      display:block!important;min-width:0!important;max-width:100%!important;flex:1 1 0!important;overflow:hidden!important;
+    }
+    [class*="st-key-pmcu_attachment_panel_"] .pmcu-attachment-title small{
+      display:block!important;width:100%!important;max-width:100%!important;min-width:0!important;
+      overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;
+      overflow-wrap:normal!important;line-height:1.5!important;
+    }
+    [class*="st-key-pmcu_attachment_panel_"] .pmcu-attachment-caption{
+      margin:7px 0 2px!important;color:#8092a6!important;font-size:.71rem!important;
+      white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;
+    }
+    [class*="st-key-pmcu_attachment_panel_"] [class*="st-key-pmcu_actions_"]{
+      width:100%!important;min-width:0!important;max-width:100%!important;
+      margin:14px 0 0!important;padding:12px 0 0!important;
+      border:0!important;border-top:1px solid #dcebe5!important;
+    }
+    [class*="st-key-pmcu_actions_"] [data-testid="stHorizontalBlock"]{
+      align-items:stretch!important;gap:11px!important;min-width:0!important;margin:0!important;padding:0!important;
+    }
+    [class*="st-key-pmcu_actions_"] [data-testid="stColumn"]{
+      min-width:0!important;align-self:stretch!important;display:flex!important;align-items:stretch!important;
+    }
+    [class*="st-key-pmcu_actions_"] [data-testid="stButton"],
+    [class*="st-key-pmcu_actions_"] [data-testid="stDownloadButton"]{
+      display:flex!important;align-items:stretch!important;min-width:0!important;width:100%!important;
+      margin:0!important;padding:0!important;
+    }
+    [class*="st-key-pmcu_actions_"] [data-testid="stButton"] button,
+    [class*="st-key-pmcu_actions_"] [data-testid="stDownloadButton"] button{
+      display:flex!important;justify-content:center!important;align-items:center!important;
+      width:100%!important;min-height:44px!important;height:44px!important;max-height:44px!important;
+      margin:0!important;padding:8px 9px!important;line-height:1.25!important;
+      font-size:.75rem!important;font-weight:780!important;border-radius:12px!important;
+      gap:6px!important;white-space:nowrap!important;box-sizing:border-box!important;
+    }
+    [class*="st-key-pmcu_actions_"] [data-testid="stButton"] button svg,
+    [class*="st-key-pmcu_actions_"] [data-testid="stDownloadButton"] button svg{
+      flex:none!important;width:17px!important;height:17px!important;
+    }
+    @media(max-width:790px){
+      [class*="st-key-pmcu_actions_"] [data-testid="stHorizontalBlock"]{flex-direction:column!important;gap:9px!important;}
+      [class*="st-key-pmcu_actions_"] [data-testid="stColumn"]{
+        flex:1 1 auto!important;width:100%!important;max-width:100%!important;
+      }
+      [class*="st-key-pmcu_actions_"] [data-testid="stButton"] button,
+      [class*="st-key-pmcu_actions_"] [data-testid="stDownloadButton"] button{
+        min-height:46px!important;height:46px!important;max-height:46px!important;font-size:.8rem!important;
+      }
+    }
     </style>""", unsafe_allow_html=True)
 
 
@@ -9536,47 +9597,6 @@ def _pmc_admin_progress_html(counts, state):
     return html + '<div class="pmr-admin-progress"><i style="width:' + str(pct) + '%"></i></div>'
 
 
-def _pmc_worker_teaser_html(row):
-    content = " ".join(str(row.get("contenido", "")).split())
-    if len(content) > 118:
-        content = content[:115].rsplit(" ", 1)[0].rstrip() + "…"
-    return ('<div class="pmr-worker-teaser"><strong>Mensaje del comunicado</strong><p>'
-            + _pmc_e(content or "Abre el comunicado para consultar el mensaje completo.") + '</p></div>')
-
-
-def _pmc_worker_preview_media(row):
-    """Miniatura privada para la primera publicación visible con adjunto.
-    Carga bajo demanda a través de la sesión existente; nunca genera URL pública.
-    """
-    name = str(row.get("adjunto_nombre") or "Archivo")
-    kind = _pmc_attachment_kind(row.get("adjunto_mime"), name)
-    if not row.get("adjunto_drive_id"):
-        return
-    with st.container(key="pmr_worker_preview_" + str(row["id_comunicado"])):
-        if kind not in ("image", "pdf"):
-            st.markdown('<div class="pmr-worker-file">Archivo adjunto disponible</div>', unsafe_allow_html=True)
-            return
-        try:
-            data = _pmc_get_private_attachment(row, "worker")
-            if kind == "pdf":
-                preview = _pmc_pdf_page(data, 0)
-                if preview is None:
-                    st.markdown('<div class="pmr-worker-file">PDF disponible · Abre para verlo</div>', unsafe_allow_html=True)
-                else:
-                    st.image(preview[1], use_container_width=True)
-            else:
-                # Miniatura reducida para evitar transmitir 10 MB al teléfono cada vez.
-                from PIL import Image as _PIL_Image, ImageOps as _PIL_ImageOps
-                with _PIL_Image.open(io.BytesIO(data)) as im:
-                    mini = _PIL_ImageOps.exif_transpose(im)
-                    mini.thumbnail((560, 300), _PIL_Image.Resampling.LANCZOS)
-                    output = io.BytesIO()
-                    mini.convert("RGB").save(output, format="JPEG", quality=78, optimize=True)
-                    st.image(output.getvalue(), use_container_width=True)
-        except Exception:
-            st.markdown('<div class="pmr-worker-file">Adjunto disponible · Abrir para visualizar</div>', unsafe_allow_html=True)
-
-
 def _pmc_employee_ui():
     premium_module_shell("Mis Comunicados", "COMUNICACIÓN", "Anuncios oficiales de Premium Market y confirmaciones de lectura.")
     _pmc_ui_styles()
@@ -9620,7 +9640,7 @@ def _pmc_employee_ui():
         page_num = 1
     visible_page = visible[(page_num - 1) * page_size:page_num * page_size]
     with st.container(key="pmc_reader"):
-        for row_index, row in enumerate(visible_page):
+        for row in visible_page:
             rid = row["id_comunicado"]
             receipt = _pmc_receipt(reads, rid, dni_actual)
             opened_key = f"pmc_open_{rid}_{_pm2_dni(dni_actual)}"
@@ -9631,17 +9651,8 @@ def _pmc_employee_ui():
                 st.markdown(_pmc_unified_header_html(row, receipt), unsafe_allow_html=True)
                 st.markdown(_pmc_unified_meta_html(row), unsafe_allow_html=True)
                 if not opened:
-                    # Boceto aprobado: ficha, resumen breve, miniatura y acción discreta.
-                    # Se mantienen el mensaje COMPLETO y la confirmación en el detalle.
-                    if row.get("adjunto_drive_id") and row_index == 0:
-                        with st.container(key="pmr_worker_preview_columns_" + rid):
-                            _teaser_col, _preview_col = st.columns([1.25, 1], gap="small")
-                            with _teaser_col:
-                                st.markdown(_pmc_worker_teaser_html(row), unsafe_allow_html=True)
-                            with _preview_col:
-                                _pmc_worker_preview_media(row)
-                    else:
-                        st.markdown(_pmc_worker_teaser_html(row), unsafe_allow_html=True)
+                    # Vista cerrada: solo título, estado y cuatro datos. El contenido
+                    # y los archivos privados se leen exclusivamente tras pulsar «Leer».
                     with st.container(key="pmc_read_action_" + rid):
                         if st.button("Leer comunicado", key="pmc_open_btn_" + rid,
                                      icon=":material/visibility:", use_container_width=False):
@@ -9665,8 +9676,6 @@ def _pmc_employee_ui():
                         else:
                             st.markdown(_pmc_unified_message_html(row, expanded=True, receipt=receipt),
                                         unsafe_allow_html=True)
-                    if attachment_data is not None:
-                        _pmc_unified_attachment_actions(row, attachment_data, attachment_kind, "worker")
                     with st.container(key="pmcu_read_controls_" + rid):
                         if not (receipt and receipt.get("confirmado_el")):
                             if st.button("Confirmo que he leído este comunicado", key="pmc_confirm_" + rid,
@@ -9918,9 +9927,7 @@ def _pmc_admin_ui():
                             with text_col:
                                 st.markdown(_pmc_admin_message_html(n), unsafe_allow_html=True)
                             with photo_col:
-                                media_bytes, media_kind = _pmc_unified_attachment_panel(n, "admin")
-                                if media_bytes is not None:
-                                    _pmc_unified_attachment_actions(n, media_bytes, media_kind, "admin")
+                                _pmc_unified_attachment_panel(n, "admin")
                         else:
                             st.markdown(_pmc_admin_message_html(n), unsafe_allow_html=True)
                     st.markdown(_pmc_admin_progress_html(counts, status_label), unsafe_allow_html=True)
