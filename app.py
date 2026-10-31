@@ -996,6 +996,42 @@ section[data-testid="stSidebar"] .tp-brand {margin-bottom:12px;}
 .st-key-pm_v_gestion_colaboradores .tp-row{border-bottom:1px solid var(--pm-line);}
 /* 10 Nómina */
 .st-key-pm_v_boletas_de_pago .boleta-table{width:100%;}
+.st-key-pm_v_boletas_de_pago .tp-pay-lead{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin:10px 0 16px;padding:14px 18px;border:1px solid #e8edf4;border-radius:18px;background:linear-gradient(180deg,#ffffff 0%,#fbfcff 100%);box-shadow:0 8px 26px -22px rgba(16,24,40,.22);}
+.st-key-pm_v_boletas_de_pago .tp-pay-lead b{display:block;font-size:.88rem;color:#1f2b40;margin-bottom:4px;}
+.st-key-pm_v_boletas_de_pago .tp-pay-lead span{display:block;font-size:.79rem;line-height:1.5;color:#748197;}
+.st-key-pm_v_boletas_de_pago .tp-pay-chip{display:inline-flex;align-items:center;gap:7px;padding:9px 12px;border-radius:999px;background:#fff4e8;color:#a56612;font-size:.74rem;font-weight:800;white-space:nowrap;border:1px solid #f2ddb4;}
+.st-key-pm_v_boletas_de_pago .tp-pay-chip.ok{background:#eefaf4;color:#148a65;border-color:#cbead9;}
+.st-key-pm_v_boletas_de_pago .tp-pay-kpis{margin-bottom:14px;}
+.st-key-boleta_resumen_panel,.st-key-boleta_ingresos_panel,.st-key-boleta_desc_panel{background:linear-gradient(180deg,#ffffff 0%,#fbfcff 100%);border:1px solid #e7edf3;border-radius:22px;padding:18px 18px 8px;box-shadow:0 10px 30px -24px rgba(16,24,40,.22);margin:10px 0 18px;}
+.st-key-boleta_resumen_panel{padding-bottom:16px;}
+.st-key-boleta_ingresos_panel{border-top:4px solid #1ea672;}
+.st-key-boleta_desc_panel{border-top:4px solid #d55267;}
+.st-key-pm_v_boletas_de_pago .tp-pay-title{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:14px;}
+.st-key-pm_v_boletas_de_pago .tp-pay-title h4{margin:0!important;font-size:1rem!important;line-height:1.2!important;color:#1f2b40!important;letter-spacing:-.03em!important;}
+.st-key-pm_v_boletas_de_pago .tp-pay-title p{margin:4px 0 0!important;font-size:.8rem!important;line-height:1.5!important;color:#7b8799!important;}
+.st-key-pm_v_boletas_de_pago .tp-pay-badge{display:inline-flex;align-items:center;justify-content:center;min-width:44px;height:44px;padding:0 12px;border-radius:14px;font-size:1.05rem;font-weight:800;}
+.st-key-pm_v_boletas_de_pago .tp-pay-badge.in{background:#ecfaf3;color:#148a65;}
+.st-key-pm_v_boletas_de_pago .tp-pay-badge.out{background:#fff1f3;color:#c12f43;}
+.st-key-boleta_ingresos_panel [data-testid="stNumberInput"],.st-key-boleta_desc_panel [data-testid="stNumberInput"]{background:#fff;border:1px solid #e8edf4;border-radius:18px;padding:11px 13px 8px;box-shadow:0 10px 22px -24px rgba(16,24,40,.18);margin-bottom:10px;}
+.st-key-boleta_ingresos_panel [data-testid="stNumberInput"]:focus-within,.st-key-boleta_desc_panel [data-testid="stNumberInput"]:focus-within{border-color:#d6dee8;box-shadow:0 0 0 3px rgba(216,47,67,.08),0 14px 24px -24px rgba(16,24,40,.25);}
+.st-key-boleta_ingresos_panel [data-testid="stNumberInput"] label p,.st-key-boleta_desc_panel [data-testid="stNumberInput"] label p{font-weight:800!important;font-size:.82rem!important;color:#26354a!important;line-height:1.35!important;}
+.st-key-boleta_ingresos_panel [data-testid="stNumberInput"] input,.st-key-boleta_desc_panel [data-testid="stNumberInput"] input{font-weight:800!important;color:#18243b!important;font-size:1rem!important;}
+.st-key-boleta_ingresos_panel .tp-note-t,.st-key-boleta_desc_panel .tp-note-t{margin-top:2px;}
+.st-key-boleta_ingresos_panel [data-testid="stAlert"],.st-key-boleta_desc_panel [data-testid="stAlert"]{margin:6px 0 12px!important;}
+@media(max-width:900px){
+ .st-key-pm_v_boletas_de_pago .tp-pay-lead{padding:13px 14px;}
+ .st-key-boleta_resumen_panel,.st-key-boleta_ingresos_panel,.st-key-boleta_desc_panel{padding:16px 14px 6px;border-radius:18px;}
+}
+@media(max-width:680px){
+ .st-key-pm_v_boletas_de_pago .tp-pay-lead{flex-direction:column;align-items:flex-start;gap:10px;}
+ .st-key-pm_v_boletas_de_pago .tp-pay-title{gap:10px;align-items:center;}
+ .st-key-pm_v_boletas_de_pago .tp-pay-title h4{font-size:.96rem!important;}
+ .st-key-pm_v_boletas_de_pago .tp-pay-title p{font-size:.78rem!important;}
+ .st-key-pm_v_boletas_de_pago .tp-pay-badge{min-width:40px;height:40px;border-radius:12px;font-size:.95rem;}
+ .st-key-boleta_ingresos_panel [data-testid="stNumberInput"],.st-key-boleta_desc_panel [data-testid="stNumberInput"]{padding:10px 11px 7px;border-radius:16px;}
+ .st-key-boleta_ingresos_panel [data-testid="stNumberInput"] label p,.st-key-boleta_desc_panel [data-testid="stNumberInput"] label p{font-size:.8rem!important;}
+ .st-key-boleta_ingresos_panel [data-testid="stNumberInput"] input,.st-key-boleta_desc_panel [data-testid="stNumberInput"] input{font-size:.98rem!important;}
+}
 /* 11 Programación */
 .st-key-pm_v_programacion_de_turnos .tp-up-calendar,.st-key-pm_v_programacion_de_turnos .tp-cal-shell{overflow-x:auto!important;max-width:100%!important;}
 .st-key-pm_v_programacion_de_turnos .tp-up-shift{min-height:66px;}
@@ -10769,44 +10805,53 @@ elif choice == "Boletas de Pago":
                     incidencias_monto = float(pd.to_numeric(df_inc_u["valor_reparacion"], errors="coerce").fillna(0).sum())
 
             st.markdown('<div class="tp-sec" style="margin-top:18px"><div><div class="tp-sec-title">Valores y conceptos calculados</div><div class="tp-sec-sub">Los valores se calculan solos desde asistencia, solicitudes y caja; puedes ajustarlos si hace falta</div></div></div>', unsafe_allow_html=True)
-            resumen_slot = st.empty()
+            st.markdown('<div class="tp-pay-lead"><div><b>Editor de valores de boleta</b><span>Ahora los conceptos se organizan en dos paneles claros para que ajustes ingresos y descuentos sin perder la vista general. Pensado para escritorio y también para celular.</span></div><div class="tp-pay-chip ok">Cálculo inteligente</div></div>', unsafe_allow_html=True)
+            with st.container(key="boleta_resumen_panel"):
+                st.markdown('<div class="tp-pay-title"><div><h4>Resumen automático</h4><p>Se recalcula en tiempo real a medida que cambias cualquier campo.</p></div><div class="tp-pay-badge in">Σ</div></div>', unsafe_allow_html=True)
+                resumen_slot = st.empty()
         
             if permisos_recuperados_cnt > 0:
                 ui_callout("**Permisos recuperados (no se cuentan como falta):** " + " | ".join(permisos_recuperados_detalle), "ok")
 
-            st.markdown('<div class="tp-grp ok">Ingresos</div>', unsafe_allow_html=True)
-            c_i1, c_i2, c_i3 = st.columns(3)
-            sueldo_basico_in = c_i1.number_input("Sueldo Básico (S/.)", min_value=0.0, value=530.0, step=10.0, format="%.2f")
-            dias_trab_in = c_i2.number_input("Días Laborados", min_value=0, max_value=31, value=int(dias_trabajados_cnt))
-            feriados_trab_in = c_i3.number_input("Feriados Trab. (Adicional)", min_value=0, max_value=10, value=int(feriados_trabajados_cnt))
+            col_ingresos, col_descuentos = st.columns(2, gap="large")
 
-            c_i4, c_i10 = st.columns(2)
-            hrs_extras_in = c_i4.number_input("Horas Extras (Hrs)", min_value=0.0, value=float(hrs_extras_totales), step=0.5, format="%.2f")
-            domingo_volunt_in = c_i10.number_input(
-                "Días de Descanso Trabajados Voluntariamente (Domingo)", min_value=0, max_value=5, value=int(domingos_voluntarios_cnt),
-                help="Se calcula automáticamente con la solicitud aprobada y la asistencia registrada; también reconoce marcaciones históricas de domingo voluntario. Puedes ajustarlo manualmente."
-            )
-            ui_callout("Los domingos trabajados voluntariamente se pagan como día adicional (100% del valor día), separado del sueldo básico, dejando constancia de que originalmente era su descanso.")
+            with col_ingresos:
+                with st.container(key="boleta_ingresos_panel"):
+                    st.markdown('<div class="tp-pay-title"><div><h4>Ingresos</h4><p>Sueldo, feriados, horas extra, domingos voluntarios y bonos reconocidos.</p></div><div class="tp-pay-badge in">+</div></div>', unsafe_allow_html=True)
+                    c_i1, c_i2 = st.columns(2)
+                    sueldo_basico_in = c_i1.number_input("Sueldo Básico (S/.)", min_value=0.0, value=530.0, step=10.0, format="%.2f")
+                    dias_trab_in = c_i2.number_input("Días Laborados", min_value=0, max_value=31, value=int(dias_trabajados_cnt))
 
-            c_b1, c_b2, c_b3 = st.columns(3)
-            bono_puntualidad_in = c_b1.number_input("Bono por Puntualidad (S/.)", min_value=0.0, value=0.0, step=5.0, format="%.2f", key="boleta_bono_puntualidad")
-            bono_presencia_in = c_b2.number_input("Bono Presencia y Uniforme (S/.)", min_value=0.0, value=0.0, step=5.0, format="%.2f", key="boleta_bono_presencia")
-            bono_orden_in = c_b3.number_input("Bono Orden y Limpieza (S/.)", min_value=0.0, value=0.0, step=5.0, format="%.2f", key="boleta_bono_orden")
+                    c_i3, c_i4 = st.columns(2)
+                    feriados_trab_in = c_i3.number_input("Feriados Trab. (Adicional)", min_value=0, max_value=10, value=int(feriados_trabajados_cnt))
+                    hrs_extras_in = c_i4.number_input("Horas Extras (Hrs)", min_value=0.0, value=float(hrs_extras_totales), step=0.5, format="%.2f")
 
-            st.markdown('<div class="tp-grp bad">Descuentos</div>', unsafe_allow_html=True)
-            c_i5, c_i6, c_i7 = st.columns(3)
-            adelanto_in = c_i5.number_input("Adelanto de Sueldo (S/.)", min_value=0.0, value=float(adelanto_sueldo_monto), step=5.0, format="%.2f")
-            dias_faltas_in = c_i6.number_input("Días Faltas", min_value=0, max_value=30, value=int(dias_faltas_cnt))
-            descuadre_caja_in = c_i7.number_input("Descuadre / Faltante Caja (S/.)", min_value=0.0, value=float(descuadre_caja_monto), step=1.0, format="%.2f")
+                    domingo_volunt_in = st.number_input(
+                        "Días de Descanso Trabajados Voluntariamente (Domingo)", min_value=0, max_value=5, value=int(domingos_voluntarios_cnt),
+                        help="Se calcula automáticamente con la solicitud aprobada y la asistencia registrada; también reconoce marcaciones históricas de domingo voluntario. Puedes ajustarlo manualmente."
+                    )
+                    ui_callout("Los domingos trabajados voluntariamente se pagan como día adicional (100% del valor día), separado del sueldo básico, dejando constancia de que originalmente era su descanso.")
 
-            c_i8, c_i9 = st.columns(2)
-            desc_inventario_in = c_i8.number_input("Descuadre Inventario (S/.)", min_value=0.0, value=0.0, step=1.0, format="%.2f")
-            consumos_in = c_i9.number_input("Consumos por Pagar (S/.)", min_value=0.0, value=0.0, step=1.0, format="%.2f")
+                    st.markdown("<div class='tp-note-t'>Bonos y reconocimientos</div>", unsafe_allow_html=True)
+                    c_b1, c_b2 = st.columns(2)
+                    bono_puntualidad_in = c_b1.number_input("Bono por Puntualidad (S/.)", min_value=0.0, value=0.0, step=5.0, format="%.2f", key="boleta_bono_puntualidad")
+                    bono_presencia_in = c_b2.number_input("Bono Presencia y Uniforme (S/.)", min_value=0.0, value=0.0, step=5.0, format="%.2f", key="boleta_bono_presencia")
+                    bono_orden_in = st.number_input("Bono Orden y Limpieza (S/.)", min_value=0.0, value=0.0, step=5.0, format="%.2f", key="boleta_bono_orden")
 
-            c_inc1, c_inc2 = st.columns(2)
-            incidencias_in = c_inc1.number_input("Incidencias / Daños (S/.)", min_value=0.0, value=float(incidencias_monto), step=1.0, format="%.2f", key=f"boleta_incidencias_{colab_b_sel}_{mes_b_sel}_{anio_b_sel}")
-            with c_inc2:
-                ui_callout(f"Se descuentan las incidencias del mes registradas por el colaborador ({incidencias_cnt} registrada(s)), excepto las marcadas como 'Resuelto / Condonado'.")
+            with col_descuentos:
+                with st.container(key="boleta_desc_panel"):
+                    st.markdown('<div class="tp-pay-title"><div><h4>Descuentos</h4><p>Adelantos, faltas reconocidas, diferencias de caja, inventario, consumos e incidencias del mes.</p></div><div class="tp-pay-badge out">−</div></div>', unsafe_allow_html=True)
+                    c_i5, c_i6 = st.columns(2)
+                    adelanto_in = c_i5.number_input("Adelanto de Sueldo (S/.)", min_value=0.0, value=float(adelanto_sueldo_monto), step=5.0, format="%.2f")
+                    dias_faltas_in = c_i6.number_input("Días Faltas", min_value=0, max_value=30, value=int(dias_faltas_cnt))
+
+                    c_i7, c_i8 = st.columns(2)
+                    descuadre_caja_in = c_i7.number_input("Descuadre / Faltante Caja (S/.)", min_value=0.0, value=float(descuadre_caja_monto), step=1.0, format="%.2f")
+                    desc_inventario_in = c_i8.number_input("Descuadre Inventario (S/.)", min_value=0.0, value=0.0, step=1.0, format="%.2f")
+
+                    consumos_in = st.number_input("Consumos por Pagar (S/.)", min_value=0.0, value=0.0, step=1.0, format="%.2f")
+                    incidencias_in = st.number_input("Incidencias / Daños (S/.)", min_value=0.0, value=float(incidencias_monto), step=1.0, format="%.2f", key=f"boleta_incidencias_{colab_b_sel}_{mes_b_sel}_{anio_b_sel}")
+                    ui_callout(f"Se descuentan las incidencias del mes registradas por el colaborador ({incidencias_cnt} registrada(s)), excepto las marcadas como 'Resuelto / Condonado'.")
 
             # FÓRMULAS DE CÁLCULO
             _ult_dia_b = pd.Period(f"{int(anio_b_sel)}-{int(mes_b_sel):02d}").days_in_month
