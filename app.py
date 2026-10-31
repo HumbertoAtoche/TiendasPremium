@@ -8760,6 +8760,125 @@ def _pmc_ui_styles():
     @media(max-width:780px){.pmc-task-hero{padding:15px 13px;margin:11px 10px 0;gap:11px;border-radius:17px}.pmc-task-hero-icon{width:47px;height:47px;border-radius:14px}.pmc-task-hero-icon svg{width:25px;height:25px}.pmc-task-main{padding:12px 11px 14px}.pmc-task-grid{gap:8px}.pmc-task-info{padding:10px 9px;gap:8px;border-radius:13px}.pmc-task-info-icon{width:32px;height:32px;border-radius:9px}.pmc-task-info-icon svg{width:17px;height:17px}.pmc-task-info strong{font-size:.74rem}.pmc-task-info small{font-size:.68rem}.pmc-task-message{padding:13px;border-radius:14px}.pmc-task-message p{font-size:.82rem}.pmc-task-status{padding:7px 9px;font-size:.66rem}.st-key-pm_bottle_toast_card{bottom:calc(91px + env(safe-area-inset-bottom,0px));left:12px;right:12px;width:auto;max-width:none;padding:14px!important}}
     @media(max-width:520px){.pmc-task-hero{display:grid;grid-template-columns:44px minmax(0,1fr);grid-template-rows:auto auto;align-items:start;gap:7px 11px}.pmc-task-hero-icon{grid-column:1;grid-row:1 / span 2;width:44px;height:44px}.pmc-task-hero-text{grid-column:2;grid-row:1;min-width:0}.pmc-task-status{grid-column:2;grid-row:2;justify-self:start;white-space:normal}.pmc-task-hero-text small{font-size:.61rem}.pmc-card.pmc-task-card .pmc-task-hero-text h3{font-size:1.07rem!important;line-height:1.35!important}}
     @media(max-width:390px){.pmc-task-info{gap:6px}.pmc-task-info-icon{width:28px;height:28px}.pmc-task-info-icon svg{width:16px;height:16px}.pmc-task-info strong{font-size:.71rem}.pmc-task-status{font-size:.62rem}}
+
+    /* Premium Market · Comunicado unificado: referencia de diseño aprobada. */
+    .st-key-pmc_reader [class*="st-key-pmc_notice_"]{
+      min-width:0!important;overflow:hidden!important;
+      background:#fff!important;border:1px solid #e1e9f3!important;
+      border-radius:24px!important;padding:19px 19px 17px!important;
+      box-shadow:0 18px 40px -29px rgba(24,43,72,.30)!important;
+      margin:13px 0 25px!important;
+    }
+    .pmcu-header{display:flex;align-items:center;gap:17px;min-width:0;
+      background:linear-gradient(105deg,#fff7f9 0%,#fffdfd 52%,#fff2f5 100%);
+      padding:21px 23px;border:1px solid #f6d6df;border-radius:19px;
+    }
+    .pmcu-header--important{background:linear-gradient(110deg,#fff9ed,#fff 55%,#fff8ed);border-color:#f1e4c6}
+    .pmcu-header--normal{background:linear-gradient(110deg,#f6faff,#fff 60%,#f7fbff);border-color:#e0ebf7}
+    .pmcu-header-icon{display:grid;place-items:center;flex:none;width:61px;height:61px;
+      border-radius:18px;background:#ffebef;border:1px solid #fbd2dc;color:#cf3050}
+    .pmcu-header--normal .pmcu-header-icon{background:#eaf4ff;color:#346aa3;border-color:#dcecff}
+    .pmcu-header--important .pmcu-header-icon{background:#fff2d9;color:#a97b24;border-color:#f1dfb7}
+    .pmcu-header-icon svg{width:31px;height:31px}
+    .pmcu-header-content{flex:1;min-width:0}
+    .pmcu-header-content small{display:block;font-size:.7rem;font-weight:850;letter-spacing:.11em;color:#7488a2;margin-bottom:6px}
+    .pmcu-header-content h3{color:#19304b!important;margin:0!important;line-height:1.28!important;
+      letter-spacing:-.04em!important;font-size:clamp(1.2rem,2.3vw,1.67rem)!important;
+      font-weight:850!important;overflow-wrap:anywhere}
+    .pmcu-status{flex:none;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;
+      border-radius:999px;padding:10px 15px;border:1px solid #e9d5ac;background:#fff2d6;
+      color:#a16c13;font-size:.75rem;font-weight:830}
+    .pmcu-status--done{background:#e7f8ef;color:#148363;border-color:#bfebd3}
+    .pmcu-status--pending{background:#fff0f3;color:#b83250;border-color:#f3cfda}
+    .pmcu-meta-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px;margin:15px 0 15px}
+    .pmcu-meta-card{display:flex;align-items:center;gap:11px;min-width:0;background:linear-gradient(180deg,#fff,#fcfdff);
+      border:1px solid #dfe8f4;border-radius:17px;padding:13px 14px;
+      box-shadow:0 10px 23px -24px rgba(22,43,72,.26)}
+    .pmcu-meta-icon{flex:none;width:39px;height:39px;border-radius:12px;background:#eaf3ff;color:#3272b9;
+      display:grid;place-items:center}
+    .pmcu-meta-icon svg{width:20px;height:20px}
+    .pmcu-meta-copy{min-width:0}.pmcu-meta-copy small{display:block;color:#8090a8;font-size:.69rem;
+      font-weight:750;line-height:1.4;margin-bottom:3px}
+    .pmcu-meta-copy strong{display:block;font-size:.8rem;color:#233954;font-weight:850;line-height:1.38;
+      overflow-wrap:anywhere}
+    .st-key-pmc_reader [class*="st-key-pmcu_content_"]{min-width:0;margin:0 0 12px!important}
+    .st-key-pmc_reader [class*="st-key-pmcu_content_"] [data-testid="stHorizontalBlock"]{
+      gap:15px!important;align-items:stretch!important}
+    .st-key-pmc_reader [class*="st-key-pmcu_content_"] [data-testid="stColumn"]{min-width:0!important}
+    .pmcu-message{border:1px solid #e1eaf6;background:linear-gradient(160deg,#fcfdff,#f8fbff);
+      border-radius:18px;padding:21px 21px 17px;min-height:215px;height:100%;box-sizing:border-box}
+    .pmcu-section-title{display:flex;align-items:center;gap:10px;color:#2d5385;
+      font-size:.91rem;font-weight:850;margin-bottom:17px}
+    .pmcu-section-title svg{width:21px;height:21px}
+    .pmcu-message-text{color:#465f7d;font-size:.94rem;line-height:1.85;white-space:pre-wrap;
+      overflow-wrap:anywhere;min-height:95px}
+    .pmcu-message-foot{color:#8191a8;font-size:.75rem;font-weight:720;margin-top:13px}
+    .pmcu-confirmed{color:#147e5c}
+    .st-key-pmc_reader [class*="st-key-pmcu_attachment_panel_"]{
+      border:1px solid #dfe9f5;background:linear-gradient(165deg,#fff,#fafcff);
+      border-radius:18px;padding:16px!important;margin:0!important;min-width:0!important;}
+    .pmcu-attachment-title{display:flex;align-items:center;gap:11px;margin:0 0 13px;min-width:0}
+    .pmcu-attachment-icon{flex:none;display:grid;place-items:center;width:44px;height:44px;border-radius:13px;
+      background:#e8f8f0;border:1px solid #c4eada;color:#168967}
+    .pmcu-attachment-icon svg{width:23px;height:23px}
+    .pmcu-attachment-title>span:last-child{min-width:0}
+    .pmcu-attachment-title strong{display:block;color:#128764;font-weight:850;font-size:.79rem;letter-spacing:.03em}
+    .pmcu-attachment-title small{display:block;margin-top:4px;font-size:.75rem;color:#7e8fa5;
+      overflow-wrap:anywhere;line-height:1.4}
+    .st-key-pmc_reader [class*="st-key-pmcu_image_thumbnail_"] img,
+    .st-key-pmc_reader [class*="st-key-pmcu_pdf_thumbnail_"] img{
+      display:block!important;width:100%!important;max-height:255px!important;object-fit:contain!important;
+      border-radius:13px!important;background:#fff!important;border:1px solid #e1eaf5!important}
+    .pmcu-attachment-caption{margin-top:9px;color:#8695a9;font-size:.69rem;overflow-wrap:anywhere}
+    .pmcu-file-placeholder{min-height:160px;border-radius:14px;background:#f4f8fe;
+      border:1px dashed #cbdced;display:flex;flex-direction:column;align-items:center;justify-content:center;
+      text-align:center;gap:10px;padding:22px 15px}
+    .pmcu-file-placeholder span{border-radius:9px;background:#e7f0ff;color:#245f9f;padding:7px 12px;font-weight:850}
+    .pmcu-file-placeholder strong{color:#1f3a57;font-size:.9rem}
+    .pmcu-file-placeholder small{color:#8493a8;font-size:.74rem}
+    .st-key-pmc_reader [class*="st-key-pmcu_actions_"]{border-top:1px solid #ecf1f7;padding-top:12px;margin-top:5px!important}
+    .st-key-pmc_reader [class*="st-key-pmcu_actions_"] [data-testid="stButton"] button,
+    .st-key-pmc_reader [class*="st-key-pmcu_actions_"] [data-testid="stDownloadButton"] button{
+      background:#fff!important;border:1px solid #cfdde9!important;border-radius:13px!important;
+      color:#35618e!important;min-height:49px!important;font-weight:780!important;box-shadow:none!important}
+    .st-key-pmc_reader [class*="st-key-pmcu_actions_"] [data-testid="stColumn"]:first-child button{
+      border-color:#a8dbc4!important;color:#137d5e!important}
+    .st-key-pmc_reader [class*="st-key-pmcu_actions_"] button:hover{background:#f4f9fd!important}
+    .st-key-pmc_reader [class*="st-key-pmcu_read_controls_"]{margin-top:10px!important}
+    .st-key-pmc_reader [class*="st-key-pmcu_read_controls_"] [data-testid="stButton"] button{
+      border-radius:13px!important;min-height:47px!important}
+    .st-key-pmc_reader [class*="st-key-pmcu_read_controls_"] [data-testid="stButton"] button[kind="primary"]{
+      background:#c92e47!important;border-color:#c92e47!important;color:#fff!important}
+    @media(max-width:1050px){.pmcu-meta-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:790px){
+      .st-key-pmc_reader [class*="st-key-pmc_notice_"]{padding:12px 11px 13px!important;border-radius:19px!important}
+      .pmcu-header{padding:15px 14px;gap:11px;border-radius:15px}
+      .pmcu-header-icon{width:44px;height:44px;border-radius:13px}.pmcu-header-icon svg{width:24px;height:24px}
+      .pmcu-header-content h3{font-size:1.13rem!important}.pmcu-header-content small{font-size:.61rem}
+      .pmcu-status{padding:7px 10px;font-size:.64rem}
+      .pmcu-meta-grid{gap:8px;margin:10px 0 11px}
+      .pmcu-meta-card{padding:10px 9px;border-radius:13px;gap:8px}
+      .pmcu-meta-icon{width:30px;height:30px;border-radius:9px}.pmcu-meta-icon svg{width:16px;height:16px}
+      .pmcu-meta-copy small{font-size:.62rem}.pmcu-meta-copy strong{font-size:.72rem}
+      .st-key-pmc_reader [class*="st-key-pmcu_content_"] [data-testid="stHorizontalBlock"]{
+        flex-direction:column!important;gap:11px!important}
+      .st-key-pmc_reader [class*="st-key-pmcu_content_"] [data-testid="stColumn"]{
+        flex:1 1 auto!important;width:100%!important;max-width:100%!important;min-width:0!important}
+      .pmcu-message{padding:15px;border-radius:14px;min-height:0}
+      .pmcu-message-text{font-size:.86rem;min-height:0}
+      .st-key-pmc_reader [class*="st-key-pmcu_attachment_panel_"]{padding:13px!important;border-radius:14px}
+      .pmcu-section-title{margin-bottom:11px}
+      .st-key-pmc_reader [class*="st-key-pmcu_actions_"] [data-testid="stHorizontalBlock"]{
+        flex-direction:column!important;gap:7px!important}
+      .st-key-pmc_reader [class*="st-key-pmcu_actions_"] [data-testid="stColumn"]{
+        flex:1 1 auto!important;width:100%!important;max-width:100%!important;min-width:0!important}
+    }
+    @media(max-width:380px){
+      .pmcu-header{display:grid;grid-template-columns:42px minmax(0,1fr);gap:9px}
+      .pmcu-header-icon{grid-column:1;grid-row:1 / span 2}
+      .pmcu-status{grid-column:2;justify-self:start}
+      .pmcu-meta-card{gap:6px}.pmcu-meta-icon{width:28px;height:28px}.pmcu-meta-copy strong{font-size:.69rem}
+    }
     </style>''', unsafe_allow_html=True)
 
 
@@ -8913,6 +9032,140 @@ def _pmc_render_attach(row, prefix):
                                mime=mime, key=key + "_download", use_container_width=True)
 
 
+# PREMIUM MARKET · COMUNICADO UNIFICADO V2
+# Mantiene las lecturas/confirmaciones existentes y el acceso privado a Drive.
+# Cada anuncio usa una única superficie visual: encabezado, información,
+# cuerpo, adjunto y acciones. El adjunto se carga solo al abrir el comunicado.
+def _pmc_unified_header_html(row, receipt=None):
+    priority = str(row.get("prioridad", "Normal"))
+    tone = {"Urgente": "urgent", "Importante": "important"}.get(priority, "normal")
+    state = ("Confirmado" if receipt and receipt.get("confirmado_el") else
+             "Leído" if receipt else "Sin confirmar")
+    state_class = ("done" if state == "Confirmado" else
+                   "read" if state == "Leído" else "pending")
+    icon = ('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" '
+            'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+            '<path d="M4 10v4a2 2 0 0 0 2 2h3l9 4V4l-9 4H6a2 2 0 0 0-2 2Z"/>'
+            '<path d="m9 16 1.5 4M20 9a4 4 0 0 1 0 6"/></svg>')
+    return (
+        '<div class="pmcu-header pmcu-header--' + tone + '">'
+        '<span class="pmcu-header-icon">' + icon + '</span>'
+        '<div class="pmcu-header-content"><small>COMUNICADO OFICIAL</small><h3>'
+        + _pmc_e(row.get("titulo", "Comunicado")) + '</h3></div>'
+        '<span class="pmcu-status pmcu-status--' + state_class + '">'
+        + _pmc_e(state) + '</span></div>'
+    )
+
+
+def _pmc_unified_meta_html(row):
+    icon_paths = {
+        "date": '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18"/>',
+        "priority": '<path d="M12 3 2 21h20L12 3Z"/><path d="M12 9v5m0 3h.01"/>',
+        "category": '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h10"/>',
+        "file": '<path d="M6 2h9l4 4v16H6zM15 2v5h4M9 12h7m-7 4h7"/>',
+    }
+    fields = [
+        ("Fecha de publicación", str(row.get("publicar_desde", ""))[:16] or "—", "date"),
+        ("Prioridad", str(row.get("prioridad", "Normal")), "priority"),
+        ("Categoría", str(row.get("categoria", "General")), "category"),
+        ("Documento", "Adjunto disponible" if row.get("adjunto_drive_id") else "Sin adjunto", "file"),
+    ]
+    parts = []
+    for label, value, kind in fields:
+        parts.append('<div class="pmcu-meta-card"><span class="pmcu-meta-icon" aria-hidden="true">'
+                     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" '
+                     'stroke-linecap="round" stroke-linejoin="round">' + icon_paths[kind] + '</svg></span>'
+                     '<span class="pmcu-meta-copy"><small>' + _pmc_e(label) + '</small>'
+                     '<strong>' + _pmc_e(value) + '</strong></span></div>')
+    return '<div class="pmcu-meta-grid">' + ''.join(parts) + '</div>'
+
+
+def _pmc_unified_message_html(row, *, expanded, receipt=None):
+    content = str(row.get("contenido", ""))
+    if not expanded and len(content) > 220:
+        content = content[:220].rstrip() + "…"
+    icon = ('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" '
+            'stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" '
+            'height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h6"/></svg>')
+    footer = ''
+    if receipt and receipt.get("confirmado_el"):
+        footer = ('<div class="pmcu-message-foot pmcu-confirmed">✓ Lectura confirmada el '
+                  + _pmc_e(str(receipt.get("confirmado_el"))[:16]) + '</div>')
+    elif expanded:
+        footer = '<div class="pmcu-message-foot">Revisa el contenido y confirma su lectura.</div>'
+    return ('<section class="pmcu-message"><div class="pmcu-section-title">' + icon
+            + '<strong>' + ('Mensaje completo' if expanded else 'Mensaje del comunicado')
+            + '</strong></div><div class="pmcu-message-text">' + _pmc_e(content)
+            + '</div>' + footer + '</section>')
+
+
+def _pmc_unified_attachment_panel(row, prefix):
+    """Renderizar en la MISMA tarjeta la imagen/PDF y devolver bytes para acciones.
+
+    Sigue reutilizando _pmc_get_private_attachment, con verificación de acceso.
+    Al mostrar la lista cerrada no se consultan adjuntos de Drive.
+    """
+    name = str(row.get("adjunto_nombre") or "Archivo")
+    mime = str(row.get("adjunto_mime") or "application/octet-stream")
+    kind = _pmc_attachment_kind(mime, name)
+    label = {"image": "IMAGEN ADJUNTA", "pdf": "DOCUMENTO PDF", "text": "ARCHIVO ADJUNTO"}.get(kind, "ARCHIVO ADJUNTO")
+    icon = ('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" '
+            'stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" '
+            'height="18" rx="3"/><path d="M8 14l3-3 3 2 2-2 2 3M8 8h.01"/></svg>')
+    with st.container(key="pmcu_attachment_panel_" + str(row["id_comunicado"])):
+        st.markdown('<div class="pmcu-attachment-title"><span class="pmcu-attachment-icon">'
+                    + icon + '</span><span><strong>' + _pmc_e(label) + '</strong>'
+                    '<small>' + _pmc_e(name) + '</small></span></div>', unsafe_allow_html=True)
+        try:
+            data = _pmc_get_private_attachment(row, prefix)
+        except Exception:
+            st.error("No se pudo recuperar el adjunto privado. Revisa Drive y tus permisos.")
+            return None, kind
+        if kind == "image":
+            with st.container(key="pmcu_image_thumbnail_" + str(row["id_comunicado"])):
+                st.image(data, use_container_width=True)
+            st.markdown('<div class="pmcu-attachment-caption">Vista previa · '
+                        + _pmc_e(name) + '</div>', unsafe_allow_html=True)
+        elif kind == "pdf":
+            try:
+                first_page = _pmc_pdf_page(data, 0)
+            except Exception:
+                first_page = None
+            if first_page is None:
+                st.markdown('<div class="pmcu-file-placeholder"><span>PDF</span>'
+                            '<strong>Documento disponible</strong>'
+                            '<small>Selecciona «Ver PDF» para abrir el visor.</small></div>',
+                            unsafe_allow_html=True)
+            else:
+                with st.container(key="pmcu_pdf_thumbnail_" + str(row["id_comunicado"])):
+                    st.image(first_page[1], use_container_width=True)
+                st.markdown('<div class="pmcu-attachment-caption">Vista previa de la primera página · '
+                            + _pmc_e(name) + '</div>', unsafe_allow_html=True)
+        else:
+            st.markdown('<div class="pmcu-file-placeholder"><strong>Documento disponible</strong>'
+                        '<small>Utiliza el botón de vista previa o descárgalo.</small></div>',
+                        unsafe_allow_html=True)
+    return data, kind
+
+
+def _pmc_unified_attachment_actions(row, data, kind, prefix):
+    """Dos acciones reales, horizontales en PC y apiladas en móvil."""
+    rid = str(row["id_comunicado"])
+    name = str(row.get("adjunto_nombre") or "Archivo")
+    mime = str(row.get("adjunto_mime") or "application/octet-stream")
+    label = {"image": "Ampliar imagen", "pdf": "Ver PDF"}.get(kind, "Ver documento")
+    with st.container(key="pmcu_actions_" + rid):
+        left, right = st.columns([1, 1], gap="medium")
+        with left:
+            if st.button(label, key="pmcu_eye_" + rid, use_container_width=True,
+                         icon=":material/visibility:"):
+                _pmc_attachment_dialog(row, data, prefix)
+        with right:
+            st.download_button("Descargar adjunto", data=data, file_name=name,
+                               mime=mime, use_container_width=True, key="pmcu_download_" + rid,
+                               icon=":material/download:")
+
+
 def _pmc_employee_ui():
     premium_module_shell("Mis Comunicados", "COMUNICACIÓN", "Anuncios oficiales de Premium Market y confirmaciones de lectura.")
     _pmc_ui_styles()
@@ -8955,8 +9208,13 @@ def _pmc_employee_ui():
             opened_key = f"pmc_open_{rid}_{_pm2_dni(dni_actual)}"
             opened = bool(st.session_state.get(opened_key))
             with st.container(key="pmc_notice_" + rid):
-                st.markdown(_pmc_card_html(row, receipt, expanded=opened), unsafe_allow_html=True)
+                # Un solo comunicado visible: encabezado y datos arriba,
+                # mensaje/adjunto en la misma fila en escritorio.
+                st.markdown(_pmc_unified_header_html(row, receipt), unsafe_allow_html=True)
+                st.markdown(_pmc_unified_meta_html(row), unsafe_allow_html=True)
                 if not opened:
+                    st.markdown(_pmc_unified_message_html(row, expanded=False, receipt=receipt),
+                                unsafe_allow_html=True)
                     with st.container(key="pmc_read_action_" + rid):
                         if st.button("Leer comunicado", key="pmc_open_btn_" + rid, use_container_width=True):
                             ok, msg = _pmc_mark_read(rid, confirm=False)
@@ -8966,23 +9224,34 @@ def _pmc_employee_ui():
                             else:
                                 st.error(msg)
                 else:
-                    # El mensaje ya está completo en la tarjeta principal: sin duplicar título ni contenido.
-                    _pmc_render_attach(row, "worker")
-                    if receipt and receipt.get("confirmado_el"):
-                        st.markdown('<div class="pmc-success">Lectura confirmada el ' +
-                                    _pmc_e(receipt.get("confirmado_el")) + '</div>', unsafe_allow_html=True)
-                    else:
-                        if st.button("Confirmo que he leído este comunicado", key="pmc_confirm_" + rid,
-                                     type="primary", use_container_width=True):
-                            ok, msg = _pmc_mark_read(rid, confirm=True)
-                            if ok:
-                                _pm62_confirmar_despues_de_actualizar(msg, "Mis Comunicados")
-                                st.rerun()
-                            else:
-                                st.error(msg)
-                    if st.button("Cerrar detalle", key="pmc_close_" + rid, use_container_width=True):
-                        st.session_state[opened_key] = False
-                        st.rerun()
+                    attachment_data = None
+                    attachment_kind = None
+                    with st.container(key="pmcu_content_" + rid):
+                        if row.get("adjunto_drive_id"):
+                            message_col, attachment_col = st.columns([1.58, 1], gap="medium")
+                            with message_col:
+                                st.markdown(_pmc_unified_message_html(row, expanded=True, receipt=receipt),
+                                            unsafe_allow_html=True)
+                            with attachment_col:
+                                attachment_data, attachment_kind = _pmc_unified_attachment_panel(row, "worker")
+                        else:
+                            st.markdown(_pmc_unified_message_html(row, expanded=True, receipt=receipt),
+                                        unsafe_allow_html=True)
+                    if attachment_data is not None:
+                        _pmc_unified_attachment_actions(row, attachment_data, attachment_kind, "worker")
+                    with st.container(key="pmcu_read_controls_" + rid):
+                        if not (receipt and receipt.get("confirmado_el")):
+                            if st.button("Confirmo que he leído este comunicado", key="pmc_confirm_" + rid,
+                                         type="primary", use_container_width=True):
+                                ok, msg = _pmc_mark_read(rid, confirm=True)
+                                if ok:
+                                    _pm62_confirmar_despues_de_actualizar(msg, "Mis Comunicados")
+                                    st.rerun()
+                                else:
+                                    st.error(msg)
+                        if st.button("Cerrar detalle", key="pmc_close_" + rid, use_container_width=True):
+                            st.session_state[opened_key] = False
+                            st.rerun()
 
 
 def _pmc_admin_ui():
