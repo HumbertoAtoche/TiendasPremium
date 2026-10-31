@@ -9334,9 +9334,253 @@ def _pmc_unified_attachment_actions(row, data, kind, prefix):
                                icon=":material/download:")
 
 
+# PREMIUM MARKET · COMUNICADOS / diseño aprobado para web y celular.
+# Las tarjetas son presentación: los botones de Streamlit conservan los flujos reales.
+def _pmc_reference_styles():
+    st.markdown(r"""<style>
+    /* Indicadores administrativos, como en el boceto: iconos, jerarquía y color discreto. */
+    .pmr-admin-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px;margin:16px 0 16px}
+    .pmr-admin-kpi{display:flex;align-items:center;gap:15px;min-width:0;padding:17px 18px;border-radius:20px;
+      border:1px solid #e5edf5;background:#fff;box-shadow:0 15px 28px -27px rgba(23,39,68,.36)}
+    .pmr-kpi-icon{flex:none;display:grid;place-items:center;width:51px;height:51px;border-radius:16px;background:#edf5ff;color:#246bb3}
+    .pmr-admin-kpi.pending .pmr-kpi-icon{background:#fff5e6;color:#d78c16}
+    .pmr-admin-kpi.done .pmr-kpi-icon{background:#e9f9f1;color:#11a378}
+    .pmr-kpi-icon svg{width:26px;height:26px;stroke:currentColor;stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round}
+    .pmr-admin-kpi>div{min-width:0}.pmr-admin-kpi small{color:#70839b;font-size:.74rem;font-weight:780;display:block;line-height:1.3}
+    .pmr-admin-kpi strong{display:block;color:#1a2d49;font-weight:860;font-size:1.55rem;letter-spacing:-.045em;line-height:1.22;margin:5px 0 2px}
+    .pmr-admin-kpi em{font-style:normal;font-size:.72rem;color:#8493a8;display:block;line-height:1.4}
+    /* Panel de administración seleccionado: MISMA superficie que su adjunto. */
+    [class*="st-key-pmc_admin_notice_"]:has(.pmr-admin-hero){border:1px solid #f0dce1!important;border-radius:23px!important;
+      box-shadow:0 22px 45px -34px rgba(25,40,66,.31)!important;padding:16px!important;background:#fff!important}
+    .pmr-admin-hero{display:flex;align-items:center;gap:13px;background:linear-gradient(112deg,#fff4f6 0%,#fff 55%,#fff7f8 100%);
+      border:1px solid #f4dde3;border-radius:17px;padding:16px 17px;min-width:0}
+    .pmr-admin-hero-icon{display:grid;place-items:center;flex:none;width:49px;height:49px;border-radius:15px;
+      background:#fff0f3;border:1px solid #f5d5de;color:#c9314d}
+    .pmr-admin-hero-icon svg{width:25px;height:25px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+    .pmr-admin-hero-body{min-width:0;flex:1}.pmr-admin-hero-body small{display:block;color:#778aa3;font-size:.68rem;font-weight:850;letter-spacing:.1em;margin:0 0 6px}
+    .pmr-admin-hero-body strong{display:block;color:#1e324e;font-size:1.16rem;line-height:1.38;font-weight:860;letter-spacing:-.035em;overflow-wrap:anywhere}
+    .pmr-admin-status{display:inline-flex;align-items:center;justify-content:center;border-radius:100px;
+      padding:7px 11px;font-size:.73rem;font-weight:840;background:#fff0f3;color:#ba304d;border:1px solid #f3d7df;white-space:nowrap}
+    .pmr-admin-status.draft{background:#f3f5f8;border-color:#e1e7ee;color:#728196}
+    .pmr-admin-status.archived{background:#f5f6f8;border-color:#e5e8ef;color:#6e7d91}
+    .pmr-admin-status.scheduled{background:#eff6ff;border-color:#d5e6fc;color:#2e6fae}
+    [class*="st-key-pmc_admin_notice_"] .pmcu-meta-grid{margin:13px 0!important;gap:10px}
+    [class*="st-key-pmc_admin_notice_"] .pmcu-meta-card{padding:10px!important;border-radius:13px!important}
+    [class*="st-key-pmc_admin_notice_"] .pmcu-meta-icon{width:32px!important;height:32px!important;border-radius:9px!important}
+    [class*="st-key-pmc_admin_notice_"] .pmcu-meta-copy small{font-size:.65rem!important}
+    [class*="st-key-pmc_admin_notice_"] .pmcu-meta-copy strong{font-size:.75rem!important}
+    [class*="st-key-pmc_admin_notice_"] .pmcu-message{min-height:190px!important;border-radius:15px!important;padding:17px!important}
+    [class*="st-key-pmc_admin_notice_"] .pmcu-message-text{min-height:0!important;font-size:.86rem!important}
+    [class*="st-key-pmc_admin_notice_"] [class*="st-key-pmcu_attachment_panel_"]{
+      border:1px solid #d6eee3!important;background:#f7fdf9!important;border-radius:16px!important;padding:12px!important}
+    [class*="st-key-pmc_admin_notice_"] [class*="st-key-pmcu_image_thumbnail_"] img,
+    [class*="st-key-pmc_admin_notice_"] [class*="st-key-pmcu_pdf_thumbnail_"] img{
+      width:100%!important;max-height:208px!important;object-fit:contain!important;border-radius:12px!important}
+    [class*="st-key-pmc_admin_notice_"] [class*="st-key-pmcu_actions_"]{border:0!important;padding:7px 0 0!important;margin:0!important}
+    [class*="st-key-pmc_admin_notice_"] [class*="st-key-pmcu_actions_"] [data-testid="stButton"] button{
+      min-height:40px!important;font-size:.76rem!important;background:#fff!important;border-color:#c8e6d8!important;color:#0b855f!important}
+    [class*="st-key-pmc_admin_notice_"] [class*="st-key-pmcu_actions_"] [data-testid="stDownloadButton"] button{
+      min-height:40px!important;font-size:.76rem!important}
+    [class*="st-key-pmr_admin_body_"] [data-testid="stHorizontalBlock"]{gap:13px!important;align-items:stretch!important}
+    [class*="st-key-pmr_admin_body_"] [data-testid="stColumn"]{min-width:0!important}
+    [class*="st-key-pmr_worker_preview_columns_"] [data-testid="stHorizontalBlock"]{gap:10px!important;align-items:center!important}
+    [class*="st-key-pmr_worker_preview_columns_"] [data-testid="stColumn"]{min-width:0!important}
+    .pmr-admin-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:17px 0 12px}
+    .pmr-admin-stat{padding:12px 13px;border:1px solid #e3ebf4;background:linear-gradient(165deg,#fff,#f8faff);border-radius:14px;min-width:0}
+    .pmr-admin-stat.good{border-color:#d0eee0;background:linear-gradient(165deg,#fff,#effaf5)}
+    .pmr-admin-stat.wait{border-color:#f7e2bd;background:linear-gradient(165deg,#fff,#fff7e9)}
+    .pmr-admin-stat small{display:block;font-size:.7rem;color:#71839b;font-weight:750;margin-bottom:5px}
+    .pmr-admin-stat strong{font-size:1.17rem;letter-spacing:-.04em;font-weight:850;color:#203650}
+    .pmr-admin-progress-label{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:6px 0 8px;font-size:.74rem;color:#71839a}
+    .pmr-admin-progress-label b{color:#168565;font-weight:840}
+    .pmr-admin-progress{height:9px;border-radius:999px;background:#e8edf4;overflow:hidden;margin:0 0 14px}
+    .pmr-admin-progress i{display:block;height:100%;background:linear-gradient(90deg,#16b281,#52d0a4);border-radius:inherit}
+    .pmr-manage-hint{color:#7b8ca1;font-size:.75rem;line-height:1.45;margin:7px 0}
+    [class*="st-key-pmc_admin_notice_"] [data-testid="stExpander"]{border:1px solid #e3eaf4!important;background:#fcfdff!important;border-radius:13px!important;margin:8px 0!important}
+    [class*="st-key-pmc_admin_notice_"] [data-testid="stExpander"] summary{font-weight:780!important;color:#314766!important}
+    /* Colaborador: comunicado compacto y fotografía como parte de la misma ficha. */
+    .st-key-pmc_reader [class*="st-key-pmc_notice_"]{border:1px solid #e3eaf3!important;
+      background:linear-gradient(180deg,#fff,#fbfcff)!important;padding:17px!important;border-radius:22px!important;
+      box-shadow:0 20px 37px -31px rgba(26,41,67,.33)!important}
+    .st-key-pmc_reader .pmcu-header{padding:17px!important;border-radius:17px!important}
+    .st-key-pmc_reader .pmcu-header-icon{width:52px!important;height:52px!important;border-radius:15px!important}
+    .st-key-pmc_reader .pmcu-header-icon svg{width:27px!important;height:27px!important}
+    .st-key-pmc_reader .pmcu-header-content h3{font-size:1.18rem!important;line-height:1.32!important}
+    .st-key-pmc_reader .pmcu-meta-grid{margin:12px 0 9px!important}
+    .st-key-pmc_reader .pmcu-meta-card{padding:10px 11px!important;border-radius:14px!important}
+    .pmr-worker-teaser{border-top:1px solid #e5edf6;padding:13px 4px 7px;color:#60758e;line-height:1.6;font-size:.82rem;min-width:0}
+    .pmr-worker-teaser strong{display:flex;align-items:center;gap:8px;font-size:.76rem;color:#315f91;font-weight:820;margin-bottom:5px}
+    .pmr-worker-teaser p{margin:0!important;color:#74869e;font-size:.82rem;line-height:1.65;max-width:75ch;overflow-wrap:anywhere}
+    .pmr-worker-preview{border:1px solid #e3eaf3;border-radius:13px;padding:5px;background:#fff;min-width:0;overflow:hidden}
+    [class*="st-key-pmr_worker_preview_"] img{max-height:125px!important;object-fit:cover!important;border-radius:10px!important;display:block!important;width:100%!important}
+    .pmr-worker-file{display:flex;align-items:center;justify-content:center;min-height:85px;color:#3a6fa8;background:#f0f6ff;
+      border:1px dashed #cbdcf1;border-radius:13px;font-size:.76rem;font-weight:790;text-align:center;padding:10px}
+    .st-key-pmc_reader [class*="st-key-pmc_read_action_"]{display:flex!important;justify-content:flex-end!important;
+      margin:4px 0 0!important;padding-top:9px!important;border-top:1px solid #e9edf4!important}
+    .st-key-pmc_reader [class*="st-key-pmc_read_action_"] [data-testid="stButton"] button{
+      width:auto!important;min-height:39px!important;padding:6px 14px!important;border:1px solid #d2e4f8!important;
+      border-radius:11px!important;background:#edf5ff!important;color:#275f9d!important;
+      font-size:.77rem!important;font-weight:850!important;margin:0!important;box-shadow:none!important}
+    .st-key-pmc_reader [class*="st-key-pmc_read_action_"] [data-testid="stButton"] button:hover{background:#e2efff!important}
+    .st-key-pmc_filters{padding:17px 19px 12px!important;margin-top:20px!important;border-radius:20px!important}
+    .pmc-kpis{margin:19px 0 20px!important}
+    @media(max-width:1000px){.pmr-admin-kpis{gap:9px}.pmr-admin-kpi{padding:14px;gap:11px}.pmr-kpi-icon{width:42px;height:42px}}
+    @media(max-width:770px){
+      .pmr-admin-kpis{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+      .pmr-admin-kpi{display:block;padding:12px 10px;border-radius:14px}.pmr-kpi-icon{width:36px;height:36px;border-radius:11px;margin-bottom:7px}
+      .pmr-kpi-icon svg{width:19px;height:19px}.pmr-admin-kpi small{font-size:.64rem}.pmr-admin-kpi strong{font-size:1.26rem}
+      .pmr-admin-kpi em{display:none}
+      .pmr-admin-hero{padding:13px 12px;gap:9px}.pmr-admin-hero-icon{width:41px;height:41px;border-radius:12px}
+      .pmr-admin-hero-body strong{font-size:.98rem}.pmr-admin-status{font-size:.64rem;padding:6px 8px}
+      [class*="st-key-pmr_admin_body_"] [data-testid="stHorizontalBlock"]{flex-direction:column!important;gap:10px!important}
+      [class*="st-key-pmr_admin_body_"] [data-testid="stColumn"]{flex:1 1 auto!important;width:100%!important;max-width:100%!important;min-width:0!important}
+      [class*="st-key-pmr_worker_preview_columns_"] [data-testid="stHorizontalBlock"]{flex-direction:row!important;gap:9px!important}
+      [class*="st-key-pmr_worker_preview_columns_"] [data-testid="stColumn"]{flex:1 1 0!important;width:0!important;max-width:none!important;min-width:0!important}
+      [class*="st-key-pmc_admin_notice_"] .pmcu-meta-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .pmr-admin-stats{gap:7px}.pmr-admin-stat{padding:10px 9px;border-radius:12px}.pmr-admin-stat small{font-size:.64rem}.pmr-admin-stat strong{font-size:1.08rem}
+      .st-key-pmc_reader [class*="st-key-pmc_notice_"]{padding:11px!important;border-radius:19px!important}
+      .st-key-pmc_reader .pmcu-header{padding:14px!important}.st-key-pmc_reader .pmcu-header-icon{width:43px!important;height:43px!important}
+      .st-key-pmc_reader .pmcu-header-content h3{font-size:1.03rem!important}.st-key-pmc_reader .pmcu-header-content small{font-size:.6rem!important}
+      .st-key-pmc_reader .pmcu-meta-grid{gap:7px!important}
+      .pmr-worker-teaser{font-size:.77rem;padding:10px 2px 5px}.pmr-worker-teaser p{font-size:.76rem}
+      .st-key-pmc_filters{padding:14px 13px 9px!important}
+      [class*="st-key-pmr_worker_preview_"] img{max-height:100px!important}
+    }
+    @media(max-width:390px){
+      .pmr-admin-hero{display:grid;grid-template-columns:40px minmax(0,1fr);gap:7px}
+      .pmr-admin-status{grid-column:2;justify-self:start}.pmr-admin-hero-icon{grid-row:1 / span 2}
+      .pmr-admin-stat strong{font-size:1rem}.pmr-worker-teaser p{line-height:1.5}
+    }
+    @media(max-width:355px){
+      [class*="st-key-pmr_worker_preview_columns_"] [data-testid="stHorizontalBlock"]{flex-direction:column!important}
+      [class*="st-key-pmr_worker_preview_columns_"] [data-testid="stColumn"]{flex:1 1 auto!important;width:100%!important;max-width:100%!important}
+    }
+    </style>""", unsafe_allow_html=True)
+
+
+def _pmc_admin_state(row):
+    state = str(row.get("estado", "Borrador"))
+    start = str(row.get("publicar_desde", ""))
+    expiry = str(row.get("vigente_hasta", ""))
+    now = _pmc_today()
+    if state == "Publicado":
+        if start and start > now:
+            return "Programado", "scheduled"
+        if expiry and expiry < now:
+            return "Vencido", "archived"
+        return "Publicado", "published"
+    return {"Borrador": ("Borrador", "draft"), "Archivado": ("Archivado", "archived")}.get(state, (state, "draft"))
+
+
+def _pmc_admin_feature_header_html(row):
+    status, tone = _pmc_admin_state(row)
+    icon = ('<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4a2 2 0 0 0 2 2h3l9 4V4l-9 4H6a2 2 0 0 0-2 2Z"/>'
+            '<path d="M20 9a4 4 0 0 1 0 6"/></svg>')
+    return ('<div class="pmr-admin-hero"><span class="pmr-admin-hero-icon">' + icon + '</span>'
+            '<div class="pmr-admin-hero-body"><small>COMUNICADO OFICIAL</small><strong>' + _pmc_e(row.get("titulo", "")) + '</strong></div>'
+            '<span class="pmr-admin-status ' + tone + '">' + _pmc_e(status) + '</span></div>')
+
+
+def _pmc_admin_kpis_html(notices, reads):
+    current = _pmc_today()
+    active = [n for n in notices if n.get("estado") == "Publicado"
+              and str(n.get("publicar_desde", "")) <= current
+              and (not n.get("vigente_hasta") or str(n["vigente_hasta"]) >= current)]
+    pending = confirmed = 0
+    for n in active:
+        d = _pmc_receipt_stats(n, reads)
+        pending += int(d["pendientes"])
+        confirmed += int(d["confirmados"])
+    icons = (
+        '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h6"/>',
+        '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+        '<circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/>',
+    )
+    items = (("Comunicados activos", len(active), "Publicados y visibles", "active"),
+             ("Pendientes de lectura", pending, "Confirmaciones por recibir", "pending"),
+             ("Confirmados", confirmed, "Confirmaciones registradas", "done"))
+    html = '<div class="pmr-admin-kpis">'
+    for (label, value, subtitle, tone), glyph in zip(items, icons):
+        html += ('<div class="pmr-admin-kpi ' + tone + '"><span class="pmr-kpi-icon">'
+                 '<svg viewBox="0 0 24 24">' + glyph + '</svg></span><div><small>'
+                 + label + '</small><strong>' + str(value) + '</strong><em>' + subtitle + '</em></div></div>')
+    return html + '</div>'
+
+
+def _pmc_admin_message_html(row):
+    """El administrador consulta el contenido: no pide confirmación de lectura."""
+    icon = ('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" '
+            'stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" '
+            'height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h6"/></svg>')
+    return ('<section class="pmcu-message"><div class="pmcu-section-title">' + icon
+            + '<strong>Mensaje del comunicado</strong></div><div class="pmcu-message-text">'
+            + _pmc_e(row.get("contenido", "")) + '</div></section>')
+
+
+def _pmc_admin_progress_html(counts, state):
+    total = max(0, int(counts.get("total", 0)))
+    done = min(total, max(0, int(counts.get("confirmados", 0))))
+    pending = max(0, int(counts.get("pendientes", 0)))
+    pct = min(100, max(0, round(100 * done / total))) if total else 0
+    if state in ("Borrador", "Programado"):
+        caption = "El seguimiento comienza cuando el comunicado esté publicado"
+    elif not total:
+        caption = "No hay destinatarios registrados"
+    else:
+        caption = f"{pct}% de lecturas confirmadas"
+    stats = (("Destinatarios", total, ""), ("Confirmaron", done, "good"), ("Pendientes", pending, "wait"))
+    html = '<div class="pmr-admin-stats">'
+    for label, value, tone in stats:
+        html += '<div class="pmr-admin-stat ' + tone + '"><small>' + label + '</small><strong>' + str(value) + '</strong></div>'
+    html += '</div><div class="pmr-admin-progress-label"><span>' + _pmc_e(caption) + '</span><b>' + str(done) + ' de ' + str(total) + '</b></div>'
+    return html + '<div class="pmr-admin-progress"><i style="width:' + str(pct) + '%"></i></div>'
+
+
+def _pmc_worker_teaser_html(row):
+    content = " ".join(str(row.get("contenido", "")).split())
+    if len(content) > 118:
+        content = content[:115].rsplit(" ", 1)[0].rstrip() + "…"
+    return ('<div class="pmr-worker-teaser"><strong>Mensaje del comunicado</strong><p>'
+            + _pmc_e(content or "Abre el comunicado para consultar el mensaje completo.") + '</p></div>')
+
+
+def _pmc_worker_preview_media(row):
+    """Miniatura privada para la primera publicación visible con adjunto.
+    Carga bajo demanda a través de la sesión existente; nunca genera URL pública.
+    """
+    name = str(row.get("adjunto_nombre") or "Archivo")
+    kind = _pmc_attachment_kind(row.get("adjunto_mime"), name)
+    if not row.get("adjunto_drive_id"):
+        return
+    with st.container(key="pmr_worker_preview_" + str(row["id_comunicado"])):
+        if kind not in ("image", "pdf"):
+            st.markdown('<div class="pmr-worker-file">Archivo adjunto disponible</div>', unsafe_allow_html=True)
+            return
+        try:
+            data = _pmc_get_private_attachment(row, "worker")
+            if kind == "pdf":
+                preview = _pmc_pdf_page(data, 0)
+                if preview is None:
+                    st.markdown('<div class="pmr-worker-file">PDF disponible · Abre para verlo</div>', unsafe_allow_html=True)
+                else:
+                    st.image(preview[1], use_container_width=True)
+            else:
+                # Miniatura reducida para evitar transmitir 10 MB al teléfono cada vez.
+                from PIL import Image as _PIL_Image, ImageOps as _PIL_ImageOps
+                with _PIL_Image.open(io.BytesIO(data)) as im:
+                    mini = _PIL_ImageOps.exif_transpose(im)
+                    mini.thumbnail((560, 300), _PIL_Image.Resampling.LANCZOS)
+                    output = io.BytesIO()
+                    mini.convert("RGB").save(output, format="JPEG", quality=78, optimize=True)
+                    st.image(output.getvalue(), use_container_width=True)
+        except Exception:
+            st.markdown('<div class="pmr-worker-file">Adjunto disponible · Abrir para visualizar</div>', unsafe_allow_html=True)
+
+
 def _pmc_employee_ui():
     premium_module_shell("Mis Comunicados", "COMUNICACIÓN", "Anuncios oficiales de Premium Market y confirmaciones de lectura.")
     _pmc_ui_styles()
+    _pmc_reference_styles()
     # Encabezado blanco único; el listado de comunicados comienza directamente.
     notices, reads, err = _pmc_load()
     if err:
@@ -9367,10 +9611,16 @@ def _pmc_employee_ui():
     if not visible:
         st.info("No tienes comunicados en esta categoría.")
         return
-    if len(visible) > 80:
-        st.caption("Mostrando los 80 comunicados más recientes. Utiliza la búsqueda para encontrar otro.")
+    page_size = 6
+    page_count = (len(visible) + page_size - 1) // page_size
+    if page_count > 1:
+        page_num = st.selectbox("Página de comunicados", range(1, page_count + 1),
+                                key="pmc_worker_page")
+    else:
+        page_num = 1
+    visible_page = visible[(page_num - 1) * page_size:page_num * page_size]
     with st.container(key="pmc_reader"):
-        for row in visible[:80]:
+        for row_index, row in enumerate(visible_page):
             rid = row["id_comunicado"]
             receipt = _pmc_receipt(reads, rid, dni_actual)
             opened_key = f"pmc_open_{rid}_{_pm2_dni(dni_actual)}"
@@ -9381,8 +9631,17 @@ def _pmc_employee_ui():
                 st.markdown(_pmc_unified_header_html(row, receipt), unsafe_allow_html=True)
                 st.markdown(_pmc_unified_meta_html(row), unsafe_allow_html=True)
                 if not opened:
-                    # Tarjeta contraída: título, estado y cuatro datos.
-                    # El contenido y el adjunto se muestran al abrirla.
+                    # Boceto aprobado: ficha, resumen breve, miniatura y acción discreta.
+                    # Se mantienen el mensaje COMPLETO y la confirmación en el detalle.
+                    if row.get("adjunto_drive_id") and row_index == 0:
+                        with st.container(key="pmr_worker_preview_columns_" + rid):
+                            _teaser_col, _preview_col = st.columns([1.25, 1], gap="small")
+                            with _teaser_col:
+                                st.markdown(_pmc_worker_teaser_html(row), unsafe_allow_html=True)
+                            with _preview_col:
+                                _pmc_worker_preview_media(row)
+                    else:
+                        st.markdown(_pmc_worker_teaser_html(row), unsafe_allow_html=True)
                     with st.container(key="pmc_read_action_" + rid):
                         if st.button("Leer comunicado", key="pmc_open_btn_" + rid,
                                      icon=":material/visibility:", use_container_width=False):
@@ -9558,7 +9817,8 @@ def _pmc_admin_ui():
             else:
                 st.error(msg)
         return
-    t_pub, t_monitor = st.tabs(("Publicar comunicado", "Seguimiento e historial"))
+    _pmc_reference_styles()
+    t_monitor, t_pub = st.tabs(("Seguimiento e historial", "Publicar comunicado"))
     with t_pub:
         persons = _pmc_personas()
         if not persons:
@@ -9607,6 +9867,7 @@ def _pmc_admin_ui():
                     st.error(msg)
     with t_monitor:
         _pmc_monitor_ui_styles()
+        st.markdown(_pmc_admin_kpis_html(notices, reads), unsafe_allow_html=True)
         with st.container(key="pmc_admin_monitor_filters"):
             _mleft, _mright = st.columns([1, 1.65], gap="medium")
             with _mleft:
@@ -9633,51 +9894,56 @@ def _pmc_admin_ui():
             else:
                 page_num = 1
             page_rows = filtered[(page_num - 1) * page_size : page_num * page_size]
+            if "pmc_admin_monitor_selected" not in st.session_state and page_rows:
+                st.session_state["pmc_admin_monitor_selected"] = str(page_rows[0]["id_comunicado"])
             for n in page_rows:
                 rid = str(n["id_comunicado"])
                 counts = _pmc_receipt_stats(n, reads)
                 is_selected = str(st.session_state.get("pmc_admin_monitor_selected", "")) == rid
                 with st.container(key="pmc_admin_notice_" + rid):
-                    st.markdown(_pmc_monitor_summary_html(n, counts), unsafe_allow_html=True)
-                    if st.button("Cerrar gestión" if is_selected else "Ver seguimiento y gestionar",
-                                 key="pmc_admin_monitor_open_" + rid, use_container_width=True,
-                                 icon=":material/expand_less:" if is_selected else ":material/arrow_forward:"):
-                        st.session_state["pmc_admin_monitor_selected"] = "" if is_selected else rid
-                        st.rerun()
                     if not is_selected:
+                        st.markdown(_pmc_monitor_summary_html(n, counts), unsafe_allow_html=True)
+                        if st.button("Ver seguimiento y gestionar", key="pmc_admin_monitor_open_" + rid,
+                                     use_container_width=True, icon=":material/arrow_forward:"):
+                            st.session_state["pmc_admin_monitor_selected"] = rid
+                            st.rerun()
                         continue
-                    with st.container(key="pmc_admin_detail_" + rid):
-                        tab_stats, tab_content, tab_actions = st.tabs(("Lecturas", "Mensaje y adjunto", "Administrar"))
-                        with tab_stats:
-                            st.caption(f"{counts['confirmados']} de {counts['total']} confirmaron su lectura · "
-                                       f"{counts['pendientes']} pendiente(s).")
-                            st.progress(counts["porcentaje"] / 100,
-                                        text=f"{counts['porcentaje']} % de lecturas confirmadas")
-                            persons = {_pm2_dni(p["dni"]): p["nombre"] for p in _pmc_personas()}
-                            targets = sorted(_pmc_recipients(n))
-                            detail_rows = []
-                            for dni in targets:
-                                receipt = _pmc_receipt(reads, rid, dni)
-                                detail_rows.append({
-                                    "Colaborador": persons.get(dni, "Colaborador"),
-                                    "DNI (últimos 4)": dni[-4:],
-                                    "Estado": "Confirmado" if receipt and receipt.get("confirmado_el") else
-                                              ("Visto" if receipt else "Pendiente"),
-                                    "Visto": receipt.get("visto_el", "") if receipt else "",
-                                    "Confirmado": receipt.get("confirmado_el", "") if receipt else "",
-                                })
-                            if detail_rows:
-                                st.dataframe(pd.DataFrame(detail_rows), use_container_width=True, hide_index=True)
-                            else:
-                                st.info("Este comunicado todavía no tiene destinatarios asignados.")
-                        with tab_content:
-                            st.markdown('<div class="pmc-monitor-message"><small>MENSAJE DEL COMUNICADO</small><p>' +
-                                        _pmc_e(n.get("contenido", "")) + '</p></div>', unsafe_allow_html=True)
-                            if n.get("adjunto_drive_id"):
-                                _pmc_render_attach(n, "admin")
-                            else:
-                                st.caption("Este comunicado no tiene archivos adjuntos.")
-                        with tab_actions:
+                    # Un solo comunicado destacado, con imagen integrada a la derecha.
+                    status_label, _ = _pmc_admin_state(n)
+                    st.markdown(_pmc_admin_feature_header_html(n), unsafe_allow_html=True)
+                    st.markdown(_pmc_unified_meta_html(n), unsafe_allow_html=True)
+                    with st.container(key="pmr_admin_body_" + rid):
+                        if n.get("adjunto_drive_id"):
+                            text_col, photo_col = st.columns([1.7, 1], gap="medium")
+                            with text_col:
+                                st.markdown(_pmc_admin_message_html(n), unsafe_allow_html=True)
+                            with photo_col:
+                                media_bytes, media_kind = _pmc_unified_attachment_panel(n, "admin")
+                                if media_bytes is not None:
+                                    _pmc_unified_attachment_actions(n, media_bytes, media_kind, "admin")
+                        else:
+                            st.markdown(_pmc_admin_message_html(n), unsafe_allow_html=True)
+                    st.markdown(_pmc_admin_progress_html(counts, status_label), unsafe_allow_html=True)
+                    with st.expander("Ver destinatarios y sus confirmaciones"):
+                        persons = {_pm2_dni(p["dni"]): p["nombre"] for p in _pmc_personas()}
+                        targets = sorted(_pmc_recipients(n))
+                        detail_rows = []
+                        for dni in targets:
+                            receipt = _pmc_receipt(reads, rid, dni)
+                            detail_rows.append({
+                                "Colaborador": persons.get(dni, "Colaborador"),
+                                "DNI (últimos 4)": dni[-4:],
+                                "Estado": "Confirmado" if receipt and receipt.get("confirmado_el") else
+                                          ("Visto" if receipt else "Pendiente"),
+                                "Visto": receipt.get("visto_el", "") if receipt else "",
+                                "Confirmado": receipt.get("confirmado_el", "") if receipt else "",
+                            })
+                        if detail_rows:
+                            st.dataframe(pd.DataFrame(detail_rows), use_container_width=True, hide_index=True)
+                        else:
+                            st.info("Este comunicado todavía no tiene destinatarios asignados.")
+                    if st.checkbox("Mostrar opciones de administración",
+                                   key="pmc_admin_tools_" + rid):
                             if n["estado"] == "Borrador":
                                 with st.expander("Editar este borrador"):
                                     persons_edit = _pmc_personas()
@@ -9742,6 +10008,10 @@ def _pmc_admin_ui():
                                         st.error(msg)
                             if n["estado"] == "Archivado":
                                 st.info("Comunicado archivado. Las lecturas se conservan en el historial.")
+                    if st.button("Cerrar detalle", key="pmc_admin_monitor_close_" + rid,
+                                 icon=":material/close:", use_container_width=False):
+                        st.session_state["pmc_admin_monitor_selected"] = ""
+                        st.rerun()
 
 
 if rol_actual == "admin":
