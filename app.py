@@ -6607,7 +6607,7 @@ _PM3_EVIDENCE_COLS = [
     "id_evidencia", "id_rutina", "dni", "drive_file_id", "nombre_archivo",
     "tipo_archivo", "tamano_bytes", "sha256", "subido_por", "fecha_subida",
 ]
-_PM3_MAX_UPLOAD_BYTES = 25 * 1024 * 1024
+_PM3_MAX_UPLOAD_BYTES = 40 * 1024 * 1024
 _PM3_MAX_EVIDENCES = 3
 
 
@@ -6735,42 +6735,62 @@ def _pm3_validate_private_folder(drive, folder_id):
 
 
 def _pm3_prepare_image(file_obj):
-    """WebP sin EXIF ni metadatos, dimensiones seguras y límite estricto."""
+    """Convierte fotos JPEG/PNG/WebP/HEIC a WebP compacto y sin metadatos.
+
+    La reducción se realiza ANTES de crear una imagen RGB completa para
+    minimizar picos de memoria con fotografías de 48 MP de iPhone.
+    """
     from io import BytesIO
     from PIL import Image as PILImage, ImageOps, UnidentifiedImageError
-    try:
-        from pillow_heif import register_heif_opener
-        register_heif_opener()  # iPhone: permite procesar HEIC/HEIF cuando se instala pillow-heif
-    except ImportError:
-        pass
     if file_obj is None:
         raise ValueError("Selecciona una fotografía.")
-    if int(getattr(file_obj, "size", _PM3_MAX_UPLOAD_BYTES + 1)) > _PM3_MAX_UPLOAD_BYTES:
-        raise ValueError("La imagen supera 25 MB. Reduce su tamaño en Fotos o selecciona otra.")
+    name = str(getattr(file_obj, "name", "") or "").lower()
+    is_heif = name.endswith((".heic", ".heif"))
+    try:
+        from pillow_heif import register_heif_opener
+        register_heif_opener(thumbnails=False)
+    except ImportError:
+        if is_heif:
+            raise ValueError("Para fotos HEIC de iPhone falta pillow-heif en requirements.txt. ")
+    size = getattr(file_obj, "size", None)
+    if size is not None and int(size) > _PM3_MAX_UPLOAD_BYTES:
+        raise ValueError("La foto supera 40 MB. Selecciona una más pequeña o conviértela a JPEG.")
     raw = file_obj.getvalue() if hasattr(file_obj, "getvalue") else file_obj.read()
+    if not raw:
+        raise ValueError("La fotografía está vacía. Vuelve a seleccionarla.")
     if len(raw) > _PM3_MAX_UPLOAD_BYTES:
-        raise ValueError("El archivo es demasiado grande.")
+        raise ValueError("La foto supera 40 MB. Selecciona una más pequeña o conviértela a JPEG.")
     try:
         with PILImage.open(BytesIO(raw)) as image:
             if image.format not in ("JPEG", "PNG", "WEBP", "HEIF", "HEIC"):
                 raise ValueError("Formato no permitido. Utiliza JPEG, PNG, WebP o HEIC.")
             if image.width * image.height > 65_000_000:
-                raise ValueError("La fotografía supera 65 megapíxeles. Reduce su resolución antes de enviarla.")
-            # JPEG de iPhone de hasta 48 MP: decodificar a menor resolución cuando el códec lo permite.
+                raise ValueError("Fotografía de más de 65 megapíxeles; reduce la resolución antes de subirla.")
+            # JPEG permite una decodificación aproximada de menor tamaño.
             if image.format == "JPEG":
                 image.draft("RGB", (2560, 2560))
-            normalized = ImageOps.exif_transpose(image).convert("RGB")
-            normalized.thumbnail((1280, 1280))
-            for quality in (82, 74, 64, 53):
-                buf = BytesIO()
-                normalized.save(buf, format="WEBP", quality=quality, method=5)
-                if buf.tell() <= 450_000:
-                    return buf.getvalue()
-            if buf.tell() > 900_000:
-                raise ValueError("No se pudo comprimir la imagen adecuadamente.")
-            return buf.getvalue()
+            # En HEIC/PNG también reducimos antes de convertir a RGB, evitando
+            # mantener una segunda copia de 48 MP en memoria.
+            image.thumbnail((1600, 1600), reducing_gap=2.0)
+            normalized = ImageOps.exif_transpose(image)
+            normalized.thumbnail((1280, 1280), reducing_gap=2.0)
+            if normalized.mode != "RGB":
+                normalized = normalized.convert("RGB")
+            # Respaldo progresivo: fotografías con mucho detalle se reducen
+            # más, en lugar de fallar al superar el tamaño objetivo WebP.
+            for edge in (1280, 1080, 900, 720):
+                if max(normalized.size) > edge:
+                    normalized.thumbnail((edge, edge), reducing_gap=2.0)
+                for quality in (82, 74, 64, 54):
+                    buf = BytesIO()
+                    normalized.save(buf, format="WEBP", quality=quality, method=4)
+                    if buf.tell() <= 350_000:
+                        return buf.getvalue()
+            raise ValueError("No se pudo comprimir esta fotografía. Prueba convertirla a JPEG desde Fotos.")
     except (UnidentifiedImageError, OSError, PILImage.DecompressionBombError, MemoryError) as exc:
-        raise ValueError("No se pudo procesar esta imagen. Intenta con una foto más pequeña o en formato JPEG.") from exc
+        if is_heif:
+            raise ValueError("No se pudo leer la foto HEIC. Comprueba pillow-heif o conviértela a JPEG.") from exc
+        raise ValueError("No se pudo procesar la fotografía. Intenta con otra foto o en formato JPEG.") from exc
 
 
 def _pm3_upload_evidence(task_id, file_obj):
@@ -6895,13 +6915,23 @@ def _pm3_worker_upload_ui(task_id):
     if count >= _PM3_MAX_EVIDENCES:
         return
     with st.expander("Adjuntar fotografía de evidencia", expanded=False):
-        st.caption("Foto o galería del celular (JPEG, PNG y HEIC de iPhone). Hasta 25 MB por archivo; "
-                   "se comprime automáticamente antes de guardarse en Drive privado.")
+        st.caption("Toma una foto o elígela en tu iPhone o Android (HEIC, JPEG, PNG o WebP). "
+                   "Admite hasta 40 MB y 65 MP; la convierte a WebP compacto para Drive privado.")
         nonce = st.session_state.get("_pm3_file_nonce_" + str(task_id), 0)
-        image = st.file_uploader("Fotografía", type=["jpg", "jpeg", "png", "webp", "heic", "heif"],
-                                 key=f"pm3_file_{task_id}_{nonce}", accept_multiple_files=False)
+        # max_upload_size limita el archivo ANTES de enviarlo al servidor.
+        # Fallback para versiones de Streamlit que aún no conocen ese parámetro.
+        _picker_args = dict(type=["jpg", "jpeg", "png", "webp", "heic", "heif"],
+                            key=f"pm3_file_{task_id}_{nonce}", accept_multiple_files=False)
+        try:
+            image = st.file_uploader("Fotografía", max_upload_size=40, **_picker_args)
+        except TypeError as _picker_err:
+            if "max_upload_size" not in str(_picker_err):
+                raise
+            image = st.file_uploader("Fotografía", **_picker_args)
         if image is not None:
-            st.caption("Se procesará la imagen para reducir su peso. No cierres la página durante el guardado.")
+            _mb = int(getattr(image, "size", 0)) / (1024 * 1024)
+            st.caption(f"Seleccionada: {getattr(image, 'name', 'Fotografía')} · {_mb:.1f} MB. "
+                       "Pulsa Guardar fotografía y espera la confirmación; no cierres la página durante la subida.")
         if st.button("Guardar fotografía", key="pm3_upload_" + str(task_id),
                      disabled=image is None, use_container_width=True, type="primary"):
             with st.spinner("Comprimiendo y guardando la fotografía…"):
@@ -8160,6 +8190,53 @@ _PM_MOBILE_EXPERIENCE_CSS = """
   .stApp:not(:has(.st-key-pm_auth_page)) .pm-exec-stat,
   .stApp:not(:has(.st-key-pm_auth_page)) .pm2-stat{padding:10px!important;}
 }
+/* PREMIUM MARKET 6.1 · TECLADO MÓVIL Y FORMULARIOS
+   No hay JavaScript manipulando el DOM. Safari/Chrome soportan :has().
+   Cuando el usuario edita un campo, la barra inferior desaparece: no
+   invade el teclado ni puede tapar Guardar/Confirmar/Enviar. */
+@media screen and (max-width:780px){
+  .stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stMain"]{
+    scroll-padding-top:80px!important;
+    scroll-padding-bottom:125px!important;
+    -webkit-overflow-scrolling:touch;
+  }
+  .stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stMain"] input:not([type="checkbox"]):not([type="radio"]),
+  .stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stMain"] textarea,
+  .stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stMain"] [role="combobox"]{
+    scroll-margin-top:95px!important;
+    scroll-margin-bottom:150px!important;
+    font-size:16px!important;
+  }
+  .stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stMain"] [data-testid="stFormSubmitButton"],
+  .stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stMain"] [data-testid="stForm"] [data-testid="stButton"]{
+    scroll-margin-bottom:135px!important;
+  }
+  .stApp:not(:has(.st-key-pm_auth_page)):has(input:not([type="checkbox"]):not([type="radio"]):focus,
+      textarea:focus, [role="combobox"]:focus, [contenteditable="true"]:focus)
+      .st-key-tp_bottomnav{
+    display:none!important;
+    visibility:hidden!important;
+    pointer-events:none!important;
+  }
+  .stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stMain"] [data-testid="stFileUploader"]{
+    max-width:100%!important;min-width:0!important;overflow-wrap:anywhere!important;
+  }
+  .stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stMain"] [data-testid="stFileUploader"] button{
+    min-height:48px!important;max-width:100%!important;
+  }
+  /* Tablas anchas: scroll horizontal local, no desplazamiento de toda la página. */
+  .stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stMain"] [data-testid="stDataFrame"],
+  .stApp:not(:has(.st-key-pm_auth_page)) [data-testid="stMain"] .tp-table-wrap{
+    overscroll-behavior-inline:contain;
+    touch-action:pan-x pan-y;
+  }
+  /* Menos coste de composición en dispositivos modestos. */
+  .stApp:not(:has(.st-key-pm_auth_page)) .st-key-tp_bottomnav{
+    -webkit-backdrop-filter:blur(8px) saturate(130%)!important;
+    backdrop-filter:blur(8px) saturate(130%)!important;
+  }
+}
+
 @media screen and (min-width:781px){
   .st-key-tp_bottomnav{display:none!important;}
 }
