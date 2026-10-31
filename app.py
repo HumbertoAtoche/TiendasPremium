@@ -9348,6 +9348,14 @@ _PM_MOBILE_EXPERIENCE_CSS = """
     flex:1 1 0!important;min-width:0!important;width:50%!important;max-width:50%!important;
   }
   .stApp:not(:has(.st-key-pm_auth_page)) .st-key-pm_mobile_employee_home [data-testid="stButton"] button{min-height:47px!important;}
+  /* Separación estable entre las tres filas del inicio del colaborador.
+     Streamlit envuelve el HTML en contenedores propios, por eso se espacian
+     los contenedores completos en lugar de confiar en márgenes interiores. */
+  .stApp:not(:has(.st-key-pm_auth_page)) .st-key-pm_mobile_hero_row{margin:0 0 20px!important;}
+  .stApp:not(:has(.st-key-pm_auth_page)) .st-key-pm_mobile_metrics_row{margin:0 0 22px!important;}
+  .stApp:not(:has(.st-key-pm_auth_page)) .st-key-pm_mobile_actions_row{margin:0 0 16px!important;}
+  .stApp:not(:has(.st-key-pm_auth_page)) .st-key-pm_mobile_hero_row .pm-m-home-hero,
+  .stApp:not(:has(.st-key-pm_auth_page)) .st-key-pm_mobile_metrics_row .pm-m-home-metrics{margin-bottom:0!important;}
   /* El saludo anterior se reemplaza sólo en móvil; sus controles siguen intactos. */
   .stApp:not(:has(.st-key-pm_auth_page)) .st-key-pm_v_marcar_asistencia .tp-hero{display:none!important;}
   /* Premium IA: solo escritorio. Ocultamos lanzador y panel en móvil. */
@@ -10125,25 +10133,27 @@ def _pm_mobile_home():
     saludo = "Buenos días" if now.hour < 12 else ("Buenas tardes" if now.hour < 19 else "Buenas noches")
     escape = _html.escape
     with st.container(key="pm_mobile_employee_home"):
-        st.markdown(
-            '<div class="pm-m-home-hero">'
-            '<div class="pm-m-eyebrow">MI JORNADA · PREMIUM MARKET</div>'
-            f'<h2>{saludo}, {first_name}</h2>'
-            '<p>Organiza tu turno, marca tu asistencia y revisa tus actividades.</p>'
-            '<div class="pm-m-home-tags">'
-            f'<span>{escape(context["turno"])}</span>'
-            f'<span>{escape(context["asistencia"])}</span>'
-            '</div></div>', unsafe_allow_html=True,
-        )
+        with st.container(key="pm_mobile_hero_row"):
+            st.markdown(
+                '<div class="pm-m-home-hero">'
+                '<div class="pm-m-eyebrow">MI JORNADA · PREMIUM MARKET</div>'
+                f'<h2>{saludo}, {first_name}</h2>'
+                '<p>Organiza tu turno, marca tu asistencia y revisa tus actividades.</p>'
+                '<div class="pm-m-home-tags">'
+                f'<span>{escape(context["turno"])}</span>'
+                f'<span>{escape(context["asistencia"])}</span>'
+                '</div></div>', unsafe_allow_html=True,
+            )
         rutinas_dato = "—" if context["error_rutinas"] else str(context["pendientes_rut"])
-        st.markdown(
-            '<div class="pm-m-home-metrics">'
-            '<div><small>Mis rutinas pendientes</small>'
-            f'<strong>{rutinas_dato}</strong><span>Para hoy</span></div>'
-            '<div><small>Solicitudes en revisión</small>'
-            f'<strong>{context["pendientes_sol"]}</strong><span>En seguimiento</span></div>'
-            '</div>', unsafe_allow_html=True,
-        )
+        with st.container(key="pm_mobile_metrics_row"):
+            st.markdown(
+                '<div class="pm-m-home-metrics">'
+                '<div><small>Mis rutinas pendientes</small>'
+                f'<strong>{rutinas_dato}</strong><span>Para hoy</span></div>'
+                '<div><small>Solicitudes en revisión</small>'
+                f'<strong>{context["pendientes_sol"]}</strong><span>En seguimiento</span></div>'
+                '</div>', unsafe_allow_html=True,
+            )
         if context["error_rutinas"]:
             st.caption("No se pudieron actualizar las rutinas; consulta la sección Mis Rutinas para reintentar.")
         else:
@@ -10163,13 +10173,14 @@ def _pm_mobile_home():
                         f'<span>{escape(str(t.get("prioridad", "Normal")))} · {escape(str(t.get("estado", "Pendiente")))}</span>'
                         '</article>', unsafe_allow_html=True,
                     )
-        col_r, col_s = st.columns(2)
-        with col_r:
-            st.button("Mis rutinas", key="pm_mobile_go_rutinas", use_container_width=True,
-                      type="primary", on_click=_ir_a, args=("Mis Rutinas",), icon=":material/checklist:")
-        with col_s:
-            st.button("Solicitudes", key="pm_mobile_go_solicitudes", use_container_width=True,
-                      on_click=_ir_a, args=("Solicitar Permiso / Adelanto",), icon=":material/inbox:")
+        with st.container(key="pm_mobile_actions_row"):
+            col_r, col_s = st.columns(2)
+            with col_r:
+                st.button("Mis rutinas", key="pm_mobile_go_rutinas", use_container_width=True,
+                          type="primary", on_click=_ir_a, args=("Mis Rutinas",), icon=":material/checklist:")
+            with col_s:
+                st.button("Solicitudes", key="pm_mobile_go_solicitudes", use_container_width=True,
+                          on_click=_ir_a, args=("Solicitar Permiso / Adelanto",), icon=":material/inbox:")
 
 # Resumen táctil de avisos, sin alterar la lógica de Solicitudes existente.
 def _pm_mobile_notices():
