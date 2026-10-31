@@ -7424,34 +7424,19 @@ def _pm2_css():
     .st-key-pm_v_mis_rutinas [data-testid="stExpander"]{border-color:#e5ebf3!important;border-radius:14px!important}
     /* Asistencia: reservar márgenes simétricos para hora, concepto y estado */
     .st-key-pm_v_marcar_asistencia .tp-row{padding:14px 16px!important;gap:16px!important;border:1px solid #e8edf3!important;
-      border-radius:16px!important;display:flex!important;align-items:center!important;min-width:0;background:linear-gradient(180deg,#ffffff 0%,#fbfcff 100%)!important;box-shadow:0 16px 28px -28px rgba(27,44,73,.28)!important}
+      border-radius:16px!important;display:flex!important;align-items:center!important;min-width:0}
     .st-key-pm_v_marcar_asistencia .tp-row-time{display:flex;align-items:center;justify-content:center;flex:0 0 70px!important;
-      min-width:70px!important;min-height:52px!important;margin:0!important;padding:0 9px!important;box-sizing:border-box;font-variant-numeric:tabular-nums;font-size:1rem;
-      border-radius:16px!important;background:linear-gradient(180deg,#ffffff 0%,#f5f8fc 100%)!important;border:1px solid #e5ebf3!important;color:#2c405c!important;font-weight:820!important;letter-spacing:-.03em!important;text-align:center!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.85)!important}
+      min-width:70px!important;margin:0!important;padding:0 9px!important;box-sizing:border-box;font-variant-numeric:tabular-nums;font-size:1rem}
     .st-key-pm_v_marcar_asistencia .tp-row-main{flex:1;min-width:0}
     .st-key-pm_v_marcar_asistencia .tp-row .tp-chips{flex:none}
-    .pm-att-summary{margin-top:14px;border:1px solid #e3ebf3;border-radius:18px;padding:16px 16px 14px;background:linear-gradient(135deg,#f8fbff 0%,#ffffff 62%,#fef4f6 100%);box-shadow:0 18px 32px -29px rgba(28,45,72,.30)}
-    .pm-att-summary-head{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
-    .pm-att-summary-head small{display:block;color:#d3344d;font-size:.7rem;font-weight:850;letter-spacing:.10em;text-transform:uppercase;margin:0 0 4px}
-    .pm-att-summary-head strong{display:block;color:#1d2d46;font-size:1rem;line-height:1.25}
-    .pm-att-summary-head b{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:999px;background:#ecf8f2;border:1px solid #d2eedf;color:#137a56;font-size:.74rem;font-weight:820}
-    .pm-att-summary-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-    .pm-att-summary-card{min-width:0;border-radius:15px;padding:13px 13px 12px;border:1px solid #e7edf4;background:#fff;box-shadow:0 10px 22px -24px rgba(29,45,72,.36)}
-    .pm-att-summary-card small{display:block;color:#8090a3;font-size:.71rem;font-weight:760;line-height:1.35;margin:0 0 6px}
-    .pm-att-summary-card strong{display:block;color:#1d2d46;font-size:1.28rem;font-weight:860;letter-spacing:-.04em;line-height:1.05;margin:0 0 5px}
-    .pm-att-summary-card span{display:block;color:#66778f;font-size:.76rem;line-height:1.45}
-    .pm-att-summary-card.accent{background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%);border-color:#dce8f7}
-    .pm-att-summary-card.ok{background:linear-gradient(180deg,#ffffff 0%,#eefaf4 100%);border-color:#d4eedf}
-    .pm-att-summary-card.warn{background:linear-gradient(180deg,#ffffff 0%,#fff8ed 100%);border-color:#f3e1bb}
     @media(max-width:900px){.pm2-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
     @media(max-width:600px){
       .pm2-hero{padding:22px 19px;border-radius:20px}.pm2-stats{gap:9px}
       .pm2-stat{padding:12px 13px}.pm2-stat b{font-size:1.55rem}
       .pm2-staff{padding:13px}.pm2-task-title{font-size:.96rem}
       .st-key-pm_v_marcar_asistencia .tp-row{gap:11px!important;padding:12px!important}
-      .st-key-pm_v_marcar_asistencia .tp-row-time{flex-basis:57px!important;min-width:57px!important;min-height:48px!important;padding:0 3px!important;font-size:.86rem}
+      .st-key-pm_v_marcar_asistencia .tp-row-time{flex-basis:57px!important;min-width:57px!important;padding:0 3px!important;font-size:.86rem}
       .st-key-pm_v_marcar_asistencia .tp-row .tp-chips{max-width:36%}
-      .pm-att-summary{padding:14px 14px 12px;border-radius:16px}.pm-att-summary-grid{grid-template-columns:1fr}.pm-att-summary-card strong{font-size:1.16rem}
     }
     /* RUTINAS 3.1: hechos claros, bordes suaves y sin etiquetas gigantes. */
     .pm2-task-info{align-items:flex-start;gap:10px;margin:0 0 12px}
@@ -8710,10 +8695,7 @@ def _pmc_ui_styles():
     .pmc-home-alert-copy small{display:block;color:#c9334d;font-size:.72rem;font-weight:850;letter-spacing:.09em;margin:0 0 6px}.pmc-home-alert-copy strong{display:block;color:#1e2f49;font-size:1.03rem;line-height:1.35;margin:0 0 4px}.pmc-home-alert-copy p{margin:0;color:#6e7e94;font-size:.82rem;line-height:1.55}
     .pmc-home-alert-badge{flex:none;width:50px;height:50px;border-radius:16px;display:grid;place-items:center;background:linear-gradient(135deg,#1b2d49,#d7354f);color:#fff;font-size:1.2rem;font-weight:900;box-shadow:0 14px 28px -22px rgba(28,44,72,.6)}
     .pmc-mini b{color:#1d2f46}.pmc-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:19px 0 18px}.pmc-kpis>div{position:relative;overflow:hidden;background:linear-gradient(145deg,#fff,#fbfcff);border:1px solid #e8edf3;border-radius:18px;padding:18px 17px;box-shadow:0 13px 29px -25px rgba(24,41,68,.25)}.pmc-kpis>div::before{content:"";position:absolute;left:0;right:0;top:0;height:3px;background:#91a5bb}.pmc-kpis>div:nth-child(2)::before{background:#d9425b}.pmc-kpis>div:nth-child(3)::before{background:#21b37f}.pmc-kpis small{display:block;color:#738297;font-size:.77rem;font-weight:750}.pmc-kpis strong{display:block;margin-top:10px;font-size:1.85rem;line-height:1.15;letter-spacing:-.055em;color:#1d2b44}
-    .st-key-pmc_filters{border:1px solid #e8edf4;border-radius:22px;background:linear-gradient(180deg,#ffffff 0%,#fbfcff 100%);padding:16px 18px 8px;margin:14px 0 22px;box-shadow:0 18px 32px -30px rgba(25,42,66,.28)}
-    .st-key-pmc_filters label{font-weight:820!important;color:#243650!important;letter-spacing:-.01em}
-    .st-key-pmc_filters [data-baseweb="select"] > div{border-radius:15px!important;border:1px solid #e6ebf3!important;background:#f7f9fc!important;min-height:50px!important;box-shadow:none!important}
-    .st-key-pmc_filters [data-testid="stTextInput"] input{border-radius:15px!important;border:1px solid #e6ebf3!important;background:#f7f9fc!important;min-height:50px!important}
+    .st-key-pmc_filters{border:1px solid #e8edf4;border-radius:19px;background:#fff;padding:12px 16px 2px;margin:10px 0 18px;box-shadow:0 12px 26px -25px rgba(25,42,66,.24)}
     .st-key-pmc_admin_editor [data-testid="stForm"],.st-key-pmc_admin_filter [data-testid="stForm"]{border-radius:18px!important;background:#fff!important}
     .st-key-pmc_reader [data-testid="stButton"] button,.st-key-pmc_admin_actions [data-testid="stButton"] button{min-height:46px!important}
     @media(max-width:620px){
@@ -9715,7 +9697,7 @@ _PM_MOBILE_EXPERIENCE_CSS = """
   .stApp:not(:has(.st-key-pm_auth_page)) .st-key-pm_v_mis_rutinas .pm2-kicker{margin-bottom:7px!important;font-size:.64rem!important;}
   /* Filas de registro y cantidad alineadas, nunca pegadas al borde. */
   .stApp:not(:has(.st-key-pm_auth_page)) .tp-row{min-width:0!important;max-width:100%!important;padding:13px!important;gap:10px!important;display:flex!important;align-items:center!important;flex-wrap:wrap!important;}
-  .stApp:not(:has(.st-key-pm_auth_page)) .tp-row-time{flex:0 0 72px!important;width:72px!important;min-width:72px!important;min-height:54px!important;margin:0!important;padding:0 10px!important;text-align:center!important;box-sizing:border-box!important;font-variant-numeric:tabular-nums!important;display:flex!important;align-items:center!important;justify-content:center!important;border-radius:17px!important;background:linear-gradient(180deg,#ffffff 0%,#f6f8fc 100%)!important;border:1px solid #e5ebf2!important;color:#2e415d!important;font-weight:810!important;letter-spacing:-.03em!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.88)!important;}
+  .stApp:not(:has(.st-key-pm_auth_page)) .tp-row-time{flex:0 0 68px!important;width:68px!important;min-width:68px!important;margin:0!important;padding:0 8px!important;text-align:center!important;box-sizing:border-box!important;font-variant-numeric:tabular-nums!important;}
   .stApp:not(:has(.st-key-pm_auth_page)) .tp-row-main{min-width:0!important;flex:1 1 125px!important;}
   .stApp:not(:has(.st-key-pm_auth_page)) .tp-row-main span{white-space:normal!important;overflow-wrap:anywhere!important;}
   .stApp:not(:has(.st-key-pm_auth_page)) .tp-row .tp-chips{margin-left:auto!important;flex:0 1 auto!important;max-width:100%!important;justify-content:flex-end!important;}
@@ -10926,25 +10908,11 @@ elif choice == "Marcar Asistencia":
                     df_mismarcas["dt"] = pd.to_datetime(df_mismarcas["fecha_hora"])
                     mins_lab, mins_ext, mins_tot, _ = calcular_jornada_y_horas_extras(df_mismarcas)
                 
-                    _pct_turno = min(100, int(round((mins_lab * 100) / max(jornada_base_min(), 1))))
-                    _estado_turno = "Turno activo" if not df_mismarcas.empty and str(df_mismarcas.sort_values("dt").iloc[-1]["tipo"]) == "INGRESO" else "Jornada cerrada"
-                    _extra_lbl = formatear_horas_minutos(mins_ext) if mins_ext > 0 else "0 min"
-                    _extra_sub = "Generadas hoy" if mins_ext > 0 else "Aún no registradas"
-                    st.markdown(
-                        f'''<div class="pm-att-summary">
-                              <div class="pm-att-summary-head">
-                                <div><small>Seguimiento de jornada</small><strong>Así va tu asistencia de hoy</strong></div>
-                                <b>{_html.escape(_estado_turno)}</b>
-                              </div>
-                              <div class="pm-att-summary-grid">
-                                <div class="pm-att-summary-card"><small>Horas trabajadas</small><strong>{formatear_horas_minutos(mins_tot)}</strong><span>Total acumulado del día</span></div>
-                                <div class="pm-att-summary-card accent"><small>Jornada efectiva</small><strong>{formatear_horas_minutos(mins_lab)}</strong><span>de {jornada_base_txt()}</span></div>
-                                <div class="pm-att-summary-card {'ok' if mins_ext > 0 else 'accent'}"><small>Horas extra</small><strong>{_extra_lbl}</strong><span>{_extra_sub}</span></div>
-                                <div class="pm-att-summary-card warn"><small>Avance de jornada</small><strong>{_pct_turno}%</strong><span>Progreso sobre tu jornada base</span></div>
-                              </div>
-                            </div>''',
-                        unsafe_allow_html=True
-                    )
+                    st.markdown("---")
+                    st.markdown(f"**Horas Trabajadas Hoy:** {formatear_horas_minutos(mins_tot)}")
+                    st.markdown(f"**Jornada Completa ({jornada_base_txt()}):** {formatear_horas_minutos(mins_lab)} / {jornada_base_txt()}")
+                    if mins_ext > 0:
+                        st.markdown(f"**Horas Extras Generadas:** <span style='color:#00A959; font-weight:700;'>{formatear_horas_minutos(mins_ext)}</span>", unsafe_allow_html=True)
                 else:
                     st.info("No hay marcaciones registradas la jornada de hoy.")
             else:
