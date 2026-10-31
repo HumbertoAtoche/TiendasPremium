@@ -10026,7 +10026,7 @@ if rol_actual == "admin":
     # Estilo uniforme para paneles de operación: conserva lógica y menú original.
     menu = ["Dashboard General", "Centro de Alertas", "Rutinas Operativas", "Analítica (BI)", "Gestión Colaboradores", "Onboarding / Offboarding", "Gestión de Vacaciones", "Programación de Turnos", "Boletas de Pago", "Solicitudes y Permisos", "Historial de Descuadres", "Incidencias y Daños", "Botellas Fiadas", "Historial de Asistencias", "Auditoría y Configuración", "Gestión de Comunicados"]
 else:
-    menu = ["Marcar Asistencia", "Mis Rutinas", "Registrar Descuadre", "Registrar Incidencia", "Botellas Fiadas", "Mi Ficha Técnica", "Mis Vacaciones", "Mis Boletas", "Solicitar Permiso / Adelanto", "Mi Dashboard Mensual", "Mis Comunicados"]
+    menu = ["Marcar Asistencia", "Mis Rutinas", "Mis Comunicados", "Mi Dashboard Mensual", "Registrar Descuadre", "Registrar Incidencia", "Botellas Fiadas", "Mi Ficha Técnica", "Mis Vacaciones", "Mis Boletas", "Solicitar Permiso / Adelanto"]
 
 if rol_real == "admin":
     _opc_vc = ["Mi vista (admin)"] + sorted(n for n, d in USUARIOS.items() if d["rol"] != "admin")
