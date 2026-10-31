@@ -4057,6 +4057,8 @@ _PM_DATOS_POR_VISTA = {
     "Historial de Asistencias": set(),
     "Auditoría y Configuración": {"auditoria"},
     "Rutinas Operativas": {"checklist"},
+    "Gestión de Comunicados": set(),
+    "Mis Comunicados": set(),
     "Marcar Asistencia": set(),
     "Mis Rutinas": set(),
     "Registrar Descuadre": {"descuadres"},
@@ -4095,10 +4097,10 @@ def _pm_datos_requeridos():
              "Gestión Colaboradores", "Onboarding / Offboarding", "Gestión de Vacaciones",
              "Programación de Turnos", "Boletas de Pago", "Solicitudes y Permisos",
              "Historial de Descuadres", "Incidencias y Daños", "Botellas Fiadas",
-             "Historial de Asistencias", "Auditoría y Configuración", "Rutinas Operativas") if viewing_admin else (
+             "Historial de Asistencias", "Auditoría y Configuración", "Rutinas Operativas", "Gestión de Comunicados") if viewing_admin else (
              "Marcar Asistencia", "Mis Rutinas", "Registrar Descuadre", "Registrar Incidencia",
              "Botellas Fiadas", "Mi Ficha Técnica", "Mis Vacaciones", "Mis Boletas",
-             "Solicitar Permiso / Adelanto", "Mi Dashboard Mensual")
+             "Solicitar Permiso / Adelanto", "Mi Dashboard Mensual", "Mis Comunicados")
     if selected not in valid:
         selected = default_view
     return _PM_NUCLEO_AUTENTICADO | _PM_DATOS_POR_VISTA.get(selected, set())
@@ -7920,12 +7922,748 @@ _pm2_edit_task = _pm3_synchronized(_pm2_edit_task)
 _pm2_import_legacy = _pm3_synchronized(_pm2_import_legacy)
 
 
+# ============================================================
+# PREMIUM MARKET · COMUNICADOS 1.0
+# Dos hojas independientes; sin ventanas emergentes ni dependencia
+# de las alertas de cumpleaños, botellas, solicitudes o rutinas.
+# ============================================================
+import uuid as _pmc_uuid
+import json as _pmc_json
+import html as _pmc_html
+
+_PMC_NOTICES = "Comunicados"
+_PMC_READS = "Comunicados_Lecturas"
+_PMC_HEADERS = [
+    "id_comunicado", "titulo", "contenido", "categoria", "prioridad", "estado",
+    "publicar_desde", "vigente_hasta", "audiencia", "destinatarios_json",
+    "adjunto_drive_id", "adjunto_nombre", "adjunto_mime", "creado_por",
+    "creado_el", "actualizado_el",
+]
+_PMC_READ_HEADERS = [
+    "id_comunicado", "dni", "nombre", "visto_el", "confirmado_el",
+]
+_PMC_CATEGORIES = ("General", "Procedimientos", "Personal", "Seguridad", "Operaciones")
+_PMC_PRIORITIES = ("Normal", "Importante", "Urgente")
+_PMC_FILE_LIMIT = 10 * 1024 * 1024
+_PMC_CACHE_TTL = 45
+
+
+@st.cache_resource(show_spinner=False)
+def _pmc_shared_state():
+    return {"lock": threading.RLock(), "at": 0.0, "records": None, "reads": None,
+            "generation": 0}
+
+
+def _pmc_reset_cache():
+    state = _pmc_shared_state()
+    with state["lock"]:
+        state["at"] = 0
+        state["records"] = None
+        state["reads"] = None
+        state["generation"] += 1
+
+
+def _pmc_admin():
+    return str(rol_real).lower() == "admin" and not st.session_state.get("ver_como")
+
+
+def _pmc_personas():
+    """Instantánea de personas activas; jamás permitir escoger DNI arbitrario."""
+    return _pm2_people()
+
+
+def _pmc_ws(nombre, headers, create=False):
+    if not doc_sheets:
+        raise ConnectionError("Google Sheets no está conectado.")
+    try:
+        ws = doc_sheets.worksheet(nombre)
+    except gspread.exceptions.WorksheetNotFound:
+        if not create:
+            return None
+        if not _pmc_admin():
+            raise PermissionError("Solo administración puede preparar el módulo.")
+        ws = doc_sheets.add_worksheet(title=nombre, rows=1500, cols=len(headers))
+        ws.append_row(headers, value_input_option="RAW")
+    real = ws._ws if isinstance(ws, _HojaProxy) else ws
+    actual = [str(x).strip() for x in real.row_values(1)]
+    if not actual and create:
+        ws.append_row(headers, value_input_option="RAW")
+        actual = list(headers)
+    if actual != list(headers):
+        raise ValueError(f"La hoja {nombre} tiene columnas distintas; no se modificó.")
+    return ws
+
+
+def _pmc_rows(ws, headers):
+    if ws is None:
+        return []
+    real = ws._ws if isinstance(ws, _HojaProxy) else ws
+    matrix = real.get_all_values()
+    if not matrix:
+        return []
+    if [str(c).strip() for c in matrix[0]] != list(headers):
+        raise ValueError("Cambió el esquema de un registro de Comunicados.")
+    return [dict(zip(headers, (row + [""] * len(headers))[:len(headers)]))
+            for row in matrix[1:] if row and str(row[0]).strip()]
+
+
+def _pmc_load(force=False):
+    """Caché común de lectura; nunca devuelve información filtrada por usuario."""
+    cache = _pmc_shared_state()
+    try:
+        with cache["lock"]:
+            if not force and cache["records"] is not None and time.monotonic() - cache["at"] < _PMC_CACHE_TTL:
+                return [dict(x) for x in cache["records"]], [dict(x) for x in cache["reads"]], None
+            ws_n = _pmc_ws(_PMC_NOTICES, _PMC_HEADERS)
+            ws_r = _pmc_ws(_PMC_READS, _PMC_READ_HEADERS)
+            if ws_n is None or ws_r is None:
+                return None, None, "El módulo todavía no está preparado. Administración debe crear sus hojas."
+            notices = _pmc_rows(ws_n, _PMC_HEADERS)
+            reads = _pmc_rows(ws_r, _PMC_READ_HEADERS)
+            cache["records"] = [dict(x) for x in notices]
+            cache["reads"] = [dict(x) for x in reads]
+            cache["at"] = time.monotonic()
+            return notices, reads, None
+    except Exception as exc:
+        print("Comunicados · error de lectura:", type(exc).__name__)
+        return None, None, "No se pudieron consultar los comunicados. Revisa la conexión y vuelve a intentarlo."
+
+
+def _pmc_prepare():
+    if not _pmc_admin():
+        return False, "No autorizado."
+    try:
+        with _pmc_shared_state()["lock"]:
+            _pmc_ws(_PMC_NOTICES, _PMC_HEADERS, create=True)
+            _pmc_ws(_PMC_READS, _PMC_READ_HEADERS, create=True)
+            _pmc_reset_cache()
+        return True, "Se prepararon Comunicados y Comunicados_Lecturas."
+    except Exception as exc:
+        print("Comunicados · preparación:", type(exc).__name__)
+        return False, "No se pudo preparar el módulo. Revisa los permisos de Google Sheets."
+
+
+def _pmc_today():
+    return obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S")
+
+
+def _pmc_recipients(row):
+    try:
+        targets = _pmc_json.loads(str(row.get("destinatarios_json", "[]")))
+        if isinstance(targets, list):
+            return {_pm2_dni(x) for x in targets if str(x).strip()}
+    except (ValueError, TypeError):
+        pass
+    return set()  # no dar acceso general cuando la audiencia está dañada
+
+
+def _pmc_visible(row, dni, when=None):
+    now = when or _pmc_today()
+    if row.get("estado") != "Publicado":
+        return False
+    if str(row.get("publicar_desde", "")) > now:
+        return False
+    until = str(row.get("vigente_hasta", "")).strip()
+    if until and until < now:
+        return False
+    return _pm2_dni(dni) in _pmc_recipients(row)
+
+
+def _pmc_receipt(reads, announcement_id, dni):
+    relevant = [r for r in reads if r.get("id_comunicado") == str(announcement_id)
+                and _pm2_dni(r.get("dni", "")) == _pm2_dni(dni)]
+    return relevant[-1] if relevant else None
+
+
+def _pmc_unread_count():
+    if rol_actual == "admin":
+        return 0
+    notices, reads, err = _pmc_load()
+    if err:
+        return None
+    return sum(1 for row in notices if _pmc_visible(row, dni_actual)
+               and not (_pmc_receipt(reads, row["id_comunicado"], dni_actual) or {}).get("confirmado_el"))
+
+
+def _pmc_create_notice(fields, file_obj=None):
+    if not _pmc_admin():
+        return False, "Solo administración puede publicar comunicados."
+    title = str(fields.get("titulo", "")).strip()
+    body = str(fields.get("contenido", "")).strip()
+    people = {p["dni"] for p in _pmc_personas()}
+    targets = sorted({_pm2_dni(t) for t in fields.get("destinatarios", [])})
+    if not title or len(title) > 130 or len(body) < 10 or len(body) > 6000:
+        return False, "Completa el título (máximo 130 caracteres) y el mensaje (10 a 6000 caracteres)."
+    if not targets or not set(targets) <= people:
+        return False, "Selecciona al menos un colaborador activo válido."
+    if fields.get("categoria") not in _PMC_CATEGORIES or fields.get("prioridad") not in _PMC_PRIORITIES:
+        return False, "Categoría o prioridad no válida."
+    if fields.get("estado") not in ("Borrador", "Publicado"):
+        return False, "Estado no válido."
+    start = str(fields.get("publicar_desde", "")).strip()
+    until = str(fields.get("vigente_hasta", "")).strip()
+    try:
+        datetime.strptime(start, "%Y-%m-%d %H:%M:%S")
+        if until:
+            datetime.strptime(until, "%Y-%m-%d %H:%M:%S")
+            if until <= start:
+                return False, "La fecha de vencimiento debe ser posterior a la publicación."
+    except ValueError:
+        return False, "Comprueba las fechas de publicación y vencimiento."
+    now = _pmc_today()
+    notice_id = "COM-" + _pmc_uuid.uuid4().hex[:18].upper()
+    drive_id, filename, mime = "", "", ""
+    uploaded = False
+    try:
+        if file_obj is not None:
+            drive_id, filename, mime = _pmc_upload_attachment(file_obj, notice_id)
+            uploaded = True
+        row = {
+            "id_comunicado": notice_id, "titulo": title, "contenido": body,
+            "categoria": fields["categoria"], "prioridad": fields["prioridad"],
+            "estado": fields["estado"], "publicar_desde": start,
+            "vigente_hasta": until, "audiencia": fields.get("audiencia", "Seleccionados"),
+            "destinatarios_json": _pmc_json.dumps(targets, ensure_ascii=False),
+            "adjunto_drive_id": drive_id, "adjunto_nombre": filename,
+            "adjunto_mime": mime, "creado_por": str(user_real),
+            "creado_el": now, "actualizado_el": now,
+        }
+        with _pmc_shared_state()["lock"]:
+            ws = _pmc_ws(_PMC_NOTICES, _PMC_HEADERS, create=True)
+            ws.append_row([row[c] for c in _PMC_HEADERS], value_input_option="RAW")
+            _pmc_reset_cache()
+        return True, ("Comunicado publicado correctamente." if fields["estado"] == "Publicado"
+                      else "Borrador guardado correctamente.")
+    except Exception as exc:
+        print("Comunicados · no se confirmó publicación:", type(exc).__name__)
+        # Confirmación remota antes de eliminar un adjunto en Drive.
+        if uploaded and drive_id:
+            try:
+                ws = _pmc_ws(_PMC_NOTICES, _PMC_HEADERS)
+                existing = _pmc_rows(ws, _PMC_HEADERS) if ws is not None else []
+                if not any(x.get("id_comunicado") == notice_id for x in existing):
+                    drive, _ = _pm3_drive_client()
+                    drive.files().delete(fileId=drive_id, supportsAllDrives=True).execute()
+            except Exception:
+                pass  # no borrar si no sabemos si Sheets persistió el registro
+        return False, "No se pudo confirmar el comunicado. Comprueba Google Sheets antes de reintentar."
+
+
+def _pmc_upload_attachment(file_obj, notice_id):
+    if not _pmc_admin():
+        raise PermissionError("No puedes cargar adjuntos.")
+    from googleapiclient.http import MediaIoBaseUpload
+    import io as _pmc_io
+    # El nombre lo provee el navegador: eliminar rutas tanto Unix como Windows.
+    name = str(file_obj.name).replace("\\", "/").split("/")[-1][:95]
+    ext = os.path.splitext(name)[1].lower()
+    mimes = {".pdf": "application/pdf", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+             ".png": "image/png", ".webp": "image/webp"}
+    mime = mimes.get(ext)
+    if not mime:
+        raise ValueError("Solo se permiten PDF, JPG, PNG y WebP.")
+    content = file_obj.getvalue()
+    if not content or len(content) > _PMC_FILE_LIMIT:
+        raise ValueError("Adjunta un archivo de hasta 10 MB.")
+    signatures = {".pdf": content.startswith(b"%PDF-"),
+                  ".jpg": content.startswith(b"\xff\xd8\xff"),
+                  ".jpeg": content.startswith(b"\xff\xd8\xff"),
+                  ".png": content.startswith(b"\x89PNG\r\n\x1a\n"),
+                  ".webp": content.startswith(b"RIFF") and content[8:12] == b"WEBP"}
+    if not signatures[ext]:
+        raise ValueError("El archivo no coincide con el formato indicado.")
+    drive, folder = _pm3_drive_client()
+    _pm3_validate_private_folder(drive, folder)
+    media = MediaIoBaseUpload(_pmc_io.BytesIO(content), mimetype=mime, resumable=False)
+    metadata = {"name": f"{notice_id}_{name}", "parents": [folder], "mimeType": mime}
+    res = drive.files().create(body=metadata, media_body=media,
+                               fields="id,name,mimeType", supportsAllDrives=True).execute()
+    if not res.get("id"):
+        raise IOError("Drive no confirmó el archivo adjunto.")
+    return str(res["id"]), name, mime
+
+
+def _pmc_file_download(row):
+    """No se comparte un URL público de Drive; la autorización ocurre aquí."""
+    if not st.session_state.get("usuario_login"):
+        raise PermissionError("Debes iniciar sesión.")
+    rid = str(row.get("id_comunicado", ""))
+    notices, _, err = _pmc_load(force=True)
+    if err:
+        raise RuntimeError("No se pudo verificar el destinatario.")
+    actual = next((x for x in notices if x.get("id_comunicado") == rid), None)
+    if actual is None:
+        raise PermissionError("El comunicado ya no existe.")
+    if not _pmc_admin() and not _pmc_visible(actual, dni_actual):
+        raise PermissionError("Este documento no está disponible para tu cuenta.")
+    file_id = str(actual.get("adjunto_drive_id", ""))
+    if not file_id or file_id != str(row.get("adjunto_drive_id", "")):
+        raise PermissionError("Adjunto no autorizado.")
+    drive, _ = _pm3_drive_client()
+    data = drive.files().get_media(fileId=file_id, supportsAllDrives=True).execute()
+    if not isinstance(data, bytes) or len(data) > _PMC_FILE_LIMIT:
+        raise ValueError("El archivo tiene un tamaño no permitido.")
+    return data
+
+
+def _pmc_row_update(notice_id, state):
+    if not _pmc_admin() or state not in ("Publicado", "Archivado"):
+        return False, "No autorizado."
+    try:
+        with _pmc_shared_state()["lock"]:
+            ws = _pmc_ws(_PMC_NOTICES, _PMC_HEADERS)
+            if ws is None:
+                raise RuntimeError("No existe la hoja de comunicados.")
+            real = ws._ws if isinstance(ws, _HojaProxy) else ws
+            rows = real.get_all_values()
+            found = [(i, v) for i, v in enumerate(rows[1:], start=2)
+                     if v and str(v[0]) == str(notice_id)]
+            if len(found) != 1:
+                raise ValueError("El comunicado no es único.")
+            num, values = found[0]
+            previous = dict(zip(_PMC_HEADERS, (values + [""] * len(_PMC_HEADERS))[:len(_PMC_HEADERS)]))
+            if state == "Publicado" and previous["estado"] != "Borrador":
+                raise ValueError("Solo se puede publicar un borrador.")
+            if state == "Archivado" and previous["estado"] == "Archivado":
+                return True, "El comunicado ya estaba archivado."
+            now = _pmc_today()
+            # Una solicitud de Sheets para ambos cambios, evitando el estado parcial.
+            ws.batch_update([
+                {"range": f"F{num}:F{num}", "values": [[state]]},
+                {"range": f"P{num}:P{num}", "values": [[now]]},
+            ], value_input_option="RAW")
+            _pmc_reset_cache()
+        return True, ("Comunicado publicado." if state == "Publicado" else "Comunicado archivado.")
+    except Exception as exc:
+        print("Comunicados · cambio de estado:", type(exc).__name__)
+        return False, "No se pudo confirmar el cambio. Actualiza y comprueba el estado antes de reintentar."
+
+
+def _pmc_edit_draft(notice_id, fields):
+    """Edita solo borradores; los publicados son inmutables y auditables."""
+    if not _pmc_admin():
+        return False, "Solo administración puede editar borradores."
+    title = str(fields.get("titulo", "")).strip()
+    body = str(fields.get("contenido", "")).strip()
+    targets = sorted({_pm2_dni(x) for x in fields.get("destinatarios", [])})
+    active = {p["dni"] for p in _pmc_personas()}
+    if not title or len(title) > 130 or not 10 <= len(body) <= 6000:
+        return False, "Revisa el título y el contenido."
+    if not targets or not set(targets) <= active:
+        return False, "Selecciona destinatarios activos válidos."
+    if fields.get("categoria") not in _PMC_CATEGORIES or fields.get("prioridad") not in _PMC_PRIORITIES:
+        return False, "Categoría o prioridad no válida."
+    start = str(fields.get("publicar_desde", ""))
+    until = str(fields.get("vigente_hasta", ""))
+    try:
+        datetime.strptime(start, "%Y-%m-%d %H:%M:%S")
+        if until:
+            datetime.strptime(until, "%Y-%m-%d %H:%M:%S")
+            if until <= start:
+                return False, "El vencimiento debe ser posterior a la publicación."
+    except ValueError:
+        return False, "Fecha u hora no válida."
+    try:
+        with _pmc_shared_state()["lock"]:
+            ws = _pmc_ws(_PMC_NOTICES, _PMC_HEADERS)
+            if ws is None:
+                raise ValueError("La hoja no existe.")
+            real = ws._ws if isinstance(ws, _HojaProxy) else ws
+            matches = [(i, row) for i, row in enumerate(real.get_all_values()[1:], start=2)
+                       if row and str(row[0]) == str(notice_id)]
+            if len(matches) != 1:
+                raise ValueError("El borrador no es único.")
+            i, row = matches[0]
+            if len(row) < 6 or row[5] != "Borrador":
+                return False, "Solo puedes modificar comunicados en borrador."
+            ws.batch_update([
+                {"range": f"B{i}:E{i}", "values": [[title, body, fields["categoria"], fields["prioridad"]]]},
+                {"range": f"G{i}:J{i}", "values": [[start, until, fields.get("audiencia", "Seleccionados"),
+                                                        _pmc_json.dumps(targets, ensure_ascii=False)]]},
+                {"range": f"P{i}:P{i}", "values": [[_pmc_today()]]},
+            ], value_input_option="RAW")
+            _pmc_reset_cache()
+        return True, "Borrador actualizado correctamente."
+    except Exception as exc:
+        print("Comunicados · edición de borrador:", type(exc).__name__)
+        return False, "No se pudo confirmar la edición. Actualiza antes de reintentar."
+
+
+def _pmc_mark_read(notice_id, confirm=False):
+    if not st.session_state.get("usuario_login") or st.session_state.get("ver_como"):
+        return False, "No se puede confirmar desde la vista previa."
+    dni = _pm2_dni(dni_actual)
+    try:
+        state = _pmc_shared_state()
+        with state["lock"]:
+            notices, _, err = _pmc_load(force=True)
+            if err:
+                raise RuntimeError(err)
+            notice = next((x for x in notices if x["id_comunicado"] == str(notice_id)), None)
+            if notice is None or not _pmc_visible(notice, dni):
+                return False, "Este comunicado no está disponible para tu cuenta."
+            ws = _pmc_ws(_PMC_READS, _PMC_READ_HEADERS)
+            real = ws._ws if isinstance(ws, _HojaProxy) else ws
+            rows = real.get_all_values()
+            matches = [(idx, vals) for idx, vals in enumerate(rows[1:], start=2)
+                       if vals and vals[0] == str(notice_id)
+                       and _pm2_dni(vals[1] if len(vals)>1 else "") == dni]
+            if len(matches) > 1:
+                return False, "Hay registros duplicados de lectura. Solicita ayuda a administración."
+            now = _pmc_today()
+            name = str(user_actual)
+            if not matches:
+                ws.append_row([str(notice_id), dni, name, now, now if confirm else ""],
+                              value_input_option="RAW")
+            else:
+                idx, vals = matches[0]
+                if confirm and len(vals) > 4 and str(vals[4]).strip():
+                    return True, "Este comunicado ya tiene tu confirmación."
+                if confirm:
+                    ws.update(range_name=f"E{idx}:E{idx}", values=[[now]], value_input_option="RAW")
+            _pmc_reset_cache()
+        return True, ("Lectura confirmada correctamente." if confirm
+                      else "Comunicado abierto correctamente.")
+    except Exception as exc:
+        print("Comunicados · lectura:", type(exc).__name__)
+        return False, "No se pudo confirmar en Google Sheets. Comprueba tu conexión y vuelve a intentar."
+
+
+def _pmc_receipt_stats(notice, reads):
+    targets = _pmc_recipients(notice)
+    confirmed, viewed = set(), set()
+    for r in reads:
+        if r.get("id_comunicado") == notice.get("id_comunicado") and _pm2_dni(r.get("dni", "")) in targets:
+            dni = _pm2_dni(r["dni"])
+            if str(r.get("visto_el", "")).strip():
+                viewed.add(dni)
+            if str(r.get("confirmado_el", "")).strip():
+                confirmed.add(dni)
+    return {"total": len(targets), "vistos": len(viewed), "confirmados": len(confirmed),
+            "pendientes": len(targets - confirmed), "porcentaje": round(100*len(confirmed)/len(targets)) if targets else 0}
+
+
+def _pmc_e(value):
+    return _pmc_html.escape(str(value or ""), quote=True)
+
+
+def _pmc_card_html(row, receipt=None, admin=False):
+    p = str(row.get("prioridad", "Normal"))
+    tone = {"Urgente": "urgent", "Importante": "important"}.get(p, "normal")
+    if admin:
+        label = str(row.get("estado", "Borrador"))
+        if label == "Publicado":
+            label = ("Programado" if str(row.get("publicar_desde", "")) > _pmc_today() else
+                     "Vencido" if str(row.get("vigente_hasta", "")) and
+                     str(row.get("vigente_hasta")) < _pmc_today() else "Publicado")
+    else:
+        label = "Confirmado" if receipt and receipt.get("confirmado_el") else ("Leído" if receipt else "Sin confirmar")
+    status = "done" if label == "Confirmado" else tone
+    detail = _pmc_e(str(row.get("contenido", ""))[:180])
+    return ('<article class="pmc-card pmc-card--' + tone + '">'
+            '<div class="pmc-card-line"><span class="pmc-type">' + _pmc_e(row.get("categoria")) + '</span>'
+            '<span class="pmc-state pmc-state--' + status + '">' + _pmc_e(label) + '</span></div>'
+            '<h3>' + _pmc_e(row.get("titulo")) + '</h3>'
+            '<p>' + detail + ('…' if len(str(row.get("contenido", ""))) > 180 else '') + '</p>'
+            '<div class="pmc-card-meta"><span>Publicado: ' + _pmc_e(row.get("publicar_desde"))[:16] + '</span>'
+            '<span>Prioridad: ' + _pmc_e(p) + '</span></div></article>')
+
+
+def _pmc_ui_styles():
+    st.markdown('''<style>
+    .pmc-hero{background:linear-gradient(115deg,#172741,#263d60 69%,#6e354f);border-radius:22px;padding:24px 26px;color:white;margin:0 0 17px;box-shadow:0 16px 34px -22px #15254188;position:relative;overflow:hidden}
+    .pmc-hero::after{content:"";width:200px;height:200px;position:absolute;right:-70px;top:-95px;border:1px solid #ffffff25;border-radius:50%;box-shadow:0 0 0 30px #ffffff08,0 0 0 68px #ffffff08;pointer-events:none}
+    .pmc-hero small{font-weight:850;letter-spacing:.11em;color:#ffcbd2;font-size:.68rem}.pmc-hero h2{font-size:clamp(1.3rem,2.4vw,1.9rem);margin:12px 0 7px;color:#fff!important;letter-spacing:-.04em}.pmc-hero p{max-width:670px;color:#d6dfeb;font-size:.86rem;line-height:1.6;margin:0}
+    .pmc-intro{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:10px 0 14px}.pmc-intro strong{font-size:1.03rem;color:#1c2c45}.pmc-intro span{font-size:.78rem;color:#728197}
+    .pmc-card{background:linear-gradient(160deg,#fff,#fbfcff);padding:19px 20px 16px;border:1px solid #e5eaf2;border-left:4px solid #91a4bf;border-radius:19px;margin:10px 0 7px;box-shadow:0 14px 28px -25px #1d2d485c;overflow-wrap:anywhere}
+    .pmc-card--urgent{border-left-color:#db344e;background:linear-gradient(115deg,#fff,#fff8f9)}.pmc-card--important{border-left-color:#d99b27;background:linear-gradient(115deg,#fff,#fffdf8)}
+    .pmc-card-line{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}.pmc-type{font-size:.68rem;letter-spacing:.07em;text-transform:uppercase;font-weight:850;color:#7a879e}
+    .pmc-card h3{font-size:clamp(1.06rem,2vw,1.28rem);line-height:1.35;letter-spacing:-.04em;font-weight:850;color:#192842;margin:11px 0 7px}.pmc-card p{font-size:.85rem;line-height:1.65;color:#687991;margin:0 0 14px;white-space:pre-wrap}
+    .pmc-card-meta{display:flex;gap:12px;flex-wrap:wrap;border-top:1px solid #e8edf3;padding-top:11px;font-size:.74rem;font-weight:700;color:#7b899d}
+    .pmc-state{padding:7px 10px;border-radius:99px;background:#ecf3fc;color:#3d70b6;font-weight:850;font-size:.69rem;white-space:nowrap}
+    .pmc-state--urgent{background:#fff0f2;color:#c22f45}.pmc-state--important{background:#fff6e5;color:#a46d18}.pmc-state--done{background:#e7f8f0;color:#0d8b5b}
+    .pmc-detail{padding:19px 20px;border:1px solid #e4eaf3;border-radius:19px;background:#fff;margin:10px 0 13px;box-shadow:0 14px 24px -26px #22334f77}
+    .pmc-detail h3{font-size:1.3rem;color:#1b2d47;font-weight:850;margin:6px 0 12px;line-height:1.35}.pmc-detail p{white-space:pre-wrap;line-height:1.85;color:#364860;font-size:.93rem;overflow-wrap:anywhere;margin:0}
+    .pmc-detail small{font-size:.74rem;letter-spacing:.075em;color:#c52d49;font-weight:850}
+    .pmc-success{background:#eaf9f1;border:1px solid #c7ebd8;color:#127950;padding:13px 16px;border-radius:14px;font-weight:750;font-size:.86rem;margin:7px 0 14px}
+    .pmc-mini{border-radius:15px;padding:13px 16px;border:1px solid #e7ebf3;background:#fff;color:#60718a;margin:10px 0;font-size:.82rem;line-height:1.6}
+    .pmc-mini b{color:#1d2f46}.pmc-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:15px 0}.pmc-kpis>div{background:#fff;border:1px solid #e8edf3;border-radius:16px;padding:15px}.pmc-kpis small{display:block;color:#738297;font-size:.75rem;font-weight:750}.pmc-kpis strong{display:block;margin-top:7px;font-size:1.6rem;letter-spacing:-.05em;color:#1d2b44}
+    .st-key-pmc_admin_editor [data-testid="stForm"],.st-key-pmc_admin_filter [data-testid="stForm"]{border-radius:18px!important;background:#fff!important}
+    .st-key-pmc_reader [data-testid="stButton"] button,.st-key-pmc_admin_actions [data-testid="stButton"] button{min-height:46px!important}
+    @media(max-width:620px){
+      .st-key-pmc_admin_editor [data-testid="stHorizontalBlock"]{flex-direction:column!important;gap:5px!important}
+      .st-key-pmc_admin_editor [data-testid="stColumn"]{width:100%!important;max-width:100%!important;min-width:0!important;flex-basis:auto!important;flex-grow:1!important}
+      .st-key-pmc_admin_editor input,.st-key-pmc_admin_editor textarea{font-size:16px!important}
+    }
+    @media(max-width:780px){.pmc-hero{padding:20px 18px;border-radius:18px}.pmc-card{padding:16px;border-radius:17px}.pmc-detail{padding:17px 15px}.pmc-kpis{gap:7px}.pmc-kpis>div{padding:12px 10px}.pmc-kpis strong{font-size:1.35rem}.pmc-card-meta{gap:7px}.pmc-intro{align-items:flex-start}}
+    @media(max-width:390px){.pmc-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.pmc-hero h2{font-size:1.25rem}}
+    </style>''', unsafe_allow_html=True)
+
+
+def _pmc_render_attach(row, prefix):
+    if not row.get("adjunto_drive_id"):
+        return
+    st.caption("Adjunto privado · " + str(row.get("adjunto_nombre", "Archivo")))
+    key = f"pmc_file_{prefix}_{row['id_comunicado']}"
+    if st.button("Preparar archivo adjunto", key=key + "_open", use_container_width=True):
+        try:
+            st.session_state[key] = _pmc_file_download(row)
+        except Exception:
+            st.error("No se pudo recuperar el adjunto privado. Revisa Drive y tus permisos.")
+    if st.session_state.get(key):
+        st.download_button("Descargar adjunto", data=st.session_state[key],
+                           file_name=str(row.get("adjunto_nombre") or "adjunto"),
+                           mime=str(row.get("adjunto_mime") or "application/octet-stream"),
+                           use_container_width=True, key=key + "_save")
+
+
+def _pmc_employee_ui():
+    premium_module_shell("Mis Comunicados", "COMUNICACIÓN", "Anuncios oficiales de Premium Market y confirmaciones de lectura.")
+    _pmc_ui_styles()
+    st.markdown('<section class="pmc-hero"><small>PREMIUM MARKET · COMUNICACIÓN INTERNA</small>'
+                '<h2>Mantente al día con Premium Market.</h2><p>Consulta los comunicados dirigidos a ti. '
+                'Confirma la lectura cuando termines de revisar cada mensaje.</p></section>', unsafe_allow_html=True)
+    notices, reads, err = _pmc_load()
+    if err:
+        st.info(err)
+        return
+    visible = [row for row in notices if _pmc_visible(row, dni_actual)]
+    visible.sort(key=lambda x: x.get("publicar_desde", ""), reverse=True)
+    unread = [n for n in visible if not (_pmc_receipt(reads, n["id_comunicado"], dni_actual) or {}).get("confirmado_el")]
+    st.markdown('<div class="pmc-kpis"><div><small>Mis comunicados</small><strong>' + str(len(visible)) +
+                '</strong></div><div><small>Por confirmar</small><strong>' + str(len(unread)) +
+                '</strong></div><div><small>Confirmados</small><strong>' + str(len(visible)-len(unread)) +
+                '</strong></div></div>', unsafe_allow_html=True)
+    f = st.selectbox("Mostrar", ("Pendientes de lectura", "Todos", "Confirmados"), key="pmc_worker_filter")
+    search = st.text_input("Buscar entre mis comunicados", key="pmc_worker_search",
+                           placeholder="Título, procedimiento, tema…").strip().casefold()
+    if f == "Pendientes de lectura":
+        visible = unread
+    elif f == "Confirmados":
+        visible = [n for n in visible if n not in unread]
+    if search:
+        visible = [r for r in visible if search in (str(r.get("titulo", "")) + " " +
+                                                  str(r.get("contenido", "")) + " " +
+                                                  str(r.get("categoria", ""))).casefold()]
+    if not visible:
+        st.info("No tienes comunicados en esta categoría.")
+        return
+    if len(visible) > 80:
+        st.caption("Mostrando los 80 comunicados más recientes. Utiliza la búsqueda para encontrar otro.")
+    with st.container(key="pmc_reader"):
+        for row in visible[:80]:
+            rid = row["id_comunicado"]
+            receipt = _pmc_receipt(reads, rid, dni_actual)
+            st.markdown(_pmc_card_html(row, receipt), unsafe_allow_html=True)
+            opened_key = f"pmc_open_{rid}_{_pm2_dni(dni_actual)}"
+            opened = bool(st.session_state.get(opened_key))
+            if not opened:
+                if st.button("Leer comunicado", key="pmc_open_btn_" + rid, use_container_width=True):
+                    ok, msg = _pmc_mark_read(rid, confirm=False)
+                    if ok:
+                        st.session_state[opened_key] = True
+                        st.rerun()
+                    else:
+                        st.error(msg)
+            else:
+                st.markdown('<div class="pmc-detail"><small>MENSAJE OFICIAL</small><h3>' + _pmc_e(row["titulo"]) +
+                            '</h3><p>' + _pmc_e(row["contenido"]) + '</p></div>', unsafe_allow_html=True)
+                _pmc_render_attach(row, "worker")
+                if receipt and receipt.get("confirmado_el"):
+                    st.markdown('<div class="pmc-success">Lectura confirmada el ' +
+                                _pmc_e(receipt.get("confirmado_el")) + '</div>', unsafe_allow_html=True)
+                else:
+                    if st.button("Confirmo que he leído este comunicado", key="pmc_confirm_" + rid,
+                                 type="primary", use_container_width=True):
+                        ok, msg = _pmc_mark_read(rid, confirm=True)
+                        if ok:
+                            _pm62_confirmar_despues_de_actualizar(msg, "Mis Comunicados")
+                            st.rerun()
+                        else:
+                            st.error(msg)
+                if st.button("Cerrar detalle", key="pmc_close_" + rid, use_container_width=True):
+                    st.session_state[opened_key] = False
+                    st.rerun()
+            st.markdown('<div style="height:10px"></div>', unsafe_allow_html=True)
+
+
+def _pmc_admin_ui():
+    premium_module_shell("Gestión de Comunicados", "COMUNICACIÓN", "Publica anuncios oficiales y verifica quién confirmó su lectura.")
+    _pmc_ui_styles()
+    st.markdown('<section class="pmc-hero"><small>PREMIUM MARKET · GESTIÓN INTERNA</small>'
+                '<h2>Comunicados que sí llegan a tu equipo.</h2><p>Publica, segmenta, programa y '
+                'supervisa la lectura sin mezclar avisos de asistencia, cumpleaños o rutinas.</p></section>', unsafe_allow_html=True)
+    if not _pmc_admin():
+        st.error("Esta sección requiere una sesión administrativa real.")
+        return
+    notices, reads, err = _pmc_load()
+    if err:
+        st.warning(err)
+        if st.button("Preparar las hojas de Comunicados", key="pmc_init", type="primary", use_container_width=True):
+            ok, msg = _pmc_prepare()
+            if ok:
+                _pm62_confirmar_despues_de_actualizar(msg, "Gestión de Comunicados")
+                st.rerun()
+            else:
+                st.error(msg)
+        return
+    t_pub, t_monitor = st.tabs(("Publicar comunicado", "Seguimiento e historial"))
+    with t_pub:
+        persons = _pmc_personas()
+        if not persons:
+            st.warning("No se encontraron colaboradores activos.")
+            return
+        option_to_dni = {p["nombre"] + " · " + p["dni"]: p["dni"] for p in persons}
+        with st.container(key="pmc_admin_editor"):
+            st.markdown("#### Nuevo comunicado")
+            st.caption("Selecciona los destinatarios antes de publicar. La lista queda registrada como instantánea.")
+            # Fuera de st.form: el selector cambia inmediatamente sin un envío intermedio.
+            audience = st.radio("Dirigido a", ["Todos los colaboradores activos", "Seleccionar destinatarios"],
+                                horizontal=True, key="pmc_audience")
+            selected = (list(option_to_dni) if audience == "Todos los colaboradores activos" else
+                        st.multiselect("Colaboradores destinatarios", list(option_to_dni), key="pmc_selected"))
+            if audience == "Todos los colaboradores activos":
+                st.caption(f"{len(selected)} colaborador(es) recibirán este comunicado.")
+            with st.form("pmc_publish_form", clear_on_submit=False):
+                title = st.text_input("Título", placeholder="Ej. Nuevo procedimiento de cierre de caja", max_chars=130)
+                body = st.text_area("Mensaje", placeholder="Escribe una comunicación clara, completa y fácil de entender.", height=185, max_chars=6000)
+                c_cat, c_pri = st.columns(2)
+                cat = c_cat.selectbox("Categoría", _PMC_CATEGORIES)
+                pri = c_pri.selectbox("Prioridad", _PMC_PRIORITIES)
+                c_date, c_time = st.columns(2)
+                now = obtener_ahora_peru()
+                pub_d = c_date.date_input("Fecha de publicación", value=now.date(), key="pmc_pub_d")
+                pub_t = c_time.time_input("Hora de publicación", value=now.time().replace(second=0, microsecond=0), key="pmc_pub_t")
+                expiry_d = st.date_input("Fecha de vencimiento (opcional)", value=None,
+                                          help="Deja el campo vacío para un comunicado sin vencimiento.")
+                file = st.file_uploader("Adjuntar PDF o imagen (opcional, máximo 10 MB)",
+                                        type=["pdf", "jpg", "jpeg", "png", "webp"], key="pmc_attachment")
+                save_mode = st.radio("Acción", ["Publicar / programar", "Guardar borrador"], horizontal=True)
+                submitted = st.form_submit_button("Guardar comunicado", type="primary", use_container_width=True)
+            if submitted:
+                start = datetime.combine(pub_d, pub_t).strftime("%Y-%m-%d %H:%M:%S")
+                until = (datetime.combine(expiry_d, dt_time(23, 59, 59)).strftime("%Y-%m-%d %H:%M:%S")
+                         if expiry_d is not None else "")
+                fields = {"titulo": title, "contenido": body, "categoria": cat, "prioridad": pri,
+                          "estado": "Borrador" if save_mode == "Guardar borrador" else "Publicado",
+                          "audiencia": audience, "destinatarios": [option_to_dni[x] for x in selected],
+                          "publicar_desde": start, "vigente_hasta": until}
+                ok, msg = _pmc_create_notice(fields, file_obj=file)
+                if ok:
+                    _pm62_confirmar_despues_de_actualizar(msg, "Gestión de Comunicados")
+                    st.rerun()
+                else:
+                    st.error(msg)
+    with t_monitor:
+        status_f = st.selectbox("Estado", ["Todos", "Publicado", "Borrador", "Archivado"], key="pmc_admin_status")
+        search_admin = st.text_input("Buscar comunicado", key="pmc_admin_search",
+                                     placeholder="Buscar por título o contenido").strip().casefold()
+        filtered = [x for x in notices if status_f == "Todos" or x.get("estado") == status_f]
+        if search_admin:
+            filtered = [x for x in filtered if search_admin in (str(x.get("titulo", "")) + " " +
+                                                            str(x.get("contenido", ""))).casefold()]
+        filtered.sort(key=lambda x: x.get("creado_el", ""), reverse=True)
+        if len(filtered) > 100:
+            st.caption("Mostrando los últimos 100 registros. Puedes buscar otro comunicado por título.")
+        if not filtered:
+            st.info("Todavía no hay comunicados para el filtro seleccionado.")
+        for n in filtered[:100]:
+            rid = n["id_comunicado"]
+            counts = _pmc_receipt_stats(n, reads)
+            st.markdown(_pmc_card_html(n, admin=True), unsafe_allow_html=True)
+            with st.expander("Leer contenido del comunicado"):
+                st.markdown('<div class="pmc-detail"><p>' + _pmc_e(n.get("contenido", "")) +
+                            '</p></div>', unsafe_allow_html=True)
+            st.markdown('<div class="pmc-kpis"><div><small>Destinatarios</small><strong>' + str(counts["total"]) +
+                        '</strong></div><div><small>Confirmaron</small><strong>' + str(counts["confirmados"]) +
+                        '</strong></div><div><small>Pendientes</small><strong>' + str(counts["pendientes"]) +
+                        '</strong></div></div>', unsafe_allow_html=True)
+            st.progress(counts["porcentaje"] / 100, text=f"{counts['porcentaje']} % de lecturas confirmadas")
+            with st.expander("Ver destinatarios y sus confirmaciones"):
+                persons = {_pm2_dni(p["dni"]): p["nombre"] for p in _pmc_personas()}
+                targets = sorted(_pmc_recipients(n))
+                detail_rows = []
+                for dni in targets:
+                    receipt = _pmc_receipt(reads, rid, dni)
+                    detail_rows.append({"Colaborador": persons.get(dni, "Colaborador"),
+                                       "DNI (últimos 4)": dni[-4:],
+                                       "Estado": "Confirmado" if receipt and receipt.get("confirmado_el") else
+                                       ("Visto" if receipt else "Pendiente"),
+                                       "Visto": receipt.get("visto_el", "") if receipt else "",
+                                       "Confirmado": receipt.get("confirmado_el", "") if receipt else ""})
+                st.dataframe(pd.DataFrame(detail_rows), use_container_width=True, hide_index=True)
+            _pmc_render_attach(n, "admin")
+            if n["estado"] == "Borrador":
+                with st.expander("Editar este borrador"):
+                    persons_edit = _pmc_personas()
+                    opt_edit = {p["nombre"] + " · " + p["dni"]: p["dni"] for p in persons_edit}
+                    old_dnis = _pmc_recipients(n)
+                    default_edit = [label for label, dni in opt_edit.items() if dni in old_dnis]
+                    selected_edit = st.multiselect("Destinatarios del borrador", list(opt_edit),
+                                                   default=default_edit, key="pmc_edit_dest_" + rid)
+                    with st.form("pmc_edit_form_" + rid):
+                        e_title = st.text_input("Título", value=str(n.get("titulo", "")), max_chars=130)
+                        e_body = st.text_area("Mensaje", value=str(n.get("contenido", "")), height=155, max_chars=6000)
+                        e_c1, e_c2 = st.columns(2)
+                        cat_saved = str(n.get("categoria", "General"))
+                        priority_saved = str(n.get("prioridad", "Normal"))
+                        e_cat = e_c1.selectbox("Categoría", _PMC_CATEGORIES,
+                                               index=_PMC_CATEGORIES.index(cat_saved) if cat_saved in _PMC_CATEGORIES else 0)
+                        e_priority = e_c2.selectbox("Prioridad", _PMC_PRIORITIES,
+                                                    index=_PMC_PRIORITIES.index(priority_saved) if priority_saved in _PMC_PRIORITIES else 0)
+                        try:
+                            e_dt = datetime.strptime(str(n.get("publicar_desde", "")), "%Y-%m-%d %H:%M:%S")
+                        except ValueError:
+                            e_dt = obtener_ahora_peru()
+                        e_d, e_t = st.columns(2)
+                        e_pub_date = e_d.date_input("Fecha de publicación", value=e_dt.date())
+                        e_pub_time = e_t.time_input("Hora", value=e_dt.time())
+                        try:
+                            e_old_exp = datetime.strptime(str(n.get("vigente_hasta", "")), "%Y-%m-%d %H:%M:%S").date()
+                        except ValueError:
+                            e_old_exp = None
+                        e_exp = st.date_input("Fecha de vencimiento (opcional)", value=e_old_exp)
+                        e_save = st.form_submit_button("Guardar cambios del borrador", type="primary", use_container_width=True)
+                    if e_save:
+                        edit_fields = {
+                            "titulo": e_title, "contenido": e_body, "categoria": e_cat, "prioridad": e_priority,
+                            "destinatarios": [opt_edit[x] for x in selected_edit],
+                            "audiencia": "Seleccionados", "publicar_desde":
+                                datetime.combine(e_pub_date, e_pub_time).strftime("%Y-%m-%d %H:%M:%S"),
+                            "vigente_hasta": datetime.combine(e_exp, dt_time(23,59,59)).strftime("%Y-%m-%d %H:%M:%S") if e_exp else "",
+                        }
+                        ok, msg = _pmc_edit_draft(rid, edit_fields)
+                        if ok:
+                            _pm62_confirmar_despues_de_actualizar(msg, "Gestión de Comunicados")
+                            st.rerun()
+                        st.error(msg)
+                if st.button("Publicar este borrador", key="pmc_publish_" + rid, use_container_width=True):
+                    ok, msg = _pmc_row_update(rid, "Publicado")
+                    if ok:
+                        _pm62_confirmar_despues_de_actualizar(msg, "Gestión de Comunicados")
+                        st.rerun()
+                    st.error(msg)
+            elif n["estado"] == "Publicado":
+                with st.expander("Archivar este comunicado"):
+                    st.caption("Al archivarlo dejará de aparecer a los colaboradores; las lecturas se conservan en el historial.")
+                    approve_archive = st.checkbox("Confirmo que quiero archivar este comunicado",
+                                                  key="pmc_archive_check_" + rid)
+                    if st.button("Archivar definitivamente", key="pmc_archive_" + rid,
+                                 disabled=not approve_archive, use_container_width=True):
+                        ok, msg = _pmc_row_update(rid, "Archivado")
+                        if ok:
+                            _pm62_confirmar_despues_de_actualizar(msg, "Gestión de Comunicados")
+                            st.rerun()
+                        st.error(msg)
+            st.markdown('<div style="height:13px"></div>', unsafe_allow_html=True)
+
+
 if rol_actual == "admin":
     # El asistente ahora se abre desde un botón flotante; no ocupa espacio en el menú.
     # Estilo uniforme para paneles de operación: conserva lógica y menú original.
-    menu = ["Dashboard General", "Centro de Alertas", "Rutinas Operativas", "Analítica (BI)", "Gestión Colaboradores", "Onboarding / Offboarding", "Gestión de Vacaciones", "Programación de Turnos", "Boletas de Pago", "Solicitudes y Permisos", "Historial de Descuadres", "Incidencias y Daños", "Botellas Fiadas", "Historial de Asistencias", "Auditoría y Configuración"]
+    menu = ["Dashboard General", "Centro de Alertas", "Rutinas Operativas", "Analítica (BI)", "Gestión Colaboradores", "Onboarding / Offboarding", "Gestión de Vacaciones", "Programación de Turnos", "Boletas de Pago", "Solicitudes y Permisos", "Historial de Descuadres", "Incidencias y Daños", "Botellas Fiadas", "Historial de Asistencias", "Auditoría y Configuración", "Gestión de Comunicados"]
 else:
-    menu = ["Marcar Asistencia", "Mis Rutinas", "Registrar Descuadre", "Registrar Incidencia", "Botellas Fiadas", "Mi Ficha Técnica", "Mis Vacaciones", "Mis Boletas", "Solicitar Permiso / Adelanto", "Mi Dashboard Mensual"]
+    menu = ["Marcar Asistencia", "Mis Rutinas", "Registrar Descuadre", "Registrar Incidencia", "Botellas Fiadas", "Mi Ficha Técnica", "Mis Vacaciones", "Mis Boletas", "Solicitar Permiso / Adelanto", "Mi Dashboard Mensual", "Mis Comunicados"]
 
 if rol_real == "admin":
     _opc_vc = ["Mi vista (admin)"] + sorted(n for n, d in USUARIOS.items() if d["rol"] != "admin")
@@ -7960,6 +8698,13 @@ if rol_actual == "admin":
         _r_wait = int((_r_for_review["estado"].astype(str) == "Por validar").sum())
         if _r_wait:
             _btn_pendiente(f"Rutinas por validar · {_r_wait}", "tp_acc_rutinas_review", "Rutinas Operativas", ":material/fact_check:")
+
+# Centro de Comunicados: contador propio, sin usar popups ni el Centro de Alertas.
+if rol_actual != "admin":
+    _pmc_pend = _pmc_unread_count()
+    if _pmc_pend is not None and _pmc_pend > 0:
+        _btn_pendiente(f"Comunicados sin confirmar · {_pmc_pend}",
+                       "pmc_sidebar_unread", "Mis Comunicados", ":material/campaign:")
 
 st.sidebar.markdown('<div class="tp-note-t pm-restored-nav-title">Navegación</div>', unsafe_allow_html=True)
 st.sidebar.markdown('<div class="pm-nav-kind-' + ('admin' if rol_actual == 'admin' else 'employee') + '"></div>', unsafe_allow_html=True)
@@ -7996,6 +8741,7 @@ _PM_NAV_KIND = {
     "Botellas Fiadas":"bottle", "Historial de Asistencias":"history", "Auditoría y Configuración":"settings",
     "Mis Rutinas":"list", "Marcar Asistencia":"fingerprint", "Registrar Descuadre":"cash", "Registrar Incidencia":"alert",
     "Mi Ficha Técnica":"user", "Mis Vacaciones":"calendar", "Mis Boletas":"file",
+    "Gestión de Comunicados":"bell", "Mis Comunicados":"bell",
     "Solicitar Permiso / Adelanto":"inbox", "Mi Dashboard Mensual":"chart",
 }
 _pm_icon_rules=[]
@@ -8916,12 +9662,15 @@ PM7_MODULES = {
     'Onboarding / Offboarding': 'person_add',
     'Auditoría y Configuración': 'settings',
 }
-PM7_MODULES.update({'Rutinas Operativas': 'fact_check', 'Mis Rutinas': 'fact_check'})
+PM7_MODULES.update({'Rutinas Operativas': 'fact_check', 'Mis Rutinas': 'fact_check',
+                    'Gestión de Comunicados': 'campaign', 'Mis Comunicados': 'campaign'})
 
 
 
 PM8_VIEW_DETAILS = {'Marcar Asistencia': ('Registro de jornada', 'Tus marcaciones se guardan al confirmar la operación.', 'personal'), 'Registrar Descuadre': ('Control de caja', 'Revisa el importe y la observación antes de registrar.', 'finanzas'), 'Registrar Incidencia': ('Registro operativo', 'Describe el hecho y verifica los datos del registro.', 'control'), 'Mi Ficha Técnica': ('Expediente personal', 'Información laboral y de contacto registrada.', 'personal'), 'Solicitar Permiso / Adelanto': ('Nueva solicitud', 'Completa los datos y revisa el estado de tus solicitudes.', 'personal'), 'Mis Boletas': ('Documentos personales', 'Consulta los documentos disponibles en tu historial.', 'personal'), 'Mi Dashboard Mensual': ('Resumen de mi mes', 'Consulta tus registros y resultados del periodo.', 'analitica'), 'Dashboard General': ('Centro de operaciones', 'Indicadores y asistencia para seguimiento diario.', 'analitica'), 'Gestión Colaboradores': ('Directorio de personal', 'Consulta, filtra y administra las fichas del equipo.', 'personal'), 'Boletas de Pago': ('Gestión documental', 'Consulta y administra los documentos de nómina.', 'finanzas'), 'Programación de Turnos': ('Planificación operativa', 'Organiza y revisa los horarios del equipo.', 'operaciones'), 'Solicitudes y Permisos': ('Bandeja de solicitudes', 'Revisa solicitudes y registra decisiones.', 'operaciones'), 'Historial de Descuadres': ('Auditoría de caja', 'Filtra movimientos y consulta el detalle de las diferencias.', 'finanzas'), 'Incidencias y Daños': ('Seguimiento de incidencias', 'Consulta y gestiona el estado de los casos.', 'control'), 'Botellas Fiadas': ('Préstamos y devoluciones', 'Consulta saldos pendientes y registros de devolución.', 'operaciones'), 'Historial de Asistencias': ('Control de asistencia', 'Consulta marcaciones y trazabilidad de jornadas.', 'personal'), 'Centro de Alertas': ('Prioridades del día', 'Revisa los pendientes que necesitan atención.', 'control'), 'Gestión de Vacaciones': ('Control de descansos', 'Consulta periodos, saldos y solicitudes registradas.', 'personal'), 'Mis Vacaciones': ('Mis descansos', 'Consulta tus periodos registrados.', 'personal'), 'Analítica (BI)': ('Inteligencia de negocio', 'Explora tendencias y reportes operativos.', 'analitica'), 'Onboarding / Offboarding': ('Ciclo de vida laboral', 'Gestiona altas, bajas y tareas asociadas.', 'personal'), 'Auditoría y Configuración': ('Administración del sistema', 'Consulta la trazabilidad y configuración autorizada.', 'control')}
-PM8_VIEW_DETAILS.update({'Rutinas Operativas': ('Asignación personalizada', 'Actividades programadas con persona, lugar y horario.', 'operaciones'), 'Mis Rutinas': ('Mi trabajo del día', 'Actividades pendientes y completadas con instrucciones.', 'personal')})
+PM8_VIEW_DETAILS.update({'Rutinas Operativas': ('Asignación personalizada', 'Actividades programadas con persona, lugar y horario.', 'operaciones'), 'Mis Rutinas': ('Mi trabajo del día', 'Actividades pendientes y completadas con instrucciones.', 'personal'),
+                         'Gestión de Comunicados': ('Comunicación interna', 'Publicaciones, destinatarios y lecturas confirmadas.', 'operaciones'),
+                         'Mis Comunicados': ('Comunicaciones oficiales', 'Mensajes y confirmaciones de lectura de tu tienda.', 'personal')})
 
 
 def premium_module_context(titulo):
@@ -9193,6 +9942,13 @@ def _pm_mobile_notices():
         por_validar = int((mis_rut["estado"].astype(str) == "Por validar").sum())
         observadas = int((mis_rut["revision_estado"].astype(str) == "Observada").sum())
     with st.container(key="pm_mobile_notices"):
+        _pend_com = _pmc_unread_count()
+        if _pend_com is not None and _pend_com > 0:
+            st.markdown('<div class="pmc-mini"><b>Comunicados</b> · '
+                        + str(_pend_com) + ' pendiente(s) de confirmar.</div>',
+                        unsafe_allow_html=True)
+            st.button("Ir a mis comunicados", key="pmc_notices_go", use_container_width=True,
+                      on_click=_ir_a, args=("Mis Comunicados",))
         if por_validar or observadas:
             st.info(f"Rutinas: {por_validar} por validar · {observadas} con observaciones.")
             st.button("Abrir mis rutinas", key="pm_mobile_review_link", use_container_width=True,
@@ -9219,7 +9975,11 @@ _pm62_mostrar_confirmacion(choice)
 # PREMIUM MARKET 8.0 — CAPA FINAL DE COMPONENTES Y ACCESIBILIDAD
 # ============================================================
 
-if choice == "Marcar Asistencia":
+if choice == "Gestión de Comunicados":
+    _pmc_admin_ui()
+elif choice == "Mis Comunicados":
+    _pmc_employee_ui()
+elif choice == "Marcar Asistencia":
     premium_module_shell('Marcar Asistencia', 'MI JORNADA', 'Registra y consulta tus marcaciones.')
 
     # Recordatorio breve al abrir la jornada: no compite con los diálogos
@@ -9228,6 +9988,15 @@ if choice == "Marcar Asistencia":
 
     # Panel específico para teléfonos; conserva el formulario existente y su lógica.
     _pm_mobile_home()
+
+    # Recordatorio independiente: no abre ni compite con cumpleaños/botellas/rutinas.
+    _pmc_home_pend = _pmc_unread_count()
+    if _pmc_home_pend is not None and _pmc_home_pend > 0:
+        st.markdown('<div class="pmc-mini"><b>Comunicados para ti</b> · Tienes '
+                    + str(_pmc_home_pend) + ' comunicado(s) por confirmar.</div>',
+                    unsafe_allow_html=True)
+        st.button("Leer comunicados", key="pmc_home_go", use_container_width=True,
+                  on_click=_ir_a, args=("Mis Comunicados",))
 
     with st.container(key="pm_v_marcar_asistencia"):
 
