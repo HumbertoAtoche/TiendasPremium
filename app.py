@@ -1397,6 +1397,32 @@ section[data-testid="stSidebar"] .st-key-tp_acc_bot button *{color:#a72b3c!impor
 .pm-notice-row strong{font-size:.83rem;color:#24334a;display:block;overflow-wrap:anywhere;}
 .pm-notice-row small{font-size:.72rem;color:#8a97a6;}
 .pm-notice-row>b{font-size:.74rem;color:#c32b40;background:#fff1f2;padding:6px 10px;border-radius:999px;white-space:nowrap;}
+/* Premium Market · botella: diálogo compacto, sin alterar cumpleaños ni bienvenida. */
+[data-testid="stDialog"]:has(.pm-bottle-compact) [role="dialog"]{
+  width:min(460px,calc(100vw - 26px))!important;
+  max-width:min(460px,calc(100vw - 26px))!important;
+  border:1px solid #e8edf4!important;
+  border-radius:23px!important;
+  box-shadow:0 26px 74px rgba(23,35,54,.19)!important;
+}
+.pm-bottle-compact{display:flex;gap:14px;align-items:center;min-width:0;padding:6px 0 13px;}
+.pm-bottle-compact-icon{flex:none;width:53px;height:53px;display:grid;place-items:center;border-radius:17px;background:#fff0f3;color:#c62c45;}
+.pm-bottle-compact-copy{min-width:0;flex:1;}
+.pm-bottle-compact-copy small{display:block;color:#c23049;font-weight:850;font-size:.65rem;letter-spacing:.075em;margin-bottom:4px;}
+.pm-bottle-compact-copy strong{display:block;font-size:1.15rem;line-height:1.3;color:#19283e;font-weight:850;}
+.pm-bottle-compact-copy p{font-size:.78rem;line-height:1.55;color:#708098;margin:6px 0 0;}
+.pm-bottle-pending-list{border:1px solid #e8edf4;background:#fbfcff;border-radius:15px;margin:2px 0 15px;padding:3px 13px;}
+.pm-bottle-pending-item{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:9px 0;border-bottom:1px solid #e9edf2;}
+.pm-bottle-pending-item:last-child{border-bottom:0;}
+.pm-bottle-pending-item>div{min-width:0;flex:1;}
+.pm-bottle-pending-item strong{display:block;font-size:.79rem;color:#27364a;overflow-wrap:anywhere;}
+.pm-bottle-pending-item small{display:block;color:#8a97a9;font-size:.71rem;margin-top:2px;}
+.pm-bottle-pending-item>b{white-space:nowrap;background:#fff1f3;color:#bd3048;border-radius:99px;padding:6px 9px;font-size:.69rem;}
+[data-testid="stDialog"]:has(.pm-bottle-compact) [data-testid="stButton"] button{min-height:45px!important;border-radius:13px!important;font-size:.83rem!important;}
+@media(max-width:440px){
+ .pm-bottle-compact{gap:11px;}.pm-bottle-compact-icon{width:46px;height:46px;border-radius:14px;}
+ .pm-bottle-compact-copy strong{font-size:1.04rem;}.pm-bottle-pending-list{padding:3px 10px;}
+}
 /* Fine interaction polish */
 .pm-workspace-head{border-radius:20px!important;box-shadow:var(--elite-shadow)!important;}
 .pm-workspace-glyph{border-radius:14px!important;}
@@ -8370,9 +8396,10 @@ def _pmc_e(value):
     return _pmc_html.escape(str(value or ""), quote=True)
 
 
-def _pmc_card_html(row, receipt=None, admin=False):
-    p = str(row.get("prioridad", "Normal"))
-    tone = {"Urgente": "urgent", "Importante": "important"}.get(p, "normal")
+def _pmc_card_html(row, receipt=None, admin=False, expanded=False):
+    """Tarjeta del listado; solo presentación. Estados y permisos proceden de Sheets."""
+    priority = str(row.get("prioridad", "Normal"))
+    tone = {"Urgente": "urgent", "Importante": "important"}.get(priority, "normal")
     if admin:
         label = str(row.get("estado", "Borrador"))
         if label == "Publicado":
@@ -8380,16 +8407,34 @@ def _pmc_card_html(row, receipt=None, admin=False):
                      "Vencido" if str(row.get("vigente_hasta", "")) and
                      str(row.get("vigente_hasta")) < _pmc_today() else "Publicado")
     else:
-        label = "Confirmado" if receipt and receipt.get("confirmado_el") else ("Leído" if receipt else "Sin confirmar")
-    status = "done" if label == "Confirmado" else tone
-    detail = _pmc_e(str(row.get("contenido", ""))[:180])
-    return ('<article class="pmc-card pmc-card--' + tone + '">'
-            '<div class="pmc-card-line"><span class="pmc-type">' + _pmc_e(row.get("categoria")) + '</span>'
+        label = ("Confirmado" if receipt and receipt.get("confirmado_el") else
+                 "Leído" if receipt else "Sin confirmar")
+    status = "done" if label == "Confirmado" else ("read" if label == "Leído" else tone)
+    full = str(row.get("contenido", ""))
+    preview = full[:230]
+    svg = ('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" '
+           'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+           '<path d="M4 10v4a2 2 0 0 0 2 2h3l9 4V4l-9 4H6a2 2 0 0 0-2 2Z"/>'
+           '<path d="m9 16 1.5 4M20 9a4 4 0 0 1 0 6"/></svg>')
+    attachment = ('<span class="pmc-card-chip pmc-card-chip--file">Adjunto disponible</span>'
+                  if row.get("adjunto_drive_id") else '')
+    excerpt = ('' if expanded else '<p class="pmc-card-excerpt">' + _pmc_e(preview) +
+               ('…' if len(full) > 230 else '') + '</p>')
+    meta = ('<span class="pmc-card-chip">Publicado · ' +
+            _pmc_e(str(row.get("publicar_desde", ""))[:16]) + '</span>'
+            '<span class="pmc-card-chip pmc-card-chip--priority">Prioridad · ' +
+            _pmc_e(priority) + '</span>' + attachment)
+    return ('<article class="pmc-card pmc-card--' + tone +
+            (' pmc-card--opened' if expanded else '') + '">'
+            '<div class="pmc-card-top"><div class="pmc-card-topgroup">'
+            '<span class="pmc-card-glyph">' + svg + '</span>'
+            '<div class="pmc-card-toptext"><small>PREMIUM MARKET · COMUNICACIÓN</small>'
+            '<strong>Comunicado oficial</strong></div></div>'
             '<span class="pmc-state pmc-state--' + status + '">' + _pmc_e(label) + '</span></div>'
-            '<h3>' + _pmc_e(row.get("titulo")) + '</h3>'
-            '<p>' + detail + ('…' if len(str(row.get("contenido", ""))) > 180 else '') + '</p>'
-            '<div class="pmc-card-meta"><span>Publicado: ' + _pmc_e(row.get("publicar_desde"))[:16] + '</span>'
-            '<span>Prioridad: ' + _pmc_e(p) + '</span></div></article>')
+            '<div class="pmc-card-body"><div class="pmc-card-category">'
+            '<span class="pmc-card-category-dot"></span>' + _pmc_e(row.get("categoria")) + '</div>'
+            '<h3>' + _pmc_e(row.get("titulo")) + '</h3>' + excerpt +
+            '<div class="pmc-card-meta">' + meta + '</div></div></article>')
 
 
 def _pmc_detail_html(row, receipt=None, admin=False):
@@ -8576,13 +8621,34 @@ def _pmc_home_notice():
 def _pmc_ui_styles():
     st.markdown('''<style>
     .pmc-intro{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:10px 0 14px}.pmc-intro strong{font-size:1.03rem;color:#1c2c45}.pmc-intro span{font-size:.78rem;color:#728197}
-    .pmc-card{background:linear-gradient(160deg,#fff,#fbfcff);padding:19px 20px 16px;border:1px solid #e5eaf2;border-left:4px solid #91a4bf;border-radius:19px;margin:10px 0 7px;box-shadow:0 14px 28px -25px #1d2d485c;overflow-wrap:anywhere}
-    .pmc-card--urgent{border-left-color:#db344e;background:linear-gradient(115deg,#fff,#fff8f9)}.pmc-card--important{border-left-color:#d99b27;background:linear-gradient(115deg,#fff,#fffdf8)}
-    .pmc-card-line{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}.pmc-type{font-size:.68rem;letter-spacing:.07em;text-transform:uppercase;font-weight:850;color:#7a879e}
-    .pmc-card h3{font-size:clamp(1.06rem,2vw,1.28rem);line-height:1.35;letter-spacing:-.04em;font-weight:850;color:#192842;margin:11px 0 7px}.pmc-card p{font-size:.85rem;line-height:1.65;color:#687991;margin:0 0 14px;white-space:pre-wrap}
-    .pmc-card-meta{display:flex;gap:12px;flex-wrap:wrap;border-top:1px solid #e8edf3;padding-top:11px;font-size:.74rem;font-weight:700;color:#7b899d}
-    .pmc-state{padding:7px 10px;border-radius:99px;background:#ecf3fc;color:#3d70b6;font-weight:850;font-size:.69rem;white-space:nowrap}
-    .pmc-state--urgent{background:#fff0f2;color:#c22f45}.pmc-state--important{background:#fff6e5;color:#a46d18}.pmc-state--done{background:#e7f8f0;color:#0d8b5b}
+    /* Tarjetas editoriales: cabecera de identidad, contenido blanco y metadatos compactos. */
+    .pmc-card{position:relative;overflow:hidden;background:#fff;border:1px solid #e3e9f1;border-radius:22px;margin:12px 0 0;box-shadow:0 18px 38px -28px rgba(23,40,71,.30);min-width:0;transition:border-color .16s ease,box-shadow .16s ease}
+    .pmc-card:hover{border-color:#d3ddea;box-shadow:0 22px 43px -28px rgba(23,40,71,.36)}
+    .pmc-card-top{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;padding:17px 20px;color:#fff;background:linear-gradient(115deg,#1b2d4a 0%,#2a3d60 65%,#91405b 130%)}
+    .pmc-card--urgent .pmc-card-top{background:linear-gradient(115deg,#1d304c 0%,#47344e 65%,#c13955 130%)}
+    .pmc-card--important .pmc-card-top{background:linear-gradient(115deg,#1b304b 0%,#3b4561 64%,#b57839 135%)}
+    .pmc-card-topgroup{display:flex;align-items:center;gap:11px;min-width:0}
+    .pmc-card-glyph{width:42px;height:42px;display:grid;place-items:center;flex:none;border-radius:14px;background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.15)}
+    .pmc-card-glyph svg{width:23px;height:23px;display:block;stroke:#fff}
+    .pmc-card-toptext{min-width:0}.pmc-card-toptext small{display:block;color:#ffced7;font-size:.63rem;letter-spacing:.10em;font-weight:850;line-height:1.5}
+    .pmc-card-toptext strong{display:block;color:#fff;font-size:.93rem;font-weight:820;letter-spacing:-.025em;margin-top:2px}
+    .pmc-card-body{padding:20px 22px 19px;min-width:0}
+    .pmc-card-category{display:flex;gap:7px;align-items:center;color:#7b899e;font-size:.7rem;letter-spacing:.10em;text-transform:uppercase;font-weight:850}
+    .pmc-card-category-dot{height:7px;width:7px;border-radius:50%;flex:none;background:#d63c57}
+    .pmc-card h3{font-size:clamp(1.17rem,1.85vw,1.4rem)!important;line-height:1.3!important;letter-spacing:-.045em!important;font-weight:850!important;color:#1d2c44!important;margin:12px 0 10px!important;overflow-wrap:anywhere}
+    .pmc-card-excerpt{font-size:.87rem;line-height:1.75;color:#65758c;margin:0 0 17px;white-space:pre-wrap;overflow-wrap:anywhere;max-width:78ch}
+    .pmc-card-meta{display:flex;gap:8px;flex-wrap:wrap;border-top:1px solid #ecf0f5;padding-top:14px;margin-top:12px}
+    .pmc-card-chip{display:inline-flex;align-items:center;background:#f5f7fb;border:1px solid #e9edf3;border-radius:999px;padding:7px 10px;font-size:.71rem;font-weight:740;color:#61728b;line-height:1.25}
+    .pmc-card-chip--priority{color:#ad354a;background:#fff4f6;border-color:#f8e4e9}
+    .pmc-card-chip--file{color:#34608f;background:#edf5ff;border-color:#dfeafa}
+    .pmc-state{display:inline-flex;align-items:center;white-space:nowrap;border-radius:99px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.24);color:#fff;font-weight:800;font-size:.72rem;padding:8px 12px;line-height:1.2}
+    .pmc-state--done{background:#e4faed;border-color:#a9dec2;color:#117d54}
+    .pmc-state--read{background:#fff1d9;border-color:#f6ddad;color:#945e0b}
+    .pmc-card--opened .pmc-card-body{padding-bottom:16px}
+    /* El botón de lectura es una acción real nativa de Streamlit. */
+    [class*="st-key-pmc_notice_"]{margin-bottom:21px!important;max-width:100%;min-width:0}
+    [class*="st-key-pmc_read_action_"] [data-testid="stButton"] button{border-radius:0 0 18px 18px!important;margin-top:-3px!important;min-height:49px!important;background:#fff1f4!important;border:1px solid #f0d8de!important;color:#b32b45!important;font-weight:800!important;box-shadow:0 10px 20px -21px rgba(23,40,71,.40)!important}
+    [class*="st-key-pmc_read_action_"] [data-testid="stButton"] button:hover{background:#ffe8ed!important;border-color:#e8bdc9!important}
     .pmc-detail{padding:20px 20px 18px;border:1px solid #e4eaf3;border-radius:21px;background:linear-gradient(180deg,#fff 0%,#fbfcff 100%);margin:10px 0 13px;box-shadow:0 18px 32px -28px #22334f77;overflow:hidden}
     .pmc-detail--rich{position:relative}.pmc-detail--rich::before{content:"";position:absolute;inset:0 auto 0 0;width:5px;background:linear-gradient(180deg,#df334c 0%,#283a63 100%)}
     .pmc-detail-top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:10px;padding-left:4px}
@@ -8600,7 +8666,8 @@ def _pmc_ui_styles():
     .pmc-home-alert{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:17px 18px;border-radius:20px;border:1px solid #eed6dd;background:linear-gradient(135deg,#fff7f9 0%,#fdfdff 100%);box-shadow:0 16px 30px -28px rgba(32,45,71,.32);margin:8px 0 10px}
     .pmc-home-alert-copy small{display:block;color:#c9334d;font-size:.72rem;font-weight:850;letter-spacing:.09em;margin:0 0 6px}.pmc-home-alert-copy strong{display:block;color:#1e2f49;font-size:1.03rem;line-height:1.35;margin:0 0 4px}.pmc-home-alert-copy p{margin:0;color:#6e7e94;font-size:.82rem;line-height:1.55}
     .pmc-home-alert-badge{flex:none;width:50px;height:50px;border-radius:16px;display:grid;place-items:center;background:linear-gradient(135deg,#1b2d49,#d7354f);color:#fff;font-size:1.2rem;font-weight:900;box-shadow:0 14px 28px -22px rgba(28,44,72,.6)}
-    .pmc-mini b{color:#1d2f46}.pmc-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:15px 0}.pmc-kpis>div{background:#fff;border:1px solid #e8edf3;border-radius:16px;padding:15px}.pmc-kpis small{display:block;color:#738297;font-size:.75rem;font-weight:750}.pmc-kpis strong{display:block;margin-top:7px;font-size:1.6rem;letter-spacing:-.05em;color:#1d2b44}
+    .pmc-mini b{color:#1d2f46}.pmc-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:19px 0 18px}.pmc-kpis>div{position:relative;overflow:hidden;background:linear-gradient(145deg,#fff,#fbfcff);border:1px solid #e8edf3;border-radius:18px;padding:18px 17px;box-shadow:0 13px 29px -25px rgba(24,41,68,.25)}.pmc-kpis>div::before{content:"";position:absolute;left:0;right:0;top:0;height:3px;background:#91a5bb}.pmc-kpis>div:nth-child(2)::before{background:#d9425b}.pmc-kpis>div:nth-child(3)::before{background:#21b37f}.pmc-kpis small{display:block;color:#738297;font-size:.77rem;font-weight:750}.pmc-kpis strong{display:block;margin-top:10px;font-size:1.85rem;line-height:1.15;letter-spacing:-.055em;color:#1d2b44}
+    .st-key-pmc_filters{border:1px solid #e8edf4;border-radius:19px;background:#fff;padding:12px 16px 2px;margin:10px 0 18px;box-shadow:0 12px 26px -25px rgba(25,42,66,.24)}
     .st-key-pmc_admin_editor [data-testid="stForm"],.st-key-pmc_admin_filter [data-testid="stForm"]{border-radius:18px!important;background:#fff!important}
     .st-key-pmc_reader [data-testid="stButton"] button,.st-key-pmc_admin_actions [data-testid="stButton"] button{min-height:46px!important}
     @media(max-width:620px){
@@ -8608,8 +8675,15 @@ def _pmc_ui_styles():
       .st-key-pmc_admin_editor [data-testid="stColumn"]{width:100%!important;max-width:100%!important;min-width:0!important;flex-basis:auto!important;flex-grow:1!important}
       .st-key-pmc_admin_editor input,.st-key-pmc_admin_editor textarea{font-size:16px!important}
     }
-    @media(max-width:780px){.pmc-card{padding:16px;border-radius:17px}.pmc-detail{padding:17px 15px}.pmc-kpis{gap:7px}.pmc-kpis>div{padding:12px 10px}.pmc-kpis strong{font-size:1.35rem}.pmc-card-meta{gap:7px}.pmc-intro{align-items:flex-start}.pmc-file-frame{min-height:310px}.pmc-home-alert{padding:15px 14px;border-radius:18px}.pmc-home-alert-copy strong{font-size:.98rem}.pmc-home-alert-copy p{font-size:.78rem}.pmc-home-alert-badge{width:44px;height:44px;border-radius:14px}}
-    @media(max-width:390px){.pmc-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:780px){.pmc-card{border-radius:19px}.pmc-card-top{padding:14px 15px;gap:9px}.pmc-card-body{padding:17px 16px 16px}.pmc-card-glyph{width:38px;height:38px;border-radius:12px}.pmc-card-toptext small{font-size:.58rem}.pmc-card h3{font-size:1.13rem!important}.pmc-card-excerpt{font-size:.83rem}.pmc-card-chip{padding:6px 9px;font-size:.67rem}.pmc-detail{padding:17px 15px}.pmc-kpis{gap:8px}.pmc-kpis>div{padding:14px 11px}.pmc-kpis strong{font-size:1.5rem}.pmc-card-meta{gap:6px}.pmc-intro{align-items:flex-start}.pmc-file-frame{min-height:310px}.pmc-home-alert{padding:15px 14px;border-radius:18px}.pmc-home-alert-copy strong{font-size:.98rem}.pmc-home-alert-copy p{font-size:.78rem}.pmc-home-alert-badge{width:44px;height:44px;border-radius:14px}}
+    @media(max-width:620px){.st-key-pmc_filters [data-testid="stHorizontalBlock"]{flex-direction:column!important;gap:5px!important}.st-key-pmc_filters [data-testid="stColumn"]{flex:1 1 auto!important;width:100%!important;max-width:100%!important;min-width:0!important}.pmc-state{font-size:.67rem;padding:7px 10px}}
+    @media(max-width:620px){
+      .pmc-card-top{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px}
+      .pmc-card-topgroup{min-width:0;gap:8px}.pmc-card-glyph{width:34px;height:34px;border-radius:11px}.pmc-card-glyph svg{width:20px;height:20px}
+      .pmc-card-toptext small{font-size:.52rem;letter-spacing:.06em;line-height:1.4}.pmc-card-toptext strong{font-size:.81rem}
+      .pmc-state{font-size:.62rem;padding:7px 8px}
+    }
+    @media(max-width:390px){.pmc-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.pmc-kpis>div{padding:13px 8px}.pmc-kpis small{font-size:.65rem;line-height:1.35}.pmc-kpis strong{font-size:1.36rem}}
     </style>''', unsafe_allow_html=True)
 
 
@@ -8687,9 +8761,13 @@ def _pmc_employee_ui():
                 '</strong></div><div><small>Por confirmar</small><strong>' + str(len(unread)) +
                 '</strong></div><div><small>Confirmados</small><strong>' + str(len(visible)-len(unread)) +
                 '</strong></div></div>', unsafe_allow_html=True)
-    f = st.selectbox("Mostrar", ("Pendientes de lectura", "Todos", "Confirmados"), key="pmc_worker_filter")
-    search = st.text_input("Buscar entre mis comunicados", key="pmc_worker_search",
-                           placeholder="Título, procedimiento, tema…").strip().casefold()
+    with st.container(key="pmc_filters"):
+        fcol, scol = st.columns([1, 1.6], gap="medium")
+        with fcol:
+            f = st.selectbox("Mostrar", ("Pendientes de lectura", "Todos", "Confirmados"), key="pmc_worker_filter")
+        with scol:
+            search = st.text_input("Buscar entre mis comunicados", key="pmc_worker_search",
+                                   placeholder="Título, procedimiento, tema…").strip().casefold()
     if f == "Pendientes de lectura":
         visible = unread
     elif f == "Confirmados":
@@ -8707,36 +8785,37 @@ def _pmc_employee_ui():
         for row in visible[:80]:
             rid = row["id_comunicado"]
             receipt = _pmc_receipt(reads, rid, dni_actual)
-            st.markdown(_pmc_card_html(row, receipt), unsafe_allow_html=True)
             opened_key = f"pmc_open_{rid}_{_pm2_dni(dni_actual)}"
             opened = bool(st.session_state.get(opened_key))
-            if not opened:
-                if st.button("Leer comunicado", key="pmc_open_btn_" + rid, use_container_width=True):
-                    ok, msg = _pmc_mark_read(rid, confirm=False)
-                    if ok:
-                        st.session_state[opened_key] = True
-                        st.rerun()
-                    else:
-                        st.error(msg)
-            else:
-                st.markdown(_pmc_detail_html(row, receipt=receipt, admin=False), unsafe_allow_html=True)
-                _pmc_render_attach(row, "worker")
-                if receipt and receipt.get("confirmado_el"):
-                    st.markdown('<div class="pmc-success">Lectura confirmada el ' +
-                                _pmc_e(receipt.get("confirmado_el")) + '</div>', unsafe_allow_html=True)
+            with st.container(key="pmc_notice_" + rid):
+                st.markdown(_pmc_card_html(row, receipt, expanded=opened), unsafe_allow_html=True)
+                if not opened:
+                    with st.container(key="pmc_read_action_" + rid):
+                        if st.button("Leer comunicado", key="pmc_open_btn_" + rid, use_container_width=True):
+                            ok, msg = _pmc_mark_read(rid, confirm=False)
+                            if ok:
+                                st.session_state[opened_key] = True
+                                st.rerun()
+                            else:
+                                st.error(msg)
                 else:
-                    if st.button("Confirmo que he leído este comunicado", key="pmc_confirm_" + rid,
-                                 type="primary", use_container_width=True):
-                        ok, msg = _pmc_mark_read(rid, confirm=True)
-                        if ok:
-                            _pm62_confirmar_despues_de_actualizar(msg, "Mis Comunicados")
-                            st.rerun()
-                        else:
-                            st.error(msg)
-                if st.button("Cerrar detalle", key="pmc_close_" + rid, use_container_width=True):
-                    st.session_state[opened_key] = False
-                    st.rerun()
-            st.markdown('<div style="height:10px"></div>', unsafe_allow_html=True)
+                    st.markdown(_pmc_detail_html(row, receipt=receipt, admin=False), unsafe_allow_html=True)
+                    _pmc_render_attach(row, "worker")
+                    if receipt and receipt.get("confirmado_el"):
+                        st.markdown('<div class="pmc-success">Lectura confirmada el ' +
+                                    _pmc_e(receipt.get("confirmado_el")) + '</div>', unsafe_allow_html=True)
+                    else:
+                        if st.button("Confirmo que he leído este comunicado", key="pmc_confirm_" + rid,
+                                     type="primary", use_container_width=True):
+                            ok, msg = _pmc_mark_read(rid, confirm=True)
+                            if ok:
+                                _pm62_confirmar_despues_de_actualizar(msg, "Mis Comunicados")
+                                st.rerun()
+                            else:
+                                st.error(msg)
+                    if st.button("Cerrar detalle", key="pmc_close_" + rid, use_container_width=True):
+                        st.session_state[opened_key] = False
+                        st.rerun()
 
 
 def _pmc_admin_ui():
@@ -9484,38 +9563,43 @@ st.markdown('''<style>
 
 # Notificación de botellas: se abre una sola vez por inicio de sesión.
 # Debe invocarse en el cuerpo principal, nunca dentro de st.sidebar ni st.columns.
-@st.dialog("Centro de notificaciones", width="large", **_pm_dialog_dismiss_kwargs())
+@st.dialog("Botellas pendientes", width="small", **_pm_dialog_dismiss_kwargs())
 def _tp_aviso_botellas_inicio(total):
-    # Contenido y cifras reales. Es un resumen; la edición ocurre en Botellas Fiadas.
+    # Resumen compacto: solo botellas. Cumpleaños, rutinas y comunicados conservan sus avisos propios.
     _reg = _bf_pendientes_aviso
     _botellas = 0
     if isinstance(_reg, pd.DataFrame) and "cantidad_botellas" in _reg.columns:
         _botellas = int(pd.to_numeric(_reg["cantidad_botellas"], errors="coerce").fillna(0).sum())
+    _texto_b = "botella pendiente" if _botellas == 1 else "botellas pendientes"
+    _texto_r = "registro abierto" if int(total) == 1 else "registros abiertos"
     st.markdown(
-        '<div class="pm-notice-head"><div class="pm-notice-mark"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M9 13h6"/></svg></div>'
-        '<div><span class="pm-notice-kicker">SEGUIMIENTO DE PENDIENTES</span><h3>Botellas por devolver</h3>'
-        '<p>Revisa lo que queda pendiente entre los turnos de tus tiendas.</p></div></div>'
-        '<div class="pm-notice-metrics"><div><b>' + str(total) + '</b><small>Registros abiertos</small></div>'
-        '<div><b>' + str(_botellas) + '</b><small>Botellas pendientes</small></div></div>',
-        unsafe_allow_html=True,
+        '<div class="pm-bottle-compact">'
+        '<div class="pm-bottle-compact-icon"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M7 10h10M10 14h4"/></svg></div>'
+        '<div class="pm-bottle-compact-copy"><small>SEGUIMIENTO DE DEVOLUCIONES</small>'
+        f'<strong>{_botellas} {_texto_b}</strong>'
+        f'<p>{int(total)} {_texto_r}. Puedes revisarlos en Botellas Fiadas.</p>'
+        '</div></div>', unsafe_allow_html=True,
     )
     if isinstance(_reg, pd.DataFrame) and not _reg.empty:
-        st.markdown('<div class="pm-notice-list-title">Últimos registros sin devolver</div>', unsafe_allow_html=True)
-        for _, _r in _reg.head(3).iterrows():
+        st.markdown('<div class="pm-bottle-pending-list">', unsafe_allow_html=True)
+        for _, _r in _reg.head(2).iterrows():
             _nombre_n = _html.escape(str(_r.get("cliente_nombre", "Cliente")))
             _cant_n = _html.escape(str(_r.get("cantidad_botellas", "—")))
             _tipo_n = _html.escape(str(_r.get("tipo_botella", "")))
-            st.markdown('<div class="pm-notice-row"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M9 13h6"/></svg>'
-                        '<div><strong>' + _nombre_n + '</strong><small>' + _tipo_n + '</small></div>'
-                        '<b>' + _cant_n + ' bot.</b></div>', unsafe_allow_html=True)
-    col_detalle, col_cerrar = st.columns(2)
+            st.markdown('<div class="pm-bottle-pending-item"><div><strong>' + _nombre_n +
+                        '</strong><small>' + _tipo_n + '</small></div><b>' + _cant_n + ' bot.</b></div>',
+                        unsafe_allow_html=True)
+        if len(_reg) > 2:
+            st.caption(f"Y {len(_reg)-2} registro(s) más por revisar.")
+        st.markdown('</div>', unsafe_allow_html=True)
+    col_detalle, col_cerrar = st.columns([1.25, 1], gap="small")
     with col_detalle:
-        if st.button("Revisar devoluciones", key="tp_bf_modal_ver", use_container_width=True, type="primary"):
+        if st.button("Ver devoluciones", key="tp_bf_modal_ver", use_container_width=True, type="primary"):
             st.session_state["nav_radio"] = "Botellas Fiadas"
             st.session_state["gs_q"] = ""
             st.rerun()
     with col_cerrar:
-        if st.button("Ahora no", key="tp_bf_modal_cerrar", use_container_width=True):
+        if st.button("Después", key="tp_bf_modal_cerrar", use_container_width=True):
             st.rerun()
 
 # El contador del perfil sigue disponible en todas las vistas, pero el diálogo
