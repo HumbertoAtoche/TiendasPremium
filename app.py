@@ -9014,6 +9014,39 @@ def _pmc_ui_styles():
       .pmcu-status{grid-column:2;justify-self:start}
       .pmcu-meta-card{gap:6px}.pmcu-meta-icon{width:28px;height:28px}.pmcu-meta-copy strong{font-size:.69rem}
     }
+    /* Vista previa: cuatro datos y botón de lectura en esquina inferior derecha. */
+    .st-key-pmc_reader [class*="st-key-pmc_notice_"] .pmcu-meta-grid{
+      margin-bottom:5px!important;
+    }
+    .st-key-pmc_reader [class*="st-key-pmc_read_action_"]{
+      display:flex!important;justify-content:flex-end!important;
+      align-items:center!important;width:100%!important;
+      margin:3px 0 0!important;padding:0!important;
+      min-height:39px!important;
+    }
+    .st-key-pmc_reader [class*="st-key-pmc_read_action_"] [data-testid="stVerticalBlock"],
+    .st-key-pmc_reader [class*="st-key-pmc_read_action_"] [data-testid="stButton"]{
+      display:flex!important;justify-content:flex-end!important;
+      align-items:center!important;width:100%!important;
+      gap:0!important;margin:0!important;padding:0!important;
+    }
+    .st-key-pmc_reader [class*="st-key-pmc_read_action_"] [data-testid="stButton"] button{
+      width:auto!important;min-width:146px!important;max-width:100%!important;
+      min-height:38px!important;padding:8px 14px!important;margin:0!important;
+      border-radius:11px!important;background:#edf4fc!important;
+      border:1px solid #d5e5f6!important;color:#27649c!important;
+      box-shadow:none!important;font-size:.78rem!important;
+      font-weight:800!important;line-height:1.15!important;
+    }
+    .st-key-pmc_reader [class*="st-key-pmc_read_action_"] [data-testid="stButton"] button:hover{
+      background:#e2effc!important;border-color:#bdd7f1!important;
+    }
+    @media(max-width:790px){
+      .st-key-pmc_reader [class*="st-key-pmc_notice_"]{padding-bottom:12px!important;}
+      .st-key-pmc_reader [class*="st-key-pmc_read_action_"] [data-testid="stButton"] button{
+        min-height:41px!important;padding:9px 13px!important;font-size:.8rem!important;
+      }
+    }
     </style>''', unsafe_allow_html=True)
 
 
@@ -9348,10 +9381,11 @@ def _pmc_employee_ui():
                 st.markdown(_pmc_unified_header_html(row, receipt), unsafe_allow_html=True)
                 st.markdown(_pmc_unified_meta_html(row), unsafe_allow_html=True)
                 if not opened:
-                    st.markdown(_pmc_unified_message_html(row, expanded=False, receipt=receipt),
-                                unsafe_allow_html=True)
+                    # Tarjeta contraída: título, estado y cuatro datos.
+                    # El contenido y el adjunto se muestran al abrirla.
                     with st.container(key="pmc_read_action_" + rid):
-                        if st.button("Leer comunicado", key="pmc_open_btn_" + rid, use_container_width=True):
+                        if st.button("Leer comunicado", key="pmc_open_btn_" + rid,
+                                     icon=":material/visibility:", use_container_width=False):
                             ok, msg = _pmc_mark_read(rid, confirm=False)
                             if ok:
                                 st.session_state[opened_key] = True
