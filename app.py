@@ -8371,9 +8371,6 @@ def _pmc_card_html(row, receipt=None, admin=False):
 
 def _pmc_ui_styles():
     st.markdown('''<style>
-    .pmc-hero{background:linear-gradient(115deg,#172741,#263d60 69%,#6e354f);border-radius:22px;padding:24px 26px;color:white;margin:0 0 17px;box-shadow:0 16px 34px -22px #15254188;position:relative;overflow:hidden}
-    .pmc-hero::after{content:"";width:200px;height:200px;position:absolute;right:-70px;top:-95px;border:1px solid #ffffff25;border-radius:50%;box-shadow:0 0 0 30px #ffffff08,0 0 0 68px #ffffff08;pointer-events:none}
-    .pmc-hero small{font-weight:850;letter-spacing:.11em;color:#ffcbd2;font-size:.68rem}.pmc-hero h2{font-size:clamp(1.3rem,2.4vw,1.9rem);margin:12px 0 7px;color:#fff!important;letter-spacing:-.04em}.pmc-hero p{max-width:670px;color:#d6dfeb;font-size:.86rem;line-height:1.6;margin:0}
     .pmc-intro{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:10px 0 14px}.pmc-intro strong{font-size:1.03rem;color:#1c2c45}.pmc-intro span{font-size:.78rem;color:#728197}
     .pmc-card{background:linear-gradient(160deg,#fff,#fbfcff);padding:19px 20px 16px;border:1px solid #e5eaf2;border-left:4px solid #91a4bf;border-radius:19px;margin:10px 0 7px;box-shadow:0 14px 28px -25px #1d2d485c;overflow-wrap:anywhere}
     .pmc-card--urgent{border-left-color:#db344e;background:linear-gradient(115deg,#fff,#fff8f9)}.pmc-card--important{border-left-color:#d99b27;background:linear-gradient(115deg,#fff,#fffdf8)}
@@ -8395,8 +8392,8 @@ def _pmc_ui_styles():
       .st-key-pmc_admin_editor [data-testid="stColumn"]{width:100%!important;max-width:100%!important;min-width:0!important;flex-basis:auto!important;flex-grow:1!important}
       .st-key-pmc_admin_editor input,.st-key-pmc_admin_editor textarea{font-size:16px!important}
     }
-    @media(max-width:780px){.pmc-hero{padding:20px 18px;border-radius:18px}.pmc-card{padding:16px;border-radius:17px}.pmc-detail{padding:17px 15px}.pmc-kpis{gap:7px}.pmc-kpis>div{padding:12px 10px}.pmc-kpis strong{font-size:1.35rem}.pmc-card-meta{gap:7px}.pmc-intro{align-items:flex-start}}
-    @media(max-width:390px){.pmc-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.pmc-hero h2{font-size:1.25rem}}
+    @media(max-width:780px){.pmc-card{padding:16px;border-radius:17px}.pmc-detail{padding:17px 15px}.pmc-kpis{gap:7px}.pmc-kpis>div{padding:12px 10px}.pmc-kpis strong{font-size:1.35rem}.pmc-card-meta{gap:7px}.pmc-intro{align-items:flex-start}}
+    @media(max-width:390px){.pmc-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
     </style>''', unsafe_allow_html=True)
 
 
@@ -8420,9 +8417,7 @@ def _pmc_render_attach(row, prefix):
 def _pmc_employee_ui():
     premium_module_shell("Mis Comunicados", "COMUNICACIÓN", "Anuncios oficiales de Premium Market y confirmaciones de lectura.")
     _pmc_ui_styles()
-    st.markdown('<section class="pmc-hero"><small>PREMIUM MARKET · COMUNICACIÓN INTERNA</small>'
-                '<h2>Mantente al día con Premium Market.</h2><p>Consulta los comunicados dirigidos a ti. '
-                'Confirma la lectura cuando termines de revisar cada mensaje.</p></section>', unsafe_allow_html=True)
+    # Encabezado blanco único; el listado de comunicados comienza directamente.
     notices, reads, err = _pmc_load()
     if err:
         st.info(err)
@@ -8490,9 +8485,6 @@ def _pmc_employee_ui():
 def _pmc_admin_ui():
     premium_module_shell("Gestión de Comunicados", "COMUNICACIÓN", "Publica anuncios oficiales y verifica quién confirmó su lectura.")
     _pmc_ui_styles()
-    st.markdown('<section class="pmc-hero"><small>PREMIUM MARKET · GESTIÓN INTERNA</small>'
-                '<h2>Comunicados que sí llegan a tu equipo.</h2><p>Publica, segmenta, programa y '
-                'supervisa la lectura sin mezclar avisos de asistencia, cumpleaños o rutinas.</p></section>', unsafe_allow_html=True)
     if not _pmc_admin():
         st.error("Esta sección requiere una sesión administrativa real.")
         return
