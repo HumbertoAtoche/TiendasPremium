@@ -3253,9 +3253,13 @@ def _tp_toast(body, *args, **kwargs):
     else:
         color, titulo, icono = "green", "Guardado con éxito", ""
     try:
-        return st._tp_toast_orig(f":{color}[●] **{titulo}**\n\n{txt}", *args, **kwargs)
+        result = st._tp_toast_orig(f":{color}[●] **{titulo}**\n\n{txt}", *args, **kwargs)
     except Exception:
-        return st._tp_toast_orig(txt)
+        result = st._tp_toast_orig(txt)
+    # La marca permite que comunicados no compita con otras notificaciones.
+    # Es un dato privado de esta sesión, sin escrituras en Sheets.
+    st.session_state["_pm_last_toast_at"] = time.time()
+    return result
 
 if not hasattr(st, "_tp_toast_orig"):
     st._tp_toast_orig = st.toast
@@ -4740,6 +4744,25 @@ def _es_cumpleanos_hoy(fecha_nac_str, hoy_date):
         return False
     return (f_nac.day == hoy_date.day) and (f_nac.month == hoy_date.month)
 
+def _pm_dialog_dismiss_kwargs(callback=None):
+    """Permite que X/Escape cierre el aviso y reactive la cola de Comunicados.
+
+    En versiones antiguas de Streamlit que no soportan on_dismiss se conserva
+    el comportamiento original, sin impedir que la aplicación arranque.
+    """
+    try:
+        import inspect as _pm_inspect
+        if "on_dismiss" in _pm_inspect.signature(st.dialog).parameters:
+            return {"on_dismiss": callback if callback is not None else "rerun"}
+    except (TypeError, ValueError):
+        pass
+    return {}
+
+
+def _pm_cumple_dismiss_callback():
+    st.session_state["_tp_cumple_dialogo_abierto"] = False
+
+
 def _mostrar_modal_cumpleanos(nombre_usuario):
     hoy_peru = obtener_ahora_peru().date()
     fila_usuario = st.session_state.empleados[st.session_state.empleados["nombre"] == nombre_usuario]
@@ -4777,7 +4800,7 @@ def _mostrar_modal_cumpleanos(nombre_usuario):
                '<div class="tp-bd-big">Gracias por ser parte de esta familia.</div>'
                '<div class="tp-bd-sign">Con cariño,<br><b>tu familia Premium</b> · Tiendas Premium E.I.R.L.</div></div></div>')
 
-    @st.dialog("Un día muy especial")
+    @st.dialog("Un día muy especial", **_pm_dialog_dismiss_kwargs(_pm_cumple_dismiss_callback))
     def _dialogo_cumpleanos():
         st.markdown(html_bd, unsafe_allow_html=True)
         st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
@@ -8396,26 +8419,158 @@ def _pmc_detail_html(row, receipt=None, admin=False):
             '<div class="pmc-detail-grid">' + meta_html + '</div></section>')
 
 
+# PREMIUM MARKET · COMUNICADOS, SIN APILAR ALERTAS
+# Este aviso NO utiliza st.dialog, y el toast espera a que los otros diálogos
+# de inicio (cumpleaños, botellas, motivación) estén cerrados.
+def _pmc_home_toast_can_show():
+    if st.session_state.get("_tp_cumple_dialogo_abierto", False):
+        return False
+    if globals().get("_pm_modal_botellas_este_rerun", False):
+        return False
+    if globals().get("_pm_modal_motivacion_este_rerun", False):
+        return False
+    # Evitar dos toasts distintos superpuestos en el mismo celular.
+    return (time.time() - float(st.session_state.get("_pm_last_toast_at", 0))) >= 9.0
+
+
+def _pmc_home_toast_pump():
+    pending = st.session_state.get("_pmc_home_toast_pending")
+    if not isinstance(pending, dict):
+        return
+    if pending.get("user") != str(st.session_state.get("usuario_login", "")):
+        st.session_state.pop("_pmc_home_toast_pending", None)
+        return
+    if not _pmc_home_toast_can_show():
+        return
+    ticket = str(pending.get("ticket", ""))
+    if not ticket or st.session_state.get(ticket):
+        st.session_state.pop("_pmc_home_toast_pending", None)
+        return
+    st.session_state[ticket] = True
+    st.session_state.pop("_pmc_home_toast_pending", None)
+    st.toast(str(pending.get("message", "Tienes comunicados por leer.")))
+
+
+# Fragmento ligero: solo revisa memoria de sesión cada 5 s; no consulta Sheets.
+# Si no hay otros diálogos, entrega el aviso en cuanto termina la espera.
+_pmc_fragment_api = getattr(st, "fragment", None)
+if callable(_pmc_fragment_api):
+    _pmc_home_toast_pump = _pmc_fragment_api(run_every="5s")(_pmc_home_toast_pump)
+
+
+def _pmc_home_alert_styles():
+    """Estilos globales en Inicio (sin depender de abrir 'Mis Comunicados')."""
+    st.markdown(r"""<style>
+      .st-key-pmc_home_alert{
+        position:relative!important;overflow:hidden!important;
+        padding:20px 20px 16px!important;margin:22px 0 24px!important;
+        border:1px solid #e8e8f0!important;border-radius:24px!important;
+        background:linear-gradient(132deg,#ffffff 0%,#fef9fb 58%,#fff2f5 100%)!important;
+        box-shadow:0 18px 42px -30px rgba(32,41,66,.29),0 5px 18px -15px rgba(191,43,72,.22)!important;
+      }
+      .st-key-pmc_home_alert:before{
+        content:"";position:absolute;left:0;top:0;bottom:0;width:5px;
+        background:linear-gradient(180deg,#ed6379,#bf2847 58%,#263c64);
+      }
+      .st-key-pmc_home_alert:after{
+        content:"";position:absolute;right:-58px;top:-72px;width:190px;height:190px;
+        border-radius:50%;pointer-events:none;
+        background:radial-gradient(circle,rgba(226,51,82,.10),rgba(226,51,82,0) 69%);
+      }
+      .pmc-home-intro{display:flex;align-items:flex-start;gap:14px;position:relative;z-index:1;}
+      .pmc-home-icon{
+        flex:none;display:grid;place-items:center;width:52px;height:52px;border-radius:17px;
+        color:#fff;background:linear-gradient(145deg,#223957 0%,#c43150 100%);
+        box-shadow:0 11px 25px -16px rgba(40,46,78,.58);
+      }
+      .pmc-home-icon svg{width:25px;height:25px;display:block;}
+      .pmc-home-body{flex:1;min-width:0;}
+      .pmc-home-kicker{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px;}
+      .pmc-home-kicker span{font-size:.67rem;letter-spacing:.1em;font-weight:850;color:#b52c46;}
+      .pmc-home-count{
+        display:inline-flex;align-items:center;justify-content:center;min-width:27px;height:25px;
+        border:1px solid #f7c9d3;border-radius:9px;padding:2px 7px;
+        font-size:.8rem;font-weight:850;color:#c02948;background:#fff0f3;
+      }
+      .pmc-home-headline{display:block;color:#1c2b43;font-size:clamp(1.03rem,2vw,1.27rem);
+        letter-spacing:-.035em;font-weight:850;line-height:1.36;margin:0 0 7px;overflow-wrap:anywhere;}
+      .pmc-home-description{font-size:.82rem;line-height:1.65;color:#6d7b90;margin:0 0 12px;}
+      .pmc-home-foot{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+      .pmc-home-chip{display:inline-flex;align-items:center;border:1px solid #e6e9f1;border-radius:999px;
+        padding:5px 10px;color:#53647b;background:rgba(255,255,255,.85);font-size:.69rem;font-weight:750;}
+      .st-key-pmc_home_alert [data-testid="stButton"]{position:relative;z-index:2;margin-top:15px!important;}
+      .st-key-pmc_home_alert [data-testid="stButton"] button{
+        min-height:50px!important;width:100%!important;border:0!important;border-radius:14px!important;
+        background:linear-gradient(105deg,#c02b47 0%,#e13d57 100%)!important;
+        color:#fff!important;font-weight:820!important;font-size:.88rem!important;
+        box-shadow:0 11px 24px -16px rgba(171,27,60,.64)!important;
+      }
+      .st-key-pmc_home_alert [data-testid="stButton"] button:hover{
+        background:linear-gradient(105deg,#a9233c,#c4314c)!important;transform:translateY(-1px);
+      }
+      .st-key-pmc_home_alert [data-testid="stButton"] button *{color:#fff!important;}
+      @media(max-width:780px){
+        .st-key-pmc_home_alert{padding:17px 15px 15px!important;margin:20px 0 24px!important;border-radius:21px!important;}
+        .pmc-home-intro{gap:11px;}
+        .pmc-home-icon{width:44px;height:44px;border-radius:14px;}
+        .pmc-home-icon svg{width:22px;height:22px;}
+        .pmc-home-headline{font-size:1rem;}
+        .pmc-home-description{font-size:.79rem;line-height:1.58;}
+        .st-key-pmc_home_alert [data-testid="stButton"] button{min-height:49px!important;}
+      }
+      @media(max-width:355px){
+        .pmc-home-intro{gap:9px;}.pmc-home-icon{width:40px;height:40px;}
+        .pmc-home-kicker span{font-size:.62rem;}
+      }
+    </style>""", unsafe_allow_html=True)
+
+
 def _pmc_home_notice():
     pending = _pmc_unread_count()
     if pending is None or pending <= 0:
+        # Un cambio de estado elimina las notificaciones pendientes de esta sesión.
+        st.session_state.pop("_pmc_home_toast_pending", None)
         return
+
+    _pmc_home_alert_styles()
     today = obtener_ahora_peru().date().isoformat()
-    key = f"_pmc_home_toast_{_pm2_dni(dni_actual)}_{today}_{pending}"
-    if not st.session_state.get(key):
-        st.session_state[key] = True
-        st.toast(f"Tienes {pending} comunicado(s) pendiente(s) por confirmar.")
-    plural = "s" if pending != 1 else ""
+    ticket = f"_pmc_toast_shown_{_pm2_dni(dni_actual)}_{today}_{pending}"
+    if st.session_state.get("ver_como"):
+        st.session_state.pop("_pmc_home_toast_pending", None)
+    elif not st.session_state.get(ticket):
+        st.session_state["_pmc_home_toast_pending"] = {
+            "ticket": ticket,
+            "user": str(st.session_state.get("usuario_login", "")),
+            "message": ("Tienes 1 comunicado pendiente por confirmar." if pending == 1
+                        else f"Tienes {pending} comunicados pendientes por confirmar."),
+        }
+
+    headline = ("Tienes un comunicado por confirmar" if pending == 1
+                else f"Tienes {pending} comunicados por confirmar")
+    description = ("Hay una comunicación oficial que requiere tu lectura." if pending == 1
+                   else "Tienes comunicaciones oficiales que requieren tu lectura.")
     with st.container(key="pmc_home_alert"):
         st.markdown(
-            '<div class="pmc-home-alert"><div class="pmc-home-alert-copy"><small>COMUNICADOS PENDIENTES</small>'
-            f'<strong>{pending} comunicado{plural} requiere{("n" if pending != 1 else "")} tu lectura</strong>'
-            '<p>Revisa y confirma tus comunicados oficiales sin perderlos entre otros avisos.</p></div>'
-            '<div class="pmc-home-alert-badge">✦</div></div>',
-            unsafe_allow_html=True,
+            '<div class="pmc-home-intro"><div class="pmc-home-icon" aria-hidden="true">'
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"'
+            ' stroke-linecap="round" stroke-linejoin="round"><path d="M3 11v2a2 2 0 0 0 2 2h2l3 5h3l-3-5h1l9 4V5l-9 4H5a2 2 0 0 0-2 2Z"/>'
+            '<path d="M21 9a4 4 0 0 1 0 6"/></svg></div>'
+            '<div class="pmc-home-body"><div class="pmc-home-kicker">'
+            '<span>NOVEDADES PARA TI</span><b class="pmc-home-count">' + str(pending) + '</b></div>'
+            '<strong class="pmc-home-headline">' + headline + '</strong>'
+            '<p class="pmc-home-description">' + description +
+            ' Revisa su contenido y deja constancia de lectura.</p>'
+            '<div class="pmc-home-foot"><span class="pmc-home-chip">Lectura requerida</span>'
+            '<span class="pmc-home-chip">Comunicación interna</span></div>'
+            '</div></div>', unsafe_allow_html=True,
         )
-        st.button("Leer comunicados", key="pmc_home_go", use_container_width=True,
+        st.button("Abrir mis comunicados", key="pmc_home_go", use_container_width=True,
                   on_click=_ir_a, args=("Mis Comunicados",), icon=":material/campaign:")
+
+    # Este fragmento NO consulta Google: entrega un único toast después de otros
+    # diálogos o toasts, sin competir con alertas de cumpleaños y botellas.
+    if st.session_state.get("_pmc_home_toast_pending"):
+        _pmc_home_toast_pump()
 
 
 def _pmc_ui_styles():
@@ -9321,7 +9476,7 @@ st.markdown('''<style>
 
 # Notificación de botellas: se abre una sola vez por inicio de sesión.
 # Debe invocarse en el cuerpo principal, nunca dentro de st.sidebar ni st.columns.
-@st.dialog("Centro de notificaciones", width="large")
+@st.dialog("Centro de notificaciones", width="large", **_pm_dialog_dismiss_kwargs())
 def _tp_aviso_botellas_inicio(total):
     # Contenido y cifras reales. Es un resumen; la edición ocurre en Botellas Fiadas.
     _reg = _bf_pendientes_aviso
@@ -9412,7 +9567,7 @@ def _pm_diario_registro_proceso():
     import threading
     return {"vistos": set(), "lock": threading.Lock()}
 
-@st.dialog("Un mensaje para ti", width="small")
+@st.dialog("Un mensaje para ti", width="small", **_pm_dialog_dismiss_kwargs())
 def _pm_dialogo_motivacion(nombre, frase):
     _nombre_esc = _html.escape(str(nombre).split()[0].capitalize() if nombre else "equipo")
     _frase_esc = _html.escape(frase)
@@ -9432,6 +9587,8 @@ def _pm_dialogo_motivacion(nombre, frase):
 
 # La frase se muestra una vez por usuario/día en la sesión y, mientras siga
 # activo el proceso Streamlit, también entre sesiones. No escribe en Sheets.
+# Coordinación visual: otros avisos aguardarán hasta cerrar este diálogo.
+_pm_modal_motivacion_este_rerun = False
 if (not st.session_state.get("_tp_cumple_dialogo_abierto", False)
         and not _pm_modal_botellas_este_rerun):
     _pm_hoy_dia = obtener_ahora_peru().date()
@@ -9445,6 +9602,7 @@ if (not st.session_state.get("_tp_cumple_dialogo_abierto", False)
                 _pm_registro["vistos"].add(_pm_clave_dia)
         st.session_state[_pm_flag_dia] = True
         if not _pm_ya_visto:
+            _pm_modal_motivacion_este_rerun = True
             _pm_dialogo_motivacion(user_real, _pm_frase_dia(user_real, _pm_clave_dia[0], _pm_hoy_dia))
 
 # -------------------- ASISTENTE PREMIUM IA · V2 --------------------
