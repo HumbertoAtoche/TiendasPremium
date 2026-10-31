@@ -8369,6 +8369,55 @@ def _pmc_card_html(row, receipt=None, admin=False):
             '<span>Prioridad: ' + _pmc_e(p) + '</span></div></article>')
 
 
+def _pmc_detail_html(row, receipt=None, admin=False):
+    priority = str(row.get("prioridad", "Normal"))
+    category = str(row.get("categoria", "General"))
+    if admin:
+        status = str(row.get("estado", "Borrador"))
+    else:
+        status = "Confirmado" if receipt and receipt.get("confirmado_el") else ("Leído" if receipt else "Pendiente")
+    meta = []
+    published = str(row.get("publicar_desde", "")).strip()
+    if published:
+        meta.append(("Publicado", published[:16]))
+    expiry = str(row.get("vigente_hasta", "")).strip()
+    if expiry:
+        meta.append(("Vigente hasta", expiry[:16]))
+    meta.append(("Prioridad", priority))
+    meta.append(("Categoría", category))
+    if not admin and receipt and receipt.get("confirmado_el"):
+        meta.append(("Confirmado", str(receipt.get("confirmado_el"))[:16]))
+    meta_html = "".join('<div><small>' + _pmc_e(k) + '</small><strong>' + _pmc_e(v) + '</strong></div>' for k, v in meta)
+    return ('<section class="pmc-detail pmc-detail--rich">'
+            '<div class="pmc-detail-top"><div><small>MENSAJE OFICIAL</small>'
+            '<h3>' + _pmc_e(row.get("titulo")) + '</h3></div>'
+            '<span class="pmc-state pmc-state--' + ("done" if status == "Confirmado" else ("urgent" if priority == "Urgente" else "important" if priority == "Importante" else "normal")) + '">' + _pmc_e(status) + '</span></div>'
+            '<p>' + _pmc_e(row.get("contenido")) + '</p>'
+            '<div class="pmc-detail-grid">' + meta_html + '</div></section>')
+
+
+def _pmc_home_notice():
+    pending = _pmc_unread_count()
+    if pending is None or pending <= 0:
+        return
+    today = obtener_ahora_peru().date().isoformat()
+    key = f"_pmc_home_toast_{_pm2_dni(dni_actual)}_{today}_{pending}"
+    if not st.session_state.get(key):
+        st.session_state[key] = True
+        st.toast(f"Tienes {pending} comunicado(s) pendiente(s) por confirmar.")
+    plural = "s" if pending != 1 else ""
+    with st.container(key="pmc_home_alert"):
+        st.markdown(
+            '<div class="pmc-home-alert"><div class="pmc-home-alert-copy"><small>COMUNICADOS PENDIENTES</small>'
+            f'<strong>{pending} comunicado{plural} requiere{("n" if pending != 1 else "")} tu lectura</strong>'
+            '<p>Revisa y confirma tus comunicados oficiales sin perderlos entre otros avisos.</p></div>'
+            '<div class="pmc-home-alert-badge">✦</div></div>',
+            unsafe_allow_html=True,
+        )
+        st.button("Leer comunicados", key="pmc_home_go", use_container_width=True,
+                  on_click=_ir_a, args=("Mis Comunicados",), icon=":material/campaign:")
+
+
 def _pmc_ui_styles():
     st.markdown('''<style>
     .pmc-intro{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:10px 0 14px}.pmc-intro strong{font-size:1.03rem;color:#1c2c45}.pmc-intro span{font-size:.78rem;color:#728197}
@@ -8379,11 +8428,23 @@ def _pmc_ui_styles():
     .pmc-card-meta{display:flex;gap:12px;flex-wrap:wrap;border-top:1px solid #e8edf3;padding-top:11px;font-size:.74rem;font-weight:700;color:#7b899d}
     .pmc-state{padding:7px 10px;border-radius:99px;background:#ecf3fc;color:#3d70b6;font-weight:850;font-size:.69rem;white-space:nowrap}
     .pmc-state--urgent{background:#fff0f2;color:#c22f45}.pmc-state--important{background:#fff6e5;color:#a46d18}.pmc-state--done{background:#e7f8f0;color:#0d8b5b}
-    .pmc-detail{padding:19px 20px;border:1px solid #e4eaf3;border-radius:19px;background:#fff;margin:10px 0 13px;box-shadow:0 14px 24px -26px #22334f77}
-    .pmc-detail h3{font-size:1.3rem;color:#1b2d47;font-weight:850;margin:6px 0 12px;line-height:1.35}.pmc-detail p{white-space:pre-wrap;line-height:1.85;color:#364860;font-size:.93rem;overflow-wrap:anywhere;margin:0}
+    .pmc-detail{padding:20px 20px 18px;border:1px solid #e4eaf3;border-radius:21px;background:linear-gradient(180deg,#fff 0%,#fbfcff 100%);margin:10px 0 13px;box-shadow:0 18px 32px -28px #22334f77;overflow:hidden}
+    .pmc-detail--rich{position:relative}.pmc-detail--rich::before{content:"";position:absolute;inset:0 auto 0 0;width:5px;background:linear-gradient(180deg,#df334c 0%,#283a63 100%)}
+    .pmc-detail-top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:10px;padding-left:4px}
+    .pmc-detail h3{font-size:1.3rem;color:#1b2d47;font-weight:850;margin:6px 0 8px;line-height:1.35}.pmc-detail p{white-space:pre-wrap;line-height:1.85;color:#364860;font-size:.94rem;overflow-wrap:anywhere;margin:0;padding-left:4px}
     .pmc-detail small{font-size:.74rem;letter-spacing:.075em;color:#c52d49;font-weight:850}
+    .pmc-detail-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:9px;margin-top:15px}
+    .pmc-detail-grid>div{border:1px solid #ebeff6;background:#fff;border-radius:14px;padding:10px 11px}
+    .pmc-detail-grid small{display:block;margin:0 0 4px;color:#7f8a9d;letter-spacing:.03em;font-size:.7rem}
+    .pmc-detail-grid strong{display:block;color:#23354d;font-size:.84rem;line-height:1.45}
     .pmc-success{background:#eaf9f1;border:1px solid #c7ebd8;color:#127950;padding:13px 16px;border-radius:14px;font-weight:750;font-size:.86rem;margin:7px 0 14px}
     .pmc-mini{border-radius:15px;padding:13px 16px;border:1px solid #e7ebf3;background:#fff;color:#60718a;margin:10px 0;font-size:.82rem;line-height:1.6}
+    .pmc-attach-note{border-radius:14px;padding:10px 14px;border:1px solid #e8edf4;background:#fff;color:#62748a;margin:8px 0 10px;font-size:.8rem;line-height:1.55}
+    .pmc-attach-shell{border:1px solid #e7edf5;background:linear-gradient(180deg,#ffffff,#fbfcff);border-radius:18px;padding:12px 12px 10px;margin:2px 0 12px}
+    .pmc-file-title{font-size:.82rem;font-weight:800;color:#1f3049;margin:0 0 8px}.pmc-file-frame{width:100%;min-height:420px;border:0;border-radius:14px;background:#f7f9fc}
+    .pmc-home-alert{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:17px 18px;border-radius:20px;border:1px solid #eed6dd;background:linear-gradient(135deg,#fff7f9 0%,#fdfdff 100%);box-shadow:0 16px 30px -28px rgba(32,45,71,.32);margin:8px 0 10px}
+    .pmc-home-alert-copy small{display:block;color:#c9334d;font-size:.72rem;font-weight:850;letter-spacing:.09em;margin:0 0 6px}.pmc-home-alert-copy strong{display:block;color:#1e2f49;font-size:1.03rem;line-height:1.35;margin:0 0 4px}.pmc-home-alert-copy p{margin:0;color:#6e7e94;font-size:.82rem;line-height:1.55}
+    .pmc-home-alert-badge{flex:none;width:50px;height:50px;border-radius:16px;display:grid;place-items:center;background:linear-gradient(135deg,#1b2d49,#d7354f);color:#fff;font-size:1.2rem;font-weight:900;box-shadow:0 14px 28px -22px rgba(28,44,72,.6)}
     .pmc-mini b{color:#1d2f46}.pmc-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:15px 0}.pmc-kpis>div{background:#fff;border:1px solid #e8edf3;border-radius:16px;padding:15px}.pmc-kpis small{display:block;color:#738297;font-size:.75rem;font-weight:750}.pmc-kpis strong{display:block;margin-top:7px;font-size:1.6rem;letter-spacing:-.05em;color:#1d2b44}
     .st-key-pmc_admin_editor [data-testid="stForm"],.st-key-pmc_admin_filter [data-testid="stForm"]{border-radius:18px!important;background:#fff!important}
     .st-key-pmc_reader [data-testid="stButton"] button,.st-key-pmc_admin_actions [data-testid="stButton"] button{min-height:46px!important}
@@ -8392,25 +8453,67 @@ def _pmc_ui_styles():
       .st-key-pmc_admin_editor [data-testid="stColumn"]{width:100%!important;max-width:100%!important;min-width:0!important;flex-basis:auto!important;flex-grow:1!important}
       .st-key-pmc_admin_editor input,.st-key-pmc_admin_editor textarea{font-size:16px!important}
     }
-    @media(max-width:780px){.pmc-card{padding:16px;border-radius:17px}.pmc-detail{padding:17px 15px}.pmc-kpis{gap:7px}.pmc-kpis>div{padding:12px 10px}.pmc-kpis strong{font-size:1.35rem}.pmc-card-meta{gap:7px}.pmc-intro{align-items:flex-start}}
+    @media(max-width:780px){.pmc-card{padding:16px;border-radius:17px}.pmc-detail{padding:17px 15px}.pmc-kpis{gap:7px}.pmc-kpis>div{padding:12px 10px}.pmc-kpis strong{font-size:1.35rem}.pmc-card-meta{gap:7px}.pmc-intro{align-items:flex-start}.pmc-file-frame{min-height:310px}.pmc-home-alert{padding:15px 14px;border-radius:18px}.pmc-home-alert-copy strong{font-size:.98rem}.pmc-home-alert-copy p{font-size:.78rem}.pmc-home-alert-badge{width:44px;height:44px;border-radius:14px}}
     @media(max-width:390px){.pmc-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
     </style>''', unsafe_allow_html=True)
+
+
+def _pmc_attachment_kind(mime, name=""):
+    mime = str(mime or "").lower()
+    name = str(name or "").lower()
+    if mime.startswith("image/") or name.endswith((".png", ".jpg", ".jpeg", ".webp", ".gif")):
+        return "image"
+    if mime == "application/pdf" or name.endswith(".pdf"):
+        return "pdf"
+    if mime.startswith("text/") or name.endswith((".txt", ".csv", ".md", ".json", ".log")):
+        return "text"
+    return "file"
+
+
+def _pmc_preview_attachment(data, name, mime, key):
+    kind = _pmc_attachment_kind(mime, name)
+    with st.container(key=key + "_preview_box"):
+        st.markdown('<div class="pmc-attach-shell">', unsafe_allow_html=True)
+        if kind == "image":
+            st.image(data, caption=str(name or "Adjunto"), use_container_width=True)
+        elif kind == "pdf":
+            b64 = base64.b64encode(data).decode("utf-8")
+            st.markdown(
+                '<div class="pmc-file-title">Vista previa del PDF</div>'
+                f'<iframe class="pmc-file-frame" src="data:application/pdf;base64,{b64}"></iframe>',
+                unsafe_allow_html=True,
+            )
+        elif kind == "text":
+            try:
+                preview = data.decode("utf-8")
+            except UnicodeDecodeError:
+                preview = data.decode("latin-1", errors="replace")
+            st.markdown('<div class="pmc-file-title">Vista previa del archivo</div>', unsafe_allow_html=True)
+            st.code(preview[:5000] + ("\n..." if len(preview) > 5000 else ""))
+        else:
+            st.info("Este adjunto no tiene vista previa integrada. Puedes descargarlo desde aquí.")
+        st.markdown('</div>', unsafe_allow_html=True)
 
 
 def _pmc_render_attach(row, prefix):
     if not row.get("adjunto_drive_id"):
         return
-    st.caption("Adjunto privado · " + str(row.get("adjunto_nombre", "Archivo")))
+    file_name = str(row.get("adjunto_nombre", "Archivo"))
+    file_mime = str(row.get("adjunto_mime") or "application/octet-stream")
+    kind = _pmc_attachment_kind(file_mime, file_name)
+    kind_label = {"image": "Imagen privada", "pdf": "PDF privado", "text": "Documento privado"}.get(kind, "Adjunto privado")
+    st.markdown('<div class="pmc-attach-note">' + _pmc_e(kind_label) + ' · ' + _pmc_e(file_name) + '</div>', unsafe_allow_html=True)
     key = f"pmc_file_{prefix}_{row['id_comunicado']}"
-    if st.button("Preparar archivo adjunto", key=key + "_open", use_container_width=True):
+    if st.button("Abrir adjunto en la app", key=key + "_open", use_container_width=True):
         try:
             st.session_state[key] = _pmc_file_download(row)
         except Exception:
             st.error("No se pudo recuperar el adjunto privado. Revisa Drive y tus permisos.")
     if st.session_state.get(key):
+        _pmc_preview_attachment(st.session_state[key], file_name, file_mime, key)
         st.download_button("Descargar adjunto", data=st.session_state[key],
-                           file_name=str(row.get("adjunto_nombre") or "adjunto"),
-                           mime=str(row.get("adjunto_mime") or "application/octet-stream"),
+                           file_name=file_name,
+                           mime=file_mime,
                            use_container_width=True, key=key + "_save")
 
 
@@ -8461,8 +8564,7 @@ def _pmc_employee_ui():
                     else:
                         st.error(msg)
             else:
-                st.markdown('<div class="pmc-detail"><small>MENSAJE OFICIAL</small><h3>' + _pmc_e(row["titulo"]) +
-                            '</h3><p>' + _pmc_e(row["contenido"]) + '</p></div>', unsafe_allow_html=True)
+                st.markdown(_pmc_detail_html(row, receipt=receipt, admin=False), unsafe_allow_html=True)
                 _pmc_render_attach(row, "worker")
                 if receipt and receipt.get("confirmado_el"):
                     st.markdown('<div class="pmc-success">Lectura confirmada el ' +
@@ -8564,8 +8666,7 @@ def _pmc_admin_ui():
             counts = _pmc_receipt_stats(n, reads)
             st.markdown(_pmc_card_html(n, admin=True), unsafe_allow_html=True)
             with st.expander("Leer contenido del comunicado"):
-                st.markdown('<div class="pmc-detail"><p>' + _pmc_e(n.get("contenido", "")) +
-                            '</p></div>', unsafe_allow_html=True)
+                st.markdown(_pmc_detail_html(n, admin=True), unsafe_allow_html=True)
             st.markdown('<div class="pmc-kpis"><div><small>Destinatarios</small><strong>' + str(counts["total"]) +
                         '</strong></div><div><small>Confirmaron</small><strong>' + str(counts["confirmados"]) +
                         '</strong></div><div><small>Pendientes</small><strong>' + str(counts["pendientes"]) +
@@ -9056,14 +9157,15 @@ _PM_MOBILE_EXPERIENCE_CSS = """
   .st-key-tp_bottomnav{display:none!important;}
 }
 /* Componentes nuevos para la portada operativa del celular. */
-.pm-m-home-hero{background:linear-gradient(125deg,#14253f 0%,#243656 62%,#b72c47 145%);padding:20px 19px;border-radius:23px;color:#fff;margin:0 0 11px;box-shadow:0 20px 36px -28px rgba(19,39,70,.55);}
-.pm-m-eyebrow{color:#ffc4d0;font-size:.66rem;font-weight:850;letter-spacing:.14em;margin:0 0 9px;}
-.pm-m-home-hero h2{font-size:clamp(1.36rem,5.2vw,1.65rem)!important;line-height:1.21!important;letter-spacing:-.045em;color:#fff!important;margin:0 0 8px!important;}
-.pm-m-home-hero p{color:#d9e1ef;font-size:.82rem;line-height:1.58;margin:0 0 13px;}
-.pm-m-home-tags{display:flex;flex-wrap:wrap;gap:7px;}
-.pm-m-home-tags span{padding:7px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.11);color:#f7f9fd;font-size:.71rem;font-weight:760;}
-.pm-m-home-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:0 0 11px;}
-.pm-m-home-metrics>div{display:flex;flex-direction:column;min-width:0;gap:3px;padding:13px;background:#fff;border:1px solid #e8edf4;border-radius:17px;box-shadow:0 9px 24px -23px rgba(20,35,60,.25);}
+.pm-m-home-hero{position:relative;overflow:hidden;background:linear-gradient(125deg,#14253f 0%,#243656 60%,#b72c47 145%);padding:24px 21px 34px;border-radius:25px;color:#fff;margin:0 0 18px;box-shadow:0 24px 42px -30px rgba(19,39,70,.60);}
+.pm-m-home-hero::after{content:"";position:absolute;right:-42px;top:-36px;width:152px;height:152px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.22) 0%,rgba(255,255,255,0) 72%);pointer-events:none;}
+.pm-m-eyebrow{color:#ffc4d0;font-size:.68rem;font-weight:850;letter-spacing:.16em;margin:0 0 11px;}
+.pm-m-home-hero h2{font-size:clamp(1.48rem,5.6vw,1.86rem)!important;line-height:1.18!important;letter-spacing:-.048em;color:#fff!important;margin:0 0 11px!important;max-width:92%;}
+.pm-m-home-hero p{color:#d9e1ef;font-size:.86rem;line-height:1.66;margin:0 0 16px;max-width:92%;}
+.pm-m-home-tags{display:flex;flex-wrap:wrap;gap:8px;}
+.pm-m-home-tags span{padding:8px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.12);color:#f7f9fd;font-size:.74rem;font-weight:770;}
+.pm-m-home-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;margin:0 0 13px;}
+.pm-m-home-metrics>div{display:flex;flex-direction:column;min-width:0;gap:3px;padding:15px 14px;background:#fff;border:1px solid #e8edf4;border-radius:19px;box-shadow:0 14px 28px -25px rgba(20,35,60,.28);}
 .pm-m-home-metrics small{font-size:.69rem;font-weight:700;color:#75839a;line-height:1.35;}
 .pm-m-home-metrics strong{font-size:1.7rem;font-weight:850;color:#192b46;line-height:1.2;font-variant-numeric:tabular-nums;}
 .pm-m-home-metrics span{font-size:.67rem;color:#97a3b3;line-height:1.35;}
@@ -9981,14 +10083,8 @@ elif choice == "Marcar Asistencia":
     # Panel específico para teléfonos; conserva el formulario existente y su lógica.
     _pm_mobile_home()
 
-    # Recordatorio independiente: no abre ni compite con cumpleaños/botellas/rutinas.
-    _pmc_home_pend = _pmc_unread_count()
-    if _pmc_home_pend is not None and _pmc_home_pend > 0:
-        st.markdown('<div class="pmc-mini"><b>Comunicados para ti</b> · Tienes '
-                    + str(_pmc_home_pend) + ' comunicado(s) por confirmar.</div>',
-                    unsafe_allow_html=True)
-        st.button("Leer comunicados", key="pmc_home_go", use_container_width=True,
-                  on_click=_ir_a, args=("Mis Comunicados",))
+    # Recordatorio independiente de comunicados: banner visible + aviso breve.
+    _pmc_home_notice()
 
     with st.container(key="pm_v_marcar_asistencia"):
 
