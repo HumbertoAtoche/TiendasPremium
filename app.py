@@ -12489,6 +12489,9 @@ def _pm2_legacy_count():
 
 
 def _pm2_task_compact_html(row, show_worker=False):
+    """Tarjeta compacta y alineada; los estilos críticos son inline para
+    resistir los cambios de estilos de Streamlit sin alterar la lógica.
+    """
     esc = _html.escape
     current = str(row.get("estado", "Pendiente"))
     status_label, tone = _pm2_state_visual(row)
@@ -12497,30 +12500,76 @@ def _pm2_task_compact_html(row, show_worker=False):
         status_class = "reviewing"
     elif current == "Cancelada":
         status_class = "cancelled"
+
+    # Colores tomados de la paleta actual de Premium Market.
+    states = {
+        "done": ("#e9f8f0", "#128252", "#c6e9d5"),
+        "active": ("#edf4ff", "#235fbb", "#d9e6ff"),
+        "pending": ("#fff6e8", "#98610c", "#f3deb8"),
+        "urgent": ("#fff1ea", "#ae4c19", "#f6d2c3"),
+        "reviewing": ("#eef2ff", "#4055aa", "#dce3fd"),
+        "cancelled": ("#f3f5f8", "#6f7d90", "#e0e6ee"),
+    }
+    bg, ink, outline = states.get(status_class, states["pending"])
+
     day = str(row.get("fecha", ""))[:10]
     try:
         day = datetime.strptime(day, "%Y-%m-%d").strftime("%d/%m/%Y")
-    except Exception:
+    except ValueError:
         pass
-    timerange = " – ".join(v for v in (str(row.get("hora_inicio", "")).strip(), str(row.get("hora_limite", "")).strip()) if v)
+    timerange = " – ".join(v for v in (
+        str(row.get("hora_inicio", "")).strip(), str(row.get("hora_limite", "")).strip()
+    ) if v)
     meta = []
     if day:
         meta.append(("calendar", day))
     if timerange:
         meta.append(("clock", timerange))
-    if str(row.get("zona", "")).strip():
-        meta.append(("pin", str(row.get("zona", "")).strip()))
     if str(row.get("tienda", "")).strip():
         meta.append(("store", str(row.get("tienda", "")).strip()))
-    meta_html = ''.join('<span class="pm4-mini-meta">' + _pm4_icon(ic, 14) + esc(val) + '</span>' for ic, val in meta[:4])
-    worker = ('<div class="pm4-mini-sub">' + _pm4_icon('user', 14) + esc(str(row.get('nombre', ''))) + '</div>' if show_worker else '')
+    if str(row.get("zona", "")).strip():
+        meta.append(("pin", str(row.get("zona", "")).strip()))
+    meta_html = ''.join(
+        '<span class="pm4-mini-meta" style="display:inline-flex;align-items:center;gap:6px;'
+        'border:1px solid #e3eaf3;border-radius:999px;background:#f6f8fc;'
+        'padding:6px 10px;font-size:.75rem;color:#637792;line-height:1.25;'
+        'max-width:100%;min-width:0;overflow-wrap:anywhere">'
+        + _pm4_icon(icon, 14) + '<span>' + esc(value) + '</span></span>'
+        for icon, value in meta[:4]
+    )
+    worker_html = (
+        '<div class="pm4-mini-sub" style="display:flex;align-items:center;gap:6px;'
+        'font-size:.78rem;color:#74859c;line-height:1.3;margin-top:5px">'
+        + _pm4_icon('user', 14) + '<span>' + esc(str(row.get('nombre', ''))) + '</span></div>'
+        if show_worker else ''
+    )
+    title = esc(str(row.get("titulo", "Actividad programada")))
+    # Distribución compacta real: icono | título y estado | metadatos debajo.
+    # No depende exclusivamente de los selectores st-key del sidebar/Streamlit.
     return (
-        '<article class="pm4-mini-card pm4-mini-card--' + status_class + '">'
-        '<div class="pm4-mini-left"><div class="pm4-mini-icon">' + _pm4_icon(_pm4_task_type(str(row.get('titulo',''))), 20) + '</div></div>'
-        '<div class="pm4-mini-main"><div class="pm4-mini-top">'
-        '<div class="pm4-mini-titlewrap"><h4>' + esc(str(row.get('titulo', 'Actividad programada'))) + '</h4>' + worker + '</div>'
-        '<span class="pm4-mini-status pm4-mini-status--' + status_class + '">' + esc(status_label) + '</span></div>'
-        '<div class="pm4-mini-meta-row">' + meta_html + '</div></div></article>'
+        '<article class="pm4-mini-card pm4-mini-card--' + status_class + '" '
+        'style="display:grid;grid-template-columns:50px minmax(0,1fr);'
+        'align-items:center;gap:13px;min-width:0;width:100%;margin:0;padding:0;'
+        'border:0;background:transparent;box-shadow:none">'
+        '<div class="pm4-mini-icon" style="display:flex;align-items:center;justify-content:center;'
+        'height:50px;width:50px;border-radius:15px;border:1px solid #d7e6fb;'
+        'background:linear-gradient(145deg,#f0f6ff,#e8f1ff);color:#3467b6;flex-shrink:0">'
+        + _pm4_icon(_pm4_task_type(str(row.get('titulo',''))), 23) + '</div>'
+        '<div class="pm4-mini-main" style="min-width:0;flex:1">'
+        '<div class="pm4-mini-top" style="display:flex;align-items:center;'
+        'justify-content:space-between;gap:9px;flex-wrap:wrap;min-width:0">'
+        '<div class="pm4-mini-titlewrap" style="flex:1 1 180px;min-width:0">'
+        '<div style="font-weight:800;font-size:.92rem;line-height:1.35;'
+        'color:#1d304d;margin:0;overflow-wrap:anywhere">' + title + '</div>'
+        + worker_html + '</div>'
+        '<span class="pm4-mini-status pm4-mini-status--' + status_class + '" '
+        'style="display:inline-flex;align-items:center;justify-content:center;'
+        'border-radius:999px;white-space:nowrap;padding:5px 10px;'
+        'background:' + bg + ';color:' + ink + ';border:1px solid ' + outline + ';'
+        'font-size:.72rem;font-weight:800;line-height:1.3">' + esc(status_label) + '</span>'
+        '</div><div class="pm4-mini-meta-row" '
+        'style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;'
+        'margin-top:11px;min-width:0">' + meta_html + '</div></div></article>'
     )
 
 
@@ -20331,9 +20380,16 @@ elif choice == "Rutinas Operativas":
                     with c_staff:
                         with st.container(key="pm4_staff_panel", border=False):
                             distinct = df_day['dni'].astype(str).map(_pm2_dni).nunique()
-                            st.markdown('<div class="pm4-monitor-panel-heading"><h3>'
+                            st.markdown('<div class="pm4-monitor-panel-heading" '
+                                        'style="display:flex;align-items:center;justify-content:space-between;gap:10px;'
+                                        'flex-wrap:wrap;min-height:42px;margin-bottom:14px">'
+                                        '<div role="heading" aria-level="3" '
+                                        'style="display:flex;align-items:center;gap:10px;'
+                                        'font-weight:850;font-size:1.08rem;color:#1c2e4a;line-height:1.35">'
                                         + _pm4_icon('user', 23)
-                                        + 'Avance por colaborador</h3><span class="pm4-panel-count">'
+                                        + 'Avance por colaborador</div><span class="pm4-panel-count" '
+                                        'style="font-size:.75rem;color:#6d7f98;background:#f6f8fc;'
+                                        'border:1px solid #e4ebf4;padding:7px 11px;border-radius:999px">'
                                         + str(distinct) + (' persona' if distinct == 1 else ' personas')
                                         + '</span></div>', unsafe_allow_html=True)
                             for worker_name, group in df_day.groupby("nombre", sort=True):
@@ -20363,15 +20419,24 @@ elif choice == "Rutinas Operativas":
                                 st.markdown(html, unsafe_allow_html=True)
                     with c_list:
                         with st.container(key="pm4_activities_panel", border=False):
-                            st.markdown('<div class="pm4-monitor-panel-heading"><h3>'
+                            st.markdown('<div class="pm4-monitor-panel-heading" '
+                                        'style="display:flex;align-items:center;justify-content:space-between;gap:10px;'
+                                        'flex-wrap:wrap;min-height:42px;margin-bottom:14px">'
+                                        '<div role="heading" aria-level="3" '
+                                        'style="display:flex;align-items:center;gap:10px;'
+                                        'font-weight:850;font-size:1.08rem;color:#1c2e4a;line-height:1.35">'
                                         + _pm4_icon('calendar', 23)
-                                        + 'Actividades programadas</h3><span class="pm4-panel-count">'
+                                        + 'Actividades programadas</div><span class="pm4-panel-count" '
+                                        'style="font-size:.75rem;color:#6d7f98;background:#f6f8fc;'
+                                        'border:1px solid #e4ebf4;padding:7px 11px;border-radius:999px">'
                                         + str(len(df_day)) + (' actividad' if len(df_day)==1 else ' actividades')
                                         + '</span></div>', unsafe_allow_html=True)
                             for _, task in df_day.sort_values(["hora_inicio", "nombre", "titulo"]).iterrows():
                                 task_id = str(task['id_rutina'])
-                                with st.container(key='pm4_activity_row_' + task_id, border=False):
-                                    info_col, action_col = st.columns([5, 1], gap='small', vertical_alignment='center')
+                                with st.container(key='pm4_activity_row_' + task_id, border=True):
+                                    # Un único contenedor con borde envuelve datos y botón.
+                                    # Es nativo y conserva su aspecto incluso si falla CSS adicional.
+                                    info_col, action_col = st.columns([5.4, 1], gap='small', vertical_alignment='center')
                                     with info_col:
                                         st.markdown(_pm2_task_compact_html(task, show_worker=True), unsafe_allow_html=True)
                                     with action_col:
