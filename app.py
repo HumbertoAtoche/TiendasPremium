@@ -12524,8 +12524,97 @@ def _pm2_task_compact_html(row, show_worker=False):
     )
 
 
-def _pm2_admin_focus_worker(label):
-    st.session_state['pm2_monitor_worker'] = label
+def _pm4_admin_dashboard_css():
+    """Solo presentación del seguimiento administrativo; no afecta Mis Rutinas."""
+    st.markdown("""<style>
+    /* Diseño simétrico de seguimiento, mantiene la tipografía global de Premium Market */
+    .st-key-pm4_monitor_filters{background:#fff;border:1px solid #e4ebf4;border-radius:20px;padding:12px 14px;
+      box-shadow:0 14px 29px -26px rgba(29,47,87,.35);margin:10px 0 12px}
+    .st-key-pm4_monitor_filters label p{font-size:.78rem;font-weight:750;color:#6e7e95}
+    .st-key-pm4_monitor_filters [class*="st-key-pm2_admin_refresh"] button{
+      background:#2456a1!important;color:#fff!important;border-color:#2456a1!important;
+      min-height:43px!important;border-radius:12px!important}
+    .st-key-pm4_monitor_filters [class*="st-key-pm2_admin_refresh"] button:hover{
+      background:#174888!important;color:#fff!important}
+    .pm4-admin-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:16px 0 24px}
+    .pm4-admin-kpi{display:flex;align-items:center;gap:15px;border:1px solid #e4ebf4;border-radius:20px;
+      padding:17px 20px;background:#fff;min-width:0;min-height:104px;box-shadow:0 14px 29px -26px rgba(29,47,87,.35)}
+    .pm4-admin-kpi-icon{display:grid;place-items:center;flex:0 0 56px;width:56px;height:56px;border-radius:16px;
+      background:#edf4ff;color:#245db0}
+    .pm4-admin-kpi-icon.green{background:#e8f8ef;color:#128456}
+    .pm4-admin-kpi-icon.gold{background:#fff6e8;color:#bf790c}
+    .pm4-admin-kpi-body{min-width:0}.pm4-admin-kpi-body small{display:block;color:#71839b;font-size:.79rem;font-weight:750;line-height:1.4}
+    .pm4-admin-kpi-body strong{display:block;color:#172a47;font-size:1.85rem;letter-spacing:-.035em;font-weight:850;line-height:1.15;margin-top:4px;font-variant-numeric:tabular-nums}
+    .st-key-pm4_staff_panel,.st-key-pm4_activities_panel{border:1px solid #e4ebf4;border-radius:24px;
+      padding:16px 16px 18px;background:#fff;min-height:450px;box-shadow:0 16px 35px -27px rgba(23,43,83,.26)}
+    .pm4-monitor-panel-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;
+      margin:0 0 16px;min-height:42px}
+    .pm4-monitor-panel-heading h3{display:flex;align-items:center;gap:11px;margin:0!important;font-size:1.10rem!important;
+      font-weight:850!important;line-height:1.4!important;color:#1c2e4a!important}
+    .pm4-monitor-panel-heading h3 .pm4-svg{color:#245b9e;flex-shrink:0}
+    .pm4-panel-count{font-size:.74rem;color:#708198;background:#f5f8fc;border:1px solid #e6edf5;
+      padding:7px 11px;border-radius:999px;white-space:nowrap}
+    .st-key-pm4_staff_panel .pm4-staff-card{margin:0 0 12px!important;padding:14px 15px!important;
+      border-radius:18px!important;box-shadow:none!important;background:#fff!important;border-color:#e5ebf3!important}
+    .st-key-pm4_staff_panel .pm4-staff-track{margin:11px 0 10px!important;height:8px!important}
+    .st-key-pm4_staff_panel .pm4-staff-milestone{padding:9px 10px!important;gap:10px!important;min-height:54px!important}
+    .st-key-pm4_staff_panel .pm4-staff-milestone-icon{height:34px!important;width:34px!important;flex-basis:34px!important}
+    .st-key-pm4_staff_panel .pm4-staff-identity strong{font-size:.84rem!important}
+    .st-key-pm4_staff_panel .pm4-staff-percent{font-size:.83rem!important}
+    .st-key-pm4_staff_panel .pm4-staff-milestone small{font-size:.70rem!important}
+    .st-key-pm4_activities_panel .st-key-pm4_activity_row,.st-key-pm4_activities_panel [class*="st-key-pm4_activity_row_"]{
+      border:1px solid #e0e8f3!important;border-radius:18px!important;background:#fff!important;
+      padding:14px 14px!important;margin-bottom:12px!important;box-shadow:none!important;min-width:0!important}
+    .st-key-pm4_activities_panel [class*="st-key-pm4_activity_row_"] [data-testid="stHorizontalBlock"]{align-items:center!important}
+    .st-key-pm4_activities_panel .pm4-mini-card{border:none!important;background:none!important;padding:0!important;
+      border-radius:0!important;box-shadow:none!important;margin:0!important;gap:12px!important;align-items:center!important}
+    .st-key-pm4_activities_panel .pm4-mini-icon{height:49px!important;width:49px!important;border-radius:14px!important}
+    .st-key-pm4_activities_panel .pm4-mini-titlewrap h4{font-size:.93rem!important;line-height:1.32!important;
+      color:#1c2f4b!important;word-break:break-word}
+    .st-key-pm4_activities_panel .pm4-mini-status{padding:5px 10px!important;font-size:.72rem!important}
+    .st-key-pm4_activities_panel .pm4-mini-meta-row{gap:6px!important;margin-top:9px!important}
+    .st-key-pm4_activities_panel .pm4-mini-meta{padding:5px 8px!important;font-size:.69rem!important;
+      line-height:1.3!important;overflow-wrap:anywhere;max-width:100%}
+    .st-key-pm4_activities_panel .pm4-mini-sub{font-size:.73rem!important;margin-top:5px!important}
+    .st-key-pm4_activities_panel [class*="st-key-pm2_open_task_"] button{
+      min-height:38px!important;border-radius:999px!important;padding:7px 12px!important;
+      background:#fff!important;border:1px solid #d7e1ee!important;color:#274365!important;
+      font-size:.79rem!important;font-weight:750!important;box-shadow:none!important;white-space:nowrap!important}
+    .st-key-pm4_activities_panel [class*="st-key-pm2_open_task_"] button:hover{
+      background:#f0f6ff!important;border-color:#9db9e2!important}
+    .pm4-no-activities{color:#718198;font-size:.84rem;padding:18px 12px;text-align:center;background:#f8fafc;
+      border-radius:14px;border:1px dashed #dfe8f2}
+    @media(max-width:1150px){.pm4-admin-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .st-key-pm4_staff_panel,.st-key-pm4_activities_panel{min-height:0}}
+    @media(max-width:850px){.pm4-admin-kpi{padding:13px 14px;min-height:88px;gap:10px}
+      .pm4-admin-kpi-icon{width:43px;height:43px;flex-basis:43px}.pm4-admin-kpi-body strong{font-size:1.5rem}
+      .st-key-pm4_staff_panel,.st-key-pm4_activities_panel{padding:12px!important;border-radius:18px}}
+    @media(max-width:520px){.pm4-admin-kpis{gap:8px;margin:13px 0 17px}
+      .pm4-admin-kpi{padding:11px 10px;min-height:78px;border-radius:15px;gap:8px}
+      .pm4-admin-kpi-icon{width:35px;height:35px;flex-basis:35px;border-radius:11px}
+      .pm4-admin-kpi-icon .pm4-svg{height:20px;width:20px}
+      .pm4-admin-kpi-body small{font-size:.65rem}.pm4-admin-kpi-body strong{font-size:1.27rem}
+      .pm4-monitor-panel-heading h3{font-size:.94rem!important}
+      .st-key-pm4_activities_panel [class*="st-key-pm4_activity_row_"]{padding:11px!important}
+      .st-key-pm4_activities_panel .pm4-mini-titlewrap h4{font-size:.85rem!important}}
+    </style>""", unsafe_allow_html=True)
+
+
+def _pm4_admin_kpis(df):
+    """KPIs reales del filtro activo, sin modificar cálculos del trabajador."""
+    stats = _pm5_routine_stats(df)
+    cards = [
+        ('user','Colaboradores',stats['workers'],'blue'),
+        ('check','Finalizadas',stats['done'],'green'),
+        ('clock','Pendientes',stats['pending'],'gold'),
+        ('clipboard','Cumplimiento',str(stats['pct'])+'%','blue'),
+    ]
+    parts = ['<section class="pm4-admin-kpis" aria-label="Indicadores de seguimiento">']
+    for icon,label,value,tone in cards:
+        parts.append('<div class="pm4-admin-kpi"><div class="pm4-admin-kpi-icon '+tone+'">'
+                     +_pm4_icon(icon,27)+'</div><div class="pm4-admin-kpi-body"><small>'
+                     +_html.escape(label)+'</small><strong>'+_html.escape(str(value))+'</strong></div></div>')
+    st.markdown(''.join(parts)+'</section>', unsafe_allow_html=True)
 
 
 def _pm2_admin_open_task(task_id):
@@ -20201,21 +20290,21 @@ elif choice == "Rutinas Operativas":
 
         with t_monitor:
             _pm3_show_flash("admin", "review")
-            st.markdown('<div class="pm2-split-title">Control diario</div>', unsafe_allow_html=True)
-            cf, cp, cs, cr = st.columns([1.1, 1.4, 1.05, .8], vertical_alignment="bottom", gap="small")
-            with cf:
-                monitor_date = st.date_input("Fecha", value=obtener_ahora_peru().date(), key="pm2_monitor_date")
-            workers = _pm2_people()
-            people_choices = ["Todos"] + [p["nombre"] + " · " + p["dni"][-4:] for p in workers]
-            map_people = {p["nombre"] + " · " + p["dni"][-4:]: p["dni"] for p in workers}
-            with cp:
-                selected_worker = st.selectbox("Colaborador", people_choices, key="pm2_monitor_worker")
-            with cs:
-                selected_state = st.selectbox("Estado", ["Todos", "Pendiente", "En curso", "Por validar", "Completada", "Cancelada", "Vencida"], key="pm2_monitor_status")
-            with cr:
-                if st.button("Actualizar", key="pm2_admin_refresh", use_container_width=True):
-                    _pm2_clear_cache()
-                    st.rerun()
+            with st.container(key="pm4_monitor_filters", border=False):
+                cf, cp, cs, cr = st.columns([1.1, 1.4, 1.05, .8], vertical_alignment="bottom", gap="small")
+                with cf:
+                    monitor_date = st.date_input("Fecha", value=obtener_ahora_peru().date(), key="pm2_monitor_date")
+                workers = _pm2_people()
+                people_choices = ["Todos"] + [p["nombre"] + " · " + p["dni"][-4:] for p in workers]
+                map_people = {p["nombre"] + " · " + p["dni"][-4:]: p["dni"] for p in workers}
+                with cp:
+                    selected_worker = st.selectbox("Colaborador", people_choices, key="pm2_monitor_worker")
+                with cs:
+                    selected_state = st.selectbox("Estado", ["Todos", "Pendiente", "En curso", "Por validar", "Completada", "Cancelada", "Vencida"], key="pm2_monitor_status")
+                with cr:
+                    if st.button("Actualizar", key="pm2_admin_refresh", use_container_width=True):
+                        _pm2_clear_cache()
+                        st.rerun()
             data, err = _pm2_load()
             if err:
                 st.error(err)
@@ -20228,64 +20317,69 @@ elif choice == "Rutinas Operativas":
                         df_day = df_day[df_day.apply(lambda x: _pm2_state_visual(x)[0] == "Vencida", axis=1)]
                     else:
                         df_day = df_day[df_day["estado"].astype(str) == selected_state]
-                _pm2_metrics(df_day)
+                _pm4_admin_dashboard_css()
+                _pm4_admin_kpis(df_day)
                 waiting_review = int((df_day["estado"].astype(str) == "Por validar").sum()) if not df_day.empty else 0
                 if waiting_review:
                     st.warning(f"Tienes {waiting_review} actividad(es) esperando validación del supervisor.")
                 if df_day.empty:
                     st.info("No hay actividades con estos filtros. Puedes crearlas en «Asignar actividades».")
                 else:
-                    c_staff, c_list = st.columns([.88, 1.5], gap="large")
+                    # Dos paneles equilibrados: conserva los datos, el estilo de tarjetas
+                    # y la edición/validación en un único diálogo de detalle.
+                    c_staff, c_list = st.columns([0.92, 1.38], gap="medium")
                     with c_staff:
-                        st.markdown('<div class="pm2-split-title">Avance por colaborador</div>', unsafe_allow_html=True)
-                        for worker_name, group in df_day.groupby("nombre", sort=True):
-                            active_group = group[group["estado"].astype(str) != "Cancelada"]
-                            done_g = int((active_group["estado"].astype(str) == "Completada").sum())
-                            total_g = len(active_group)
-                            pct = round(done_g * 100 / max(total_g, 1))
-                            dni_g = _pm2_dni(group.iloc[0]["dni"])
-                            _milestone = ("¡Rutina completada!" if total_g and pct == 100 else
-                                          "¡Muy buen avance!" if pct >= 70 else
-                                          "En marcha" if pct else "Jornada por comenzar")
-                            _milestone_txt = ("Todas las actividades de esta selección están validadas." if total_g and pct == 100 else
-                                              "Sigue el progreso de esta persona durante la jornada.")
-                            worker_label = str(worker_name) + " · " + dni_g[-4:]
-                            html = (
-                                '<article class="pm4-staff-card"><div class="pm4-staff-head">'
-                                f'{ui_avatar(str(worker_name), dni_g, "", 48)}'
-                                '<div class="pm4-staff-identity">'
-                                f'<strong>{_html.escape(str(worker_name))}</strong>'
-                                f'<span>{done_g} de {total_g} actividades validadas</span></div>'
-                                f'<span class="pm4-staff-percent">{pct}%</span></div>'
-                                f'<div class="pm4-staff-track"><span style="width:{pct}%"></span></div>'
-                                '<div class="pm4-staff-milestone"><span class="pm4-staff-milestone-icon">'
-                                + _pm4_icon("star" if total_g and pct == 100 else "clipboard", 24)
-                                + '</span><div><strong>' + _milestone + '</strong><small>'
-                                + _milestone_txt + '</small></div></div></article>'
-                            )
-                            st.markdown(html, unsafe_allow_html=True)
-                            st.button("Ver rutinas", key="pm2_focus_" + dni_g, use_container_width=True,
-                                      on_click=_pm2_admin_focus_worker, args=(worker_label,), icon=':material/visibility:')
+                        with st.container(key="pm4_staff_panel", border=False):
+                            distinct = df_day['dni'].astype(str).map(_pm2_dni).nunique()
+                            st.markdown('<div class="pm4-monitor-panel-heading"><h3>'
+                                        + _pm4_icon('user', 23)
+                                        + 'Avance por colaborador</h3><span class="pm4-panel-count">'
+                                        + str(distinct) + (' persona' if distinct == 1 else ' personas')
+                                        + '</span></div>', unsafe_allow_html=True)
+                            for worker_name, group in df_day.groupby("nombre", sort=True):
+                                active_group = group[group["estado"].astype(str) != "Cancelada"]
+                                done_g = int((active_group["estado"].astype(str) == "Completada").sum())
+                                total_g = len(active_group)
+                                pct = round(done_g * 100 / max(total_g, 1))
+                                dni_g = _pm2_dni(group.iloc[0]["dni"])
+                                _milestone = ("¡Rutina completada!" if total_g and pct == 100 else
+                                              "¡Muy buen avance!" if pct >= 70 else
+                                              "En marcha" if pct else "Jornada por comenzar")
+                                _milestone_txt = ("Todas las actividades de esta selección están validadas." if total_g and pct == 100 else
+                                                  "Sigue el progreso de esta persona durante la jornada.")
+                                html = (
+                                    '<article class="pm4-staff-card"><div class="pm4-staff-head">'
+                                    f'{ui_avatar(str(worker_name), dni_g, "", 48)}'
+                                    '<div class="pm4-staff-identity">'
+                                    f'<strong>{_html.escape(str(worker_name))}</strong>'
+                                    f'<span>{done_g} de {total_g} actividades validadas</span></div>'
+                                    f'<span class="pm4-staff-percent">{pct}%</span></div>'
+                                    f'<div class="pm4-staff-track"><span style="width:{pct}%"></span></div>'
+                                    '<div class="pm4-staff-milestone"><span class="pm4-staff-milestone-icon">'
+                                    + _pm4_icon("star" if total_g and pct == 100 else "clipboard", 24)
+                                    + '</span><div><strong>' + _milestone + '</strong><small>'
+                                    + _milestone_txt + '</small></div></div></article>'
+                                )
+                                st.markdown(html, unsafe_allow_html=True)
                     with c_list:
-                        st.markdown('<div class="pm2-split-title">Actividades programadas</div>', unsafe_allow_html=True)
-                        df_day = df_day.sort_values(["hora_inicio", "nombre", "titulo"])
-                        if selected_worker != "Todos":
-                            st.caption("Mostrando las actividades del colaborador seleccionado. Usa el filtro superior o las tarjetas de la izquierda para cambiar de persona.")
-                        else:
-                            st.caption("Vista compacta: revisa una actividad por vez con el botón de detalle.")
-                        _summary = df_day.copy()
-                        st.markdown('<style>.pm4-mini-card{display:flex;gap:14px;align-items:flex-start;border:1px solid #e6edf5;background:#fff;border-radius:20px;padding:15px 16px;box-shadow:0 16px 32px -28px rgba(28,40,69,.28)}.pm4-mini-left{flex:0 0 auto}.pm4-mini-icon{width:54px;height:54px;border-radius:16px;display:grid;place-items:center;background:#f4f8ff;color:#2f61b2;border:1px solid #dbe7f7}.pm4-mini-main{min-width:0;flex:1}.pm4-mini-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}.pm4-mini-titlewrap h4{margin:0;color:#20314a;font-size:1.08rem;line-height:1.35}.pm4-mini-sub{display:flex;align-items:center;gap:6px;color:#708199;font-size:.83rem;margin-top:5px}.pm4-mini-meta-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.pm4-mini-meta{display:inline-flex;align-items:center;gap:6px;font-size:.78rem;color:#607087;background:#f7f9fc;border:1px solid #e8edf4;padding:6px 9px;border-radius:999px}.pm4-mini-status{display:inline-flex;align-items:center;justify-content:center;padding:7px 12px;border-radius:999px;font-size:.79rem;font-weight:800;border:1px solid transparent}.pm4-mini-status--done{background:#e9f9ef;color:#1a8c53;border-color:#cbeed8}.pm4-mini-status--active{background:#e9f2ff;color:#2458bd;border-color:#d8e4ff}.pm4-mini-status--pending,.pm4-mini-status--urgent{background:#fff5e8;color:#9a620c;border-color:#f7e0bb}.pm4-mini-status--reviewing{background:#eef3ff;color:#3256c7;border-color:#dbe3ff}.pm4-mini-status--cancelled{background:#fff1f1;color:#b94a58;border-color:#f5d7db}@media(max-width:780px){.pm4-mini-top{flex-direction:column;align-items:flex-start}}</style>', unsafe_allow_html=True)
-                        for _, task in _summary.iterrows():
-                            task_id = str(task['id_rutina'])
-                            with st.container(border=False, key='pm2_admin_compact_' + task_id):
-                                row_left, row_right = st.columns([1, .22], vertical_alignment='center')
-                                with row_left:
-                                    st.markdown(_pm2_task_compact_html(task, show_worker=(selected_worker == 'Todos')), unsafe_allow_html=True)
-                                with row_right:
-                                    st.button('Ver', key='pm2_open_task_' + task_id, use_container_width=True,
-                                              on_click=_pm2_admin_open_task, args=(task_id,), icon=':material/visibility:')
-                        if st.session_state.get('_pm2_admin_task_open'):
-                            _pm2_admin_task_dialog(st.session_state.get('_pm2_admin_task_open'))
+                        with st.container(key="pm4_activities_panel", border=False):
+                            st.markdown('<div class="pm4-monitor-panel-heading"><h3>'
+                                        + _pm4_icon('calendar', 23)
+                                        + 'Actividades programadas</h3><span class="pm4-panel-count">'
+                                        + str(len(df_day)) + (' actividad' if len(df_day)==1 else ' actividades')
+                                        + '</span></div>', unsafe_allow_html=True)
+                            for _, task in df_day.sort_values(["hora_inicio", "nombre", "titulo"]).iterrows():
+                                task_id = str(task['id_rutina'])
+                                with st.container(key='pm4_activity_row_' + task_id, border=False):
+                                    info_col, action_col = st.columns([5, 1], gap='small', vertical_alignment='center')
+                                    with info_col:
+                                        st.markdown(_pm2_task_compact_html(task, show_worker=True), unsafe_allow_html=True)
+                                    with action_col:
+                                        st.button('Ver', key='pm2_open_task_' + task_id,
+                                                  on_click=_pm2_admin_open_task, args=(task_id,),
+                                                  use_container_width=True, icon=':material/visibility:')
+                    if st.session_state.get('_pm2_admin_task_open'):
+                        _pm2_admin_task_dialog(st.session_state['_pm2_admin_task_open'])
 
         with t_create:
             st.markdown('<div class="pm2-split-title">Nueva asignación personalizada</div>', unsafe_allow_html=True)
