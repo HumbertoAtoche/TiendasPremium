@@ -14779,6 +14779,16 @@ if rol_real == "admin":
         st.session_state["ver_como_sel"] = "Mi vista (admin)"
     st.sidebar.markdown('<div class="tp-note-t" style="margin:2px 2px 6px">Ver como colaborador</div>', unsafe_allow_html=True)
     st.sidebar.selectbox("Ver como colaborador", _opc_vc, key="ver_como_sel", on_change=_cambiar_preview, label_visibility="collapsed")
+# STREAMLIT: los botones pueden solicitar navegación DESPUÉS de que el menú
+# radio ya fue construido. Aplicar el destino solamente ANTES de crear
+# los widgets nav_radio y gs_q evita StreamlitWidgetAlreadyInstantiatedError.
+_pm_nav_requested = st.session_state.pop('_pm_navigation_requested', None)
+if isinstance(_pm_nav_requested, str) and _pm_nav_requested:
+    _pm_nav_requested = 'Mi Expediente' if _pm_nav_requested == 'Mi Ficha Técnica' else _pm_nav_requested
+    if _pm_nav_requested in menu:
+        st.session_state['nav_radio'] = _pm_nav_requested
+        st.session_state['gs_q'] = ''
+
 st.sidebar.markdown('<div class="tp-note-t" style="margin:8px 2px 5px">Búsqueda rápida</div>', unsafe_allow_html=True)
 st.sidebar.text_input("Buscar", key="gs_q", placeholder="Buscar personas, solicitudes, secciones…", label_visibility="collapsed")
 if st.session_state.get("nav_radio") == "Mi Ficha Técnica":
@@ -14788,8 +14798,14 @@ if st.session_state.get("nav_radio") not in menu:
     st.session_state["nav_radio"] = menu[0]
 
 def _ir_a(destino):
-    st.session_state["nav_radio"] = "Mi Expediente" if destino == "Mi Ficha Técnica" else destino
-    st.session_state["gs_q"] = ""
+    """Navegación diferida: nunca muta widgets ya instanciados.
+
+    Funciona tanto desde callbacks (sidebar, móvil, avisos) como desde
+    botones mostrados debajo del radio de navegación (recordatorios).
+    """
+    st.session_state['_pm_navigation_requested'] = (
+        'Mi Expediente' if destino == 'Mi Ficha Técnica' else str(destino)
+    )
 
 # Centro de avisos del sidebar, sin popups ni cambios al menú de navegación.
 # Las boletas son datos privados: trabajador = su DNI, admin = equipo.
@@ -15693,6 +15709,7 @@ def _pm_cerrar_sesion():
         st.session_state["pm_acceso_visible"] = False
         st.session_state.pop("nav_radio", None)
         st.session_state.pop("gs_q", None)
+        st.session_state.pop("_pm_navigation_requested", None)
 
 # Herramientas del sidebar clásico, manteniendo cierre de sesión seguro.
 st.sidebar.markdown('<div style="height:16px"></div>', unsafe_allow_html=True)
@@ -16208,8 +16225,7 @@ def _pm_bottle_notify_once():
             if st.button("Ver devoluciones", key="pm_bottle_toast_go", type="primary", use_container_width=True):
                 st.session_state["_tp_botellas_aviso_login"] = True
                 st.session_state.pop("_pm_bottle_notice_started", None)
-                st.session_state["nav_radio"] = "Botellas Fiadas"
-                st.session_state["gs_q"] = ""
+                _ir_a("Botellas Fiadas")
                 st.rerun()
         with b_close:
             if st.button("Después", key="pm_bottle_toast_later", use_container_width=True):
