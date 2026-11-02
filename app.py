@@ -14673,41 +14673,150 @@ def _pm_av_prepare():
 
 
 def _pm_av_open_message(target):
+    _pm_av_close_panel()
     _ir_a(target)
     if target == 'Mis Rutinas':
         # Los comentarios antiguos deben encontrarse aunque la vista abra por defecto en «Hoy».
         st.session_state['pm2_worker_scope'] = 'Historial completo'
 
 
-def _pm_av_render_inbox(messages, read_ids, ready):
+def _pm_av_request_panel():
+    st.session_state['_pm_av_panel_owner'] = _pm2_dni(dni_actual)
+    st.session_state['_pm_av_panel_open'] = True
+
+
+def _pm_av_close_panel():
+    st.session_state['_pm_av_panel_open'] = False
+
+
+@st.dialog("Mensajes del supervisor y administración", width="large", **_pm_dialog_dismiss_kwargs(_pm_av_close_panel))
+def _pm_av_dialog(messages, read_ids, ready):
     unread = [m for m in messages if m['id'] not in read_ids]
     if not unread:
+        st.success('No tienes mensajes pendientes por leer.')
+        if st.button('Cerrar', key='pm_av_dialog_close_empty', use_container_width=True):
+            _pm_av_close_panel()
+            st.rerun()
         return
-    with st.sidebar.expander(f'Mensajes del supervisor y administración · {len(unread)}', expanded=False):
-        st.caption('Revisa cada mensaje y confirma su lectura. No modifica la aprobación de tu tarea.')
-        if not ready:
-            st.warning('Administración debe activar primero el registro de lecturas.')
-        for idx, m in enumerate(unread[:8]):
-            st.markdown('**' + _html.escape(m['titulo']) + '**')
-            st.caption(str(m['fecha'])[:16])
-            st.write(m['texto'])
-            a,b = st.columns(2)
-            with a:
-                st.button('Abrir módulo', key='pm_av_open_'+m['id'], use_container_width=True,
-                          on_click=_pm_av_open_message, args=(m['modulo'],))
-            with b:
-                if st.button('Marcar leído', key='pm_av_ack_'+m['id'],
-                             disabled=not ready or bool(st.session_state.get('ver_como')),
-                             use_container_width=True):
-                    try:
-                        _pm_av_ack(m['id'])
-                        st.rerun()
-                    except Exception:
-                        st.error('No se pudo confirmar la lectura. Revisa la conexión y vuelve a intentarlo.')
-            if idx < min(len(unread),8)-1:
-                st.divider()
-        if len(unread)>8:
-            st.caption(f'Hay {len(unread)-8} mensaje(s) adicional(es). Confirma los anteriores para verlos.')
+    st.markdown('''<style>
+    .pm-av-wrap{display:flex;flex-direction:column;gap:12px;padding-top:2px}
+    .pm-av-card{border:1px solid #e8edf4;border-radius:18px;background:linear-gradient(180deg,#ffffff,#fbfcff);padding:16px 16px 14px;box-shadow:0 14px 28px -26px rgba(22,35,57,.35)}
+    .pm-av-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+    .pm-av-meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+    .pm-av-chip{display:inline-flex;align-items:center;padding:5px 10px;border-radius:999px;font-size:.72rem;font-weight:780;border:1px solid #e4e9f0;background:#f9fbfd;color:#516274}
+    .pm-av-chip.mod{background:#eef5ff;border-color:#d7e6ff;color:#2458bd}
+    .pm-av-chip.tipo{background:#fff4e8;border-color:#fde2be;color:#9a5b0a}
+    .pm-av-title{font-size:1.05rem;font-weight:850;color:#1f2f46;line-height:1.35;margin:0}
+    .pm-av-date{font-size:.78rem;color:#708199;white-space:nowrap}
+    .pm-av-text{font-size:.95rem;line-height:1.65;color:#31445f;background:#f9fbfd;border:1px solid #edf1f6;padding:12px 13px;border-radius:14px;margin:10px 0 14px;white-space:pre-wrap}
+    .pm-av-headnote{padding:12px 14px;border-radius:16px;border:1px solid #f0d7a6;background:#fff8eb;color:#935e12;font-size:.88rem;line-height:1.6;margin-bottom:12px}
+    </style>''', unsafe_allow_html=True)
+    st.markdown('<div class="pm-av-headnote"><b>Tienes ' + str(len(unread)) + ' mensaje(s) pendiente(s)</b><br>Se muestran por módulo, tema y fecha para que entiendas rápidamente de qué se trata cada comentario.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="pm-av-wrap">', unsafe_allow_html=True)
+    for idx, m in enumerate(unread[:12]):
+        modulo = _html.escape(str(m.get('modulo') or 'Premium Market'))
+        tipo = _html.escape(str(m.get('tipo') or 'mensaje').capitalize())
+        titulo = _html.escape(str(m.get('titulo') or 'Mensaje'))
+        fecha = _html.escape(str(m.get('fecha') or '')[:16])
+        texto = _html.escape(str(m.get('texto') or ''))
+        st.markdown(
+            '<div class="pm-av-card"><div class="pm-av-top"><div style="min-width:0;flex:1">'
+            '<div class="pm-av-meta"><span class="pm-av-chip mod">' + modulo + '</span><span class="pm-av-chip tipo">' + tipo + '</span></div>'
+            '<p class="pm-av-title">' + titulo + '</p></div><div class="pm-av-date">' + fecha + '</div></div>'
+            '<div class="pm-av-text">' + texto + '</div></div>', unsafe_allow_html=True)
+        c1, c2 = st.columns(2)
+        with c1:
+            st.button('Abrir origen', key='pm_av_dialog_open_' + m['id'], use_container_width=True,
+                      on_click=_pm_av_open_message, args=(m['modulo'],))
+        with c2:
+            if st.button('Marcar leído', key='pm_av_dialog_ack_' + m['id'],
+                         disabled=not ready or bool(st.session_state.get('ver_como')), use_container_width=True, type='primary'):
+                try:
+                    _pm_av_ack(m['id'])
+                    st.session_state['_pm_av_panel_open'] = True
+                    st.rerun()
+                except Exception:
+                    st.error('No se pudo registrar la lectura. Revisa la conexión y vuelve a intentarlo.')
+        if idx < min(len(unread), 12) - 1:
+            st.divider()
+    st.markdown('</div>', unsafe_allow_html=True)
+    if len(unread) > 12:
+        st.caption(f'Hay {len(unread)-12} mensaje(s) adicional(es). Marca algunos como leídos para ver el resto.')
+    a,b=st.columns([1,1])
+    with a:
+        if st.button('Cerrar panel', key='pm_av_dialog_close', use_container_width=True):
+            _pm_av_close_panel()
+            st.rerun()
+    with b:
+        st.button('Ir a Marcar Asistencia', key='pm_av_dialog_go_home', use_container_width=True,
+                  on_click=_pm_av_open_message, args=('Marcar Asistencia',))
+
+
+def _pm_av_home_summary():
+    """Bandeja central en Marcar Asistencia: lectura sin consultar Sheets de nuevo."""
+    if rol_actual == 'admin' or st.session_state.get('ver_como'):
+        return
+    unread = st.session_state.get('_pm_av_unread') or []
+    if not unread:
+        return
+    count = len(unread)
+    modules = list(dict.fromkeys(str(m.get('modulo') or 'Premium Market') for m in unread))
+    preview = []
+    for item in unread[:2]:
+        title = _html.escape(str(item.get('titulo') or 'Mensaje'))
+        module = _html.escape(str(item.get('modulo') or 'Premium Market'))
+        date_value = _html.escape(str(item.get('fecha') or '')[:16])
+        excerpt_raw = str(item.get('texto') or '').strip().replace('\n',' ')
+        excerpt = _html.escape(excerpt_raw[:146] + ('…' if len(excerpt_raw)>146 else ''))
+        preview.append(
+            '<div class="pm-avh-item"><div class="pm-avh-item-top"><span class="pm-avh-tag">' + module + '</span>'
+            '<small>' + date_value + '</small></div><strong>' + title + '</strong><p>' + excerpt + '</p></div>'
+        )
+    st.markdown("""<style>
+    .pm-avh-card{margin:9px 0 18px;border:1px solid #efd8df;border-radius:22px;background:linear-gradient(125deg,#fff 0%,#fffafb 75%,#fff3f5 100%);
+      box-shadow:0 18px 30px -28px rgba(113,28,53,.3);padding:18px 19px 16px;overflow:hidden}
+    .pm-avh-head{display:flex;align-items:center;gap:13px;flex-wrap:wrap;margin-bottom:15px}
+    .pm-avh-icon{flex:none;width:49px;height:49px;border-radius:16px;display:grid;place-items:center;color:#bf304c;
+      background:#ffedf1;border:1px solid #f9d9e0}
+    .pm-avh-icon svg{width:25px;height:25px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+    .pm-avh-heading{flex:1 1 240px;min-width:0}.pm-avh-heading small{display:block;font-size:.68rem;letter-spacing:.11em;font-weight:850;
+      color:#b2314a;margin-bottom:4px}.pm-avh-heading strong{display:block;color:#1e2f49;font-size:1.12rem;line-height:1.35;font-weight:850}
+    .pm-avh-heading p{margin:4px 0 0;font-size:.8rem;line-height:1.5;color:#728198}
+    .pm-avh-count{font-size:.74rem;font-weight:800;color:#a12a42;background:#fff0f3;border:1px solid #f6d4dc;
+      border-radius:999px;padding:7px 11px;white-space:nowrap}
+    .pm-avh-items{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:10px}
+    .pm-avh-item{min-width:0;border:1px solid #e9edf4;background:#fff;padding:12px 14px;border-radius:15px}
+    .pm-avh-item-top{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:7px;margin-bottom:7px}
+    .pm-avh-tag{font-size:.67rem;color:#9c3751;background:#fff0f4;border-radius:999px;padding:4px 8px;font-weight:800}
+    .pm-avh-item-top small{font-size:.71rem;color:#7a899c}
+    .pm-avh-item strong{display:block;font-size:.84rem;font-weight:810;color:#253751;line-height:1.45;overflow-wrap:anywhere}
+    .pm-avh-item p{font-size:.78rem;line-height:1.55;color:#6e7e94;margin:5px 0 0;overflow-wrap:anywhere}
+    .pm-avh-foot{font-size:.76rem;color:#718198;line-height:1.5;margin:5px 0 0}
+    .st-key-pm_av_home_center [data-testid="stButton"] button{border-radius:13px!important;min-height:46px!important}
+    @media(max-width:680px){.pm-avh-card{padding:15px;border-radius:19px;margin:7px 0 14px}
+       .pm-avh-items{grid-template-columns:1fr}.pm-avh-icon{width:44px;height:44px;border-radius:14px}
+       .pm-avh-heading strong{font-size:1rem}}
+    </style>""", unsafe_allow_html=True)
+    module_list = ', '.join(_html.escape(m) for m in modules[:3])
+    if len(modules)>3:
+        module_list += ' y otros'
+    with st.container(key='pm_av_home_center'):
+        st.markdown(
+            '<div class="pm-avh-card"><div class="pm-avh-head"><span class="pm-avh-icon" aria-hidden="true">'
+            '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="15" rx="3"/>'
+            '<path d="m4 7 8 7 8-7"/><path d="M17 3h4v4"/></svg></span>'
+            '<div class="pm-avh-heading"><small>CENTRO DE MENSAJES</small><strong>'
+            + ('Tienes 1 mensaje por leer' if count == 1 else f'Tienes {count} mensajes por leer')
+            + '</strong><p>Comentarios y respuestas de tu equipo, reunidos en un solo lugar.</p></div>'
+            '<span class="pm-avh-count">' + str(count) + ' sin leer</span></div>'
+            '<div class="pm-avh-items">' + ''.join(preview) + '</div>'
+            '<p class="pm-avh-foot">Procedencia: ' + module_list + '. Confirma tu lectura desde el panel de mensajes.</p></div>',
+            unsafe_allow_html=True)
+        st.button('Leer mis mensajes', key='pm_av_home_open', type='primary',
+                  icon=':material/mark_email_unread:', use_container_width=True,
+                  on_click=_pm_av_request_panel)
+        if not st.session_state.get('_pm_av_ready', False):
+            st.caption('Puedes consultar los mensajes; para confirmar su lectura, administración debe activar Avisos_Lecturas.')
 
 
 def _pm_sidebar_active_alerts():
@@ -14773,7 +14882,7 @@ def _pm_sidebar_active_alerts():
             unread = [m for m in messages if m['id'] not in reads]
             st.session_state['_pm_av_unread'] = unread
             if unread:
-                alerts.append(('Mensajes sin leer',len(unread),unread[0]['modulo'],
+                alerts.append(('Mensajes sin leer',len(unread),'Marcar Asistencia',
                                ':material/markunread:','pm_notice_messages'))
         except Exception as exc:
             print('Premium: lectura de mensajes:', type(exc).__name__)
@@ -14816,12 +14925,7 @@ if _pm_sidebar_errors:
     st.sidebar.caption('Algunos avisos no pudieron actualizarse: ' + ', '.join(sorted(set(_pm_sidebar_errors))))
 if not _pm_sidebar_alerts and not _pm_sidebar_errors:
     st.sidebar.caption('Sin acciones pendientes.')
-if rol_actual!='admin' and st.session_state.get('_pm_av_unread'):
-    try:
-        seen_ids, _ready = _pm_av_receipts()
-    except Exception:
-        seen_ids, _ready = set(), False
-    _pm_av_render_inbox(st.session_state.get('_pm_av_current_messages', []), seen_ids, _ready)
+# La bandeja detallada vive en Marcar Asistencia; el sidebar conserva su contador.
 if rol_actual=='admin':
     with st.sidebar.expander('Configuración de mensajes', expanded=False):
         st.caption('Una sola hoja de control de lectura, sin alterar Rutinas ni Boletas. Ejecuta una vez.')
@@ -14833,6 +14937,16 @@ if rol_actual=='admin':
                 st.error('No se pudieron preparar los mensajes. Comprueba Google Sheets y sus permisos.')
 st.sidebar.button('Actualizar avisos',key='pm_notice_refresh',
                   icon=':material/refresh:',use_container_width=True,on_click=_pm_sidebar_refresh)
+
+if rol_actual!='admin' and st.session_state.get('_pm_av_panel_open'):
+    if st.session_state.get('_pm_av_panel_owner') != _pm2_dni(dni_actual):
+        _pm_av_close_panel()
+    else:
+        try:
+            _seen_ids, _ready_panel = _pm_av_receipts(force=False)
+        except Exception:
+            _seen_ids, _ready_panel = set(), False
+        _pm_av_dialog(st.session_state.get('_pm_av_current_messages', []), _seen_ids, _ready_panel)
 
 st.markdown("""<style>
 section[data-testid="stSidebar"] [class*="st-key-pm_notice_"] button{
@@ -16238,6 +16352,10 @@ elif choice == "Marcar Asistencia":
     premium_module_shell('Marcar Asistencia', 'MI JORNADA', 'Registra y consulta tus marcaciones.')
     _pm_attendance_ui_styles()
 
+    # Único centro visible de mensajes de supervisor, boletas y solicitudes.
+    # El sidebar conserva únicamente el contador para el acceso rápido.
+    _pm_av_home_summary()
+
     # Recordatorio breve al abrir la jornada: no compite con los diálogos
     # existentes ni invade otras vistas. Se puede descartar durante el día.
     _pm5_daily_worker_notice()
@@ -16379,26 +16497,6 @@ elif choice == "Mis Rutinas":
     premium_module_shell("Mis Rutinas", "MI OPERACIÓN", "Tus actividades asignadas con fecha, hora, lugar e instrucciones claras.")
     with st.container(key="pm_v_mis_rutinas"):
         _pm2_css()
-        _my_messages = st.session_state.get('_pm_av_unread', [])
-        if _my_messages:
-            st.markdown('<div class="pm4-daily-note" style="padding:14px 17px;border-radius:16px;'
-                        'background:#fff8ed;border:1px solid #f2dbad;margin-bottom:14px">'
-                        '<b style="color:#915d11">Tienes '+str(len(_my_messages))+' mensaje(s) de supervisión o administración por leer</b>'
-                        '</div>', unsafe_allow_html=True)
-            with st.expander('Leer comentarios y respuestas pendientes', expanded=True):
-                st.caption('Los comentarios se conservan en su actividad o documento original. Confirmar lectura no aprueba ni modifica tareas.')
-                for _note in _my_messages[:8]:
-                    st.markdown('**'+_html.escape(_note['titulo'])+'**')
-                    st.caption(str(_note['fecha'])[:16])
-                    st.write(_note['texto'])
-                    if st.button('Ya leí este mensaje', key='pm_av_rut_ack_'+_note['id'],
-                                 disabled=not st.session_state.get('_pm_av_ready',False) or bool(st.session_state.get('ver_como'))):
-                        try:
-                            _pm_av_ack(_note['id'])
-                            st.rerun()
-                        except Exception:
-                            st.error('No se pudo registrar la lectura. Intenta nuevamente.')
-                    st.divider()
         # El encabezado blanco ya ofrece el contexto de esta pantalla.
         # Sin banner duplicado: las actividades comienzan directamente.
         data, err = _pm2_load()
