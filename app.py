@@ -4041,11 +4041,39 @@ def _pme_styles():
     .pme-empty{padding:21px;border:1px dashed #dce5f0;background:#fafbfd;border-radius:17px;color:#667994;
       font-size:.87rem;line-height:1.55;margin:10px 0}
     .pme-section{font-size:.99rem;font-weight:850;color:#20334d;margin:19px 0 12px}
+    .pme-hero{position:relative;overflow:hidden;border:1px solid #e6ebf2;border-radius:24px;background:linear-gradient(135deg,#ffffff 0%,#f8fbff 68%,#fff4f6 100%);
+      box-shadow:0 18px 34px -26px rgba(21,33,52,.34);padding:22px 22px 18px;margin:16px 0 18px}
+    .pme-hero::before{content:'';position:absolute;inset:auto -55px -70px auto;width:180px;height:180px;border-radius:50%;
+      background:radial-gradient(circle,rgba(236,50,55,.12),rgba(236,50,55,0));pointer-events:none}
+    .pme-hero-main{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:16px;position:relative;z-index:1}
+    .pme-hero-copy{min-width:0;flex:1 1 360px}.pme-hero-copy h3{font-size:1.25rem;line-height:1.28;margin:6px 0 7px;color:#18263d;font-weight:850}
+    .pme-hero-copy p{margin:0;color:#677a91;font-size:.88rem;line-height:1.6}
+    .pme-kicker{display:inline-flex;align-items:center;gap:8px;font-size:.72rem;font-weight:800;letter-spacing:.11em;text-transform:uppercase;color:#b22842}
+    .pme-kicker::before{content:'';width:8px;height:8px;border-radius:50%;background:currentColor}
+    .pme-pills{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.pme-pill{display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border-radius:999px;font-size:.74rem;font-weight:700;border:1px solid #e7edf4;background:#fff;color:#506177}
+    .pme-pill i{width:7px;height:7px;border-radius:50%;background:currentColor;display:inline-block}
+    .pme-pill.ok{background:#e9f7ef;color:#0f8459;border-color:#bfe7d0}.pme-pill.warn{background:#fff6e6;color:#a56a0f;border-color:#f7dfad}.pme-pill.info{background:#eaf1ff;color:#2357c8;border-color:#cad8ff}
+    .pme-focus{min-width:210px;flex:0 0 230px;border-radius:18px;padding:14px 15px;border:1px solid #e7edf4;background:rgba(255,255,255,.86);backdrop-filter:blur(4px)}
+    .pme-focus small{display:block;font-size:.69rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#7a889c;margin-bottom:5px}.pme-focus strong{display:block;font-size:1rem;color:#1b2b44;font-weight:850;line-height:1.35}.pme-focus span{display:block;font-size:.8rem;color:#6e8096;line-height:1.55;margin-top:5px}
+    .pme-focus.ok{border-color:#bfe7d0;background:#f4fbf7}.pme-focus.warn{border-color:#f3d8a2;background:#fffaf0}.pme-focus.info{border-color:#cfdbff;background:#f4f7ff}
+    .pme-stat-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px;position:relative;z-index:1}
+    .pme-stat{border:1px solid #e7edf4;border-radius:18px;background:#fff;padding:14px 15px;min-width:0;box-shadow:0 10px 22px -22px rgba(17,27,46,.3)}
+    .pme-stat small{display:block;color:#73839a;font-size:.72rem;font-weight:780;letter-spacing:.02em}.pme-stat strong{display:block;margin-top:4px;color:#1b2d45;font-size:1.35rem;font-weight:850;line-height:1.1;font-variant-numeric:tabular-nums}
+    .pme-stat span{display:block;color:#7a8aa1;font-size:.75rem;line-height:1.45;margin-top:6px}
+    .st-key-pme_portal [data-baseweb="tab-list"]{gap:8px;overflow-x:auto;overflow-y:hidden;padding:2px 0 10px;flex-wrap:nowrap;scrollbar-width:none}
+    .st-key-pme_portal [data-baseweb="tab-list"]::-webkit-scrollbar{display:none}
+    .st-key-pme_portal [data-baseweb="tab"]{height:auto!important;min-height:42px;border-radius:14px!important;border:1px solid #e5eaf1!important;background:#fff!important;padding:10px 14px!important;color:#4b5c73!important;font-weight:700!important;white-space:nowrap;box-shadow:0 6px 16px -18px rgba(20,31,49,.3)!important}
+    .st-key-pme_portal [aria-selected="true"]{background:#fff1f3!important;border-color:#f1ccd3!important;color:#a3263d!important;box-shadow:0 10px 20px -18px rgba(181,38,63,.45)!important}
+    .st-key-pme_portal [data-testid="stExpander"]{border:1px solid #e8edf4;border-radius:16px;background:#fff;box-shadow:0 10px 22px -22px rgba(19,29,48,.25)}
+    .st-key-pme_portal [data-testid="stExpander"] details summary{padding-top:2px;padding-bottom:2px}
     .st-key-pme_portal [data-testid="stFileUploader"]{border-radius:16px;background:#fff}
+    @media(max-width:980px){.pme-stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.pme-focus{flex-basis:100%}}
     @media(max-width:780px){.pme-overview{padding:16px;border-radius:19px}
       .pme-data-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
       .pme-datum{padding:11px 12px}.pme-datum strong{font-size:.82rem}
-      .pme-row{padding:12px 13px}.pme-symbol{width:47px;height:47px;border-radius:15px}}
+      .pme-row{padding:12px 13px}.pme-symbol{width:47px;height:47px;border-radius:15px}
+      .pme-hero{padding:17px 16px 15px;border-radius:20px}.pme-hero-copy h3{font-size:1.08rem}.pme-stat strong{font-size:1.2rem}}
+    @media(max-width:500px){.pme-stat-grid,.pme-data-grid{grid-template-columns:1fr}.pme-pills{gap:6px}.pme-pill{font-size:.71rem;padding:5px 9px}.st-key-pme_portal [data-baseweb="tab"]{padding:9px 12px!important;font-size:.86rem!important}}
     @media(max-width:360px){.pme-data-grid{grid-template-columns:1fr}}
     </style>''', unsafe_allow_html=True)
 
@@ -4110,6 +4138,83 @@ def _pme_file_button(dni, entry, kind, identity):
                        key=f'pme_save_{identity}_{document_id}', use_container_width=True)
 
 
+def _pme_overview_panel(dni, admin, case, files, valid_files, received_items, trainings, certificates):
+    """Resumen visual del expediente; solo presentación."""
+    try:
+        videos = sorted(_pmx_videos(dni), key=lambda x: x.get('publicado_el', ''), reverse=True)
+        progress = [r for r in _pmx_rows(_PMX_WATCH) if _pmi_dni(r.get('dni')) == _pmi_dni(dni)]
+    except Exception:
+        videos, progress = [], []
+    done = {r.get('id_video') for r in progress if r.get('estado') == 'Declarado visto'}
+    done_count = len([v for v in videos if v.get('id_video') in done])
+    total_videos = len(videos)
+    try:
+        exit_case, exit_items, exit_docs = _pmx_case_records(dni)
+    except Exception:
+        exit_case, exit_items, exit_docs = None, [], []
+    pending_items = len([r for r in exit_items if str(r.get('estado', '')).strip() != 'Completado'])
+    pending_docs = len([r for r in exit_docs if str(r.get('estado', '')).strip() != 'Recibido'])
+    pending_exit = pending_items + pending_docs
+
+    if exit_case and str(exit_case.get('estado', '')).strip() != 'Cerrado':
+        tone = 'warn'
+        title = 'Salida digital en curso' if not admin else 'Expediente con salida digital en curso'
+        desc = ('Revisa devoluciones, validación administrativa y documentos pendientes antes del cierre.'
+                if admin else 'Verifica tus devoluciones y documentos para completar el cierre del expediente.')
+    elif total_videos and done_count < total_videos:
+        tone = 'info'
+        title = 'Inducción pendiente por completar' if not admin else 'El colaborador aún tiene inducción pendiente'
+        desc = ('Tienes materiales audiovisuales por revisar dentro de tu proceso de inducción.'
+                if not admin else 'Todavía hay materiales de inducción pendientes de confirmación en este expediente.')
+    elif case and files and len(valid_files) < len(files):
+        tone = 'warn'
+        title = 'Documentación aún en proceso'
+        desc = ('Todavía hay documentos o validaciones por completar en el expediente.'
+                if admin else 'Tus documentos siguen en revisión o requieren seguimiento por parte de administración.')
+    else:
+        tone = 'ok'
+        title = 'Expediente al día'
+        desc = ('La ficha, documentos visibles e inducción se muestran consolidados en un solo lugar.'
+                if admin else 'Tu información principal, documentos, inducción y constancias se ven consolidados en un solo espacio.')
+
+    chips = []
+    chips.append('<span class="pme-pill ' + ('ok' if case else 'info') + '"><i></i>' + ('Con incorporación registrada' if case else 'Sin incorporación registrada') + '</span>')
+    if exit_case:
+        cls = 'ok' if str(exit_case.get('estado', '')).strip() == 'Cerrado' else 'warn'
+        chips.append('<span class="pme-pill ' + cls + '"><i></i>Salida digital: ' + _html.escape(str(exit_case.get('estado') or 'En proceso')) + '</span>')
+    else:
+        chips.append('<span class="pme-pill info"><i></i>Sin salida digital activa</span>')
+    if total_videos:
+        chips.append('<span class="pme-pill info"><i></i>Videos de inducción: ' + str(done_count) + '/' + str(total_videos) + '</span>')
+
+    stats = [
+        ('Documentos validados', str(len(valid_files)), (str(len(files) - len(valid_files)) + ' pendiente(s)') if files else 'Sin archivos registrados'),
+        ('Entregas confirmadas', str(len(received_items)), 'Uniformes y equipos con conformidad'),
+        ('Inducción', str(done_count) + '/' + str(total_videos if total_videos else 0), str(len(trainings)) + ' registro(s) presenciales'),
+        ('Constancias', str(len(certificates)), 'Documentos privados publicados'),
+    ]
+    if exit_case:
+        stats.append(('Salida digital', _html.escape(str(exit_case.get('estado') or 'En curso')), str(pending_exit) + ' pendiente(s) por resolver'))
+
+    stats_html = ''.join(
+        '<div class="pme-stat"><small>' + _html.escape(label) + '</small><strong>' + value + '</strong><span>' + _html.escape(sub) + '</span></div>'
+        for label, value, sub in stats
+    )
+    focus_label = 'Prioridad del expediente' if admin else 'Tu siguiente paso'
+    focus_title = ('Cierra los pendientes para dejar el expediente completo' if tone == 'warn' else
+                   'Revisa el material de inducción asignado' if tone == 'info' else
+                   'Todo está centralizado en un solo lugar')
+    focus_desc = ('Usa las pestañas para revisar documentos, entregas, inducción, constancias y la salida digital.'
+                  if tone != 'warn' else 'Empieza por la sección que tenga elementos pendientes y avanza hasta completar el expediente.')
+
+    st.markdown('<div class="pme-hero"><div class="pme-hero-main"><div class="pme-hero-copy">'
+                '<div class="pme-kicker">Mi expediente</div><h3>' + _html.escape(title) + '</h3><p>' + _html.escape(desc) + '</p>'
+                '<div class="pme-pills">' + ''.join(chips) + '</div></div>'
+                '<div class="pme-focus ' + tone + '"><small>' + _html.escape(focus_label) + '</small><strong>' + _html.escape(focus_title) + '</strong>'
+                '<span>' + _html.escape(focus_desc) + '</span></div></div><div class="pme-stat-grid">' + stats_html + '</div></div>',
+                unsafe_allow_html=True)
+
+
 def _pme_portal_view(dni, admin=False):
     _pmi_check_access(dni, admin_only=admin)
     with st.container(key='pme_portal'):
@@ -4128,11 +4233,7 @@ def _pme_portal_view(dni, admin=False):
             return
         valid_files = [r for r in files if r['estado'] == 'Validado']
         received_items = [r for r in gear if r['estado'] == 'Recibido']
-        st.markdown('<div class="pmi-kpis">'
-                    f'<div class="pmi-kpi"><small>Documentos validados</small><strong>{len(valid_files)}</strong></div>'
-                    f'<div class="pmi-kpi"><small>Entregas recibidas</small><strong>{len(received_items)}</strong></div>'
-                    f'<div class="pmi-kpi"><small>Inducciones presenciales</small><strong>{len(trainings)}</strong></div>'
-                    '</div>', unsafe_allow_html=True)
+        _pme_overview_panel(dni, admin, case, files, valid_files, received_items, trainings, certificates)
         tabs = st.tabs(['Documentos', 'Entregas', 'Inducción', 'Constancias', 'Salida digital'])
         with tabs[0]:
             st.markdown('<div class="pme-section">Documentos del expediente</div>', unsafe_allow_html=True)
