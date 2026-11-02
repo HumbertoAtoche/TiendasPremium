@@ -2069,7 +2069,7 @@ _TTL_POR_HOJA = {
     "Colaboradores": 90, "Asistencia": 45, "Solicitudes": 45,
     "BotellasFiadas": 45, "Programacion": 75, "Horarios": 180,
     "Descuadres": 90, "Incidencias": 90, "Vacaciones": 120,
-    "Boletas_Historial": 180, "Checklist": 180, "Auditoria": 180,
+    "Boletas_Historial": 45, "Checklist": 180, "Auditoria": 180,
     "Feriados": 3600,
 }
 
@@ -7325,7 +7325,8 @@ import json, numbers, hmac, hashlib, zipfile
 
 COLS_BH = ["id_boleta", "mes", "anio", "dni", "nombre", "cargo", "sueldo_basico", "total_ingresos", "total_descuentos", "neto_pagar", "fecha_emision", "emitido_por",
            "estado", "version", "datos_json", "fecha_visto_bueno", "observacion_colaborador", "fecha_observacion", "respuesta_admin",
-           "fecha_conformidad", "codigo_verificacion", "firma_png_b64", "fecha_firma", "firma_dispositivo"]
+           "fecha_conformidad", "codigo_verificacion", "firma_png_b64", "fecha_firma", "firma_dispositivo",
+           "fecha_deposito", "deposito_por", "referencia_deposito"]
 ESTADOS_BOL_VIGENTES = ("Emitido", "Observado", "Conforme", "Firmado")
 
 def _ver_bol(x):
@@ -7390,6 +7391,7 @@ def _actualizar_boleta(id_b, campos):
             return False
         for k, v in campos.items():
             hoja.update(values=[[str(v)]], range_name=f"{_col_letra(cab.index(k) + 1)}{fila}")
+        st.session_state.pop('_pm_sidebar_bol_cache', None)
         return True
     except Exception as e:
         st.error(f"No se pudo actualizar la boleta: {e}")
@@ -7422,10 +7424,65 @@ def emitir_boleta_gsheets(d, mes, anio, emitido_por, respuesta_admin=""):
                   "datos_json": datos_json, "fecha_visto_bueno": ahora, "respuesta_admin": respuesta_admin,
                   "codigo_verificacion": _codigo_verificacion(f"{id_b}|{version}|{datos_json}|{ahora}")}
         hoja.append_row([fila_n.get(c, "") for c in cab])
+        st.session_state.pop('_pm_sidebar_bol_cache', None)
         return id_b
     except Exception as e:
         st.error(f"No se pudo emitir la boleta: {e}")
         return None
+
+def _pm_bol_deposit_pending(df):
+    """Boletas conformes/firmadas cuyo pago aún no ha sido registrado."""
+    if not isinstance(df, pd.DataFrame) or df.empty or 'estado' not in df.columns:
+        return pd.DataFrame(columns=COLS_BH)
+    states = df['estado'].fillna('').astype(str).str.strip().isin(('Conforme', 'Firmado'))
+    stamps = df['fecha_deposito'] if 'fecha_deposito' in df.columns else pd.Series('', index=df.index)
+    missing = stamps.fillna('').astype(str).str.strip().eq('')
+    return df.loc[states & missing].copy()
+
+
+def _pm_bol_deposit_confirmed(id_boleta, referencia=''):
+    """Confirmación administrativa POSTERIOR al depósito, nunca automática por firma.
+
+    No modifica el estado de la conformidad, evita confirmaciones duplicadas y audita.
+    """
+    if rol_real != 'admin' or st.session_state.get('ver_como'):
+        raise PermissionError('Solo administración real puede confirmar depósitos.')
+    ref = str(referencia or '').strip()
+    if len(ref) > 120:
+        raise ValueError('La referencia debe tener 120 caracteres como máximo.')
+    hoja = _hoja_boletas()
+    if hoja is None:
+        raise ConnectionError('Google Sheets no está disponible.')
+    cab = _asegurar_esquema_boletas(hoja)
+    # Usar datos frescos, no el registro en caché de la pantalla.
+    real = hoja._ws if isinstance(hoja, _HojaProxy) else hoja
+    valores = real.get_all_values()
+    ids = [(idx, row) for idx,row in enumerate(valores[1:], start=2)
+           if row and str(row[0]) == str(id_boleta)]
+    if len(ids) != 1:
+        raise ValueError('Boleta no encontrada o duplicada; no se realizó el registro.')
+    fila, values = ids[0]
+    rec = dict(zip(cab, values + [''] * max(0,len(cab)-len(values))))
+    if str(rec.get('estado','')).strip() not in ('Conforme','Firmado'):
+        raise ValueError('El trabajador aún no ha dado su conformidad.')
+    if str(rec.get('fecha_deposito','')).strip():
+        raise ValueError('Esta boleta ya tiene un depósito registrado.')
+    fecha = obtener_ahora_peru().strftime('%Y-%m-%d %H:%M:%S')
+    # Un único batch de celdas, sin sobrescribir firma ni datos de liquidación.
+    hoja.batch_update([
+        {'range':f'{_col_letra(cab.index("fecha_deposito")+1)}{fila}', 'values':[[fecha]]},
+        {'range':f'{_col_letra(cab.index("deposito_por")+1)}{fila}', 'values':[[str(user_real)]]},
+        {'range':f'{_col_letra(cab.index("referencia_deposito")+1)}{fila}', 'values':[[ref]]},
+    ], value_input_option='RAW')
+    st.session_state.pop('_pm_sidebar_bol_cache', None)
+    st.session_state['boletas_historial'] = obtener_boletas_historial_gsheets()
+    try:
+        registrar_auditoria('Depósito de boleta confirmado', 'Boletas',
+                           'ID ' + str(id_boleta) + ' · registrado por ' + str(user_real))
+    except Exception as exc:
+        print('Premium: pendiente auditoría del depósito', type(exc).__name__)
+    return True
+
 
 def _boletas_orden(df):
     if df.empty:
@@ -14121,6 +14178,112 @@ def _ir_a(destino):
     st.session_state["nav_radio"] = "Mi Expediente" if destino == "Mi Ficha Técnica" else destino
     st.session_state["gs_q"] = ""
 
+# Centro de avisos del sidebar, sin popups ni cambios al menú de navegación.
+# Las boletas son datos privados: trabajador = su DNI, admin = equipo.
+# La caché vive 35 segundos y está asociada a usuario/vista. Lecturas de Sheets
+# comparten una caché global corta; evita consultar la hoja en cada pulsación.
+def _pm_sidebar_boletas(force=False):
+    sig = (str(st.session_state.get('usuario_login')),
+           str(st.session_state.get('ver_como')),
+           _revision_hoja('Boletas_Historial'))
+    old = st.session_state.get('_pm_sidebar_bol_cache')
+    if (not force and isinstance(old,dict) and old.get('sig')==sig
+            and time.monotonic()-old.get('at',0)<35):
+        return old['data'].copy(deep=True), None
+    if not doc_sheets:
+        return None, 'Google Sheets no está conectado.'
+    try:
+        try:
+            ws = doc_sheets.worksheet('Boletas_Historial')
+        except gspread.exceptions.WorksheetNotFound:
+            df = pd.DataFrame(columns=COLS_BH)
+        else:
+            if force and isinstance(ws, _HojaProxy):
+                ws._invalidar()  # El botón Actualizar debe ignorar caché de lectura global.
+            df = pd.DataFrame(ws.get_all_records())
+            for col in COLS_BH:
+                if col not in df.columns:
+                    df[col] = ''
+        st.session_state['_pm_sidebar_bol_cache'] = {
+            'sig':(sig[0],sig[1],_revision_hoja('Boletas_Historial')),
+            'at':time.monotonic(),'data':df.copy(deep=True)}
+        return df, None
+    except Exception as exc:
+        print('Premium: error leyendo avisos de boletas', type(exc).__name__)
+        return None, 'No fue posible consultar el historial de boletas.'
+
+
+def _pm_sidebar_refresh():
+    st.session_state.pop('_pm_sidebar_bol_cache',None)
+    st.session_state.pop('_pmi_cache',None)
+    st.session_state.pop('_cap_cache',None)
+    _pmc_reset_cache()
+    st.session_state['_pm_sidebar_force_refresh']=True
+
+
+def _pm_sidebar_active_alerts():
+    # No presentar datos ajenos ni simular ceros ante errores de conexión.
+    alerts=[]; errors=[]
+    fresh=bool(st.session_state.pop('_pm_sidebar_force_refresh',False))
+    boletas,err=_pm_sidebar_boletas(force=fresh)
+    if err:
+        errors.append('boletas')
+    elif isinstance(boletas,pd.DataFrame) and not boletas.empty:
+        state=boletas['estado'].fillna('').astype(str).str.strip()
+        if rol_actual=='admin':
+            observed=int(state.eq('Observado').sum())
+            ready=len(_pm_bol_deposit_pending(boletas))
+            if ready:
+                alerts.append(('Depósitos por registrar',ready,'Boletas de Pago',':material/account_balance_wallet:','pm_notice_deposit'))
+            if observed:
+                alerts.append(('Boletas observadas',observed,'Boletas de Pago',':material/receipt_long:','pm_notice_bol_obs'))
+        else:
+            own=boletas.loc[boletas['dni'].map(_mismo_dni_wrapper(dni_actual))]
+            issued=int(own['estado'].fillna('').astype(str).str.strip().eq('Emitido').sum())
+            if issued:
+                alerts.append(('Boletas por revisar',issued,'Mis Boletas',':material/receipt_long:','pm_notice_bol_worker'))
+    # Rutinas: caché compartida de 12 s. Solo estados accionables.
+    tasks,terr=_pm2_load(force=fresh)
+    if terr:
+        errors.append('rutinas')
+    elif isinstance(tasks,pd.DataFrame) and not tasks.empty:
+        state=tasks['estado'].fillna('').astype(str).str.strip()
+        if rol_actual=='admin':
+            count=int(state.eq('Por validar').sum())
+            if count:
+                alerts.append(('Rutinas por validar',count,'Rutinas Operativas',':material/fact_check:','pm_notice_rut_admin'))
+        else:
+            own=tasks.loc[tasks['dni'].astype(str).map(_pm2_dni).eq(_pm2_dni(dni_actual))]
+            states=own['estado'].fillna('').astype(str).str.strip()
+            actionable=int(states.isin(('Pendiente','En curso')).sum())
+            observed=int((own['revision_estado'].fillna('').astype(str).eq('Observada') &
+                          ~states.isin(('Completada','Cancelada'))).sum())
+            if actionable:
+                alerts.append(('Mis rutinas pendientes',actionable,'Mis Rutinas',':material/fact_check:','pm_notice_rut_worker'))
+            # Las observadas también están en En curso: avisar sin doble conteo en total.
+            if observed:
+                alerts.append(('Rutinas con observaciones',observed,'Mis Rutinas',':material/error_outline:','pm_notice_rut_observed'))
+    # Solicitudes actuales: admin revisa; colaborador consulta su expediente de solicitud.
+    if _sol_pend_n:
+        alerts.append((('Solicitudes por revisar' if rol_actual=='admin' else 'Mis solicitudes en revisión'),
+                       _sol_pend_n, 'Solicitudes y Permisos' if rol_actual=='admin' else 'Solicitar Permiso / Adelanto',
+                       ':material/inbox:','pm_notice_requests'))
+    if _bf_total_pendientes:
+        alerts.append(('Botellas por devolver',_bf_total_pendientes,'Botellas Fiadas',':material/liquor:','pm_notice_bottles'))
+    if rol_actual!='admin':
+        unread=_pmc_unread_count()
+        if unread is None:
+            errors.append('comunicados')
+        elif unread:
+            alerts.append(('Comunicados sin confirmar',unread,'Mis Comunicados',':material/campaign:','pm_notice_comm'))
+    return alerts,errors
+
+
+def _mismo_dni_wrapper(dni):
+    # Pandas.map acepta una función unaria; nunca filtrar por nombre visible.
+    return lambda val: _mismo_dni(val,dni)
+
+
 # Pendientes: un solo acceso por tema (muestra el número y lleva directo a la pantalla).
 def _btn_pendiente(etiqueta, key, destino, icono):
     try:
@@ -14128,25 +14291,51 @@ def _btn_pendiente(etiqueta, key, destino, icono):
     except TypeError:   # versiones antiguas de Streamlit sin parámetro icon
         st.sidebar.button(etiqueta, key=key, use_container_width=True, on_click=_ir_a, args=(destino,))
 
-if _sol_pend_n:
-    _btn_pendiente(f"{'Solicitudes por revisar' if rol_actual == 'admin' else 'Tus solicitudes en revisión'} · {_sol_pend_n}",
-                   "tp_acc_sol", "Solicitudes y Permisos" if rol_actual == "admin" else "Solicitar Permiso / Adelanto", ":material/inbox:")
-if _bf_total_pendientes:
-    _btn_pendiente(f"Botellas por devolver · {_bf_total_pendientes}", "tp_acc_bot", "Botellas Fiadas", ":material/liquor:")
-if rol_actual == "admin":
-    _r_for_review, _r_err = _pm2_load()
-    if _r_err is None and _r_for_review is not None and not _r_for_review.empty:
-        _r_wait = int((_r_for_review["estado"].astype(str) == "Por validar").sum())
-        if _r_wait:
-            _btn_pendiente(f"Rutinas por validar · {_r_wait}", "tp_acc_rutinas_review", "Rutinas Operativas", ":material/fact_check:")
+_pm_sidebar_alerts, _pm_sidebar_errors = _pm_sidebar_active_alerts()
+st.sidebar.markdown('<div class="tp-note-t pm-notice-title">AVISOS Y PENDIENTES' +
+                    (f' · {len(_pm_sidebar_alerts)}' if _pm_sidebar_alerts else '') +
+                    '</div>', unsafe_allow_html=True)
+for _label,_count,_destination,_icon,_key in _pm_sidebar_alerts:
+    _btn_pendiente(f'{_label} · {_count}',_key,_destination,_icon)
+if _pm_sidebar_errors:
+    st.sidebar.caption('Algunos avisos no pudieron actualizarse: ' + ', '.join(sorted(set(_pm_sidebar_errors))))
+if not _pm_sidebar_alerts and not _pm_sidebar_errors:
+    st.sidebar.caption('Sin acciones pendientes.')
+st.sidebar.button('Actualizar avisos',key='pm_notice_refresh',
+                  icon=':material/refresh:',use_container_width=True,on_click=_pm_sidebar_refresh)
 
-# Centro de Comunicados: contador propio, sin usar popups ni el Centro de Alertas.
-if rol_actual != "admin":
-    _pmc_pend = _pmc_unread_count()
-    if _pmc_pend is not None and _pmc_pend > 0:
-        _btn_pendiente(f"Comunicados sin confirmar · {_pmc_pend}",
-                       "pmc_sidebar_unread", "Mis Comunicados", ":material/campaign:")
-
+st.markdown("""<style>
+section[data-testid="stSidebar"] [class*="st-key-pm_notice_"] button{
+    min-height:43px!important;justify-content:flex-start!important;text-align:left!important;
+    padding:8px 11px!important;border:1px solid #e6eaf0!important;
+    border-radius:12px!important;background:#f8fafc!important;box-shadow:none!important;
+}
+section[data-testid="stSidebar"] [class*="st-key-pm_notice_"] button p{
+    font-size:.77rem!important;font-weight:720!important;line-height:1.28!important;
+    white-space:normal!important;text-align:left!important;color:#344155!important;
+}
+section[data-testid="stSidebar"] .st-key-pm_notice_deposit button,
+section[data-testid="stSidebar"] .st-key-pm_notice_bol_worker button{
+    background:#fff0f2!important;border-color:#f5ccd2!important;
+}
+section[data-testid="stSidebar"] .st-key-pm_notice_deposit button p,
+section[data-testid="stSidebar"] .st-key-pm_notice_bol_worker button p{
+    color:#9f2338!important;
+}
+section[data-testid="stSidebar"] .st-key-pm_notice_rut_admin button,
+section[data-testid="stSidebar"] .st-key-pm_notice_rut_worker button{
+    background:#edf5ff!important;border-color:#d4e6ff!important;
+}
+section[data-testid="stSidebar"] .st-key-pm_notice_bottles button{
+    background:#fff0f2!important;border-color:#f5ccd2!important;
+}
+section[data-testid="stSidebar"] .st-key-pm_notice_bottles button p{color:#9f2338!important}
+section[data-testid="stSidebar"] .st-key-pm_notice_refresh button{
+    background:transparent!important;border:1px dashed #dde4ed!important;
+    color:#617187!important;min-height:34px!important;font-size:.74rem!important;
+    box-shadow:none!important;
+}
+</style>""",unsafe_allow_html=True)
 st.sidebar.markdown('<div class="tp-note-t pm-restored-nav-title">Navegación</div>', unsafe_allow_html=True)
 st.sidebar.markdown('<div class="pm-nav-kind-' + ('admin' if rol_actual == 'admin' else 'employee') + '"></div>', unsafe_allow_html=True)
 # Menú lateral nativo, plano y siempre visible en ambas vistas.
@@ -16064,6 +16253,12 @@ elif choice == "Mis Boletas":
 
     with st.container(key="pm_v_mis_boletas"):
         _all = st.session_state.boletas_historial
+        _bol_sidebar_live, _bol_sidebar_err = _pm_sidebar_boletas()
+        if _bol_sidebar_err:
+            st.warning('No se pudo refrescar el historial de boletas. Verás los datos de la última lectura confirmada.')
+        elif isinstance(_bol_sidebar_live, pd.DataFrame):
+            _all = _bol_sidebar_live.copy(deep=True)
+            st.session_state['boletas_historial'] = _all
         _mias = _all[_all["dni"].apply(lambda x: _mismo_dni(x, dni_actual)) & _all["estado"].astype(str).isin(ESTADOS_BOL_VIGENTES) & (_all["datos_json"].astype(str).str.len() > 2)] if not _all.empty else _all
         _mias = _boletas_orden(_mias)
         if _mias.empty:
@@ -16140,7 +16335,11 @@ elif choice == "Mis Boletas":
                 elif _est_m == "Observado":
                     ui_callout(f"Enviaste una observación el {str(_rm['fecha_observacion'])[:16]}: “{_rm['observacion_colaborador']}”. Administración la revisará y emitirá una nueva versión.", "warn")
                 else:
-                    ui_callout(f"Diste tu conformidad el {str(_rm['fecha_conformidad'])[:16]}. Esta boleta ya está cerrada.", "ok")
+                    ui_callout(f"Diste tu conformidad el {str(_rm['fecha_conformidad'])[:16]}.", "ok")
+                    if str(_rm.get('fecha_deposito','')).strip():
+                        ui_callout('Administración registró el depósito el ' + str(_rm['fecha_deposito'])[:16] + '.', 'ok')
+                    elif _est_m in ('Firmado','Conforme'):
+                        ui_callout('Tu boleta está conforme. El depósito aún no ha sido confirmado por administración.', 'info')
                     if str(_rm.get("firma_png_b64", "")).strip():
                         st.markdown(ui_firma_card(_rm), unsafe_allow_html=True)
                 st.caption(f"Código de verificación: {_rm['codigo_verificacion']}")
@@ -16792,6 +16991,42 @@ elif choice == "Boletas de Pago":
     premium_module_shell('Boletas de Pago', 'NÓMINA', 'Consulta, preparación y gestión de boletas.')
 
     with st.container(key="pm_v_boletas_de_pago"):
+        # La conformidad del trabajador habilita la etapa de depósito.
+        # Solo administración certifica que el depósito efectivamente se realizó.
+        _dep_base, _dep_error = _pm_sidebar_boletas()
+        if _dep_error:
+            st.warning('No fue posible comprobar los depósitos pendientes. ' + _dep_error)
+        else:
+            st.session_state['boletas_historial'] = _dep_base.copy(deep=True)
+            _dep_rows = _pm_bol_deposit_pending(_dep_base)
+            if not _dep_rows.empty:
+                with st.container(border=True, key='pm_bol_deposit_panel'):
+                    st.markdown('#### Boletas conformes sin depósito registrado')
+                    st.caption('El colaborador ya firmó o dio conformidad. Comprueba si se realizó el pago; registra el depósito solo cuando esté verificado. Las boletas históricas también pueden aparecer aquí si nunca se registró su depósito.')
+                    opts = {str(r['id_boleta']): r for _,r in _boletas_orden(_dep_rows).iterrows()}
+                    chosen = st.selectbox('Boleta lista para depósito', list(opts),
+                        format_func=lambda v: (str(opts[v].get('nombre','')) + ' · ' +
+                          str(opts[v].get('mes','')) + ' ' + str(opts[v].get('anio','')) +
+                          ' · S/ ' + format(float(opts[v].get('neto_pagar') or 0), ',.2f')),
+                        key='pm_bol_deposit_sel')
+                    st.caption('Sin registro de depósito: ' + str(len(_dep_rows)) + ' · Esta operación guarda fecha, responsable y referencia.')
+                    ref = st.text_input('Referencia del depósito (opcional)', max_chars=120,
+                                        placeholder='Número de operación bancaria', key='pm_bol_dep_ref')
+                    yes = st.checkbox('Confirmo que el depósito ya fue realizado y verificado.',
+                                      key='pm_bol_dep_yes')
+                    if st.button('Registrar depósito realizado', type='primary',
+                                 use_container_width=True, disabled=not yes, key='pm_bol_dep_save'):
+                        try:
+                            _pm_bol_deposit_confirmed(chosen,ref)
+                            _pm62_confirmar_despues_de_actualizar('Depósito registrado. El aviso pendiente desapareció.')
+                            st.rerun()
+                        except (ValueError, PermissionError, ConnectionError) as err:
+                            st.error(str(err))
+                        except Exception as err:
+                            print('Premium: error registrando depósito', type(err).__name__)
+                            st.error('No se pudo confirmar el depósito. Consulta Sheets antes de volver a intentarlo.')
+            else:
+                st.caption('No hay boletas conformes pendientes de registrar como depositadas.')
 
         tab_boleta, tab_emitidas, tab_feriados = st.tabs(["Generar Boleta de Pago", "Histórico de boletas", "Gestión de Feriados"])
 
@@ -16858,6 +17093,11 @@ elif choice == "Boletas de Pago":
                             ui_callout(f"**Respuesta del administrador:** {_rs['respuesta_admin']}", "info")
                         st.markdown(generar_html_boleta(_ds), unsafe_allow_html=True)
                         if str(_rs["estado"]) in ("Firmado", "Conforme"):
+                            if str(_rs.get('fecha_deposito','')).strip():
+                                ui_callout('Depósito registrado por administración el ' + str(_rs['fecha_deposito'])[:16]
+                                           + ('. Referencia: ' + str(_rs.get('referencia_deposito','')) if str(_rs.get('referencia_deposito','')).strip() else '') + '.', 'ok')
+                            else:
+                                ui_callout('Conformidad recibida. Depósito pendiente de registrar por administración.', 'warn')
                             if str(_rs.get("firma_png_b64", "")).strip():
                                 st.markdown(ui_firma_card(_rs), unsafe_allow_html=True)
                             else:
