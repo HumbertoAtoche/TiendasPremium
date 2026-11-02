@@ -11423,16 +11423,29 @@ def _pm3_worker_upload_ui(task_id):
         st.caption("Toma una foto o elígela en tu iPhone o Android (HEIC, JPEG, PNG o WebP). "
                    "Admite hasta 40 MB y 65 MP; la convierte a WebP compacto para Drive privado.")
         nonce = st.session_state.get("_pm3_file_nonce_" + str(task_id), 0)
-        # max_upload_size limita el archivo ANTES de enviarlo al servidor.
-        # Fallback para versiones de Streamlit que aún no conocen ese parámetro.
-        _picker_args = dict(type=["jpg", "jpeg", "png", "webp", "heic", "heif"],
-                            key=f"pm3_file_{task_id}_{nonce}", accept_multiple_files=False)
-        try:
-            image = st.file_uploader("Fotografía", max_upload_size=40, **_picker_args)
-        except TypeError as _picker_err:
-            if "max_upload_size" not in str(_picker_err):
-                raise
-            image = st.file_uploader("Fotografía", **_picker_args)
+        # El trabajador elige cámara o galería. Los dos métodos pasan por
+        # _pm3_prepare_image: misma autorización, compresión y Drive privado.
+        camera_available = callable(getattr(st, "camera_input", None))
+        upload_source = st.radio("¿Cómo adjuntar la foto?",
+                                 ["Elegir archivo", "Tomar foto con cámara"] if camera_available
+                                 else ["Elegir archivo"],
+                                 horizontal=True, key="pm3_source_" + str(task_id),
+                                 label_visibility="visible")
+        image = None
+        if camera_available and upload_source == "Tomar foto con cámara":
+            st.caption("Permite el acceso a la cámara cuando el navegador lo solicite. Si falla, usa Elegir archivo.")
+            image = st.camera_input("Capturar fotografía", key=f"pm3_camera_{task_id}_{nonce}")
+        else:
+            # max_upload_size limita el archivo ANTES de enviarlo al servidor.
+            # Fallback para versiones de Streamlit que aún no conocen ese parámetro.
+            _picker_args = dict(type=["jpg", "jpeg", "png", "webp", "heic", "heif"],
+                                key=f"pm3_file_{task_id}_{nonce}", accept_multiple_files=False)
+            try:
+                image = st.file_uploader("Fotografía", max_upload_size=40, **_picker_args)
+            except TypeError as _picker_err:
+                if "max_upload_size" not in str(_picker_err):
+                    raise
+                image = st.file_uploader("Fotografía", **_picker_args)
         if image is not None:
             _mb = int(getattr(image, "size", 0)) / (1024 * 1024)
             st.caption(f"Seleccionada: {getattr(image, 'name', 'Fotografía')} · {_mb:.1f} MB. "
@@ -15530,14 +15543,20 @@ if rol_actual == "admin":
 else:
     _nav_items = [("Marcar Asistencia", "Inicio", ":material/home:"),
                   ("Mis Rutinas", "Rutinas", ":material/fact_check:"),
-                  ("Solicitar Permiso / Adelanto", "Avisos", ":material/notifications:"),
+                  ("__pm_abrir_mensajes__", "Mensajes", ":material/notifications:"),
                   ("Mi Expediente", "Perfil", ":material/person:")]
 try:
     with st.container(key="tp_bottomnav"):
         for _col, (_dest, _lbl, _ico) in zip(st.columns(len(_nav_items)), _nav_items):
             with _col:
-                st.button(_lbl, key=f"bn_{_dest}", icon=_ico, use_container_width=True,
-                          type="primary" if choice == _dest else "secondary", on_click=_ir_a, args=(_dest,))
+                if _dest == "__pm_abrir_mensajes__":
+                    # Mismo buzón de Marcar Asistencia: no abre Solicitudes por error.
+                    st.button(_lbl, key="bn_mensajes", icon=_ico, use_container_width=True,
+                              type="secondary", on_click=_pm_av_request_panel,
+                              help="Abrir comentarios de supervisión y administración")
+                else:
+                    st.button(_lbl, key=f"bn_{_dest}", icon=_ico, use_container_width=True,
+                              type="primary" if choice == _dest else "secondary", on_click=_ir_a, args=(_dest,))
 except Exception:
     pass  # versiones antiguas de Streamlit: se usa solo el menú lateral
 
@@ -15828,6 +15847,39 @@ _PM_MOBILE_EXPERIENCE_CSS = """
   }
 }
 
+/* MOBILE 2026.11 — diálogos, teclado y área segura.
+   Se aplica a modales reales y no altera las hojas ni sus operaciones. */
+@media screen and (max-width:780px){
+  /* Al abrir un modal, no dejar una barra inferior detrás del diálogo. */
+  body:has(div[data-testid="stDialog"] [role="dialog"]) .st-key-tp_bottomnav{
+    display:none!important;visibility:hidden!important;pointer-events:none!important;
+  }
+  div[data-testid="stDialog"] [role="dialog"]{
+    box-sizing:border-box!important;
+    width:calc(100vw - 16px)!important;
+    max-width:calc(100vw - 16px)!important;
+    max-height:calc(100dvh - 20px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))!important;
+    overflow-x:hidden!important;overflow-y:auto!important;
+    overscroll-behavior:contain!important;
+    -webkit-overflow-scrolling:touch!important;
+  }
+  /* Bandeja de mensajes: lista encima del detalle en pantallas estrechas. */
+  div[data-testid="stDialog"] [data-testid="stHorizontalBlock"]:has(.pm-av-detail){
+    display:flex!important;flex-direction:column!important;align-items:stretch!important;
+    flex-wrap:nowrap!important;gap:12px!important;
+  }
+  div[data-testid="stDialog"] [data-testid="stHorizontalBlock"]:has(.pm-av-detail) > [data-testid="stColumn"]{
+    flex:1 1 auto!important;min-width:0!important;width:100%!important;max-width:100%!important;
+  }
+  div[data-testid="stDialog"] input,
+  div[data-testid="stDialog"] textarea,
+  div[data-testid="stDialog"] [role="combobox"]{font-size:16px!important;scroll-margin-bottom:115px!important;}
+  div[data-testid="stDialog"] [data-testid="stButton"] button,
+  div[data-testid="stDialog"] [data-testid="stFormSubmitButton"] button{
+    min-height:44px!important;white-space:normal!important;line-height:1.32!important;
+  }
+  div[data-testid="stDialog"] .pm-av-detail{min-height:0!important;}
+}
 @media screen and (min-width:781px){
   .st-key-tp_bottomnav{display:none!important;}
 }
@@ -15911,9 +15963,25 @@ for _index_m, _icon_m in enumerate(_pm_mobile_icons, 1):
         f'-webkit-mask:url("{_uri_icon}") center/contain no-repeat!important;'
         f'mask:url("{_uri_icon}") center/contain no-repeat!important;}}'
     )
+# Mostrar contador de mensajes sin leer sin ensanchar el botón ni causar saltos.
+_pm_mobile_unread = len(st.session_state.get('_pm_av_unread', [])) if rol_actual != 'admin' else 0
+_pm_mobile_badge_css = ''
+if _pm_mobile_unread:
+    _pm_mobile_badge_text = str(_pm_mobile_unread) if _pm_mobile_unread < 10 else '9+'
+    _pm_mobile_badge_css = (
+        '.stApp:not(:has(.st-key-pm_auth_page)) .st-key-tp_bottomnav '
+        '[data-testid="stColumn"]:nth-child(3) button{position:relative!important;}'
+        '.stApp:not(:has(.st-key-pm_auth_page)) .st-key-tp_bottomnav '
+        '[data-testid="stColumn"]:nth-child(3) button::after{'
+        'content:"' + _pm_mobile_badge_text + '"!important;position:absolute!important;'
+        'top:2px!important;right:12px!important;min-width:17px!important;height:17px!important;'
+        'display:grid!important;place-items:center!important;border-radius:99px!important;'
+        'padding:0 3px!important;background:#c62b45!important;color:#fff!important;'
+        'font-size:10px!important;font-weight:850!important;line-height:1!important;}'
+    )
 st.markdown('<style>@media(max-width:780px){'
             '.stApp:not(:has(.st-key-pm_auth_page)) .st-key-tp_bottomnav [data-testid="stIconMaterial"]'
-            '{display:none!important;}' + ''.join(_pm_mobile_icon_rules) + '}</style>',
+            '{display:none!important;}' + ''.join(_pm_mobile_icon_rules) + _pm_mobile_badge_css + '}</style>',
             unsafe_allow_html=True)
 
 # PREMIUM MARKET · AVISOS DE RUTINAS SIN PUSH EXTERNO
