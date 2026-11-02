@@ -14967,6 +14967,19 @@ def _pm_av_prepare():
     st.session_state.pop('_pm_av_read_cache', None)
 
 
+def _pm_av_ensure_ready_silent():
+    if rol_real != 'admin' or st.session_state.get('ver_como'):
+        return False
+    if st.session_state.get('_pm_av_ready_silent_done'):
+        return True
+    try:
+        _pm_av_prepare()
+        st.session_state['_pm_av_ready_silent_done'] = True
+        return True
+    except Exception:
+        return False
+
+
 def _pm_av_open_message(target):
     _pm_av_close_panel()
     _ir_a(target)
@@ -15292,7 +15305,7 @@ def _pm_av_home_summary():
                   icon=':material/mark_email_unread:', use_container_width=True,
                   on_click=_pm_av_request_panel)
         if not st.session_state.get('_pm_av_ready', False):
-            st.caption('Puedes consultar los mensajes; para confirmar su lectura, administración debe activar Avisos_Lecturas.')
+            st.caption('Puedes consultar tus mensajes. La confirmación de lectura estará disponible en breve.')
 
 
 def _pm_sidebar_active_alerts():
@@ -15412,14 +15425,7 @@ if not _pm_sidebar_alerts and not _pm_sidebar_errors:
     st.sidebar.caption('Sin acciones pendientes.')
 # La bandeja detallada vive en Marcar Asistencia; el sidebar conserva su contador.
 if rol_actual=='admin':
-    with st.sidebar.expander('Configuración de mensajes', expanded=False):
-        st.caption('Una sola hoja de control de lectura, sin alterar Rutinas ni Boletas. Ejecuta una vez.')
-        if st.button('Activar mensajes con confirmación',key='pm_av_prepare',use_container_width=True):
-            try:
-                _pm_av_prepare()
-                st.success('Registro de lecturas preparado.')
-            except Exception:
-                st.error('No se pudieron preparar los mensajes. Comprueba Google Sheets y sus permisos.')
+    _pm_av_ensure_ready_silent()
 st.sidebar.button('Actualizar avisos',key='pm_notice_refresh',
                   icon=':material/refresh:',use_container_width=True,on_click=_pm_sidebar_refresh)
 
