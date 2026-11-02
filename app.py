@@ -4051,43 +4051,14 @@ def _pme_styles():
 
 
 def _pme_show_person(dni):
-    """Ficha no editable, reutiliza Gestión Colaboradores sin duplicar hoja."""
+    """Ficha única de Mi Expediente: diseño de Mi Ficha Técnica, datos del mismo registro.
+
+    No crea una ficha paralela ni agrega lecturas/escrituras nuevas a Sheets.
+    """
     _pmi_check_access(dni)
     person = _pmi_person(dni)
-    _safe = _html.escape
-    name = _safe(str(person.get('nombre', '') or 'Colaborador'))
-    cargo = _safe(str(person.get('cargo', '') or 'Sin registrar'))
-    status = str(person.get('estado', '')).casefold() == 'activo'
-    date_inicio = str(person.get('fecha_inicio', '')).strip()
-    fields = (
-        ('Identificación', _pmi_dni(dni)),
-        ('Puesto', str(person.get('cargo') or 'Sin registrar')),
-        ('Inicio de labores', date_inicio or 'Sin registrar'),
-        ('Teléfono', str(person.get('telefono') or 'Sin registrar')),
-        ('Domicilio', str(person.get('direccion') or 'Sin registrar')),
-        ('Contacto de emergencia', str(person.get('contacto_emergencia') or 'Sin registrar')),
-        ('Teléfono de emergencia', str(person.get('numero_emergencia') or 'Sin registrar')),
-        ('Fecha de nacimiento', str(person.get('fecha_nacimiento') or 'Sin registrar')),
-    )
-    cells = ''.join('<div class="pme-datum"><small>' + _safe(k) + '</small><strong>' + _safe(v) + '</strong></div>' for k, v in fields)
-    _avatar = ui_avatar(str(person.get('nombre') or 'Colaborador'), _pmi_dni(dni),
-                        str(person.get('foto') or ''), 64)
-    st.markdown('<div class="pme-overview"><div class="pme-overview-top">' + _avatar +
-                '<div><h3>' + name + '</h3><p>' + cargo + ' · ' + ('Activo' if status else 'Inactivo') +
-                '</p></div></div><div class="pme-data-grid">' + cells + '</div>'
-                '<p>Datos registrados en Gestión Colaboradores. No equivale a documentos verificados.</p></div>',
-                unsafe_allow_html=True)
-    link = str(person.get('link_domicilio', '')).strip()
-    if link:
-        try:
-            parsed = _pmi_urlsplit(link)
-            hostname = (parsed.hostname or '').lower()
-            if parsed.scheme == 'https' and (hostname == 'maps.app.goo.gl' or hostname in ('google.com','www.google.com','maps.google.com')):
-                st.link_button('Ver domicilio registrado en Maps', url=link, icon=':material/location_on:')
-            else:
-                st.caption('El enlace de Maps registrado requiere revisión por administración.')
-        except Exception:
-            st.caption('El enlace de Maps registrado requiere revisión por administración.')
+    renderizar_tarjeta_colaborador(pd.Series(person))
+
 
 
 def _pme_personal_records(dni):
@@ -4331,8 +4302,7 @@ def _pme_worker_ui():
     _pmi_styles()
     dni = _pmi_dni(dni_actual)
     _pmi_check_access(dni)
-    _pmx_section('MI EXPEDIENTE', 'Documentos, inducción y salidas',
-                 'Consulta tu información laboral, aprende los procesos y verifica documentos de salida.')
+    # El encabezado blanco global ya identifica el módulo. No duplicarlo.
     _pme_portal_view(dni, admin=False)
     st.caption('Si necesitas corregir tus datos personales, comunícalo a administración. '
                'Si tienes una incorporación abierta, realiza tus cargas y conformidades en Mi Incorporación.')
@@ -5612,7 +5582,7 @@ def _limpiar_busqueda():
     st.session_state["gs_q"] = ""
 
 def _gs_ir(dest, nombre_sol=None):
-    st.session_state["nav_radio"] = dest
+    st.session_state["nav_radio"] = "Mi Expediente" if dest == "Mi Ficha Técnica" else dest
     st.session_state["gs_q"] = ""
     if nombre_sol:
         st.session_state["sol_busqueda"] = nombre_sol
@@ -6799,7 +6769,7 @@ def _pm_datos_requeridos():
              "Historial de Descuadres", "Incidencias y Daños", "Botellas Fiadas",
              "Historial de Asistencias", "Auditoría y Configuración", "Rutinas Operativas", "Gestión de Comunicados") if viewing_admin else (
              "Marcar Asistencia", "Mis Rutinas", "Mi Incorporación", "Mi Expediente", "Registrar Descuadre", "Registrar Incidencia",
-             "Botellas Fiadas", "Mi Ficha Técnica", "Mis Vacaciones", "Mis Boletas",
+             "Botellas Fiadas", "Mis Vacaciones", "Mis Boletas",
              "Solicitar Permiso / Adelanto", "Mi Dashboard Mensual", "Mis Comunicados")
     if selected not in valid:
         selected = default_view
@@ -12737,7 +12707,7 @@ if rol_actual == "admin":
     menu = [mod for _, seccion in _PM_ADMIN_NAV_SECTIONS for mod in seccion]
 else:
     # IMPORTANTE: este menú del trabajador se mantiene exactamente igual.
-    menu = ["Marcar Asistencia", "Mis Rutinas", "Mis Comunicados", "Mi Dashboard Mensual", "Mi Incorporación", "Mi Expediente", "Registrar Descuadre", "Registrar Incidencia", "Botellas Fiadas", "Mi Ficha Técnica", "Mis Vacaciones", "Mis Boletas", "Solicitar Permiso / Adelanto"]
+    menu = ["Marcar Asistencia", "Mis Rutinas", "Mis Comunicados", "Mi Dashboard Mensual", "Mi Incorporación", "Mi Expediente", "Registrar Descuadre", "Registrar Incidencia", "Botellas Fiadas", "Mis Vacaciones", "Mis Boletas", "Solicitar Permiso / Adelanto"]
 
 if rol_real == "admin":
     _opc_vc = ["Mi vista (admin)"] + sorted(n for n, d in USUARIOS.items() if d["rol"] != "admin")
@@ -12747,11 +12717,14 @@ if rol_real == "admin":
     st.sidebar.selectbox("Ver como colaborador", _opc_vc, key="ver_como_sel", on_change=_cambiar_preview, label_visibility="collapsed")
 st.sidebar.markdown('<div class="tp-note-t" style="margin:8px 2px 5px">Búsqueda rápida</div>', unsafe_allow_html=True)
 st.sidebar.text_input("Buscar", key="gs_q", placeholder="Buscar personas, solicitudes, secciones…", label_visibility="collapsed")
+if st.session_state.get("nav_radio") == "Mi Ficha Técnica":
+    # Migración de sesiones anteriores: conserva el acceso al perfil sin duplicar módulos.
+    st.session_state["nav_radio"] = "Mi Expediente"
 if st.session_state.get("nav_radio") not in menu:
     st.session_state["nav_radio"] = menu[0]
 
 def _ir_a(destino):
-    st.session_state["nav_radio"] = destino
+    st.session_state["nav_radio"] = "Mi Expediente" if destino == "Mi Ficha Técnica" else destino
     st.session_state["gs_q"] = ""
 
 # Pendientes: un solo acceso por tema (muestra el número y lleva directo a la pantalla).
@@ -12782,95 +12755,26 @@ if rol_actual != "admin":
 
 st.sidebar.markdown('<div class="tp-note-t pm-restored-nav-title">Navegación</div>', unsafe_allow_html=True)
 st.sidebar.markdown('<div class="pm-nav-kind-' + ('admin' if rol_actual == 'admin' else 'employee') + '"></div>', unsafe_allow_html=True)
+# Menú lateral nativo, plano y siempre visible en ambas vistas.
+# Administrador: solo se reordena y se presenta «Mi equipo»; sin desplegables.
+# Colaborador: mismo tipo de navegación, sin la ficha redundante.
+choice = st.sidebar.radio(
+    "Navegación", menu, key="nav_radio", on_change=_limpiar_busqueda,
+    format_func=_pm_admin_label if rol_actual == "admin" else _tp_nav_label,
+    label_visibility="collapsed",
+)
+
 if rol_actual == "admin":
-    # Desvincular nav_radio del radio usado en la vista del trabajador:
-    # Streamlit no debe eliminar esta clave al dejar de renderizar ese widget.
-    st.session_state["nav_radio"] = st.session_state["nav_radio"]
-    # Cuatro grupos plegables para 16 módulos; únicamente admin.
-    # Los botones conservan los destinos originales y pasan por _ir_a.
-    with st.sidebar:
-        with st.container(key="pm_admin_nav"):
-            for grupo_idx, (seccion, destinos) in enumerate(_PM_ADMIN_NAV_SECTIONS, start=1):
-                abierto = st.session_state.get("nav_radio") in destinos
-                with st.expander(f"{grupo_idx:02d}  ·  {seccion}", expanded=abierto):
-                    for destino in destinos:
-                        st.button(
-                            _pm_admin_label(destino),
-                            key="pm_admin_nav_" + str(grupo_idx) + "_" + destino,
-                            icon=_PM_ADMIN_NAV_ICONS.get(destino),
-                            type="primary" if abierto and st.session_state.get("nav_radio") == destino else "secondary",
-                            use_container_width=True,
-                            on_click=_ir_a, args=(destino,),
-                        )
-    choice = st.session_state["nav_radio"]
-else:
-    # Vista de colaboradores: control, estructura y estado originales.
-    choice = st.sidebar.radio("Navegación", menu, key="nav_radio", on_change=_limpiar_busqueda,
-                              format_func=_tp_nav_label, label_visibility="collapsed")
+    # Respiración visual entre áreas de la lista, sin encabezados ni acordeones.
+    st.markdown("""<style>
+    section[data-testid="stSidebar"]:has(.pm-nav-kind-admin) [role="radiogroup"]>label:nth-child(4),
+    section[data-testid="stSidebar"]:has(.pm-nav-kind-admin) [role="radiogroup"]>label:nth-child(8),
+    section[data-testid="stSidebar"]:has(.pm-nav-kind-admin) [role="radiogroup"]>label:nth-child(12){
+        margin-top:12px!important;padding-top:12px!important;
+        border-top:1px solid #e8edf3!important;
+    }
+    </style>""", unsafe_allow_html=True)
 
-
-
-_PM_ADMIN_NAV_CSS = """<style>
-section[data-testid="stSidebar"] .st-key-pm_admin_nav [data-testid="stExpander"] {
-  border:1px solid #e7ecf3!important;border-radius:15px!important;
-  background:#fff!important;margin:3px 0 7px!important;
-  box-shadow:0 3px 12px rgba(24,40,68,.035)!important;overflow:hidden!important;
-}
-section[data-testid="stSidebar"] .st-key-pm_admin_nav details>summary {
-  min-height:48px!important;padding:10px 12px!important;
-  background:#fff!important;border-radius:13px!important;
-}
-section[data-testid="stSidebar"] .st-key-pm_admin_nav details[open]>summary {
-  background:#fafbfe!important;border-bottom:1px solid #edf0f5!important;
-  border-radius:13px 13px 0 0!important;
-}
-section[data-testid="stSidebar"] .st-key-pm_admin_nav details>summary p {
-  color:#42506a!important;font-size:.78rem!important;font-weight:800!important;
-  letter-spacing:.01em!important;
-}
-section[data-testid="stSidebar"] .st-key-pm_admin_nav [data-testid="stExpanderDetails"] {
-  padding:7px 8px 10px!important;
-}
-section[data-testid="stSidebar"] .st-key-pm_admin_nav [data-testid="stExpanderDetails"] [data-testid="stVerticalBlock"] {
-  gap:3px!important;
-}
-section[data-testid="stSidebar"] .st-key-pm_admin_nav [data-testid="stButton"] button {
-  display:flex!important;justify-content:flex-start!important;text-align:left!important;
-  min-height:42px!important;border-radius:10px!important;padding:9px 11px!important;
-  background:#fff!important;color:#43516a!important;border:1px solid transparent!important;
-  font-size:.79rem!important;font-weight:650!important;box-shadow:none!important;
-  transition:background .16s ease,border-color .16s ease!important;
-}
-section[data-testid="stSidebar"] .st-key-pm_admin_nav [data-testid="stButton"] button p {
-  font-size:.79rem!important;font-weight:inherit!important;color:inherit!important;
-  text-align:left!important;white-space:normal!important;overflow-wrap:anywhere!important;
-}
-section[data-testid="stSidebar"] .st-key-pm_admin_nav [data-testid="stButton"] button:hover {
-  background:#f6f8fb!important;color:#b72d43!important;border-color:#edf0f5!important;
-}
-section[data-testid="stSidebar"] .st-key-pm_admin_nav [data-testid="stButton"] button[kind="primary"],
-section[data-testid="stSidebar"] .st-key-pm_admin_nav [data-testid="stButton"] button[data-testid="stBaseButton-primary"] {
-  background:#fff0f3!important;color:#b92540!important;border:1px solid #f4d4dc!important;
-  box-shadow:inset 3px 0 0 #d72c46!important;font-weight:800!important;
-}
-section[data-testid="stSidebar"] .st-key-pm_admin_nav [data-testid="stButton"] button[kind="primary"] *,
-section[data-testid="stSidebar"] .st-key-pm_admin_nav [data-testid="stButton"] button[data-testid="stBaseButton-primary"] * {
-  color:#b92540!important;
-}
-section[data-testid="stSidebar"] .st-key-pm_admin_nav [data-testid="stButton"] button:focus-visible {
-  outline:2px solid #e68a9b!important;outline-offset:2px!important;
-}
-@media(max-width:640px){
-  section[data-testid="stSidebar"] .st-key-pm_admin_nav [data-testid="stButton"] button {
-    min-height:46px!important;padding:10px 12px!important;
-  }
-}
-@media(prefers-reduced-motion:reduce){
-  section[data-testid="stSidebar"] .st-key-pm_admin_nav [data-testid="stButton"] button{transition:none!important;}
-}
-</style>"""
-if rol_actual == "admin":
-    st.markdown(_PM_ADMIN_NAV_CSS, unsafe_allow_html=True)
 
 # Iconos SVG locales para la navegación. La lista de valores que controla
 # Streamlit no cambia; solo cambia su presentación mediante máscaras CSS.
@@ -12923,7 +12827,7 @@ else:
     _nav_items = [("Marcar Asistencia", "Inicio", ":material/home:"),
                   ("Mis Rutinas", "Rutinas", ":material/fact_check:"),
                   ("Solicitar Permiso / Adelanto", "Avisos", ":material/notifications:"),
-                  ("Mi Ficha Técnica", "Perfil", ":material/person:")]
+                  ("Mi Expediente", "Perfil", ":material/person:")]
 try:
     with st.container(key="tp_bottomnav"):
         for _col, (_dest, _lbl, _ico) in zip(st.columns(len(_nav_items)), _nav_items):
@@ -13877,7 +13781,7 @@ PM7_MODULES.update({'Rutinas Operativas': 'fact_check', 'Mis Rutinas': 'fact_che
 
 
 PM8_VIEW_DETAILS = {'Marcar Asistencia': ('Registro de jornada', 'Tus marcaciones se guardan al confirmar la operación.', 'personal'), 'Registrar Descuadre': ('Control de caja', 'Revisa el importe y la observación antes de registrar.', 'finanzas'), 'Registrar Incidencia': ('Registro operativo', 'Describe el hecho y verifica los datos del registro.', 'control'), 'Mi Ficha Técnica': ('Expediente personal', 'Información laboral y de contacto registrada.', 'personal'), 'Solicitar Permiso / Adelanto': ('Nueva solicitud', 'Completa los datos y revisa el estado de tus solicitudes.', 'personal'), 'Mis Boletas': ('Documentos personales', 'Consulta los documentos disponibles en tu historial.', 'personal'), 'Mi Dashboard Mensual': ('Resumen de mi mes', 'Consulta tus registros y resultados del periodo.', 'analitica'), 'Dashboard General': ('Centro de operaciones', 'Indicadores y asistencia para seguimiento diario.', 'analitica'), 'Gestión Colaboradores': ('Directorio de personal', 'Consulta, filtra y administra las fichas del equipo.', 'personal'), 'Boletas de Pago': ('Gestión documental', 'Consulta y administra los documentos de nómina.', 'finanzas'), 'Programación de Turnos': ('Planificación operativa', 'Organiza y revisa los horarios del equipo.', 'operaciones'), 'Solicitudes y Permisos': ('Bandeja de solicitudes', 'Revisa solicitudes y registra decisiones.', 'operaciones'), 'Historial de Descuadres': ('Auditoría de caja', 'Filtra movimientos y consulta el detalle de las diferencias.', 'finanzas'), 'Incidencias y Daños': ('Seguimiento de incidencias', 'Consulta y gestiona el estado de los casos.', 'control'), 'Botellas Fiadas': ('Préstamos y devoluciones', 'Consulta saldos pendientes y registros de devolución.', 'operaciones'), 'Historial de Asistencias': ('Control de asistencia', 'Consulta marcaciones y trazabilidad de jornadas.', 'personal'), 'Centro de Alertas': ('Prioridades del día', 'Revisa los pendientes que necesitan atención.', 'control'), 'Gestión de Vacaciones': ('Control de descansos', 'Consulta periodos, saldos y solicitudes registradas.', 'personal'), 'Mis Vacaciones': ('Mis descansos', 'Consulta tus periodos registrados.', 'personal'), 'Analítica (BI)': ('Inteligencia de negocio', 'Explora tendencias y reportes operativos.', 'analitica'), 'Gestión del Colaborador': ('Incorporación digital', 'Incorporación, expedientes, inducción y salidas digitales.', 'personal'),
-                         'Mi Incorporación': ('Tu incorporación', 'Consulta tus documentos, requisitos y uniformes.', 'personal'), 'Mi Expediente': ('Portal del colaborador', 'Ficha personal, documentos, inducción y constancias privadas.', 'personal'), 'Auditoría y Configuración': ('Administración del sistema', 'Consulta la trazabilidad y configuración autorizada.', 'control')}
+                         'Mi Incorporación': ('Tu incorporación', 'Consulta tus documentos, requisitos y uniformes.', 'personal'), 'Mi Expediente': ('Perfil y expediente', 'Ficha personal, documentos, entregas, inducción, constancias y salida.', 'personal'), 'Auditoría y Configuración': ('Administración del sistema', 'Consulta la trazabilidad y configuración autorizada.', 'control')}
 PM8_VIEW_DETAILS.update({'Rutinas Operativas': ('Asignación personalizada', 'Actividades programadas con persona, lugar y horario.', 'operaciones'), 'Mis Rutinas': ('Mi trabajo del día', 'Actividades pendientes y completadas con instrucciones.', 'personal'),
                          'Gestión de Comunicados': ('Comunicación interna', 'Publicaciones, destinatarios y lecturas confirmadas.', 'operaciones'),
                          'Mis Comunicados': ('Comunicaciones oficiales', 'Mensajes y confirmaciones de lectura de tu tienda.', 'personal')})
@@ -14577,17 +14481,6 @@ elif choice == "Registrar Incidencia":
         else:
             st.info("Aún no tienes incidencias registradas.")
 
-elif choice == "Mi Ficha Técnica":
-    premium_module_shell('Mi Ficha Técnica', 'MI PERFIL', 'Consulta tu información personal y laboral.')
-
-    with st.container(key="pm_v_mi_ficha_tecnica"):
-
-        mi_row = st.session_state.empleados[st.session_state.empleados["dni"].astype(str) == str(dni_actual)]
-        if not mi_row.empty:
-            renderizar_tarjeta_colaborador(mi_row.iloc[0])
-        else:
-            st.error("No se encontró tu información en la base de datos de colaboradores.")
-
 elif choice == "Solicitar Permiso / Adelanto":
     premium_module_shell('Solicitar Permiso / Adelanto', 'SOLICITUDES', 'Registra tus solicitudes y consulta su estado.')
 
@@ -15015,8 +14908,8 @@ elif choice == "Mi Incorporación":
     _pmi_worker_ui()
 
 elif choice == "Mi Expediente":
-    premium_module_shell('Mi Expediente', 'PERSONAS',
-                         'Documentos laborales, inducción y constancias personales.')
+    premium_module_shell('Mi Expediente', 'MI PERFIL',
+                         'Tu ficha personal, documentos laborales, inducción y constancias en un solo lugar.')
     _pme_worker_ui()
 
     # -------------------- MÓDULOS ADMIN --------------------
