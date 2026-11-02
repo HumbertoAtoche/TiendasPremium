@@ -15490,7 +15490,7 @@ with st.sidebar.container(key='pm_alert_center'):
         for _item in _pm_alert_action:
             _pm_notice_button(_item)
     if _pm_alert_follow:
-        st.markdown('<div class="pm-alert-group pm-alert-group--follow">MENSAJES Y SEGUIMIENTO <span>' + str(_pm_alert_follow_count) + '</span></div>', unsafe_allow_html=True)
+        st.markdown('<div class="pm-alert-group pm-alert-group--follow">MENSAJES Y SEGUIMIENTO</div>', unsafe_allow_html=True)
         for _item in _pm_alert_follow:
             _pm_notice_button(_item)
     if _pm_alert_unique_count == 0 and not _pm_sidebar_errors:
