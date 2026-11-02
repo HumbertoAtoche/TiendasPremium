@@ -3873,11 +3873,11 @@ def _pme_add_training(dni, titulo, categoria, fecha, duracion, modalidad, estado
     _pmi_person(dni)
     titulo, instructor, nota = str(titulo).strip()[:140], str(instructor).strip()[:100], str(nota).strip()[:500]
     if len(titulo) < 4:
-        raise ValueError('Escribe un título de capacitación de al menos 4 caracteres.')
+        raise ValueError('Escribe un título de inducción de al menos 4 caracteres.')
     if categoria not in ('Inducción', 'Operaciones', 'Seguridad', 'Atención al cliente', 'Otro'):
-        raise ValueError('Categoría de capacitación no permitida.')
+        raise ValueError('Categoría de inducción no permitida.')
     if modalidad not in ('Presencial', 'Virtual', 'Mixta') or estado not in ('Programada', 'Completada'):
-        raise ValueError('Revisa la modalidad y el estado de la capacitación.')
+        raise ValueError('Revisa la modalidad y el estado de la inducción.')
     if not isinstance(fecha, date) or not 0 <= float(duracion) <= 48:
         raise ValueError('Fecha o duración inválida.')
     _pme_append(_PME_TRAIN, {
@@ -3888,7 +3888,7 @@ def _pme_add_training(dni, titulo, categoria, fecha, duracion, modalidad, estado
         'observacion': nota, 'registrado_por': str(st.session_state.get('usuario_login')),
         'registrado_el': _pmi_time(),
     })
-    registrar_auditoria('Registrar capacitación', _PME_TRAIN, f'Colaborador {_pmi_dni(dni)} · {categoria}')
+    registrar_auditoria('Registrar inducción', _PME_TRAIN, f'Colaborador {_pmi_dni(dni)} · {categoria}')
 
 
 def _pme_complete_training(dni, training_id):
@@ -3907,7 +3907,7 @@ def _pme_complete_training(dni, training_id):
         raise RuntimeError('La capacitación no pudo identificarse de forma única.')
     updated = dict(matching[0]); updated['estado'] = 'Completada'
     ws.update(f'A{index[0]}', [[str(updated[k]) for k in _PME_SCHEMAS[_PME_TRAIN]]], value_input_option='RAW')
-    registrar_auditoria('Confirmar capacitación completada', _PME_TRAIN,
+    registrar_auditoria('Confirmar inducción completada', _PME_TRAIN,
                         f'DNI {_pmi_dni(dni)} · capacitación {training_id}')
 
 
@@ -4145,7 +4145,10 @@ def _pme_portal_view(dni, admin=False):
         _pme_show_person(dni)
         try:
             case, reqs, files, gear, profiles = _pme_personal_records(dni)
-            trainings = sorted(_pme_rows(_PME_TRAIN, dni), key=lambda r: (r['fecha'], r['registrado_el']), reverse=True)
+            trainings = sorted(
+                [r for r in _pme_rows(_PME_TRAIN, dni)
+                 if str(r.get('categoria', '')).strip().casefold() == 'inducción'],
+                key=lambda r: (r['fecha'], r['registrado_el']), reverse=True)
             certificates = sorted(_pme_rows(_PME_CERT, dni), key=lambda r: r['publicado_el'], reverse=True)
             if not admin:
                 certificates = [r for r in certificates if r['estado'] == 'Publicado']
@@ -4157,9 +4160,9 @@ def _pme_portal_view(dni, admin=False):
         st.markdown('<div class="pmi-kpis">'
                     f'<div class="pmi-kpi"><small>Documentos validados</small><strong>{len(valid_files)}</strong></div>'
                     f'<div class="pmi-kpi"><small>Entregas recibidas</small><strong>{len(received_items)}</strong></div>'
-                    f'<div class="pmi-kpi"><small>Capacitaciones</small><strong>{len(trainings)}</strong></div>'
+                    f'<div class="pmi-kpi"><small>Inducciones presenciales</small><strong>{len(trainings)}</strong></div>'
                     '</div>', unsafe_allow_html=True)
-        tabs = st.tabs(['Documentos', 'Entregas', 'Capacitaciones', 'Constancias'])
+        tabs = st.tabs(['Documentos', 'Entregas', 'Inducción', 'Constancias', 'Salida digital'])
         with tabs[0]:
             st.markdown('<div class="pme-section">Documentos del expediente</div>', unsafe_allow_html=True)
             if not case:
@@ -4194,9 +4197,10 @@ def _pme_portal_view(dni, admin=False):
                         st.caption('Observación: ' + str(item['observacion']))
             st.caption('Los uniformes aparecen según el registro de entrega y la conformidad del trabajador.')
         with tabs[2]:
-            st.markdown('<div class="pme-section">Mis capacitaciones</div>', unsafe_allow_html=True)
+            _pmx_induction_ui(dni, admin=admin)
+            st.markdown('<div class="pme-section">Inducciones presenciales registradas</div>', unsafe_allow_html=True)
             if not trainings:
-                st.markdown('<div class="pme-empty">Todavía no hay capacitaciones registradas para este colaborador. Administración puede incorporarlas desde el portal.</div>', unsafe_allow_html=True)
+                st.markdown('<div class="pme-empty">No hay inducciones presenciales registradas en el expediente.</div>', unsafe_allow_html=True)
             else:
                 for record in trainings:
                     sub = (str(record.get('categoria', '')) + ' · ' + str(record.get('fecha',''))
@@ -4211,15 +4215,15 @@ def _pme_portal_view(dni, admin=False):
                     if record.get('observacion'):
                         st.caption(record['observacion'])
                     if admin and record.get('estado') == 'Programada':
-                        with st.expander('Registrar capacitación realizada'):
-                            verified = st.checkbox('Confirmo que el trabajador asistió y completó esta capacitación',
+                        with st.expander('Confirmar inducción presencial realizada'):
+                            verified = st.checkbox('Confirmo que el colaborador completó esta inducción presencial',
                                                    key='pme_training_check_' + record['id_capacitacion'])
                             if st.button('Marcar como completada', disabled=not verified,
                                          key='pme_training_complete_' + record['id_capacitacion']):
                                 _pmi_ui_action(lambda training_id=record['id_capacitacion']:
                                                _pme_complete_training(dni, training_id),
-                                               'Capacitación marcada como completada.')
-            st.caption('Las capacitaciones se registran por administración; no se presumen completadas por haberlas consultado.')
+                                               'Inducción presencial marcada como completada.')
+            st.caption('La consulta de un video no implica visualización verificada; la confirmación queda declarada por el colaborador.')
         with tabs[3]:
             st.markdown('<div class="pme-section">Mis constancias y certificados</div>', unsafe_allow_html=True)
             if not certificates:
@@ -4242,6 +4246,13 @@ def _pme_portal_view(dni, admin=False):
                                 _pmi_ui_action(lambda ident=row['id_constancia']: _pme_revoke_certificate(dni, ident),
                                                'Constancia retirada de la vista del colaborador.')
 
+        with tabs[4]:
+            if admin:
+                st.info('Para gestionar devoluciones, documentos y el cierre, utiliza la pestaña superior «Salida digital».')
+            else:
+                with st.container(key='pmx_worker_panel'):
+                    _pmx_exit_portal(dni, admin=False)
+
 
 def _pme_admin_ui():
     if not _pmi_is_admin():
@@ -4250,9 +4261,8 @@ def _pme_admin_ui():
     _pmi_styles()
     _pme_styles()
     with st.container(key='pme_admin_dashboard'):
-        st.markdown('<div class="pmi-head"><div><h3>Portal del expediente</h3>'
-                    '<p>Ficha del equipo, documentos, historial de entregas, capacitaciones y constancias.</p>'
-                    '</div></div>', unsafe_allow_html=True)
+        _pmx_section('EXPEDIENTE LABORAL', 'Documentos y seguimiento personal',
+                     'Ficha del trabajador, historial de entregas, inducción inicial y constancias privadas.')
         people = st.session_state.get('empleados', pd.DataFrame())
         if not isinstance(people, pd.DataFrame) or people.empty:
             st.info('No hay trabajadores disponibles.')
@@ -4268,40 +4278,45 @@ def _pme_admin_ui():
         st.caption('La ficha se recupera directamente de Gestión Colaboradores. No altera los encabezados ni la información de esa hoja.')
         with st.expander('Preparación de las hojas de Fase 2'):
             st.caption('Solo se crean Exp_Capacitaciones y Exp_Constancias si aún no existen. '
-                       'Se comprueban sus encabezados y no se modifican hojas anteriores.')
+                       'Se comprueban sus encabezados sin editar hojas anteriores.')
             if st.button('Verificar o preparar hojas del portal', key='pme_prepare_sheets',
                          use_container_width=True):
                 _pmi_ui_action(_pme_create_sheets, 'Hojas del portal verificadas y listas para usar.')
         _pme_portal_view(person_dni, admin=True)
-        st.markdown('<div class="pmi-subsection"><span>ADMINISTRACIÓN</span> Nuevos registros del expediente</div>', unsafe_allow_html=True)
-        cols = st.tabs(['Registrar capacitación', 'Publicar constancia'])
+        st.markdown('<div class="pmi-subsection"><span>ADMINISTRACIÓN</span> Publicaciones e inducción</div>', unsafe_allow_html=True)
+        cols = st.tabs(['Videos de inducción', 'Inducción presencial', 'Publicar constancia'])
         with cols[0]:
-            with st.form('pme_new_training', clear_on_submit=True):
-                title = st.text_input('Nombre de la capacitación', max_chars=140, placeholder='Ej. Inducción: procedimientos de caja')
-                ca, cb = st.columns(2)
-                category = ca.selectbox('Categoría', ['Inducción', 'Operaciones', 'Seguridad', 'Atención al cliente', 'Otro'])
-                date_done = cb.date_input('Fecha', value=obtener_ahora_peru().date())
-                cc, cd = st.columns(2)
-                duration = cc.number_input('Duración (horas)', min_value=0.0, max_value=48.0, value=1.0, step=0.5)
-                modality = cd.selectbox('Modalidad', ['Presencial', 'Virtual', 'Mixta'])
-                state = st.selectbox('Estado', ['Completada', 'Programada'])
-                instructor = st.text_input('Responsable de capacitación', max_chars=100)
-                notes = st.text_area('Observaciones (opcional)', max_chars=500)
-                submit = st.form_submit_button('Registrar capacitación', use_container_width=True)
-            if submit:
-                _pmi_ui_action(lambda: _pme_add_training(person_dni, title, category, date_done,
-                                                          duration, modality, state, instructor, notes),
-                               'Capacitación registrada en el expediente.')
+            _pmx_video_admin_ui()
         with cols[1]:
-            st.caption('Solo administración publica constancias. El trabajador las consulta desde Mi Expediente.')
+            st.caption('Registra únicamente la inducción inicial del nuevo colaborador. '
+                       'No se habilita un portal de capacitaciones.')
+            with st.form('pme_new_training', clear_on_submit=True):
+                title = st.text_input('Nombre de la inducción', max_chars=140,
+                                      placeholder='Ej. Uso del sistema de ventas')
+                ca, cb = st.columns(2)
+                date_done = ca.date_input('Fecha', value=obtener_ahora_peru().date())
+                state = cb.selectbox('Estado', ['Programada', 'Completada'])
+                cc, cd = st.columns(2)
+                duration = cc.number_input('Duración (horas)', min_value=0.0, max_value=48.0,
+                                            value=1.0, step=0.5)
+                modality = cd.selectbox('Modalidad', ['Presencial', 'Virtual', 'Mixta'])
+                instructor = st.text_input('Responsable de la inducción', max_chars=100)
+                notes = st.text_area('Observaciones (opcional)', max_chars=500)
+                submit = st.form_submit_button('Registrar inducción', use_container_width=True)
+            if submit:
+                _pmi_ui_action(lambda: _pme_add_training(person_dni, title, 'Inducción', date_done,
+                                                          duration, modality, state, instructor, notes),
+                               'Inducción registrada en el expediente.')
+        with cols[2]:
+            st.caption('Solo administración publica constancias. Cada colaborador las consulta desde Mi Expediente.')
             with st.form('pme_new_certificate', clear_on_submit=True):
                 file_type = st.selectbox('Tipo de documento', ['Constancia', 'Certificado', 'Otro documento laboral'])
-                cert_title = st.text_input('Título', max_chars=140, placeholder='Ej. Constancia de capacitación')
+                cert_title = st.text_input('Título', max_chars=140, placeholder='Ej. Constancia laboral')
                 cert_date = st.date_input('Fecha del documento', value=obtener_ahora_peru().date())
                 cert_file = st.file_uploader('Archivo privado PDF o imagen',
                                              type=['pdf','jpg','jpeg','png','webp','heic','heif'],
-                                             help='Máximo 15 MB. El documento se guarda en Drive privado.')
-                cert_confirm = st.checkbox('Confirmo que este documento corresponde al colaborador seleccionado')
+                                             help='Máximo 15 MB. Guardado en Drive privado.')
+                cert_confirm = st.checkbox('Confirmo que pertenece al colaborador seleccionado')
                 save = st.form_submit_button('Publicar en su expediente', use_container_width=True)
             if save and not cert_confirm:
                 st.error('Confirma que el documento pertenece al colaborador seleccionado.')
@@ -4316,12 +4331,898 @@ def _pme_worker_ui():
     _pmi_styles()
     dni = _pmi_dni(dni_actual)
     _pmi_check_access(dni)
-    st.markdown('<div class="pmi-head"><div><h3>Mi expediente laboral</h3>'
-                '<p>Tu información, documentos, entregas, capacitaciones y constancias en un solo lugar.</p>'
-                '</div></div>', unsafe_allow_html=True)
+    _pmx_section('MI EXPEDIENTE', 'Documentos, inducción y salidas',
+                 'Consulta tu información laboral, aprende los procesos y verifica documentos de salida.')
     _pme_portal_view(dni, admin=False)
     st.caption('Si necesitas corregir tus datos personales, comunícalo a administración. '
                'Si tienes una incorporación abierta, realiza tus cargas y conformidades en Mi Incorporación.')
+
+# =============================================================
+# PREMIUM MARKET · FASE 3 · SALIDA DIGITAL + INDUCCIÓN EN VIDEO
+# Esquemas independientes. No altera hojas de Fases 1 y 2,
+# ni actualiza automáticamente el estado del trabajador.
+# =============================================================
+from urllib.parse import urlparse as _pmx_urlparse, parse_qs as _pmx_parse_qs
+import re as _pmx_re
+
+_PMX_EXIT = 'Sal_Digital'
+_PMX_ITEMS = 'Sal_Items'
+_PMX_DOCS = 'Sal_Documentos'
+_PMX_VIDEO = 'Exp_Induccion_Videos'
+_PMX_WATCH = 'Exp_Induccion_Avances'
+_PMX_SCHEMAS = {
+    _PMX_EXIT: ['id_salida', 'dni', 'nombre', 'cargo', 'motivo', 'fecha_cese', 'estado',
+                'creado_por', 'creado_el', 'validado_por', 'validado_el', 'cerrado_por',
+                'cerrado_el', 'observacion'],
+    _PMX_ITEMS: ['id_item', 'id_salida', 'dni', 'grupo', 'tarea', 'estado',
+                 'observacion', 'revisado_por', 'revisado_el'],
+    _PMX_DOCS: ['id_documento', 'id_salida', 'dni', 'tipo', 'titulo', 'nombre_archivo',
+                'mime', 'tamano', 'drive_file_id', 'estado', 'subido_por', 'subido_el',
+                'recibido_por', 'recibido_el'],
+    _PMX_VIDEO: ['id_video', 'titulo', 'descripcion', 'categoria', 'fuente',
+                 'url_youtube', 'drive_file_id', 'mime', 'nombre_archivo', 'destinatario',
+                 'estado', 'publicado_por', 'publicado_el'],
+    _PMX_WATCH: ['id_avance', 'id_video', 'dni', 'estado', 'confirmado_por', 'confirmado_el'],
+}
+_PMX_CHECKLIST = (
+    ('Devoluciones', 'Devolución de polos / uniforme de trabajo'),
+    ('Devoluciones', 'Devolución de llaves y accesos físicos'),
+    ('Devoluciones', 'Devolución de fotocheck / credencial'),
+    ('Devoluciones', 'Devolución de equipos y materiales asignados'),
+    ('Validación administrativa', 'Arqueo de caja, fiados y saldos por conciliar'),
+    ('Validación administrativa', 'Verificación de inventarios y pendientes operativos'),
+    ('Validación administrativa', 'Revisión de obligaciones de planilla / liquidación'),
+    ('Validación administrativa', 'Revocación de usuario y accesos a sistemas'),
+)
+_PMX_DOC_LIMIT = 15 * 1024 * 1024
+_PMX_VIDEO_LIMIT = 60 * 1024 * 1024
+
+
+def _pmx_sheet(name, create=False):
+    if name not in _PMX_SCHEMAS:
+        raise ValueError('Hoja de salida o inducción desconocida.')
+    if not doc_sheets:
+        raise ConnectionError('Conexión de Sheets no disponible.')
+    try:
+        ws = doc_sheets.worksheet(name)
+    except gspread.exceptions.WorksheetNotFound:
+        if not create:
+            return None
+        _pmi_check_access(dni_actual, write=True, admin_only=True)
+        try:
+            ws = doc_sheets.add_worksheet(title=name, rows=1500,
+                                          cols=len(_PMX_SCHEMAS[name]))
+        except Exception:
+            ws = doc_sheets.worksheet(name)
+    real = ws._ws if isinstance(ws, _HojaProxy) else ws
+    header = [str(c).strip() for c in real.row_values(1)]
+    if not header and create:
+        ws.append_row(_PMX_SCHEMAS[name], value_input_option='RAW')
+        header = list(_PMX_SCHEMAS[name])
+    if header != _PMX_SCHEMAS[name]:
+        raise ValueError(f'Los encabezados de {name} no coinciden. No se modificó nada.')
+    return ws
+
+
+def _pmx_rows(name):
+    ws = _pmx_sheet(name)
+    if ws is None:
+        return []
+    real = ws._ws if isinstance(ws, _HojaProxy) else ws
+    values = real.get_all_values()
+    if not values:
+        return []
+    if [str(c).strip() for c in values[0]] != _PMX_SCHEMAS[name]:
+        raise ValueError(f'Encabezados de {name} inconsistentes.')
+    columns = _PMX_SCHEMAS[name]
+    return [dict(zip(columns, row + [''] * len(columns))) for row in values[1:]
+            if row and str(row[0]).strip()]
+
+
+def _pmx_append(name, record):
+    ws = _pmx_sheet(name, create=True)
+    ws.append_row([str(record.get(c, '')) for c in _PMX_SCHEMAS[name]],
+                  value_input_option='RAW')
+    _pmi_clear()
+
+
+def _pmx_update(name, ident, changes):
+    if not changes or not set(changes).issubset(_PMX_SCHEMAS[name]):
+        raise ValueError('Columnas no reconocidas.')
+    ws = _pmx_sheet(name)
+    if ws is None:
+        raise ValueError('No existe la hoja esperada.')
+    real = ws._ws if isinstance(ws, _HojaProxy) else ws
+    vals = real.get_all_values()
+    if not vals or [x.strip() for x in vals[0]] != _PMX_SCHEMAS[name]:
+        raise ValueError('Encabezados incompatibles. No se modificó la información.')
+    found = [(idx, row) for idx, row in enumerate(vals[1:], start=2)
+             if row and str(row[0]) == str(ident)]
+    if len(found) != 1:
+        raise ValueError('Registro no encontrado de forma única.')
+    idx, row = found[0]
+    record = dict(zip(_PMX_SCHEMAS[name], row + [''] * len(_PMX_SCHEMAS[name])))
+    record.update({k: str(v) for k, v in changes.items()})
+    ws.update(f'A{idx}', [[record[k] for k in _PMX_SCHEMAS[name]]],
+              value_input_option='RAW')
+    _pmi_clear()
+
+
+def _pmx_prepare():
+    _pmi_check_access(dni_actual, write=True, admin_only=True)
+    for name in _PMX_SCHEMAS:
+        _pmx_sheet(name, create=True)
+    registrar_auditoria('Preparar fase 3', 'Gestión del Colaborador',
+                        'Salidas digitales e inducción · esquemas validados')
+
+
+def _pmx_case(dni):
+    _pmi_check_access(dni)
+    items = [r for r in _pmx_rows(_PMX_EXIT) if _pmi_dni(r['dni']) == _pmi_dni(dni)]
+    if len(items) > 1:
+        raise ValueError('Existen varias salidas para este DNI. Revisar antes de continuar.')
+    return items[0] if items else None
+
+
+def _pmx_case_records(dni):
+    case = _pmx_case(dni)
+    if not case:
+        return None, [], []
+    items = [r for r in _pmx_rows(_PMX_ITEMS) if r['id_salida'] == case['id_salida']
+             and _pmi_dni(r['dni']) == _pmi_dni(dni)]
+    docs = [r for r in _pmx_rows(_PMX_DOCS) if r['id_salida'] == case['id_salida']
+            and _pmi_dni(r['dni']) == _pmi_dni(dni)]
+    return case, items, docs
+
+
+def _pmx_start(dni, motivo, fecha, nota):
+    _pmi_check_access(dni, write=True, admin_only=True)
+    person = _pmi_person(dni)
+    if _pmx_case(dni):
+        raise ValueError('Ya existe un proceso de salida para este colaborador.')
+    if motivo not in ('Renuncia', 'Fin de contrato', 'Mutuo acuerdo', 'Otra causa'):
+        raise ValueError('Selecciona un motivo permitido.')
+    if not isinstance(fecha, date):
+        raise ValueError('Selecciona una fecha válida.')
+    with _PMI_MUTEX:
+        if _pmx_case(dni):
+            raise ValueError('La salida ya fue creada por otra sesión.')
+        # Se prepara el esquema completo antes de comenzar a persistir.
+        for name in (_PMX_EXIT, _PMX_ITEMS, _PMX_DOCS):
+            _pmx_sheet(name, create=True)
+        ident = 'SAL-' + _pmi_uuid.uuid4().hex[:20].upper()
+        now = _pmi_time()
+        _pmx_append(_PMX_EXIT, {
+            'id_salida': ident, 'dni': _pmi_dni(dni),
+            'nombre': str(person.get('nombre', '')), 'cargo': str(person.get('cargo', '')),
+            'motivo': motivo, 'fecha_cese': fecha.isoformat(), 'estado': 'Abierta',
+            'creado_por': str(st.session_state.get('usuario_login')),
+            'creado_el': now, 'observacion': str(nota).strip()[:500]})
+        for group, task in _PMX_CHECKLIST:
+            _pmx_append(_PMX_ITEMS, {
+                'id_item': 'SI-' + _pmi_uuid.uuid4().hex[:20].upper(),
+                'id_salida': ident, 'dni': _pmi_dni(dni), 'grupo': group,
+                'tarea': task, 'estado': 'Pendiente'})
+    registrar_auditoria('Iniciar salida digital', _PMX_EXIT,
+                        f'DNI {_pmi_dni(dni)} · salida {ident}')
+
+
+def _pmx_repair_items(dni):
+    """Recupera una alta interrumpida sin duplicar revisiones ya existentes."""
+    _pmi_check_access(dni, write=True, admin_only=True)
+    case, items, _ = _pmx_case_records(dni)
+    if not case or case['estado'] != 'Abierta':
+        raise ValueError('No existe una salida abierta por reparar.')
+    pairs = [(r['grupo'], r['tarea']) for r in items]
+    if len(pairs) != len(set(pairs)) or any(x not in _PMX_CHECKLIST for x in pairs):
+        raise ValueError('Hay ítems duplicados o extraños. Se requiere revisión manual.')
+    for group, task in _PMX_CHECKLIST:
+        if (group, task) not in pairs:
+            _pmx_append(_PMX_ITEMS, {
+                'id_item': 'SI-' + _pmi_uuid.uuid4().hex[:20].upper(),
+                'id_salida': case['id_salida'], 'dni': _pmi_dni(dni),
+                'grupo': group, 'tarea': task, 'estado': 'Pendiente'})
+    registrar_auditoria('Conciliar checklist de salida', _PMX_ITEMS,
+                        f'DNI {_pmi_dni(dni)} · salida {case["id_salida"]}')
+
+
+def _pmx_review_item(dni, item_id, status, note):
+    _pmi_check_access(dni, write=True, admin_only=True)
+    case, items, _ = _pmx_case_records(dni)
+    if not case or case['estado'] != 'Abierta':
+        raise ValueError('Solo puedes revisar una salida abierta.')
+    matching = [x for x in items if x['id_item'] == item_id]
+    if len(matching) != 1:
+        raise ValueError('Ítem no identificado.')
+    if status not in ('Pendiente', 'Conforme', 'No aplica', 'Observado'):
+        raise ValueError('Estado no permitido.')
+    note = str(note).strip()[:350]
+    if status in ('No aplica', 'Observado') and len(note) < 5:
+        raise ValueError('Indica el motivo de la excepción u observación.')
+    _pmx_update(_PMX_ITEMS, item_id, {
+        'estado': status, 'observacion': note,
+        'revisado_por': str(st.session_state['usuario_login']), 'revisado_el': _pmi_time()})
+    registrar_auditoria('Revisar checklist de salida', _PMX_ITEMS,
+                        f'DNI {_pmi_dni(dni)} · {item_id} · {status}')
+
+
+def _pmx_docs_folder(dni):
+    drive, root = _pm3_drive_client()
+    _pm3_validate_private_folder(drive, root)
+    # Carpetas privadas del expediente existentes, por DNI sin exponerlo en Drive.
+    folder = _pme_cert_folder(drive, root, dni)
+    return drive, folder
+
+
+def _pmx_upload_doc(dni, tipo, titulo, file_obj):
+    _pmi_check_access(dni, write=True, admin_only=True)
+    case = _pmx_case(dni)
+    if not case or case['estado'] != 'Abierta':
+        raise ValueError('La salida debe estar abierta para publicar documentos.')
+    if tipo not in ('Documento de cese', 'Liquidación', 'Constancia de trabajo', 'Otro'):
+        raise ValueError('Tipo de documento no permitido.')
+    titulo = str(titulo).strip()[:140]
+    if len(titulo) < 4 or file_obj is None:
+        raise ValueError('Escribe el título y adjunta un archivo.')
+    name = str(file_obj.name).replace('\\', '/').split('/')[-1][:90]
+    ext = os.path.splitext(name)[1].lower()
+    if ext not in ('.pdf', '.jpg', '.jpeg', '.png', '.webp', '.heic', '.heif'):
+        raise ValueError('Solo se admiten documentos PDF o imágenes.')
+    data = file_obj.getvalue()
+    if not data or len(data) > _PMX_DOC_LIMIT:
+        raise ValueError('Archivo vacío o superior a 15 MB.')
+    if ext == '.pdf':
+        if not data.startswith(b'%PDF-'):
+            raise ValueError('PDF no válido.')
+        mime = 'application/pdf'
+    else:
+        data = _pm3_prepare_image(file_obj)
+        if len(data) > _PMX_DOC_LIMIT:
+            raise ValueError('La imagen procesada es demasiado grande.')
+        mime = 'image/webp'
+        name = os.path.splitext(name)[0][:65] + '.webp'
+    drive, folder = _pmx_docs_folder(dni)
+    from googleapiclient.http import MediaIoBaseUpload
+    file_id = ''
+    try:
+        result = drive.files().create(
+            body={'name': 'salida_' + _pmi_uuid.uuid4().hex[:12] + '_' + name,
+                  'parents': [folder], 'mimeType': mime},
+            media_body=MediaIoBaseUpload(io.BytesIO(data), mimetype=mime, resumable=False),
+            fields='id', supportsAllDrives=True).execute()
+        file_id = str(result.get('id') or '')
+        if not file_id:
+            raise RuntimeError('Drive no confirmó el archivo.')
+        _pmx_append(_PMX_DOCS, {
+            'id_documento': 'SD-' + _pmi_uuid.uuid4().hex[:20].upper(),
+            'id_salida': case['id_salida'], 'dni': _pmi_dni(dni),
+            'tipo': tipo, 'titulo': titulo, 'nombre_archivo': name,
+            'mime': mime, 'tamano': len(data), 'drive_file_id': file_id,
+            'estado': 'Publicado', 'subido_por': str(st.session_state['usuario_login']),
+            'subido_el': _pmi_time()})
+    except Exception:
+        # Si la escritura pudo completarse, NO borrar el archivo como compensación.
+        raise
+    registrar_auditoria('Publicar documento de salida', _PMX_DOCS,
+                        f'DNI {_pmi_dni(dni)} · {tipo} · {file_id[:12]}')
+
+
+def _pmx_doc_bytes(dni, doc_id):
+    _pmi_check_access(dni)
+    case, _, docs = _pmx_case_records(dni)
+    rows = [x for x in docs if x['id_documento'] == str(doc_id)]
+    if not case or len(rows) != 1:
+        raise PermissionError('Documento no disponible.')
+    r = rows[0]
+    drive, _ = _pm3_drive_client()
+    body = drive.files().get_media(fileId=r['drive_file_id'], supportsAllDrives=True).execute()
+    if not isinstance(body, bytes) or not 0 < len(body) <= _PMX_DOC_LIMIT:
+        raise ValueError('El archivo no pudo recuperarse en forma válida.')
+    return body, r
+
+
+def _pmx_ack_doc(dni, doc_id):
+    _pmi_check_access(dni, write=True)
+    if _pmi_is_admin():
+        raise PermissionError('La recepción la confirma el colaborador, no administración.')
+    case, _, docs = _pmx_case_records(dni)
+    matches = [d for d in docs if d['id_documento'] == str(doc_id)]
+    if not case or case['estado'] == 'Cerrada' or len(matches) != 1:
+        raise ValueError('No hay documento pendiente en una salida abierta.')
+    if matches[0]['estado'] != 'Publicado':
+        raise ValueError('Este documento ya fue confirmado.')
+    _pmx_update(_PMX_DOCS, doc_id, {
+        'estado': 'Recibido', 'recibido_por': str(st.session_state['usuario_login']),
+        'recibido_el': _pmi_time()})
+    registrar_auditoria('Confirmar recepción documento salida', _PMX_DOCS,
+                        f'DNI {_pmi_dni(dni)} · documento {doc_id}')
+
+
+def _pmx_case_status(items, docs):
+    complete = sum(r['estado'] in ('Conforme', 'No aplica') for r in items)
+    received = sum(r['estado'] == 'Recibido' for r in docs)
+    expected = {(g, t) for g, t in _PMX_CHECKLIST}
+    actual = [(r['grupo'], r['tarea']) for r in items]
+    structure_ok = len(actual) == len(expected) and set(actual) == expected
+    return complete, received, structure_ok and complete == len(items) and bool(docs) and received == len(docs)
+
+
+def _pmx_validate(dni):
+    _pmi_check_access(dni, write=True, admin_only=True)
+    case, items, docs = _pmx_case_records(dni)
+    if not case or case['estado'] != 'Abierta':
+        raise ValueError('La salida no está abierta.')
+    _, _, ready = _pmx_case_status(items, docs)
+    if not ready:
+        raise ValueError('Faltan verificaciones o confirmaciones de documentos del colaborador.')
+    _pmx_update(_PMX_EXIT, case['id_salida'], {
+        'estado': 'Validada', 'validado_por': str(st.session_state['usuario_login']),
+        'validado_el': _pmi_time()})
+    registrar_auditoria('Validar salida digital', _PMX_EXIT,
+                        f'DNI {_pmi_dni(dni)} · salida {case["id_salida"]}')
+
+
+def _pmx_close(dni):
+    _pmi_check_access(dni, write=True, admin_only=True)
+    case, items, docs = _pmx_case_records(dni)
+    if not case or case['estado'] != 'Validada':
+        raise ValueError('Primero se requiere validación administrativa.')
+    _, _, ready = _pmx_case_status(items, docs)
+    if not ready:
+        raise ValueError('El expediente tiene documentos o requisitos pendientes.')
+    _pmx_update(_PMX_EXIT, case['id_salida'], {
+        'estado': 'Cerrada', 'cerrado_por': str(st.session_state['usuario_login']),
+        'cerrado_el': _pmi_time()})
+    registrar_auditoria('Cerrar expediente salida digital', _PMX_EXIT,
+                        f'DNI {_pmi_dni(dni)} · salida {case["id_salida"]}')
+
+
+def _pmx_youtube_link(url):
+    raw = str(url or '').strip()
+    parsed = _pmx_urlparse(raw)
+    host = (parsed.hostname or '').lower()
+    if parsed.scheme != 'https' or parsed.username or parsed.password or parsed.port not in (None, 443):
+        raise ValueError('Utiliza un enlace HTTPS de YouTube.')
+    path = parsed.path.strip('/')
+    if host in ('youtu.be', 'www.youtu.be'):
+        code = path.split('/')[0]
+    elif host in ('youtube.com', 'www.youtube.com', 'm.youtube.com'):
+        if path == 'watch':
+            code = _pmx_parse_qs(parsed.query).get('v', [''])[0]
+        elif path.startswith(('shorts/', 'embed/', 'live/')):
+            code = path.split('/')[1]
+        else:
+            code = ''
+    else:
+        code = ''
+    if not _pmx_re.fullmatch(r'[A-Za-z0-9_-]{11}', code):
+        raise ValueError('Enlace no reconocido. Pega el enlace del video de YouTube, no de un canal.')
+    return 'https://www.youtube.com/watch?v=' + code
+
+
+def _pmx_video_publish(title, desc, category, source, url, obj, audience):
+    _pmi_check_access(dni_actual, write=True, admin_only=True)
+    title = str(title).strip()[:140]
+    desc = str(desc).strip()[:500]
+    if len(title) < 4:
+        raise ValueError('El título debe tener al menos 4 caracteres.')
+    if category not in ('Sistema de ventas', 'Caja', 'Inventarios', 'Atención al cliente', 'Políticas', 'Otro'):
+        raise ValueError('Categoría inválida.')
+    if source not in ('YouTube', 'Archivo MP4'):
+        raise ValueError('Fuente inválida.')
+    if audience != 'TODOS':
+        _pmi_person(audience)
+    # Preparar ambas hojas como administrador antes de que el trabajador confirme.
+    _pmx_sheet(_PMX_VIDEO, create=True)
+    _pmx_sheet(_PMX_WATCH, create=True)
+    media_id, mime, name = '', '', ''
+    youtube = _pmx_youtube_link(url) if source == 'YouTube' else ''
+    if source == 'Archivo MP4':
+        if obj is None:
+            raise ValueError('Adjunta un video MP4.')
+        name = str(obj.name).replace('\\', '/').split('/')[-1][:90]
+        if os.path.splitext(name)[1].lower() != '.mp4':
+            raise ValueError('El video debe tener extensión .mp4.')
+        data = obj.getvalue()
+        if not 0 < len(data) <= _PMX_VIDEO_LIMIT:
+            raise ValueError('El video debe pesar entre 1 byte y 60 MB.')
+        if b'ftyp' not in data[:64]:
+            raise ValueError('No parece un video MP4 válido.')
+        drive, root = _pm3_drive_client()
+        _pm3_validate_private_folder(drive, root)
+        # Solo administración puede subir; materiales almacenados en Drive privado.
+        folder = _pmx_material_folder(drive, root)
+        from googleapiclient.http import MediaIoBaseUpload
+        saved = drive.files().create(
+            body={'name': 'induccion_' + _pmi_uuid.uuid4().hex[:12] + '.mp4',
+                  'parents': [folder], 'mimeType': 'video/mp4'},
+            media_body=MediaIoBaseUpload(io.BytesIO(data), mimetype='video/mp4', resumable=True),
+            fields='id', supportsAllDrives=True).execute()
+        media_id = str(saved.get('id') or '')
+        if not media_id:
+            raise RuntimeError('Drive no devolvió identificador del video.')
+        mime = 'video/mp4'
+    _pmx_append(_PMX_VIDEO, {
+        'id_video': 'VID-' + _pmi_uuid.uuid4().hex[:20].upper(),
+        'titulo': title, 'descripcion': desc, 'categoria': category,
+        'fuente': source, 'url_youtube': youtube, 'drive_file_id': media_id,
+        'mime': mime, 'nombre_archivo': name, 'destinatario': audience,
+        'estado': 'Publicado', 'publicado_por': str(st.session_state['usuario_login']),
+        'publicado_el': _pmi_time()})
+    registrar_auditoria('Publicar video inducción', _PMX_VIDEO,
+                        f'{category} · {source} · {audience}')
+
+
+def _pmx_material_folder(drive, root):
+    q = "name = 'Materiales_Induccion' and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
+    entries = drive.files().list(q=q, fields='nextPageToken,files(id,parents)',
+                                  supportsAllDrives=True, includeItemsFromAllDrives=True,
+                                  pageSize=100).execute()
+    if entries.get('nextPageToken'):
+        raise ValueError('Demasiadas carpetas con el mismo nombre; revisar Drive.')
+    found = [v for v in entries.get('files', []) if root in v.get('parents', [])]
+    if len(found) > 1:
+        raise ValueError('Existen carpetas duplicadas de inducción.')
+    if found:
+        return found[0]['id']
+    return drive.files().create(body={'name': 'Materiales_Induccion',
+        'parents': [root], 'mimeType': 'application/vnd.google-apps.folder'},
+        fields='id', supportsAllDrives=True).execute()['id']
+
+
+def _pmx_videos(dni):
+    _pmi_check_access(dni)
+    return [v for v in _pmx_rows(_PMX_VIDEO) if
+            (v['destinatario'] == 'TODOS' or _pmi_dni(v['destinatario']) == _pmi_dni(dni))
+            and v['estado'] == 'Publicado']
+
+
+def _pmx_confirm_video(dni, video_id):
+    _pmi_check_access(dni, write=True)
+    if _pmi_is_admin():
+        raise PermissionError('La confirmación debe hacerla el trabajador.')
+    if len([v for v in _pmx_videos(dni) if v['id_video'] == video_id]) != 1:
+        raise PermissionError('El video no corresponde a este trabajador o está retirado.')
+    previous = [a for a in _pmx_rows(_PMX_WATCH) if
+                a['id_video'] == video_id and _pmi_dni(a['dni']) == _pmi_dni(dni)]
+    if previous:
+        raise ValueError('La inducción ya fue confirmada.')
+    _pmx_append(_PMX_WATCH, {
+        'id_avance': 'AV-' + _pmi_uuid.uuid4().hex[:20].upper(),
+        'id_video': video_id, 'dni': _pmi_dni(dni), 'estado': 'Declarado visto',
+        'confirmado_por': str(st.session_state['usuario_login']),
+        'confirmado_el': _pmi_time()})
+    registrar_auditoria('Confirmación de video de inducción', _PMX_WATCH,
+                        f'DNI {_pmi_dni(dni)} · video {video_id}')
+
+
+def _pmx_archive_video(vid):
+    _pmi_check_access(dni_actual, write=True, admin_only=True)
+    matching = [v for v in _pmx_rows(_PMX_VIDEO) if v['id_video'] == vid]
+    if len(matching) != 1 or matching[0]['estado'] != 'Publicado':
+        raise ValueError('El material ya fue retirado o no existe.')
+    _pmx_update(_PMX_VIDEO, vid, {'estado': 'Retirado'})
+    registrar_auditoria('Retirar video de inducción', _PMX_VIDEO, vid)
+
+
+def _pmx_video_bytes(dni, vid):
+    _pmi_check_access(dni)
+    matched = [x for x in _pmx_videos(dni) if x['id_video'] == vid
+               and x['fuente'] == 'Archivo MP4']
+    if len(matched) != 1:
+        raise PermissionError('No tienes acceso al video.')
+    drive, _ = _pm3_drive_client()
+    data = drive.files().get_media(fileId=matched[0]['drive_file_id'],
+                                   supportsAllDrives=True).execute()
+    if not isinstance(data, bytes) or not 0 < len(data) <= _PMX_VIDEO_LIMIT:
+        raise ValueError('No se pudo leer el video o excede 60 MB.')
+    return data
+
+
+def _pmx_style():
+    st.markdown('''<style>
+    .pmx-surface{margin:12px 0 17px;border:1px solid #e6eaf0;background:#fff;
+       border-radius:21px;padding:20px;box-shadow:0 14px 38px -32px rgba(17,33,61,.4)}
+    .pmx-eyebrow{font-size:.69rem;color:#b02b43;letter-spacing:.095em;font-weight:850}
+    .pmx-heading{font-size:1.13rem;color:#1e304a;font-weight:850;margin:4px 0 6px}
+    .pmx-description{font-size:.85rem;line-height:1.6;color:#6b7b90}
+    .pmx-progress{height:9px;background:#edf0f5;overflow:hidden;border-radius:100px;margin:14px 0 8px}
+    .pmx-progress i{display:block;height:100%;background:linear-gradient(90deg,#bd2843,#ee5766);border-radius:100px}
+    .pmx-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:13px 0}
+    .pmx-stat{padding:15px;border:1px solid #e9edf3;border-top:3px solid #eaa0af;
+       border-radius:16px;background:#fbfcfe}
+    .pmx-stat small{display:block;color:#738399;font-size:.72rem;font-weight:700}
+    .pmx-stat strong{font-size:1.48rem;color:#1d304b;font-weight:850;display:block;margin-top:3px}
+    .pmx-video-card{position:relative;overflow:hidden;border:1px solid #e6ebf2;background:linear-gradient(125deg,#fff 55%,#fff8fa);
+       border-radius:18px;padding:17px 17px 17px 20px;margin:12px 0 10px;
+       box-shadow:0 12px 30px -27px rgba(30,49,73,.4);transition:transform .2s ease,box-shadow .2s ease}
+    .pmx-video-card::before{content:'';position:absolute;inset:0 auto 0 0;width:4px;
+       background:linear-gradient(180deg,#ed4b66,#9d1e33)}
+    .pmx-video-card:hover{transform:translateY(-2px);box-shadow:0 18px 32px -25px rgba(128,34,56,.35)}
+    .pmx-video-card .tag{display:inline-block;background:#fff0f3;color:#b32c46;
+       font-size:.71rem;font-weight:780;border-radius:999px;padding:5px 10px}
+    .pmx-video-card h4{font-size:1.03rem;color:#1b2b43;font-weight:850;margin:10px 0 5px;overflow-wrap:anywhere}
+    .pmx-video-card p{font-size:.82rem;color:#728197;line-height:1.6;margin:0 0 7px;overflow-wrap:anywhere}
+    .pmx-checkrow{border:1px solid #e7ecf4;border-radius:14px;padding:13px 15px;background:#fff;
+       margin:8px 0;display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap}
+    .pmx-checkrow strong{font-size:.86rem;color:#22354e;line-height:1.4}
+    .pmx-checkrow small{display:block;color:#748399;margin-top:3px;font-size:.74rem}
+    .pmx-pill{font-size:.71rem;font-weight:750;border-radius:999px;padding:5px 10px;background:#fff4e6;color:#9c6719}
+    .pmx-pill.ok{background:#e5f6ec;color:#107a53}.pmx-pill.bad{background:#fff1f2;color:#ad354a}
+    .pmx-timeline{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 16px}
+    .pmx-step{flex:1 1 100px;border:1px solid #e9edf3;border-radius:13px;padding:10px 13px;
+       font-size:.75rem;color:#78869a;background:#fff;font-weight:750}
+    .pmx-step span{display:inline-grid;place-items:center;width:23px;height:23px;border-radius:50%;
+       background:#eef1f5;color:#68798e;margin-right:7px;font-size:.72rem}
+    .pmx-step.done{border-color:#badfc9;background:#f3fbf6;color:#217a52}
+    .pmx-step.done span{background:#1e9864;color:#fff}
+    .pmx-step.now{border-color:#f1c5cd;background:#fff7f8;color:#a52941}
+    .pmx-step.now span{background:#bd304b;color:#fff}
+    .st-key-pme_portal .pme-row{transition:transform .18s ease,border-color .18s ease}
+    .st-key-pme_portal .pme-row:hover{transform:translateY(-1px);border-color:#efb9c3} 
+    .st-key-pmx_admin_panel button,.st-key-pmx_worker_panel button,
+    .st-key-pmx_video_admin button{min-height:42px!important}
+    .st-key-pmx_worker_panel [data-testid=stVideo]{max-width:100%;overflow:hidden;border-radius:15px}
+    @media(max-width:700px){
+      .pmx-surface{padding:15px;border-radius:17px}.pmx-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .pmx-video-card{padding:13px}.pmx-heading{font-size:1.02rem}
+      .pmx-stat strong{font-size:1.22rem}
+      .st-key-pmx_worker_panel button,.st-key-pmx_admin_panel button{min-height:46px!important}
+      .st-key-pmx_worker_panel .stVideo,.st-key-pmx_worker_panel iframe{max-width:100%!important}
+    }
+    @media(max-width:380px){.pmx-stats{grid-template-columns:1fr}}
+    @media(prefers-reduced-motion:reduce){.pmx-video-card,.pmx-surface{transition:none!important}}
+    </style>''', unsafe_allow_html=True)
+
+
+def _pmx_section(kicker, title, description):
+    st.markdown('<div class="pmx-surface"><div class="pmx-eyebrow">' + _html.escape(kicker) +
+                '</div><div class="pmx-heading">' + _html.escape(title) + '</div>' +
+                '<div class="pmx-description">' + _html.escape(description) +
+                '</div></div>', unsafe_allow_html=True)
+
+
+def _pmx_chip(state):
+    safe = _html.escape(str(state))
+    color = 'ok' if state in ('Conforme', 'Recibido', 'Validada', 'Cerrada', 'No aplica', 'Declarado visto') else (
+        'bad' if state in ('Observado', 'Retirado') else '')
+    return '<span class="pmx-pill ' + color + '">' + safe + '</span>'
+
+
+def _pmx_induction_ui(dni, admin=False):
+    _pmi_check_access(dni, admin_only=admin)
+    _pmx_style()
+    try:
+        videos = sorted(_pmx_videos(dni), key=lambda x: x['publicado_el'], reverse=True)
+        progress = [r for r in _pmx_rows(_PMX_WATCH) if _pmi_dni(r['dni']) == _pmi_dni(dni)]
+    except Exception:
+        st.error('No se pudo consultar la inducción. Revisa la conexión y los encabezados de Sheets.')
+        return
+    done = {r['id_video'] for r in progress if r['estado'] == 'Declarado visto'}
+    pct = int(100 * len([v for v in videos if v['id_video'] in done]) / len(videos)) if videos else 0
+    st.markdown('<div class="pmx-surface"><div class="pmx-eyebrow">MI INDUCCIÓN</div>'
+                '<div class="pmx-heading">Aprende los procesos de Premium Market</div>'
+                '<div class="pmx-description">Videos del sistema de ventas, caja y procedimientos. '
+                'Cada confirmación es declarada por el colaborador; no se mide automáticamente la reproducción.</div>'
+                '<div class="pmx-progress"><i style="width:' + str(pct) + '%"></i></div>'
+                '<div class="pmx-description">' + str(len([v for v in videos if v['id_video'] in done])) +
+                ' de ' + str(len(videos)) + ' materiales confirmados</div></div>',
+                unsafe_allow_html=True)
+    if not videos:
+        st.markdown('<div class="pme-empty">Aún no hay videos de inducción asignados. Administración puede publicarlos desde Gestión del Colaborador.</div>', unsafe_allow_html=True)
+        return
+    for vid in videos:
+        key = vid['id_video']
+        completed = key in done
+        st.markdown('<div class="pmx-video-card"><span class="tag">' +
+                    _html.escape(vid.get('categoria', 'Inducción')) + '</span><h4>' +
+                    _html.escape(vid['titulo']) + '</h4><p>' +
+                    _html.escape(vid.get('descripcion') or 'Material audiovisual de inducción') +
+                    '</p>' + _pmx_chip('Declarado visto' if completed else 'Pendiente') +
+                    '</div>', unsafe_allow_html=True)
+        with st.expander('Ver video · ' + vid['titulo'], expanded=False):
+            if vid['fuente'] == 'YouTube':
+                try:
+                    safe_url = _pmx_youtube_link(vid['url_youtube'])
+                    st.video(safe_url)
+                except ValueError:
+                    st.warning('El enlace de video requiere actualización por administración.')
+            else:
+                video_key = '_pmx_play_' + _pmi_dni(dni) + '_' + key
+                loaded = st.session_state.get(video_key)
+                login = str(st.session_state.get('usuario_login'))
+                if not loaded or loaded[0] != login:
+                    if st.button('Cargar video privado', key='pmx_load_' + _pmi_dni(dni) + key,
+                                 use_container_width=True):
+                        try:
+                            for state_key in list(st.session_state):
+                                if str(state_key).startswith('_pmx_play_'):
+                                    st.session_state.pop(state_key, None)
+                            body = _pmx_video_bytes(dni, key)
+                            st.session_state[video_key] = (login, body)
+                            loaded = st.session_state[video_key]
+                        except Exception:
+                            st.error('El video no se pudo recuperar del Drive privado.')
+                if loaded and loaded[0] == login:
+                    st.video(loaded[1], format='video/mp4')
+            if completed:
+                st.success('Inducción confirmada por el colaborador.')
+            elif not admin:
+                agree = st.checkbox('Confirmo que he revisado este material de inducción',
+                                    key='pmx_watch_chk_' + key)
+                if st.button('Confirmar inducción', key='pmx_watch_btn_' + key,
+                             disabled=not agree, use_container_width=True):
+                    _pmi_ui_action(lambda k=key: _pmx_confirm_video(dni, k),
+                                   'Inducción registrada correctamente.')
+            else:
+                st.caption('La visualización de este colaborador está pendiente de confirmación.'
+                           ' Administración no puede confirmar por él.')
+
+
+def _pmx_video_admin_ui():
+    _pmi_check_access(dni_actual, admin_only=True)
+    _pmx_style()
+    with st.container(key='pmx_video_admin'):
+        _pmx_section('CONTENIDOS DE INGRESO', 'Biblioteca de inducción',
+                     'Sube videos MP4 a Drive privado o inserta enlaces de YouTube. '
+                     'Puedes asignarlos a todo el equipo o a una persona.')
+        source = st.radio('Cómo compartir el video', ['YouTube', 'Archivo MP4'],
+                          horizontal=True, key='pmx_video_source')
+        with st.form('pmx_video_form', clear_on_submit=True):
+            title = st.text_input('Título del video', placeholder='Ej. Cómo registrar una venta', max_chars=140)
+            desc = st.text_area('Qué aprenderá el trabajador', max_chars=500, height=75)
+            a, b = st.columns(2)
+            category = a.selectbox('Proceso', ['Sistema de ventas', 'Caja', 'Inventarios',
+                                                'Atención al cliente', 'Políticas', 'Otro'])
+            b.caption('Origen: ' + source)
+            url, video_obj = '', None
+            if source == 'YouTube':
+                url = st.text_input('Enlace HTTPS de YouTube', placeholder='https://www.youtube.com/watch?v=...')
+            else:
+                video_obj = st.file_uploader('Video MP4 · máximo 60 MB', type=['mp4'],
+                    help='Para mejor reproducción en iPhone y Android, exporta el video como MP4 H.264 + AAC.')
+            people = st.session_state.get('empleados', pd.DataFrame())
+            choices = ['TODOS']
+            names = {'TODOS': 'Todos los colaboradores'}
+            if isinstance(people, pd.DataFrame) and not people.empty:
+                for _, p in people.iterrows():
+                    d = _pmi_dni(p.get('dni'))
+                    if d and d not in names:
+                        choices.append(d)
+                        names[d] = str(p.get('nombre', d)) + ' · ' + d
+            audience = st.selectbox('Dirigido a', choices, format_func=lambda d: names.get(d, d))
+            confirmed = st.checkbox('Confirmo la publicación de este material de inducción')
+            publish = st.form_submit_button('Publicar video de inducción', use_container_width=True)
+        if publish:
+            if not confirmed:
+                st.error('Marca la confirmación antes de publicar.')
+            else:
+                _pmi_ui_action(lambda: _pmx_video_publish(title, desc, category, source,
+                                                             url, video_obj, audience),
+                               'Material de inducción publicado.')
+        st.markdown('<div class="pme-section">Materiales publicados</div>', unsafe_allow_html=True)
+        try:
+            all_videos = sorted(_pmx_rows(_PMX_VIDEO), key=lambda x: x['publicado_el'], reverse=True)
+            advances = _pmx_rows(_PMX_WATCH)
+        except Exception:
+            st.error('No se pudo consultar el catálogo de inducción.')
+            return
+        for item in all_videos:
+            confirmed_count = len({x['dni'] for x in advances if x['id_video'] == item['id_video']})
+            st.markdown('<div class="pmx-checkrow"><div><strong>' + _html.escape(item['titulo']) +
+                        '</strong><small>' + _html.escape(item['categoria'] + ' · ' + item['fuente']) +
+                        ' · ' + _html.escape('Todos' if item['destinatario'] == 'TODOS' else 'Asignación individual') +
+                        ' · ' + str(confirmed_count) + ' confirmación(es)</small></div>' +
+                        _pmx_chip(item['estado']) + '</div>', unsafe_allow_html=True)
+            if item['estado'] == 'Publicado':
+                with st.expander('Administrar · ' + item['titulo']):
+                    sure = st.checkbox('Retirar este material de las inducciones visibles',
+                                       key='pmx_remove_chk_' + item['id_video'])
+                    if st.button('Retirar publicación', key='pmx_remove_btn_' + item['id_video'],
+                                 disabled=not sure):
+                        _pmi_ui_action(lambda v=item['id_video']: _pmx_archive_video(v),
+                                       'Material retirado de la inducción.')
+
+
+def _pmx_doc_view(dni, record, admin=False):
+    doc_id = record['id_documento']
+    key = '_pmx_doc_' + _pmi_dni(dni) + '_' + doc_id
+    st.markdown('<div class="pmx-checkrow"><div><strong>' + _html.escape(record['titulo']) +
+                '</strong><small>' + _html.escape(record['tipo']) +
+                ' · ' + _html.escape(record['subido_el'][:16]) + '</small></div>' +
+                _pmx_chip(record['estado']) + '</div>', unsafe_allow_html=True)
+    with st.expander('Consultar documento · ' + record['titulo']):
+        login = str(st.session_state.get('usuario_login'))
+        if st.button('Abrir documento privado', key='pmx_open_doc_' + doc_id,
+                     use_container_width=True):
+            try:
+                body, _ = _pmx_doc_bytes(dni, doc_id)
+                for sk in list(st.session_state):
+                    if str(sk).startswith('_pmx_doc_'):
+                        st.session_state.pop(sk, None)
+                st.session_state[key] = (login, body)
+            except Exception:
+                st.error('No se pudo abrir el documento privado.')
+        opened = st.session_state.get(key)
+        if opened and opened[0] == login:
+            content = opened[1]
+            if record['mime'].startswith('image/'):
+                st.image(content, use_container_width=True)
+            elif record['mime'] == 'application/pdf' and hasattr(st, 'pdf'):
+                st.pdf(content)
+            st.download_button('Descargar documento', data=content,
+                               file_name=record['nombre_archivo'], mime=record['mime'],
+                               key='pmx_download_' + doc_id, use_container_width=True)
+        if not admin and record['estado'] == 'Publicado':
+            confirm = st.checkbox('Confirmo que recibí este documento', key='pmx_doc_chk_' + doc_id)
+            if st.button('Confirmar recepción', disabled=not confirm,
+                         key='pmx_ack_btn_' + doc_id, use_container_width=True):
+                _pmi_ui_action(lambda i=doc_id: _pmx_ack_doc(dni, i),
+                               'Recepción de documento registrada.')
+
+
+def _pmx_exit_portal(dni, admin=False):
+    _pmi_check_access(dni, admin_only=admin)
+    _pmx_style()
+    try:
+        case, items, docs = _pmx_case_records(dni)
+    except Exception:
+        st.error('No se pudo consultar la salida digital. Revisa conexión y hojas de Sheets.')
+        return
+    if not case:
+        st.markdown('<div class="pme-empty">No hay un proceso de salida digital registrado para este colaborador.</div>', unsafe_allow_html=True)
+        return
+    completed, delivered, ready = _pmx_case_status(items, docs)
+    pct = int(100 * completed / len(items)) if items else 0
+    st.markdown('<div class="pmx-surface"><div class="pmx-eyebrow">EXPEDIENTE DE SALIDA</div>'
+                '<div class="pmx-heading">' + _html.escape(case['nombre']) + '</div>'
+                '<div class="pmx-description">' + _html.escape(case['motivo']) + ' · Fecha de cese: ' +
+                _html.escape(case['fecha_cese']) + ' · Estado: <b>' + _html.escape(case['estado']) + '</b></div>'
+                '<div class="pmx-progress"><i style="width:' + str(pct) + '%"></i></div>'
+                '<div class="pmx-stats">'
+                f'<div class="pmx-stat"><small>Devoluciones y controles</small><strong>{completed}/{len(items)}</strong></div>'
+                f'<div class="pmx-stat"><small>Documentos recibidos</small><strong>{delivered}/{len(docs)}</strong></div>'
+                '<div class="pmx-stat"><small>Validación administrativa</small><strong>' +
+                ('Lista' if case['estado'] in ('Validada', 'Cerrada') else 'Pendiente') +
+                '</strong></div></div></div>', unsafe_allow_html=True)
+    stage = {'Abierta': 0, 'Validada': 1, 'Cerrada': 2}.get(case['estado'], 0)
+    timeline = ''.join('<div class="pmx-step ' + ('done' if k < stage else 'now' if k == stage else '') +
+                       '"><span>' + str(k+1) + '</span>' + label + '</div>'
+                       for k, label in enumerate(('Inicio y devoluciones', 'Validación', 'Cierre')))
+    st.markdown('<div class="pmx-timeline">' + timeline + '</div>', unsafe_allow_html=True)
+    if not admin:
+        st.markdown('<div class="pme-section">Devoluciones y verificaciones</div>', unsafe_allow_html=True)
+        for item in items:
+            st.markdown('<div class="pmx-checkrow"><div><strong>' + _html.escape(item['tarea']) +
+                        '</strong><small>' + _html.escape(item.get('observacion', '')) +
+                        '</small></div>' + _pmx_chip(item['estado']) + '</div>', unsafe_allow_html=True)
+    st.markdown('<div class="pme-section">Documentos entregados</div>', unsafe_allow_html=True)
+    if not docs:
+        st.info('Administración todavía no ha publicado documentos de salida.')
+    for doc in docs:
+        _pmx_doc_view(dni, doc, admin=admin)
+    if case['estado'] == 'Cerrada':
+        st.success('El expediente de salida fue cerrado y queda disponible para consulta.')
+    elif not admin:
+        st.caption('Si tienes documentos pendientes, revisa y confirma su recepción. '
+                   'La baja del usuario y la liquidación se gestionan por administración.')
+    else:
+        st.markdown('<div class="pme-section">Checklist administrativo</div>', unsafe_allow_html=True)
+        structure = [(r['grupo'], r['tarea']) for r in items]
+        if set(structure) != set(_PMX_CHECKLIST) or len(structure) != len(_PMX_CHECKLIST):
+            st.warning('El checklist aún no está completo o presenta diferencias. No se puede validar.')
+            if case['estado'] == 'Abierta':
+                if st.button('Recuperar ítems faltantes', key='pmx_repair_' + _pmi_dni(dni),
+                             use_container_width=True):
+                    _pmi_ui_action(lambda: _pmx_repair_items(dni),
+                                   'Checklist conciliado sin sobrescribir revisiones previas.')
+        for group in ('Devoluciones', 'Validación administrativa'):
+            st.markdown('<div class="pmx-eyebrow" style="margin:15px 0 9px">' + group.upper() + '</div>', unsafe_allow_html=True)
+            for it in (i for i in items if i['grupo'] == group):
+                st.markdown('<div class="pmx-checkrow"><div><strong>' + _html.escape(it['tarea']) +
+                            '</strong><small>' + _html.escape(it.get('observacion', '')) +
+                            '</small></div>' + _pmx_chip(it['estado']) + '</div>', unsafe_allow_html=True)
+                if case['estado'] == 'Abierta':
+                    with st.expander('Revisar · ' + it['tarea']):
+                        options = ['Pendiente', 'Conforme', 'No aplica', 'Observado']
+                        state = st.selectbox('Resultado', options,
+                                              index=options.index(it['estado']) if it['estado'] in options else 0,
+                                              key='pmx_state_' + it['id_item'])
+                        note = st.text_input('Detalle / evidencia / razón de excepción',
+                                             value=it.get('observacion', ''), max_chars=350,
+                                             key='pmx_note_' + it['id_item'])
+                        if st.button('Guardar revisión', key='pmx_save_' + it['id_item'],
+                                     use_container_width=True):
+                            _pmi_ui_action(lambda i=it['id_item'], s=state, n=note:
+                                           _pmx_review_item(dni, i, s, n),
+                                           'Revisión administrativa guardada.')
+        if case['estado'] == 'Abierta':
+            st.markdown('<div class="pme-section">Publicar documentos de salida</div>', unsafe_allow_html=True)
+            with st.form('pmx_new_exit_doc', clear_on_submit=True):
+                typ = st.selectbox('Tipo', ['Documento de cese', 'Liquidación',
+                                             'Constancia de trabajo', 'Otro'])
+                title = st.text_input('Título', max_chars=140, placeholder='Ej. Constancia de trabajo')
+                obj = st.file_uploader('Documento PDF o imagen · máximo 15 MB',
+                    type=['pdf','jpg','jpeg','png','webp','heic','heif'])
+                yes = st.checkbox('Confirmo que corresponde al colaborador seleccionado')
+                save = st.form_submit_button('Publicar en su salida', use_container_width=True)
+            if save:
+                if not yes:
+                    st.error('Confirma que el documento corresponde al colaborador.')
+                else:
+                    _pmi_ui_action(lambda: _pmx_upload_doc(dni, typ, title, obj),
+                                   'Documento de salida publicado.')
+            st.markdown('<div class="pme-section">Validación administrativa</div>', unsafe_allow_html=True)
+            st.caption('Para validar: todos los ítems conformes o justificados como “No aplica”, '
+                       'al menos un documento publicado y todos confirmados por el colaborador.')
+            agree = st.checkbox('Verifiqué todas las devoluciones, obligaciones y entregas documentales',
+                                key='pmx_validate_chk_' + _pmi_dni(dni))
+            if st.button('Validar salida digital', disabled=not (agree and ready),
+                         key='pmx_validate_' + _pmi_dni(dni), use_container_width=True):
+                _pmi_ui_action(lambda: _pmx_validate(dni),
+                               'Salida validada por administración.')
+        if case['estado'] == 'Validada':
+            st.warning('El cierre conserva el historial y NO cambia automáticamente el estado laboral '
+                       'ni revoca por sí mismo el acceso en Gestión Colaboradores.')
+            sure = st.checkbox('Confirmo el cierre definitivo del expediente validado',
+                               key='pmx_close_chk_' + _pmi_dni(dni))
+            if st.button('Cerrar expediente de salida', disabled=not sure,
+                         key='pmx_close_' + _pmi_dni(dni), use_container_width=True):
+                _pmi_ui_action(lambda: _pmx_close(dni),
+                               'Expediente de salida cerrado.')
+
+
+def _pmx_exit_admin_ui():
+    if not _pmi_is_admin():
+        st.error('Solo administración puede gestionar salidas.')
+        return
+    _pmx_style()
+    with st.container(key='pmx_admin_panel'):
+        _pmx_section('FASE 3 · SALIDA DIGITAL', 'Una salida ordenada y verificable',
+                     'Devoluciones, conciliaciones, entrega documental y cierre del expediente. '
+                     'No altera los datos de Gestión Colaboradores automáticamente.')
+        with st.expander('Diagnóstico y preparación de hojas · fases 3 e inducción'):
+            st.caption('Se crean solamente las cinco hojas nuevas que falten. '
+                       'Ninguna hoja existente se renombra ni cambia sus encabezados.')
+            if st.button('Verificar y preparar hojas', key='pmx_prepare_btn',
+                         use_container_width=True):
+                _pmi_ui_action(_pmx_prepare, 'Hojas de salida e inducción verificadas.')
+        people = st.session_state.get('empleados', pd.DataFrame())
+        if not isinstance(people, pd.DataFrame) or people.empty:
+            st.info('No se encontraron colaboradores.')
+            return
+        people_rows = [p.to_dict() for _, p in people.iterrows() if _pmi_dni(p.get('dni'))]
+        person_by_dni = {_pmi_dni(p['dni']): p for p in people_rows}
+        selected = st.selectbox('Colaborador para salida digital',
+                                sorted(person_by_dni, key=lambda d: (
+                                    str(person_by_dni[d].get('estado', '')).casefold() != 'activo',
+                                    str(person_by_dni[d].get('nombre', '')).casefold())),
+                                format_func=lambda d: str(person_by_dni[d].get('nombre', '')) +
+                                ' · ' + str(person_by_dni[d].get('estado', '')),
+                                key='pmx_exit_employee')
+        try:
+            case = _pmx_case(selected)
+        except Exception:
+            st.error('No se pudo consultar el expediente de salida.')
+            return
+        if case is None:
+            with st.form('pmx_new_exit', clear_on_submit=True):
+                reason = st.selectbox('Motivo', ['Renuncia', 'Fin de contrato',
+                                                 'Mutuo acuerdo', 'Otra causa'])
+                end_date = st.date_input('Fecha efectiva de cese', value=obtener_ahora_peru().date())
+                note = st.text_area('Observación inicial (opcional)', max_chars=500)
+                yes = st.checkbox('Confirmo que corresponde iniciar el proceso de salida')
+                start = st.form_submit_button('Iniciar salida digital', use_container_width=True)
+            if start:
+                if not yes:
+                    st.error('Confirma el inicio del proceso.')
+                else:
+                    _pmi_ui_action(lambda: _pmx_start(selected, reason, end_date, note),
+                                   'Salida digital iniciada.')
+        else:
+            _pmx_exit_portal(selected, admin=True)
+
+
 
 # =========================================================
 # NUEVO MÓDULO: ONBOARDING / OFFBOARDING ESTRUCTURADO
@@ -4330,7 +5231,7 @@ TAREAS_ONBOARDING_DEFAULT = [
     "Firma de contrato de trabajo",
     "Entrega de uniforme",
     "Entrega de fotocheck / credencial",
-    "Capacitación inicial (caja, procesos, políticas)",
+    "Inducción inicial (caja, procesos, políticas)",
     "Registro formal en planilla (REMYPE)",
     "Creación de usuario en el sistema"
 ]
@@ -12848,8 +13749,8 @@ PM7_MODULES.update({'Rutinas Operativas': 'fact_check', 'Mis Rutinas': 'fact_che
 
 
 
-PM8_VIEW_DETAILS = {'Marcar Asistencia': ('Registro de jornada', 'Tus marcaciones se guardan al confirmar la operación.', 'personal'), 'Registrar Descuadre': ('Control de caja', 'Revisa el importe y la observación antes de registrar.', 'finanzas'), 'Registrar Incidencia': ('Registro operativo', 'Describe el hecho y verifica los datos del registro.', 'control'), 'Mi Ficha Técnica': ('Expediente personal', 'Información laboral y de contacto registrada.', 'personal'), 'Solicitar Permiso / Adelanto': ('Nueva solicitud', 'Completa los datos y revisa el estado de tus solicitudes.', 'personal'), 'Mis Boletas': ('Documentos personales', 'Consulta los documentos disponibles en tu historial.', 'personal'), 'Mi Dashboard Mensual': ('Resumen de mi mes', 'Consulta tus registros y resultados del periodo.', 'analitica'), 'Dashboard General': ('Centro de operaciones', 'Indicadores y asistencia para seguimiento diario.', 'analitica'), 'Gestión Colaboradores': ('Directorio de personal', 'Consulta, filtra y administra las fichas del equipo.', 'personal'), 'Boletas de Pago': ('Gestión documental', 'Consulta y administra los documentos de nómina.', 'finanzas'), 'Programación de Turnos': ('Planificación operativa', 'Organiza y revisa los horarios del equipo.', 'operaciones'), 'Solicitudes y Permisos': ('Bandeja de solicitudes', 'Revisa solicitudes y registra decisiones.', 'operaciones'), 'Historial de Descuadres': ('Auditoría de caja', 'Filtra movimientos y consulta el detalle de las diferencias.', 'finanzas'), 'Incidencias y Daños': ('Seguimiento de incidencias', 'Consulta y gestiona el estado de los casos.', 'control'), 'Botellas Fiadas': ('Préstamos y devoluciones', 'Consulta saldos pendientes y registros de devolución.', 'operaciones'), 'Historial de Asistencias': ('Control de asistencia', 'Consulta marcaciones y trazabilidad de jornadas.', 'personal'), 'Centro de Alertas': ('Prioridades del día', 'Revisa los pendientes que necesitan atención.', 'control'), 'Gestión de Vacaciones': ('Control de descansos', 'Consulta periodos, saldos y solicitudes registradas.', 'personal'), 'Mis Vacaciones': ('Mis descansos', 'Consulta tus periodos registrados.', 'personal'), 'Analítica (BI)': ('Inteligencia de negocio', 'Explora tendencias y reportes operativos.', 'analitica'), 'Gestión del Colaborador': ('Incorporación digital', 'Expedientes, documentos y entregas en un mismo lugar.', 'personal'),
-                         'Mi Incorporación': ('Tu incorporación', 'Consulta tus documentos, requisitos y uniformes.', 'personal'), 'Mi Expediente': ('Portal del colaborador', 'Ficha personal, documentos, capacitaciones y constancias privadas.', 'personal'), 'Auditoría y Configuración': ('Administración del sistema', 'Consulta la trazabilidad y configuración autorizada.', 'control')}
+PM8_VIEW_DETAILS = {'Marcar Asistencia': ('Registro de jornada', 'Tus marcaciones se guardan al confirmar la operación.', 'personal'), 'Registrar Descuadre': ('Control de caja', 'Revisa el importe y la observación antes de registrar.', 'finanzas'), 'Registrar Incidencia': ('Registro operativo', 'Describe el hecho y verifica los datos del registro.', 'control'), 'Mi Ficha Técnica': ('Expediente personal', 'Información laboral y de contacto registrada.', 'personal'), 'Solicitar Permiso / Adelanto': ('Nueva solicitud', 'Completa los datos y revisa el estado de tus solicitudes.', 'personal'), 'Mis Boletas': ('Documentos personales', 'Consulta los documentos disponibles en tu historial.', 'personal'), 'Mi Dashboard Mensual': ('Resumen de mi mes', 'Consulta tus registros y resultados del periodo.', 'analitica'), 'Dashboard General': ('Centro de operaciones', 'Indicadores y asistencia para seguimiento diario.', 'analitica'), 'Gestión Colaboradores': ('Directorio de personal', 'Consulta, filtra y administra las fichas del equipo.', 'personal'), 'Boletas de Pago': ('Gestión documental', 'Consulta y administra los documentos de nómina.', 'finanzas'), 'Programación de Turnos': ('Planificación operativa', 'Organiza y revisa los horarios del equipo.', 'operaciones'), 'Solicitudes y Permisos': ('Bandeja de solicitudes', 'Revisa solicitudes y registra decisiones.', 'operaciones'), 'Historial de Descuadres': ('Auditoría de caja', 'Filtra movimientos y consulta el detalle de las diferencias.', 'finanzas'), 'Incidencias y Daños': ('Seguimiento de incidencias', 'Consulta y gestiona el estado de los casos.', 'control'), 'Botellas Fiadas': ('Préstamos y devoluciones', 'Consulta saldos pendientes y registros de devolución.', 'operaciones'), 'Historial de Asistencias': ('Control de asistencia', 'Consulta marcaciones y trazabilidad de jornadas.', 'personal'), 'Centro de Alertas': ('Prioridades del día', 'Revisa los pendientes que necesitan atención.', 'control'), 'Gestión de Vacaciones': ('Control de descansos', 'Consulta periodos, saldos y solicitudes registradas.', 'personal'), 'Mis Vacaciones': ('Mis descansos', 'Consulta tus periodos registrados.', 'personal'), 'Analítica (BI)': ('Inteligencia de negocio', 'Explora tendencias y reportes operativos.', 'analitica'), 'Gestión del Colaborador': ('Incorporación digital', 'Incorporación, expedientes, inducción y salidas digitales.', 'personal'),
+                         'Mi Incorporación': ('Tu incorporación', 'Consulta tus documentos, requisitos y uniformes.', 'personal'), 'Mi Expediente': ('Portal del colaborador', 'Ficha personal, documentos, inducción y constancias privadas.', 'personal'), 'Auditoría y Configuración': ('Administración del sistema', 'Consulta la trazabilidad y configuración autorizada.', 'control')}
 PM8_VIEW_DETAILS.update({'Rutinas Operativas': ('Asignación personalizada', 'Actividades programadas con persona, lugar y horario.', 'operaciones'), 'Mis Rutinas': ('Mi trabajo del día', 'Actividades pendientes y completadas con instrucciones.', 'personal'),
                          'Gestión de Comunicados': ('Comunicación interna', 'Publicaciones, destinatarios y lecturas confirmadas.', 'operaciones'),
                          'Mis Comunicados': ('Comunicaciones oficiales', 'Mensajes y confirmaciones de lectura de tu tienda.', 'personal')})
@@ -13988,7 +14889,7 @@ elif choice == "Mi Incorporación":
 
 elif choice == "Mi Expediente":
     premium_module_shell('Mi Expediente', 'PERSONAS',
-                         'Documentos laborales, entregas, capacitaciones y constancias personales.')
+                         'Documentos laborales, inducción y constancias personales.')
     _pme_worker_ui()
 
     # -------------------- MÓDULOS ADMIN --------------------
@@ -16360,11 +17261,14 @@ elif choice == "Analítica (BI)":
 
 elif choice == "Gestión del Colaborador":
     premium_module_shell('Gestión del Colaborador', 'PERSONAS',
-                         'Expedientes laborales, incorporación digital, capacitaciones y constancias.')
+                         'Incorporación, inducción, documentos y salida digital.')
 
-    _pme_tab_portal, _pme_tab_process = st.tabs(['Portal del expediente', 'Incorporación y salidas'])
+    _pme_tab_portal, _pme_tab_process, _pme_tab_exit = st.tabs(
+        ['Portal del expediente', 'Incorporación', 'Salida digital'])
     with _pme_tab_portal:
         _pme_admin_ui()
+    with _pme_tab_exit:
+        _pmx_exit_admin_ui()
     with _pme_tab_process:
         with st.container(key="pm_v_onboarding_offboarding"):
             _pmi_legacy_tab = _pmi_admin_ui()
