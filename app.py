@@ -3640,156 +3640,467 @@ def _pmi_admin_ui():
     return tabs[1]
 
 
-def _pmi_worker_ui():
+# =============================================================
+# PREMIUM MARKET · MI INCORPORACIÓN v3 · UX RESPONSIVE
+# Se conserva la lógica y las hojas originales. Nuevos controles
+# visibles conectados a las mismas funciones de guardado y auditoría.
+# =============================================================
+_PMI3_ART_B64 = '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'
+_PMI3_ICONS = {
+    'identidad': 'badge', 'foto': 'photo_camera', 'frontis': 'home',
+    'recibo_servicio': 'receipt_long', 'maps_domicilio': 'location_on',
+    'cv': 'description', 'talla_polo': 'checkroom', 'contrato': 'contract',
+    'uniforme': 'inventory_2', 'datos': 'person', 'induccion': 'school',
+    'accesos': 'key', 'credencial': 'badge', 'planilla': 'work',
+}
+
+
+_PMI3_SVG_PATHS = {
+    'badge': '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M7 4V2h10v2M8 9h2M8 13h4"/><circle cx="16" cy="11" r="2"/><path d="M13 17a3 3 0 0 1 6 0"/>',
+    'photo_camera': '<path d="M4 7h4l2-3h4l2 3h4v13H4z"/><circle cx="12" cy="13" r="4"/>',
+    'home': '<path d="m3 10 9-7 9 7v11H3z"/><path d="M9 21v-7h6v7"/>',
+    'receipt_long': '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6M9 16h4"/>',
+    'location_on': '<path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/>',
+    'description': '<path d="M6 2h9l5 5v15H6zM15 2v6h5M9 12h8M9 16h8"/>',
+    'checkroom': '<path d="M9 5a3 3 0 0 1 6 0c0 2-3 2-3 4l9 6-3 5H6l-3-5 9-6"/>',
+    'contract': '<path d="M6 2h9l5 5v15H6zM15 2v6h5M9 12h8M9 16h4M14 19l2 2 4-4"/>',
+    'inventory_2': '<path d="M3 8h18v13H3zM3 4h18v4H3zM10 12h4"/>',
+    'person': '<circle cx="12" cy="7" r="4"/><path d="M4 22v-2a8 8 0 0 1 16 0v2"/>',
+    'school': '<path d="m2 10 10-6 10 6-10 6zM6 13v5c4 3 8 3 12 0v-5M22 10v8"/>',
+    'key': '<circle cx="8" cy="15" r="5"/><path d="m12 11 9-9M17 6l3 3M15 8l3 3"/>',
+    'work': '<rect x="3" y="7" width="18" height="14" rx="2"/><path d="M8 7V4h8v3M3 13h18"/>',
+    'schedule': '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+    'check_circle': '<circle cx="12" cy="12" r="10"/><path d="m7 12 3 3 7-7"/>',
+    'check': '<path d="m4 12 5 5 11-11"/>',
+    'fact_check': '<rect x="5" y="3" width="14" height="19" rx="2"/><path d="M9 2h6v4H9zM8 12l2 2 4-4M8 18h7"/>',
+    'assignment_turned_in': '<rect x="5" y="3" width="14" height="19" rx="2"/><path d="M9 2h6v4H9zM8 13l2 2 6-6"/>',
+    'layers': '<path d="m12 2 10 6-10 6L2 8zM2 12l10 6 10-6M2 16l10 6 10-6"/>',
+    'folder_open': '<path d="M3 6h7l2 3h9v11H3z"/><path d="M3 20l3-8h16l-3 8"/>',
+    'history': '<path d="M3 12a9 9 0 1 0 3-7M3 3v6h6M12 7v5l4 2"/>',
+    'upload_file': '<path d="M6 2h9l5 5v15H6zM15 2v6h5M12 19v-8M9 14l3-3 3 3"/>',
+    'flag': '<path d="M5 22V3M5 4c7-4 10 4 16 0v11c-6 4-9-4-16 0"/>',
+    'rate_review': '<path d="M5 3h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H9l-5 3v-3a2 2 0 0 1-2-2V6a3 3 0 0 1 3-3Z"/><path d="M7 8h10M7 12h7"/>',
+    'support_agent': '<path d="M4 13v-2a8 8 0 0 1 16 0v3M4 13H2v5h4v-5H4M20 13h2v5h-4v-5h2M18 20c-2 2-5 2-8 2"/>',
+    'task': '<path d="M6 3h12v18H6zM9 7h6M9 12h6M9 17h4"/>',
+    'checklist': '<rect x="5" y="3" width="14" height="19" rx="2"/><path d="M8 9l1 1 2-2M13 9h3M8 15l1 1 2-2M13 15h3"/>',
+}
+
+
+def _pmi3_svg(icon):
+    """Íconos vectoriales locales: no dependen de descargar una fuente externa."""
+    return ('<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"'
+            ' fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round"'
+            ' stroke-linejoin="round" aria-hidden="true">' + _PMI3_SVG_PATHS.get(icon, _PMI3_SVG_PATHS['task']) + '</svg>')
+
+
+
+def _pmi3_style():
+    st.markdown("""<style>
+    /* PREMIUM MARKET — INCORPORACIÓN, mismo lenguaje que Mis Rutinas y Mis Comunicados */
+    .pmi3-hero{background:linear-gradient(112deg,#fff 0%,#fff 67%,#fff8fa 100%);border:1px solid #e4eaf2;border-radius:23px;padding:18px 22px 20px;margin:8px 0 12px;box-shadow:0 16px 32px -27px rgba(24,38,61,.3);overflow:hidden}
+    .pmi3-hero-top{display:grid;grid-template-columns:164px minmax(0,1fr);gap:19px;align-items:center}
+    .pmi3-hero-art{height:174px;width:164px;display:block;object-fit:contain;mix-blend-mode:multiply}
+    .pmi3-hero-main{min-width:0}.pmi3-eyebrow{display:flex;align-items:center;gap:7px;color:#bd2a42;font-size:.7rem;letter-spacing:.1em;font-weight:850;text-transform:uppercase}
+    .pmi3-eyebrow:before{content:'';width:8px;height:8px;border-radius:99px;background:#df344d;display:inline-block}
+    .pmi3-hero-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:5px 0 5px;flex-wrap:wrap}
+    .pmi3-hero h3{font-size:1.24rem!important;line-height:1.2!important;letter-spacing:-.03em;color:#17253d!important;font-weight:850!important;margin:0!important}
+    .pmi3-muted{color:#708199;font-size:.81rem;line-height:1.55;overflow-wrap:anywhere}
+    .pmi3-stage{display:inline-flex;align-items:center;gap:7px;background:#eff2f7;color:#425169;border:1px solid #e4e8ef;border-radius:999px;padding:6px 10px;font-size:.7rem;font-weight:800;white-space:nowrap}
+    .pmi3-stage:before{content:'';width:7px;height:7px;border-radius:50%;background:#7b879b}
+    .pmi3-stage.done{background:#e9f7ee;color:#0c7b4a;border-color:#ccebd8}.pmi3-stage.done:before{background:#0b9b63}
+    .pmi3-progress-line{display:flex;align-items:baseline;gap:12px;margin:10px 0 3px;flex-wrap:wrap}
+    .pmi3-percent{font-size:2.45rem;font-weight:850;letter-spacing:-.07em;line-height:1;color:#e32b43;font-variant-numeric:tabular-nums}
+    .pmi3-progress-line small{color:#687990;font-weight:720;font-size:.81rem}
+    .pmi3-track{height:11px;background:#e8edf4;border-radius:999px;overflow:hidden;margin:9px 0 9px}
+    .pmi3-track i{height:100%;display:block;border-radius:999px;background:linear-gradient(90deg,#f24659,#d92141)}
+    .pmi3-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px;margin-top:16px}
+    .pmi3-stat{display:flex;align-items:center;gap:12px;background:#fff6f7;border:1px solid #ffe8ec;border-radius:15px;padding:12px 14px;min-width:0}
+    .pmi3-stat.wait{background:#fff9ed;border-color:#f9edcf}.pmi3-stat.valid{background:#f1fbf6;border-color:#d9f3e4}.pmi3-stat.gear{background:#f7f5ff;border-color:#eee9ff}
+    .pmi3-stat-icon{flex:0 0 39px;width:39px;height:39px;border-radius:13px;display:grid;place-items:center;background:#fff;color:#cb3046}
+    .pmi3-stat.wait .pmi3-stat-icon{color:#cc860c}.pmi3-stat.valid .pmi3-stat-icon{color:#0a9158}.pmi3-stat.gear .pmi3-stat-icon{color:#7750d7}
+    .pmi3-stat-icon svg{width:24px;height:24px}.pmi3-stat strong{font-size:1.5rem;color:#1d2b42;font-weight:850;line-height:1;display:block}.pmi3-stat small{display:block;color:#718198;font-size:.73rem;font-weight:700;line-height:1.3;margin-top:4px}
+    .pmi3-steps{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0;border:1px solid #e5eaf1;border-radius:20px;background:#fff;padding:14px 13px 16px;margin:0 0 20px;box-shadow:0 12px 28px -26px rgba(14,30,54,.28)}
+    .pmi3-step{position:relative;text-align:center;min-width:0;padding:0 7px}
+    .pmi3-step:not(:first-child)::before{position:absolute;content:'';height:2px;top:14px;left:-50%;width:100%;z-index:0;background:#dce3ee}
+    .pmi3-step.preceded::before{background:#2ba66b}
+    .pmi3-step-dot{width:29px;height:29px;margin:0 auto 8px;border:2px solid #c8d1df;border-radius:50%;display:grid;place-items:center;color:#8e9cb0;background:#fff;position:relative;z-index:1;font-size:.79rem;font-weight:800}
+    .pmi3-step-dot svg{width:19px;height:19px}
+    .pmi3-step.done .pmi3-step-dot{border-color:#25aa6d;background:#25aa6d;color:#fff}
+    .pmi3-step.current .pmi3-step-dot{border-color:#f13b52;background:#ec324c;color:#fff;box-shadow:0 0 0 4px #fff0f2}
+    .pmi3-step strong{font-weight:800;color:#293a53;font-size:.76rem;display:block;line-height:1.35;overflow-wrap:anywhere}
+    .pmi3-step small{color:#8a99ac;font-size:.69rem;display:block;margin-top:3px}
+    .pmi3-step.current strong{color:#b8243e}.pmi3-step.current small{color:#cf3853}
+    .pmi3-section-head svg{width:23px;height:23px;flex:0 0 23px;color:#d52b45}
+    .pmi3-section-head{display:flex;align-items:center;gap:10px;margin:13px 0 12px}.pmi3-section-head .material-symbols-rounded{color:#d52b45;font-size:23px}
+    .pmi3-section-head h3{color:#192941!important;font-size:1.01rem!important;font-weight:850!important;margin:0!important}.pmi3-section-head p{color:#7a8ba1;margin:3px 0 0;font-size:.79rem}
+    /* Las acciones nativas de Streamlit quedan dentro de la misma tarjeta visual */
+    .st-key-pmi3_data_map_card,.st-key-pmi3_data_size_card,.st-key-pmi3_doc_id_card,.st-key-pmi3_doc_photo_card{background:#fff;border:1px solid #e4eaf2;border-radius:18px;padding:14px 15px;margin:0 0 12px;box-shadow:0 10px 26px -25px rgba(15,29,50,.25);min-width:0}
+    .st-key-pmi3_data_map_card:has(.pmi3-requirement.valid),.st-key-pmi3_data_size_card:has(.pmi3-requirement.valid),.st-key-pmi3_doc_id_card:has(.pmi3-requirement.valid),.st-key-pmi3_doc_photo_card:has(.pmi3-requirement.valid){background:#f8fefa;border-color:#c9e8d6}
+    .st-key-pmi3_data_map_card:has(.pmi3-requirement.review),.st-key-pmi3_data_size_card:has(.pmi3-requirement.review),.st-key-pmi3_doc_id_card:has(.pmi3-requirement.review),.st-key-pmi3_doc_photo_card:has(.pmi3-requirement.review){background:#fffdf7;border-color:#f1dfad}
+    .st-key-pmi3_data_map_card .pmi3-requirement,.st-key-pmi3_data_size_card .pmi3-requirement,.st-key-pmi3_doc_id_card .pmi3-requirement,.st-key-pmi3_doc_photo_card .pmi3-requirement{background:transparent!important;border:none!important;border-radius:0;padding:0;margin:0 0 10px;box-shadow:none}
+    .pmi3-requirement{background:#fff;border:1px solid #e4eaf2;border-radius:17px;padding:15px 16px 13px;margin:0 0 12px;min-width:0;box-shadow:0 10px 26px -25px rgba(15,29,50,.25)}
+    .pmi3-requirement.valid{background:#f8fefa;border-color:#c9e8d6}.pmi3-requirement.review{background:#fffdf7;border-color:#f1dfad}.pmi3-requirement.observed{background:#fff8f8;border-color:#f2bec9}
+    .pmi3-requirement-top{display:flex;gap:11px;align-items:flex-start;min-width:0}
+    .pmi3-icon{width:39px;height:39px;min-width:39px;border-radius:12px;background:#fff0f2;color:#d42b44;display:grid;place-items:center}
+    .pmi3-requirement.valid .pmi3-icon{background:#e7f8ed;color:#0b925b}.pmi3-requirement.review .pmi3-icon{background:#fff1ce;color:#c77f04}
+    .pmi3-icon svg{width:22px;height:22px}.pmi3-requirement-copy{min-width:0;flex:1 1 auto}
+    .pmi3-req-title{font-size:.86rem;font-weight:830;color:#1c2d46;line-height:1.35;overflow-wrap:anywhere}.pmi3-req-desc{font-size:.76rem;line-height:1.54;color:#78879b;margin-top:5px;overflow-wrap:anywhere}
+    .pmi3-tag{display:inline-flex;border-radius:999px;padding:5px 10px;font-size:.69rem;font-weight:800;white-space:nowrap;background:#fff0f2;color:#c62c45}
+    .pmi3-tag.valid{background:#e2f6e9;color:#117947}.pmi3-tag.review{background:#fff3d2;color:#a96b0c}.pmi3-tag.observed{background:#ffe3e7;color:#a72238}.pmi3-tag.neutral{background:#eff2f7;color:#5e6d83}
+    .pmi3-req-value{margin-top:12px;background:rgba(244,247,250,.92);border:1px solid #edf0f5;border-radius:11px;padding:10px 11px;color:#54667e;font-size:.76rem;line-height:1.45;overflow-wrap:anywhere}
+    .pmi3-side{background:linear-gradient(140deg,#fff6f8,#fffafa);border:1px solid #f6dfe4;border-radius:19px;padding:17px 15px;margin:0 0 15px;box-shadow:0 14px 27px -27px rgba(145,36,59,.22)}
+    .pmi3-side h3{font-size:1.03rem!important;color:#87213a!important;font-weight:850!important;margin:0 0 6px!important}.pmi3-side p{color:#7f7080;font-size:.79rem;line-height:1.5;margin:0 0 12px}
+    .pmi3-tip{display:flex;gap:10px;align-items:center;background:#fff;border:1px solid #fae8ed;border-radius:12px;margin:7px 0;padding:10px 11px}
+    .pmi3-tip-icon{display:grid;place-items:center;color:#d42b44;background:#fff0f3;border-radius:10px;min-width:32px;width:32px;height:32px}
+    .pmi3-tip-icon svg{width:21px;height:21px}.pmi3-tip strong{font-size:.76rem;color:#27364c;display:block;line-height:1.35}.pmi3-tip small{display:block;font-size:.69rem;color:#8290a3;line-height:1.4;margin-top:3px}
+    .pmi3-mini-panel{border:1px solid #e4eaf2;border-radius:18px;background:#fff;padding:14px 16px;margin:12px 0 16px;box-shadow:0 11px 25px -25px rgba(15,27,47,.22)}
+    .pmi3-mini-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid #f0f2f6;min-width:0}
+    .pmi3-mini-row:first-of-type{border-top:0}.pmi3-mini-icon{color:#dc2f48;width:23px;flex:0 0 23px}.pmi3-mini-icon svg{width:20px;height:20px}
+    .pmi3-mini-copy{min-width:0;flex:1 1 auto;color:#34465f;font-weight:700;font-size:.76rem;overflow-wrap:anywhere}
+    .pmi3-mini-sub{color:#8b9ab0;font-weight:550;font-size:.7rem;line-height:1.4;display:block;margin-top:2px}
+    .pmi3-empty{border:1px dashed #d5dfed;border-radius:15px;background:#f9fbff;padding:16px 18px;margin:11px 0;color:#667991;line-height:1.6;font-size:.85rem}
+    .st-key-pmi_worker_panel [data-baseweb="tab-list"]{gap:8px;overflow-x:auto;overflow-y:hidden;flex-wrap:nowrap;scrollbar-width:none;padding-bottom:8px}
+    .st-key-pmi_worker_panel [data-baseweb="tab"]{border:1px solid #e2e9f2!important;background:#fff!important;border-radius:12px!important;padding:10px 13px!important;color:#566a82!important;min-height:41px!important;font-weight:750!important;white-space:nowrap}
+    .st-key-pmi_worker_panel [aria-selected="true"]{border-color:#f4cad2!important;background:#fff0f2!important;color:#c62943!important}
+    .st-key-pmi_worker_panel [data-testid="stExpander"]{border:1px solid #e5ebf3;border-radius:14px;background:#fff}
+    .st-key-pmi_worker_panel [data-testid="stTextInput"] input,.st-key-pmi_worker_panel [data-testid="stSelectbox"]>div{font-size:16px;max-width:100%}
+    .st-key-pmi_worker_panel .stButton button{min-height:43px;border-radius:11px;font-weight:720;white-space:normal}
+    @media(max-width:1150px){.pmi3-stat{padding:11px 10px;gap:7px}.pmi3-stat-icon{width:34px;height:34px;flex-basis:34px}.pmi3-stat strong{font-size:1.35rem}}
+    @media(max-width:860px){.pmi3-hero{padding:16px}.pmi3-stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.pmi3-hero-top{grid-template-columns:106px minmax(0,1fr);gap:10px}.pmi3-hero-art{width:105px;height:132px}.pmi3-percent{font-size:2rem}.pmi3-steps{padding:13px 6px 14px}.pmi3-step{padding:0 3px}.pmi3-step strong{font-size:.68rem}.pmi3-step small{font-size:.63rem}}
+    @media(max-width:640px){.pmi3-hero{border-radius:17px;padding:14px;margin-top:5px}.pmi3-hero-top{grid-template-columns:75px minmax(0,1fr);gap:8px}.pmi3-hero-art{width:75px;height:105px}.pmi3-hero h3{font-size:1rem!important}.pmi3-percent{font-size:1.75rem}.pmi3-progress-line small{font-size:.74rem}.pmi3-stat{border-radius:13px;padding:10px 8px}.pmi3-stat strong{font-size:1.22rem}.pmi3-stat small{font-size:.67rem}.pmi3-stat-icon{min-width:31px;width:31px;height:31px;flex-basis:31px}.pmi3-stat-icon svg{width:20px;height:20px}.pmi3-steps{overflow-x:auto;grid-template-columns:repeat(5,minmax(95px,1fr));-webkit-overflow-scrolling:touch;scrollbar-width:thin}.pmi3-side{margin-top:8px}.pmi3-requirement{padding:12px}.pmi3-requirement-top{gap:8px}.pmi3-tag{font-size:.66rem;padding:5px 8px}.pmi3-icon{min-width:33px;width:33px;height:33px}.pmi3-req-title{font-size:.82rem}}
+    @media(max-width:390px){.pmi3-hero-top{grid-template-columns:1fr}.pmi3-hero-art{display:none}.pmi3-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.pmi3-stat-icon{display:none}.pmi3-stat{padding:12px}}
+    @media(prefers-reduced-motion:reduce){.pmi3-hero,.pmi3-requirement{scroll-behavior:auto!important}}
+    </style>""", unsafe_allow_html=True)
+
+
+def _pmi3_tag(state):
+    """Etiqueta visual escapada; nunca modifica el estado almacenado."""
+    state = str(state or 'Pendiente')
+    css = ('valid' if state in ('Validado', 'Recibido', 'Finalizado')
+           else 'review' if state in ('En revisión', 'Pendiente de conformidad')
+           else 'observed' if state == 'Observado' else 'neutral' if state in ('Sustituido', 'Cancelado') else '')
+    return '<span class="pmi3-tag ' + css + '">' + _html.escape(state) + '</span>'
+
+
+def _pmi3_metric_state(reqs, gear):
+    """Cálculos puros para resumen; no inventa requisitos ni autoaprueba."""
+    required = [r for r in reqs if str(r.get('obligatorio')) == 'Sí']
+    return {
+        'pending': sum(str(r.get('estado')) not in ('Validado', 'En revisión') for r in required),
+        'review': sum(str(r.get('estado')) == 'En revisión' for r in required),
+        'valid': sum(str(r.get('estado')) == 'Validado' for r in required),
+        'gear': sum(str(g.get('estado')) == 'Pendiente de conformidad' for g in gear),
+    }
+
+
+def _pmi3_stage_status(case, reqs, gear, person_exists=True):
+    """Etapas informativas (no sustituyen las reglas de finalización)."""
+    statuses = {str(r.get('codigo')): str(r.get('estado')) for r in reqs}
+    doc_codes = (*_PMI_WORKER_DOCS, *_PMI_COMPANY_DOCS)
+    docs_ok = all(statuses.get(c) == 'Validado' for c in doc_codes)
+    data_ok = all(statuses.get(c) == 'Validado' for c in _PMI_DATA_CODES)
+    gear_ok = statuses.get('uniforme') == 'Validado' and bool(gear) and all(str(g.get('estado')) == 'Recibido' for g in gear)
+    completed = str(case.get('estado')) == 'Finalizado'
+    # Las etapas se visualizan de forma informativa, no aseguran secuencia forzosa.
+    return [bool(person_exists), docs_ok, data_ok, gear_ok, completed]
+
+
+def _pmi3_intro_overview(case, reqs, gear):
+    pct, done, total = _pmi_progress(reqs)
+    m = _pmi3_metric_state(reqs, gear)
+    finished = str(case.get('estado')) == 'Finalizado'
+    state_name = 'Finalizado' if finished else str(case.get('estado') or 'En proceso')
+    status_tag = '<span class="pmi3-stage ' + ('done' if finished else '') + '">' + _html.escape(state_name) + '</span>'
+    stats = [
+        ('description', m['pending'], 'Pendientes', ''),
+        ('schedule', m['review'], 'En revisión', 'wait'),
+        ('check_circle', m['valid'], 'Validados', 'valid'),
+        ('inventory_2', m['gear'], 'Entregas por confirmar', 'gear'),
+    ]
+    stat_markup = ''.join('<div class="pmi3-stat ' + tone + '"><div class="pmi3-stat-icon">' + _pmi3_svg(icon) + '</div><div><strong>' + str(num) + '</strong><small>' + label + '</small></div></div>' for icon,num,label,tone in stats)
+    img = '<img class="pmi3-hero-art" src="data:image/webp;base64,' + _PMI3_ART_B64 + '" alt="Ilustración de una lista de incorporación">'
+    progress_text = (f'{done} de {total} requisitos obligatorios validados' if total else 'Aún no hay requisitos preparados')
+    st.markdown('<div class="pmi3-hero"><div class="pmi3-hero-top">' + img +
+        '<div class="pmi3-hero-main"><div class="pmi3-eyebrow">Tu ingreso a Premium Market</div>'
+        '<div class="pmi3-hero-head"><h3>Mi proceso de incorporación</h3>' + status_tag + '</div>'
+        '<div class="pmi3-muted">Documentos, datos, entregas y validaciones</div>'
+        '<div class="pmi3-progress-line"><span class="pmi3-percent">' + str(pct) + '%</span><small>' + _html.escape(progress_text) + '</small></div>'
+        '<div class="pmi3-track" role="progressbar" aria-label="Avance de incorporación" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + str(pct) + '"><i style="width:' + str(pct) + '%"></i></div>'
+        '<div class="pmi3-muted">La aprobación corresponde a administración. Las entregas requieren tu conformidad.</div></div></div>'
+        '<div class="pmi3-stats">' + stat_markup + '</div></div>', unsafe_allow_html=True)
+
+
+def _pmi3_steps_panel(case, reqs, gear):
+    names = [('person', 'Datos personales'), ('description', 'Documentos'),
+             ('location_on', 'Domicilio y talla'), ('inventory_2', 'Entregas'), ('flag', 'Cierre')]
+    flags = _pmi3_stage_status(case, reqs, gear)
+    current = next((i for i,x in enumerate(flags) if not x), None)
+    content = []
+    for i, ((icon, name), ok) in enumerate(zip(names, flags)):
+        cls = 'done' if ok else 'current' if current == i else 'pending'
+        before = ' preceded' if i > 0 and flags[i - 1] else ''
+        marker = _pmi3_svg('check') if ok else str(i + 1)
+        subtitle = 'Registrados' if i == 0 and ok else 'Completado' if ok else 'En proceso' if current == i else 'Pendiente'
+        content.append('<div class="pmi3-step ' + cls + before + '"><div class="pmi3-step-dot">' + marker +
+                       '</div><strong>' + _html.escape(name) + '</strong><small>' + subtitle + '</small></div>')
+    st.markdown('<div class="pmi3-steps" aria-label="Etapas de incorporación">' + ''.join(content) + '</div>', unsafe_allow_html=True)
+
+
+def _pmi3_head(title, description='', icon='checklist'):
+    st.markdown('<div class="pmi3-section-head">' + _pmi3_svg(icon) + '<div><h3>' +
+                _html.escape(title) + '</h3>' + ('<p>' + _html.escape(description) + '</p>' if description else '') + '</div></div>', unsafe_allow_html=True)
+
+
+def _pmi3_req_card(code, title, description, state, detail=''):
+    kind = 'valid' if state in ('Validado','Recibido') else 'review' if state in ('En revisión', 'Pendiente de conformidad') else 'observed' if state == 'Observado' else ''
+    st.markdown('<div class="pmi3-requirement ' + kind + '"><div class="pmi3-requirement-top">'
+        '<div class="pmi3-icon">' + _pmi3_svg(_PMI3_ICONS.get(code,'task')) + '</div>'
+        '<div class="pmi3-requirement-copy"><div class="pmi3-req-title">' + _html.escape(title) + '</div>'
+        '<div class="pmi3-req-desc">' + _html.escape(description) + '</div></div>' + _pmi3_tag(state) +
+        '</div>' + ('<div class="pmi3-req-value">' + _html.escape(str(detail)) + '</div>' if detail else '') + '</div>', unsafe_allow_html=True)
+
+
+def _pmi3_tip_panel(case, reqs, gear):
+    states = {str(r.get('codigo')): str(r.get('estado')) for r in reqs}
+    tips = []
+    if any(states.get(c) != 'Validado' for c in _PMI_DATA_CODES):
+        tips.append(('location_on', 'Completa domicilio y talla', 'Envía estos datos y espera la revisión de administración.'))
+    if any(str(r.get('estado')) == 'Observado' for r in reqs):
+        tips.append(('rate_review', 'Revisa las observaciones', 'Corrige los requisitos observados y vuelve a enviarlos.'))
+    if any(str(r.get('estado')) in ('Pendiente', 'En revisión') for r in reqs):
+        tips.append(('description', 'Consulta el estado de tus documentos', 'Las aprobaciones aparecerán después de la revisión.'))
+    if any(str(g.get('estado')) == 'Pendiente de conformidad' for g in gear):
+        tips.append(('inventory_2','Confirma las entregas recibidas','Solo confirma uniformes y materiales entregados físicamente.'))
+    if not tips:
+        tips = [('fact_check','Revisa tu expediente','Consulta tus documentos y el estado del proceso.'),
+                ('inventory_2','Verifica tus entregas','Si recibes un uniforme, registra tu conformidad.'),
+                ('support_agent','¿Necesitas una corrección?','Comunícate con administración para solicitarla.')]
+    tips = tips[:3]
+    body = '<div class="pmi3-side"><h3>Qué sigue</h3><p>Sigue estas recomendaciones para completar tu incorporación.</p>'
+    for icon,title,desc in tips:
+        body += '<div class="pmi3-tip"><span class="pmi3-tip-icon">' + _pmi3_svg(icon) + '</span><div><strong>' + _html.escape(title) + '</strong><small>' + _html.escape(desc) + '</small></div></div>'
+    st.markdown(body + '</div>', unsafe_allow_html=True)
+
+
+def _pmi3_compact_row(icon, title, sub, state):
+    return ('<div class="pmi3-mini-row"><span class="pmi3-mini-icon">' + _pmi3_svg(icon) + '</span>'
+        '<div class="pmi3-mini-copy">' + _html.escape(str(title)) + '<span class="pmi3-mini-sub">' + _html.escape(str(sub)) +
+        '</span></div>' + _pmi3_tag(state) + '</div>')
+
+
+def _pmi3_data_card(dni, case, data, reqs, code, label):
+    req = next((r for r in reqs if r.get('codigo') == code), None)
+    latest = _pmi_latest_profile(data, case, code)
+    state = str(req.get('estado') or 'Pendiente') if req else 'Sin preparar'
+    if code == 'maps_domicilio':
+        description = 'Registra el enlace de Google Maps para verificar tu domicilio.'
+        input_help = 'En Google Maps ubica tu domicilio, pulsa Compartir y copia el enlace.'
+        label_btn = 'Registrar enlace' if not latest else 'Actualizar enlace'
+    else:
+        description = 'Indica tu talla de polo para preparar la entrega de uniformes.'
+        input_help = 'Selecciona tu talla habitual; administración debe validarla.'
+        label_btn = 'Registrar talla' if not latest else 'Actualizar talla'
+    info = ''
+    if latest and state in ('Validado', 'En revisión'):
+        info = ('Dato registrado y validado por administración.' if state == 'Validado' else 'Tu dato está pendiente de revisión por administración.')
+        if code == 'talla_polo':
+            info += ' Talla: ' + str(latest.get('valor') or '—')
+    if req and req.get('observacion'):
+        info = 'Observación de administración: ' + str(req['observacion'])
+    elif latest and latest.get('observacion'):
+        info = 'Observación de administración: ' + str(latest['observacion'])
+    _pmi3_req_card(code, label, description, state, info)
+    if case.get('estado') != 'En proceso' or not req or state in ('Validado','En revisión'):
+        if not req and case.get('estado') == 'En proceso':
+            st.caption('Administración debe preparar este requisito antes de que puedas registrarlo.')
+        return
+    with st.form('pmi3_worker_form_' + code, clear_on_submit=False):
+        if code == 'maps_domicilio':
+            val = st.text_input('Enlace de Google Maps', placeholder='https://maps.app.goo.gl/...',
+                                key=f'pmi3_maps_worker_{dni}', max_chars=1200)
+        else:
+            val = st.selectbox('Talla de polo', ['Seleccionar talla', *_PMI_POLO_SIZES],
+                               key=f'pmi3_size_worker_{dni}')
+            if val == 'Seleccionar talla':
+                val = ''
+        st.caption(input_help)
+        submitted = st.form_submit_button(label_btn, use_container_width=True, type='primary', disabled=not bool(str(val).strip()))
+    if submitted:
+        _pmi_ui_action(lambda c=code, v=val: _pmi_submit_profile(dni, c, v),
+                       'Dato enviado correctamente; queda pendiente de validación.')
+
+
+def _pmi3_doc_preview(dni, reqs, files, code):
+    req = next((r for r in reqs if r.get('codigo') == code), None)
+    state = str(req.get('estado') or 'Pendiente') if req else 'Sin preparar'
+    entries = [r for r in files if r.get('codigo') == code]
+    current = entries[-1] if entries else None
+    label = _PMI_FILE_LABELS.get(code, code)
+    description = ('Documento enviado. Puedes consultar la versión registrada.' if current else
+                   'Todavía no has enviado este documento desde Mis documentos.')
+    details = (str(current.get('nombre') or 'Archivo enviado') + ' · ' + str(current.get('subido_el') or '')[:10]) if current else ''
+    if req and req.get('observacion'):
+        details += (' · ' if details else '') + 'Observación: ' + str(req['observacion'])
+    _pmi3_req_card(code, label, description, state, details)
+    if current:
+        with st.expander('Ver documento privado · ' + label):
+            _pmi_show_file(dni, current, 'pmi3_preview')
+    elif state not in ('Validado','En revisión'):
+        st.caption('Para adjuntarlo, abre la pestaña «Mis documentos».')
+
+
+def _pmi3_worker_ui():
     if not st.session_state.get('usuario_login'):
         st.error('Inicia sesión.')
         return
     _pmi_styles()
+    _pmi3_style()
     with st.container(key='pmi_worker_panel'):
         dni = _pmi_dni(dni_actual)
         _pmi_check_access(dni)
         try:
             data = _pmi_load()
+            case = _pmi_case(data, dni)
         except Exception:
             st.error('No se pudo verificar tu incorporación. Intenta más tarde.')
             return
-        case = _pmi_case(data, dni)
         if case is None:
-            st.info('Todavía no se ha preparado tu proceso de incorporación. Administración te avisará cuando esté disponible.')
+            st.markdown('<div class="pmi3-empty">Tu proceso de incorporación todavía no ha sido preparado. Administración te avisará cuando puedas enviar tus documentos.</div>', unsafe_allow_html=True)
             return
         reqs = _pmi_subset(data, case, _PMI_REQ)
         files = _pmi_subset(data, case, _PMI_FILES)
         gear = _pmi_subset(data, case, _PMI_GEAR)
-        _pmi_summary_card(case, reqs)
+        _pmi3_intro_overview(case, reqs, gear)
+        _pmi3_steps_panel(case, reqs, gear)
         if case['estado'] == 'En proceso':
             missing_required = {r[0] for r in _PMI_TEMPLATES if r[3] == 'Sí'} - {r['codigo'] for r in reqs}
             if missing_required:
-                st.info('Administración debe actualizar los requisitos de tu expediente para que '
-                        'puedas completar la nueva lista de contratación.')
+                st.info('Administración debe actualizar los requisitos de tu expediente para que puedas completar la lista de contratación.')
         tab_requirements, tab_documents, tab_equipment = st.tabs(['Requisitos', 'Mis documentos', 'Mis entregas'])
         with tab_requirements:
-            st.markdown('<div class="pmi-head"><div><h3>Mi domicilio y mi talla de polo</h3>'
-                        '<p>Estos dos datos son obligatorios para tu ingreso y serán verificados por administración.</p></div></div>',
-                        unsafe_allow_html=True)
-            for code, label in (('maps_domicilio', 'Enlace de Google Maps de mi domicilio'),
-                                ('talla_polo', 'Mi talla de polo')):
-                latest = _pmi_latest_profile(data, case, code)
-                req_d = next((r for r in reqs if r['codigo'] == code), None)
-                with st.container(key=f'pmi_worker_data_{code}'):
-                    st.markdown('<div class="pmi-data-row"><strong>' + _html.escape(label) + '</strong>'
-                                '<small>' + (_html.escape('Dato enviado · ' + latest['estado']) if latest else 'Pendiente de registrar')
-                                + '</small></div>', unsafe_allow_html=True)
-                    if latest and latest.get('observacion'):
-                        st.caption('Observación de administración: ' + latest['observacion'])
-                    if case['estado'] != 'En proceso' or not req_d:
-                        continue
-                    if req_d['estado'] in ('Validado', 'En revisión'):
-                        st.info('Validado por administración.' if req_d['estado'] == 'Validado'
-                                else 'En revisión por administración.')
-                        continue
-                    if code == 'maps_domicilio':
-                        val = st.text_input('Pega tu enlace de Google Maps (Compartir → Copiar enlace)',
-                                            placeholder='https://maps.app.goo.gl/...',
-                                            key=f'pmi_maps_worker_{dni}', max_chars=1200)
-                        st.caption('En Google Maps selecciona tu domicilio, pulsa Compartir y copia el enlace. '
-                                   'Solo tú y administración podrán consultar este dato en el expediente.')
+            left, side = st.columns([2.35, 1], gap='medium')
+            with left:
+                _pmi3_head('Requisitos de mi incorporación', 'Completa los datos y revisa el estado de los documentos.', 'fact_check')
+                map_col, size_col = st.columns(2, gap='small')
+                with map_col:
+                    with st.container(key='pmi3_data_map_card'):
+                        _pmi3_data_card(dni, case, data, reqs, 'maps_domicilio', 'Enlace de Google Maps de mi domicilio')
+                with size_col:
+                    with st.container(key='pmi3_data_size_card'):
+                        _pmi3_data_card(dni, case, data, reqs, 'talla_polo', 'Mi talla de polo')
+                ident_col, photo_col = st.columns(2, gap='small')
+                with ident_col:
+                    with st.container(key='pmi3_doc_id_card'):
+                        _pmi3_doc_preview(dni, reqs, files, 'identidad')
+                with photo_col:
+                    with st.container(key='pmi3_doc_photo_card'):
+                        _pmi3_doc_preview(dni, reqs, files, 'foto')
+            with side:
+                _pmi3_tip_panel(case, reqs, gear)
+                if any(g.get('estado') == 'Pendiente de conformidad' for g in gear):
+                    st.info('Tienes una entrega pendiente. Revísala en la pestaña «Mis entregas».')
+            req_col, docs_col = st.columns(2, gap='medium')
+            with req_col:
+                with st.container(key='pmi3_status_panel'):
+                    _pmi3_head('Estado de mis requisitos', 'Resumen de requisitos y observaciones.', 'assignment_turned_in')
+                    if reqs:
+                        rows = ''
+                        for r in sorted(reqs, key=lambda x: next((i for i, t in enumerate(_PMI_TEMPLATES) if t[0] == x.get('codigo')), 99)):
+                            rows += _pmi3_compact_row(_PMI3_ICONS.get(r.get('codigo'), 'task'), r.get('requisito','Requisito'),
+                                                     ('Observación: ' + str(r.get('observacion'))) if r.get('observacion') else ('Obligatorio' if r.get('obligatorio') == 'Sí' else 'Opcional'), r.get('estado'))
+                        st.markdown('<div class="pmi3-mini-panel">' + rows + '</div>', unsafe_allow_html=True)
                     else:
-                        val = st.selectbox('Selecciona tu talla de polo', ['Seleccionar talla', *_PMI_POLO_SIZES],
-                                            key=f'pmi_size_worker_{dni}')
-                        if val == 'Seleccionar talla':
-                            val = ''
-                    if st.button('Enviar a administración', disabled=not bool(val),
-                                 key=f'pmi_send_worker_{dni}_{code}', use_container_width=True):
-                        _pmi_ui_action(lambda c=code, v=val: _pmi_submit_profile(dni, c, v),
-                                       'Dato enviado correctamente; queda pendiente de validación.')
-            st.markdown('<div class="pmi-subsection"><span>SEGUIMIENTO</span> Estado de mis requisitos</div>', unsafe_allow_html=True)
-            st.markdown('<div class="pmi-head"><div><h3>Mis requisitos</h3>'
-                        '<p>Visualiza el estado de cada paso y las observaciones de administración.</p></div></div>',
-                        unsafe_allow_html=True)
-            st.markdown('<div class="pmi-subsection"><span>TUS DOCUMENTOS</span> Archivos y datos para contratación</div>', unsafe_allow_html=True)
-            for r in sorted(reqs, key=lambda x: (0 if x['codigo'] in _PMI_WORKER_CODES else 1 if x['codigo'] in _PMI_COMPANY_CODES else 2,
-                                                 next((i for i, t in enumerate(_PMI_TEMPLATES) if t[0] == x['codigo']), 99))):
-                if r['codigo'] == 'contrato':
-                    st.markdown('<div class="pmi-subsection"><span>PREMIUM MARKET</span> Contrato y uniforme de 2 polos</div>', unsafe_allow_html=True)
-                st.markdown('<div class="pmi-card"><div class="pmi-row"><div><strong>'
-                            + _html.escape(r['requisito']) + '</strong>'
-                            + '<div class="pmi-muted">' + ('Obligatorio' if r['obligatorio'] == 'Sí' else 'Opcional')
-                            + '</div></div>' + _pmi_state_chip(r['estado']) + '</div>'
-                            + ('<div class="pmi-muted">' + _html.escape(r['observacion']) + '</div>' if r['observacion'] else '')
-                            + '</div>', unsafe_allow_html=True)
+                        st.markdown('<div class="pmi3-empty">No hay requisitos preparados todavía.</div>', unsafe_allow_html=True)
+            with docs_col:
+                _pmi3_head('Tus documentos para contratación', 'Archivos y datos incluidos en tu expediente.', 'layers')
+                rows = ''
+                for code in (*_PMI_WORKER_DOCS, *_PMI_COMPANY_DOCS, *_PMI_DATA_CODES):
+                    req = next((r for r in reqs if r.get('codigo') == code), None)
+                    related = [f for f in files if f.get('codigo') == code]
+                    latest = related[-1] if related else None
+                    label = _PMI_LABELS.get(code, code)
+                    subtitle = (str(latest.get('nombre')) if latest else 'Dato declarado o pendiente' if code in _PMI_DATA_CODES else 'Aún no enviado')
+                    rows += _pmi3_compact_row(_PMI3_ICONS.get(code, 'description'), label, subtitle,
+                                              req.get('estado') if req else 'Sin preparar')
+                st.markdown('<div class="pmi3-mini-panel">' + rows + '</div>', unsafe_allow_html=True)
+                st.caption('Los archivos privados se consultan y descargan desde la pestaña «Mis documentos».')
             if case['estado'] == 'En proceso' and any(r['codigo'] == 'datos' for r in reqs):
-                # Se conserva únicamente para expedientes antiguos que ya tenían este paso.
-                with st.expander('Mis datos personales y contacto (histórico)'):
+                with st.expander('Revisión de datos personales (expedientes históricos)'):
                     me = _pmi_person(dni)
                     st.write('**Dirección:**', str(me.get('direccion', 'Sin registrar')))
                     st.write('**Teléfono:**', str(me.get('telefono', 'Sin registrar')))
                     st.write('**Contacto de emergencia:**', str(me.get('contacto_emergencia', 'Sin registrar')))
-                    st.caption('Si algún dato es incorrecto, comunícalo a administración para su corrección.')
+                    st.caption('Si algún dato es incorrecto, comunícalo a administración.')
                     req_data = next((r for r in reqs if r['codigo'] == 'datos'), None)
                     if req_data and req_data['estado'] != 'Validado':
                         if st.button('Confirmo que revisé mis datos', key='pmi_personal_confirm', use_container_width=True):
                             _pmi_ui_action(lambda: _pmi_confirm_personal(dni), 'Revisión registrada; pendiente de validación.')
         with tab_documents:
+            _pmi3_head('Documentos de incorporación', 'Adjunta los documentos requeridos y consulta las observaciones de administración.', 'folder_open')
             if case['estado'] == 'En proceso':
-                with st.expander('Subir mis documentos'):
-                    st.caption('Tus archivos se guardan en Drive privado. Solo tú y administración pueden consultarlos desde la app.')
-                    doc_selection = st.selectbox('Documento',
-                        [ _PMI_FILE_LABELS[c] for c in _PMI_WORKER_DOCS ], key=f'pmi_worker_doc_{dni}')
+                with st.container(key='pmi3_upload_panel'):
+                    st.markdown('<div class="pmi3-requirement"><div class="pmi3-section-head">' + _pmi3_svg('upload_file') + '<div><h3>Enviar un documento</h3><p>Se guarda en Drive privado y queda pendiente de revisión.</p></div></div></div>', unsafe_allow_html=True)
+                    # Lógica original de formatos, tamaño y guardado sin cambios.
+                    doc_selection = st.selectbox('Tipo de documento', [_PMI_FILE_LABELS[c] for c in _PMI_WORKER_DOCS], key=f'pmi_worker_doc_{dni}')
                     code = next(c for c in _PMI_WORKER_DOCS if _PMI_FILE_LABELS[c] == doc_selection)
                     current_req = next((r for r in reqs if r['codigo'] == code), None)
-                    if current_req and current_req['estado'] == 'Validado':
-                        st.success('Este documento ya está validado.')
+                    if not current_req:
+                        st.info('Administración debe preparar este requisito antes de que puedas adjuntar el archivo.')
+                    elif current_req['estado'] == 'Validado':
+                        st.success('Este documento ya fue validado por administración.')
+                    elif current_req['estado'] == 'En revisión':
+                        st.info('Este documento ya está en revisión. Espera la respuesta de administración.')
                     else:
-                        allowed_types = (['jpg','jpeg','png','webp','heic','heif'] if code in ('foto', 'frontis')
-                                         else ['pdf','docx'] if code == 'cv'
-                                         else ['jpg','jpeg','png','webp','heic','heif','pdf'])
-                        guidance = {'identidad': 'Adjunta una imagen legible o PDF de tu documento de identidad.',
-                                    'foto': 'Sube una foto personal reciente y nítida.',
-                                    'frontis': 'Fotografía claramente la fachada de tu domicilio.',
-                                    'recibo_servicio': 'Adjunta el recibo de luz o agua en foto o PDF.',
-                                    'cv': 'Adjunta tu CV actualizado en PDF o Word (.docx).'}
+                        allowed_types = (['jpg','jpeg','png','webp','heic','heif'] if code in ('foto','frontis') else
+                                         ['pdf','docx'] if code == 'cv' else ['jpg','jpeg','png','webp','heic','heif','pdf'])
+                        guidance = {'identidad':'Adjunta una imagen legible o PDF de tu documento de identidad.',
+                                    'foto':'Sube una fotografía personal reciente y nítida.',
+                                    'frontis':'Fotografía claramente el frontis de tu domicilio.',
+                                    'recibo_servicio':'Adjunta un recibo de luz o agua legible.',
+                                    'cv':'Adjunta tu currículum actualizado en PDF o Word (.docx).'}
                         st.caption(guidance[code])
-                        uploaded = st.file_uploader('Seleccionar archivo desde el celular',
+                        uploaded = st.file_uploader('Seleccionar archivo desde el celular o computadora',
                             type=allowed_types, key=f'pmi_worker_upload_{dni}_{code}',
-                            help='Fotos iPhone HEIC/JPG hasta 40 MB. PDF o CV Word (.docx) hasta 15 MB.')
+                            help='Fotos HEIC/JPG hasta 40 MB; PDF o CV Word hasta 15 MB.')
                         if st.button('Guardar documento en Drive', type='primary', key='pmi_worker_upload_btn',
                                      disabled=uploaded is None, use_container_width=True):
                             _pmi_ui_action(lambda: _pmi_upload(dni, code, uploaded),
                                            'Tu archivo se recibió correctamente y quedó pendiente de revisión.')
             if files:
-                st.markdown('<div class="pmi-head"><div><h3>Mis documentos</h3>'
-                            '<p>Archivos asociados a tu incorporación y estado de revisión.</p></div></div>', unsafe_allow_html=True)
+                _pmi3_head('Historial de documentos enviados', 'Consulta o descarga tus archivos privados.', 'history')
                 for f in reversed(files):
                     _pmi_show_file(dni, f, 'worker')
                     if f.get('observacion'):
-                        st.caption('Observación: ' + f['observacion'])
+                        st.caption('Observación de administración: ' + str(f['observacion']))
+            else:
+                st.markdown('<div class="pmi3-empty">Aún no tienes archivos adjuntos en tu incorporación.</div>', unsafe_allow_html=True)
         with tab_equipment:
-            st.markdown('<div class="pmi-head"><div><h3>Mis uniformes</h3>'
-                        '<p>La empresa te entregará 2 polos de trabajo de tu talla. '
-                        'Confirma solamente lo que hayas recibido físicamente.</p></div></div>', unsafe_allow_html=True)
+            _pmi3_head('Mis uniformes y equipos', 'Confirma únicamente lo que recibiste físicamente.', 'inventory_2')
             _, _, polos_recibidos, _ = _pmi_polo_status(data, case)
-            st.markdown('<div class="pmi-polo-note">Polos de trabajo confirmados: <strong>'
-                        + str(polos_recibidos) + ' de 2</strong></div>', unsafe_allow_html=True)
+            st.markdown('<div class="pmi3-mini-panel"><strong>Polos de trabajo confirmados: ' + str(polos_recibidos) + ' de 2</strong>'
+                        '<div class="pmi3-muted">La empresa te entregará dos polos de tu talla validada.</div></div>', unsafe_allow_html=True)
             if not gear:
-                st.info('Aún no hay entregas registradas a tu nombre.')
+                st.markdown('<div class="pmi3-empty">Aún no hay uniformes ni materiales registrados a tu nombre.</div>', unsafe_allow_html=True)
             for g in reversed(gear):
-                st.markdown('<div class="pmi-card"><div class="pmi-row"><div><strong>'
-                            + _html.escape(g['articulo']) + ' · ' + _html.escape(g['cantidad'])
-                            + '</strong><div class="pmi-muted">Talla ' + _html.escape(g['talla'])
-                            + ' · ' + _html.escape(g['entregado_el'][:16]) + '</div></div>'
-                            + _pmi_state_chip(g['estado']) + '</div></div>', unsafe_allow_html=True)
-                if g['estado'] == 'Pendiente de conformidad' and case['estado'] == 'En proceso':
-                    note = st.text_input('Observación si la entrega no corresponde',
-                                          key='pmi_worker_gnote_' + g['id_entrega'], max_chars=300)
+                state = str(g.get('estado') or 'Pendiente')
+                description = ('Talla ' + str(g.get('talla') or '—') + ' · ' + str(g.get('cantidad') or '0') + ' unidad(es) · ' + str(g.get('entregado_el') or '')[:16])
+                _pmi3_req_card('uniforme', str(g.get('articulo') or 'Equipo'), description, state)
+                if state == 'Pendiente de conformidad' and case['estado'] == 'En proceso':
+                    note = st.text_input('Describe el problema si no recibiste esta entrega correctamente',
+                                         key='pmi_worker_gnote_' + g['id_entrega'], max_chars=300)
                     left, right = st.columns(2)
-                    if left.button('Confirmar recepción', key='pmi_worker_accept_' + g['id_entrega'],
-                                   use_container_width=True):
+                    if left.button('Confirmar recepción', key='pmi_worker_accept_' + g['id_entrega'], use_container_width=True):
                         _pmi_ui_action(lambda eid=g['id_entrega']: _pmi_accept_gear(dni, eid, True),
                                        'Conformidad de entrega registrada.')
                     if right.button('Reportar problema', key='pmi_worker_observe_' + g['id_entrega'],
-                                    use_container_width=True):
+                                    use_container_width=True, disabled=not bool(note.strip())):
                         _pmi_ui_action(lambda eid=g['id_entrega'], n=note: _pmi_accept_gear(dni, eid, False, n),
                                        'Observación enviada a administración.')
+
+
+def _pmi_worker_ui():
+    """Alias estable: conserva rutas y menús actuales sin cambiar permisos."""
+    return _pmi3_worker_ui()
 
 
 # =============================================================
