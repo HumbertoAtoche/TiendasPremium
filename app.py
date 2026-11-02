@@ -2046,8 +2046,10 @@ def conectar_google_sheets():
 
         sheet = client.open("BD_PremiumMarket")
         return sheet
-    except Exception as e:
-        st.sidebar.error(f"⚠️ Error de Conexión: {e}")
+    except Exception as exc:
+        # No exponer detalles de credenciales, claves ni respuestas de APIs al usuario.
+        print('Premium Sheets: fallo al abrir BD_PremiumMarket:', type(exc).__name__)
+        st.sidebar.error('No se pudo abrir BD_PremiumMarket. Revisa el acceso de la cuenta de servicio.')
         return None
 
 import threading
@@ -2562,7 +2564,7 @@ def registrar_auditoria(accion, entidad, detalle=""):
             st.warning(f"⚠️ No se pudo guardar en la hoja 'Auditoria' de Google Sheets: {e}")
 
 # =============================================================
-# PREMIUM MARKET · GESTIÓN DEL COLABORADOR · FASE 1 (2026)
+# PREMIUM MARKET · GESTIÓN DEL COLABORADOR · INCORPORACIÓN (2026)
 # Incorporación digital independiente del checklist histórico.
 # Documentos privados en Drive; Sheets contiene referencias y auditoría.
 # =============================================================
@@ -2649,8 +2651,8 @@ def _pmi_ws(name, create=False):
             ws = doc_sheets.add_worksheet(title=name, rows=1500, cols=len(_PMI_SCHEMAS[name]))
         except Exception:
             ws = doc_sheets.worksheet(name)  # otra sesión pudo crearla
-    real = ws._ws if isinstance(ws, _HojaProxy) else ws
-    header = [str(x).strip() for x in real.row_values(1)]
+    # El proxy incorpora caché, invalidación y reintentos ante 429 de Sheets.
+    header = [str(x).strip() for x in ws.row_values(1)]
     if not header and create:
         ws.append_row(_PMI_SCHEMAS[name], value_input_option='RAW')
         header = list(_PMI_SCHEMAS[name])
@@ -2663,12 +2665,17 @@ def _pmi_remote_rows(name):
     ws = _pmi_ws(name, create=False)
     if ws is None:
         return []
-    real = ws._ws if isinstance(ws, _HojaProxy) else ws
-    values = real.get_all_values()
+    try:
+        # Nunca saltarse _HojaProxy durante las consultas habituales: gestiona
+        # los reintentos por cuota, la caché y la invalidación tras escrituras.
+        values = ws.get_all_values()
+    except Exception as exc:
+        print(f'Premium Incorporación: lectura de {name}: {type(exc).__name__}')
+        raise RuntimeError(f'No se pudo leer la hoja {name} ({type(exc).__name__}).') from exc
     if not values:
         return []
-    if [x.strip() for x in values[0]] != _PMI_SCHEMAS[name]:
-        raise ValueError(f'Los encabezados de {name} cambiaron.')
+    if [str(x).strip() for x in values[0]] != _PMI_SCHEMAS[name]:
+        raise ValueError(f'Encabezados incompatibles en {name}. No se modificaron los datos.')
     return [dict(zip(_PMI_SCHEMAS[name], row + [''] * len(_PMI_SCHEMAS[name])))
             for row in values[1:] if row and str(row[0]).strip()]
 
@@ -3411,6 +3418,155 @@ def _pmi_show_file(dni, record, prefix):
                                key=f'pmi_download_{prefix}_{fid}', use_container_width=True)
 
 
+# =============================================================
+# GESTIÓN DEL COLABORADOR · DIAGNÓSTICO CENTRAL DE GOOGLE SHEETS
+# Solo lectura por defecto. Nunca reordena encabezados ni borra filas.
+# =============================================================
+def _pmu_esquemas_expediente():
+    """Fuente única de esquemas de incorporación, expediente y salida digital."""
+    grupos = (
+        ('Incorporación', '_PMI_SCHEMAS'),
+        ('Expediente e inducción', '_PME_SCHEMAS'),
+        ('Salida digital e inducción audiovisual', '_PMX_SCHEMAS'),
+    )
+    out = []
+    for etiqueta, nombre_global in grupos:
+        for nombre, columnas in globals().get(nombre_global, {}).items():
+            out.append((etiqueta, nombre, list(columnas)))
+    return out
+
+
+def _pmu_estado_encabezados(esperados, encontrados):
+    """Resultado puro, sin modificar hojas. Comprueba contenido y posición."""
+    esperados = [str(v).strip() for v in esperados]
+    encontrados = [str(v).strip() for v in encontrados]
+    if encontrados == esperados:
+        return 'Correcta', f'{len(esperados)} columnas verificadas'
+    if not encontrados:
+        return 'Sin encabezados', 'La primera fila está vacía'
+    faltantes = [v for v in esperados if v not in encontrados]
+    adicionales = [v for v in encontrados if v and v not in esperados]
+    duplicadas = sorted({v for v in encontrados if v and encontrados.count(v) > 1})
+    detalles = []
+    if faltantes:
+        detalles.append('Faltan: ' + ', '.join(faltantes))
+    if adicionales:
+        detalles.append('No reconocidas: ' + ', '.join(adicionales))
+    if duplicadas:
+        detalles.append('Duplicadas: ' + ', '.join(duplicadas))
+    if not detalles:
+        detalles.append('Mismas columnas, pero en distinto orden')
+    return 'Incompatible', '; '.join(detalles)
+
+
+def _pmu_diagnostico_hojas():
+    _pmi_check_access(dni_actual, admin_only=True)
+    if not doc_sheets:
+        return [{'Área': 'Conexión', 'Hoja': 'BD_PremiumMarket', 'Estado': 'Sin conexión',
+                 'Detalle': 'No se abrió el libro. Revisa cuenta de servicio y acceso compartido.'}]
+    salida = []
+    # Se consulta el encabezado actual, bajo petición explícita del administrador.
+    # No hace lecturas completas de DNI, documentos, videos ni datos personales.
+    for area, nombre, columnas in _pmu_esquemas_expediente():
+        try:
+            ws = doc_sheets.worksheet(nombre)
+            real = ws._ws if isinstance(ws, _HojaProxy) else ws
+            encabezados = real.row_values(1)
+            estado, detalle = _pmu_estado_encabezados(columnas, encabezados)
+        except gspread.exceptions.WorksheetNotFound:
+            estado, detalle = 'Faltante', 'Se puede crear sin afectar otras hojas'
+        except Exception as exc:
+            print(f'Diagnóstico expediente {nombre}: {type(exc).__name__}')
+            estado, detalle = 'Error de lectura', f'Google Sheets: {type(exc).__name__} (revisa cuota/permisos)'
+        salida.append({'Área': area, 'Hoja': nombre, 'Estado': estado, 'Detalle': detalle})
+    try:
+        ws = doc_sheets.worksheet('Colaboradores')
+        real = ws._ws if isinstance(ws, _HojaProxy) else ws
+        head = [str(x).strip() for x in real.row_values(1)]
+        faltan = [x for x in ('dni', 'nombre', 'cargo', 'estado') if x not in head]
+        estado = 'Incompatible' if faltan else 'Correcta'
+        detalle = ('Faltan: ' + ', '.join(faltan)) if faltan else 'Fuente de datos del personal disponible'
+    except gspread.exceptions.WorksheetNotFound:
+        estado, detalle = 'Faltante', 'Hoja principal de colaboradores; no crear automáticamente'
+    except Exception as exc:
+        print(f'Diagnóstico Colaboradores: {type(exc).__name__}')
+        estado, detalle = 'Error de lectura', f'Google Sheets: {type(exc).__name__}'
+    salida.insert(0, {'Área': 'Personal', 'Hoja': 'Colaboradores', 'Estado': estado, 'Detalle': detalle})
+    return salida
+
+
+def _pmu_preparar_estructura():
+    """Crea únicamente hojas de expediente faltantes o sin cabecera.
+
+    Ante un esquema distinto, detiene esa hoja: jamás renombra, mueve, elimina
+    ni sobrescribe información preexistente. El botón requiere acción del admin.
+    """
+    _pmi_check_access(dni_actual, write=True, admin_only=True)
+    if not doc_sheets:
+        raise ConnectionError('El libro BD_PremiumMarket no está disponible.')
+    resumen = []
+    errores = []
+    for _, nombre, _ in _pmu_esquemas_expediente():
+        try:
+            if nombre in _PMI_SCHEMAS:
+                _pmi_ws(nombre, create=True)
+            elif nombre in _PME_SCHEMAS:
+                _pme_ws(nombre, create=True)
+            elif nombre in _PMX_SCHEMAS:
+                _pmx_sheet(nombre, create=True)
+            resumen.append(nombre)
+        except Exception as exc:
+            errores.append((nombre, type(exc).__name__))
+            print(f'Preparación estructura {nombre}: {type(exc).__name__}')
+    _pmi_clear()
+    st.session_state.pop('_pmu_diag', None)
+    if errores:
+        return len(resumen), errores
+    return len(resumen), []
+
+
+def _pmu_diagnostico_ui():
+    if not _pmi_is_admin():
+        return
+    with st.expander('Diagnóstico y estructura de Google Sheets', expanded=False):
+        st.caption('Un solo expediente laboral con hojas especializadas. La verificación es de solo lectura; '
+                   'no elimina datos, no cambia columnas y no consulta documentos privados.')
+        if not doc_sheets:
+            st.warning('No hay conexión al libro BD_PremiumMarket en esta ejecución.')
+            if st.button('Reintentar conexión con Google Sheets', key='pmu_retry_conn',
+                         use_container_width=True):
+                conectar_google_sheets.clear()
+                st.rerun()
+        if st.button('Comprobar conexión y encabezados', key='pmu_diag_check',
+                     use_container_width=True, icon=':material/fact_check:'):
+            st.session_state['_pmu_diag'] = _pmu_diagnostico_hojas()
+        report = st.session_state.get('_pmu_diag')
+        if report:
+            ok = sum(r['Estado'] == 'Correcta' for r in report)
+            st.caption(f'{ok} de {len(report)} hojas verificadas como correctas.')
+            st.dataframe(pd.DataFrame(report), hide_index=True, use_container_width=True)
+            if any(r['Estado'] not in ('Correcta',) for r in report):
+                st.warning('Si una hoja figura como «Incompatible», revisa las columnas antes de intentar corregirla. '
+                           'No dupliques ni borres hojas con datos.')
+            if any(r['Estado'] in ('Faltante', 'Sin encabezados') for r in report
+                   if r['Hoja'] != 'Colaboradores'):
+                confirm = st.checkbox('Autorizo crear solo hojas o encabezados faltantes, sin sobrescribir datos',
+                                      key='pmu_diag_confirm')
+                if st.button('Preparar hojas faltantes', key='pmu_diag_prepare',
+                             disabled=not confirm, use_container_width=True):
+                    count, errors = _pmu_preparar_estructura()
+                    if errors:
+                        st.warning(f'Se verificaron {count} hojas. Otras requieren revisión manual: '
+                                   + ', '.join(n for n, _ in errors))
+                    else:
+                        st.success(f'Se verificaron las {count} hojas sin borrar datos.')
+                    st.session_state['_pmu_diag'] = _pmu_diagnostico_hojas()
+                    st.rerun()
+        else:
+            st.info('Pulsa «Comprobar conexión y encabezados» para detectar la hoja exacta que presenta problemas.')
+        st.caption('Fuente de datos: libro BD_PremiumMarket. Los esquemas esperados no cambian entre versiones de la interfaz.')
+
+
 def _pmi_admin_ui():
     if not _pmi_is_admin():
         st.error('Acceso exclusivo de administración.')
@@ -3422,10 +3578,20 @@ def _pmi_admin_ui():
             st.markdown('<div class="pmi-head"><div><h3>Incorporación digital</h3>'
                         '<p>Prepara expedientes, revisa documentos y registra entregas con trazabilidad.</p></div></div>',
                         unsafe_allow_html=True)
+            _pmu_diagnostico_ui()
             try:
                 data = _pmi_load()
-            except Exception:
-                st.error('No se pudo comprobar la conexión con Google Sheets. Verifica los permisos.')
+            except Exception as exc:
+                # Diferenciar validación de esquema y lectura API: no todo error
+                # de datos equivale a credenciales o permisos incorrectos.
+                if isinstance(exc, (ValueError, RuntimeError, ConnectionError)):
+                    st.error(str(exc))
+                else:
+                    st.error('No fue posible consultar el expediente (error de Google Sheets). '
+                             'Abre el diagnóstico para identificar la hoja afectada.')
+                print('Premium incorporación: lectura inicial:', type(exc).__name__)
+                st.info('Si los requisitos se actualizaron antes del aviso, no los vuelvas a crear. '
+                        'Usa el diagnóstico para revisar la hoja y después recarga la pantalla.')
                 return tabs[1]
             active_people = [p for p in _pm2_people()]
             if not active_people:
@@ -4244,7 +4410,7 @@ def _pme_revoke_certificate(dni, certificate_id):
 
 
 def _pme_cert_folder(drive, parent, dni):
-    """Reutiliza el expediente de fase 1; no crea otro expediente en Sheets."""
+    """Reutiliza un único expediente de incorporación, sin registros paralelos."""
     cases = [c for c in _pmi_remote_rows(_PMI_CASE)
              if _pmi_dni(c.get('dni')) == _pmi_dni(dni) and c.get('estado') != 'Anulado']
     if len(cases) > 1:
@@ -4659,7 +4825,7 @@ def _pme_admin_ui():
             str(person_map[d].get('nombre', '')) + ' · ' + str(person_map[d].get('estado', '')),
             key='pme_admin_person')
         st.caption('La ficha se recupera directamente de Gestión Colaboradores. No altera los encabezados ni la información de esa hoja.')
-        with st.expander('Preparación de las hojas de Fase 2'):
+        with st.expander('Estructura del expediente e inducción'):
             st.caption('Solo se crean Exp_Capacitaciones y Exp_Constancias si aún no existen. '
                        'Se comprueban sus encabezados sin editar hojas anteriores.')
             if st.button('Verificar o preparar hojas del portal', key='pme_prepare_sheets',
@@ -4720,8 +4886,8 @@ def _pme_worker_ui():
                'Si tienes una incorporación abierta, realiza tus cargas y conformidades en Mi Incorporación.')
 
 # =============================================================
-# PREMIUM MARKET · FASE 3 · SALIDA DIGITAL + INDUCCIÓN EN VIDEO
-# Esquemas independientes. No altera hojas de Fases 1 y 2,
+# PREMIUM MARKET · GESTIÓN DEL COLABORADOR · SALIDA + INDUCCIÓN
+# Esquemas independientes. No altera otras hojas del expediente,
 # ni actualiza automáticamente el estado del trabajador.
 # =============================================================
 from urllib.parse import urlparse as _pmx_urlparse, parse_qs as _pmx_parse_qs
@@ -4834,7 +5000,7 @@ def _pmx_prepare():
     _pmi_check_access(dni_actual, write=True, admin_only=True)
     for name in _PMX_SCHEMAS:
         _pmx_sheet(name, create=True)
-    registrar_auditoria('Preparar fase 3', 'Gestión del Colaborador',
+    registrar_auditoria('Preparar salida digital e inducción', 'Gestión del Colaborador',
                         'Salidas digitales e inducción · esquemas validados')
 
 
