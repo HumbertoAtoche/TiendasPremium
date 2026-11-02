@@ -15322,10 +15322,12 @@ def _pm_sidebar_active_alerts():
             pending_deposits = _pm_bol_deposit_pending(boletas)
             ready=len(pending_deposits)
             signed=int(pending_deposits['estado'].fillna('').astype(str).str.strip().eq('Firmado').sum()) if ready else 0
-            if signed:
-                alerts.append(('Boletas firmadas · por depositar',signed,'Boletas de Pago',':material/draw:','pm_notice_signed'))
+            # Una sola acción: una boleta firmada/conforme no se cuenta dos veces.
             if ready:
                 alerts.append(('Depósitos por registrar',ready,'Boletas de Pago',':material/account_balance_wallet:','pm_notice_deposit'))
+                st.session_state['_pm_notice_signed_count'] = signed
+            else:
+                st.session_state['_pm_notice_signed_count'] = 0
             if observed:
                 alerts.append(('Boletas observadas',observed,'Boletas de Pago',':material/receipt_long:','pm_notice_bol_obs'))
         else:
@@ -15340,15 +15342,21 @@ def _pm_sidebar_active_alerts():
     elif isinstance(tasks,pd.DataFrame) and not tasks.empty:
         state=tasks['estado'].fillna('').astype(str).str.strip()
         if rol_actual=='admin':
-            count=int(state.eq('Por validar').sum())
+            review_rows = tasks.loc[state.eq('Por validar')]
+            count=len(review_rows)
             if count:
+                # El acceso directo lleva al día que tiene actividades por aprobar.
+                dates=sorted((str(v)[:10] for v in review_rows['fecha'] if str(v)[:10]), reverse=True)
+                st.session_state['_pm_notice_rut_date'] = dates[0] if dates else ''
                 alerts.append(('Rutinas por validar',count,'Rutinas Operativas',':material/fact_check:','pm_notice_rut_admin'))
         else:
             own=tasks.loc[tasks['dni'].astype(str).map(_pm2_dni).eq(_pm2_dni(dni_actual))]
             states=own['estado'].fillna('').astype(str).str.strip()
-            actionable=int(states.isin(('Pendiente','En curso')).sum())
-            observed=int((own['revision_estado'].fillna('').astype(str).eq('Observada') &
-                          ~states.isin(('Completada','Cancelada'))).sum())
+            observed_mask = (own['revision_estado'].fillna('').astype(str).eq('Observada') &
+                             ~states.isin(('Completada','Cancelada')))
+            # Las rutinas observadas tienen su propia acción: no duplicarlas como pendientes.
+            actionable=int((states.isin(('Pendiente','En curso')) & ~observed_mask).sum())
+            observed=int(observed_mask.sum())
             if actionable:
                 alerts.append(('Mis rutinas pendientes',actionable,'Mis Rutinas',':material/fact_check:','pm_notice_rut_worker'))
             # Las observadas también están en En curso: avisar sin doble conteo en total.
@@ -15397,39 +15405,113 @@ def _mismo_dni_wrapper(dni):
     return lambda val: _mismo_dni(val,dni)
 
 
-# Pendientes: un solo acceso por tema (muestra el número y lleva directo a la pantalla).
-def _btn_pendiente(etiqueta, key, destino, icono):
-    callback = _pm_av_request_panel if key == 'pm_notice_messages' else _ir_a
-    args = () if key == 'pm_notice_messages' else (destino,)
+# =============================================================
+# PREMIUM MARKET · CENTRO COMPACTO DE AVISOS Y PENDIENTES
+# Cada fila continúa siendo un botón nativo, accesible y operativo.
+# Las boletas firmadas/conformes cuentan solo una vez como depósito pendiente.
+# =============================================================
+_PM_NOTICE_PRESENTATION = {
+    'pm_notice_deposit': ('Por atender', 'Boletas firmadas o conformes; depósito por verificar', 'urgent'),
+    'pm_notice_bol_obs': ('Por atender', 'Requieren revisión y respuesta administrativa', 'urgent'),
+    'pm_notice_bol_worker': ('Por atender', 'Revisa tu boleta y confirma o registra una observación', 'urgent'),
+    'pm_notice_rut_admin': ('Por atender', 'Actividades enviadas para aprobación', 'info'),
+    'pm_notice_rut_worker': ('Por atender', 'Actividades que todavía debes realizar', 'info'),
+    'pm_notice_rut_observed': ('Por atender', 'Corrige las actividades observadas', 'urgent'),
+    'pm_notice_messages': ('Mensajes y seguimiento', 'Comentarios de supervisión por leer', 'message'),
+    'pm_notice_comm': ('Mensajes y seguimiento', 'Comunicados pendientes de confirmación', 'message'),
+    'pm_notice_requests': ('Por atender' if rol_actual == 'admin' else 'Mensajes y seguimiento',
+                           'Solicitudes del equipo por evaluar' if rol_actual == 'admin' else 'Solicitudes a la espera de respuesta',
+                           'info' if rol_actual == 'admin' else 'neutral'),
+    'pm_notice_bottles': ('Mensajes y seguimiento', 'Devoluciones todavía registradas como abiertas', 'neutral'),
+}
+
+
+def _pm_notice_open(destino, key):
+    """Lleva a una acción concreta cuando el módulo admite filtros internos."""
+    if key == 'pm_notice_messages':
+        _pm_av_request_panel()
+        return
+    if key == 'pm_notice_rut_admin' and rol_actual == 'admin':
+        date_txt = str(st.session_state.get('_pm_notice_rut_date') or '')
+        try:
+            st.session_state['pm2_monitor_date'] = datetime.strptime(date_txt[:10], '%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            pass
+        st.session_state['pm2_monitor_status'] = 'Por validar'
+        st.session_state['pm2_monitor_worker'] = 'Todos'
+    elif key == 'pm_notice_rut_observed' and rol_actual != 'admin':
+        st.session_state['pm2_worker_scope'] = 'Historial completo'
+    _ir_a(destino)
+
+
+def _pm_notice_button(item):
+    label, number, target, icon, key = item
     try:
-        st.sidebar.button(etiqueta, key=key, use_container_width=True,
-                          on_click=callback, args=args, icon=icono)
-    except TypeError:   # versiones antiguas de Streamlit sin parámetro icon
-        st.sidebar.button(etiqueta, key=key, use_container_width=True,
-                          on_click=callback, args=args)
+        st.button(f'{label} · {int(number)}', key=key, icon=icon,
+                  use_container_width=True, on_click=_pm_notice_open,
+                  args=(target, key), help=f'{label}. {int(number)} registro(s).')
+    except TypeError:
+        st.button(f'{label} · {int(number)}', key=key, use_container_width=True,
+                  on_click=_pm_notice_open, args=(target, key))
+
+
+def _pm_notice_css_for_items(items):
+    """Microdescripción visual, segura para CSS y sin elementos clicables falsos."""
+    rules=[]
+    for _, _, _, _, key in items:
+        group, subtitle, tone = _PM_NOTICE_PRESENTATION.get(key, ('Mensajes y seguimiento', 'Revisar información', 'neutral'))
+        if key == 'pm_notice_deposit':
+            signed = min(int(st.session_state.get('_pm_notice_signed_count') or 0), int(next((x[1] for x in items if x[4] == key), 0)))
+            conforme = max(int(next((x[1] for x in items if x[4] == key), 0)) - signed, 0)
+            subtitle = f'{signed} firmada(s) · {conforme} conforme(s) sin depósito'
+        safe_sub = str(subtitle).replace('\\','\\\\').replace('"','\\"').replace('\n',' ')
+        rules.append('section[data-testid="stSidebar"] .st-key-pm_alert_center .st-key-' + key + ' button::after{content:"' + safe_sub + '";}')
+        if tone == 'urgent':
+            rules.append('section[data-testid="stSidebar"] .st-key-pm_alert_center .st-key-' + key + ' button{border-left:3px solid #df6471!important;}')
+        elif tone == 'info':
+            rules.append('section[data-testid="stSidebar"] .st-key-pm_alert_center .st-key-' + key + ' button{border-left:3px solid #8eaee2!important;}')
+    return ''.join(rules)
+
 
 _pm_sidebar_alerts, _pm_sidebar_errors = _pm_sidebar_active_alerts()
-st.sidebar.markdown('<div class="tp-note-t pm-notice-title">AVISOS Y PENDIENTES' +
-                    (f' · {len(_pm_sidebar_alerts)}' if _pm_sidebar_alerts else '') +
-                    '</div>', unsafe_allow_html=True)
-for _label,_count,_destination,_icon,_key in _pm_sidebar_alerts:
-    _btn_pendiente(f'{_label} · {_count}',_key,_destination,_icon)
-if (rol_actual!='admin' and st.session_state.get('_pm_av_current_messages')
-        and not st.session_state.get('_pm_av_unread')):
-    st.sidebar.button('Mis mensajes · historial', key='pm_av_history_sidebar',
-                      icon=':material/mail:', use_container_width=True,
-                      on_click=_pm_av_request_panel)
-if _pm_sidebar_errors:
-    st.sidebar.caption('Algunos avisos no pudieron actualizarse: ' + ', '.join(sorted(set(_pm_sidebar_errors))))
-if not _pm_sidebar_alerts and not _pm_sidebar_errors:
-    st.sidebar.caption('Sin acciones pendientes.')
-# La bandeja detallada vive en Marcar Asistencia; el sidebar conserva su contador.
-if rol_actual=='admin':
-    _pm_av_ensure_ready_silent()
-st.sidebar.button('Actualizar avisos',key='pm_notice_refresh',
-                  icon=':material/refresh:',use_container_width=True,on_click=_pm_sidebar_refresh)
+_pm_alert_action = [item for item in _pm_sidebar_alerts if _PM_NOTICE_PRESENTATION.get(item[4], ('Mensajes y seguimiento',))[0] == 'Por atender']
+_pm_alert_follow = [item for item in _pm_sidebar_alerts if item not in _pm_alert_action]
+_pm_alert_unique_count = sum(int(a[1]) for a in _pm_sidebar_alerts)
+_pm_alert_action_count = sum(int(a[1]) for a in _pm_alert_action)
+_pm_alert_follow_count = sum(int(a[1]) for a in _pm_alert_follow)
 
-if rol_actual!='admin' and st.session_state.get('_pm_av_panel_open'):
+with st.sidebar.container(key='pm_alert_center'):
+    st.markdown('<div class="pm-alert-head"><span class="pm-alert-heading">'
+                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>'
+                'Avisos y pendientes</span><span class="pm-alert-total">' + str(_pm_alert_unique_count) + '</span></div>',
+                unsafe_allow_html=True)
+    if _pm_alert_action:
+        st.markdown('<div class="pm-alert-group">POR ATENDER <span>' + str(_pm_alert_action_count) + '</span></div>', unsafe_allow_html=True)
+        for _item in _pm_alert_action:
+            _pm_notice_button(_item)
+    if _pm_alert_follow:
+        st.markdown('<div class="pm-alert-group pm-alert-group--follow">MENSAJES Y SEGUIMIENTO <span>' + str(_pm_alert_follow_count) + '</span></div>', unsafe_allow_html=True)
+        for _item in _pm_alert_follow:
+            _pm_notice_button(_item)
+    if _pm_alert_unique_count == 0 and not _pm_sidebar_errors:
+        st.markdown('<div class="pm-alert-empty"><span>✓</span><div><b>Todo al día</b>'
+                    '<small>No tienes pendientes por atender.</small></div></div>', unsafe_allow_html=True)
+    if (rol_actual != 'admin' and st.session_state.get('_pm_av_current_messages')
+            and not st.session_state.get('_pm_av_unread')):
+        st.button('Consultar mensajes anteriores', key='pm_av_history_sidebar',
+                  icon=':material/history:', use_container_width=True,
+                  on_click=_pm_av_request_panel)
+    if _pm_sidebar_errors:
+        st.caption('No se pudo actualizar: ' + ', '.join(sorted(set(_pm_sidebar_errors))))
+    st.button('Actualizar avisos', key='pm_alert_refresh',
+              icon=':material/refresh:', use_container_width=True,
+              on_click=_pm_sidebar_refresh)
+
+# Evitar un paso de configuración en el sidebar: se prepara sin interferir con el usuario.
+if rol_actual == 'admin':
+    _pm_av_ensure_ready_silent()
+
+if rol_actual != 'admin' and st.session_state.get('_pm_av_panel_open'):
     if st.session_state.get('_pm_av_panel_owner') != _pm2_dni(dni_actual):
         _pm_av_close_panel()
     else:
@@ -15440,41 +15522,29 @@ if rol_actual!='admin' and st.session_state.get('_pm_av_panel_open'):
         _pm_av_dialog(st.session_state.get('_pm_av_current_messages', []), _seen_ids, _ready_panel)
 
 st.markdown("""<style>
-section[data-testid="stSidebar"] [class*="st-key-pm_notice_"] button{
-    min-height:43px!important;justify-content:flex-start!important;text-align:left!important;
-    padding:8px 11px!important;border:1px solid #e6eaf0!important;
-    border-radius:12px!important;background:#f8fafc!important;box-shadow:none!important;
-}
-section[data-testid="stSidebar"] [class*="st-key-pm_notice_"] button p{
-    font-size:.77rem!important;font-weight:720!important;line-height:1.28!important;
-    white-space:normal!important;text-align:left!important;color:#344155!important;
-}
-section[data-testid="stSidebar"] .st-key-pm_notice_deposit button,
-section[data-testid="stSidebar"] .st-key-pm_notice_bol_worker button{
-    background:#fff0f2!important;border-color:#f5ccd2!important;
-}
-section[data-testid="stSidebar"] .st-key-pm_notice_deposit button p,
-section[data-testid="stSidebar"] .st-key-pm_notice_bol_worker button p{
-    color:#9f2338!important;
-}
-section[data-testid="stSidebar"] .st-key-pm_notice_rut_admin button,
-section[data-testid="stSidebar"] .st-key-pm_notice_rut_worker button{
-    background:#edf5ff!important;border-color:#d4e6ff!important;
-}
-section[data-testid="stSidebar"] .st-key-pm_notice_messages button,
-section[data-testid="stSidebar"] .st-key-pm_notice_signed button{
-    background:#fff2e8!important;border-color:#f2d9b6!important;
-}
-section[data-testid="stSidebar"] .st-key-pm_notice_bottles button{
-    background:#fff0f2!important;border-color:#f5ccd2!important;
-}
-section[data-testid="stSidebar"] .st-key-pm_notice_bottles button p{color:#9f2338!important}
-section[data-testid="stSidebar"] .st-key-pm_notice_refresh button{
-    background:transparent!important;border:1px dashed #dde4ed!important;
-    color:#617187!important;min-height:34px!important;font-size:.74rem!important;
-    box-shadow:none!important;
-}
-</style>""",unsafe_allow_html=True)
+section[data-testid="stSidebar"] .st-key-pm_alert_center{margin:8px 0 13px!important;padding:12px 10px 10px!important;border:1px solid #e8edf5!important;border-radius:18px!important;background:linear-gradient(180deg,#fff,#fbfcfe)!important;box-shadow:0 10px 22px -24px rgba(26,42,73,.2)!important}
+section[data-testid="stSidebar"] .st-key-pm_alert_center .pm-alert-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 2px 9px}
+section[data-testid="stSidebar"] .st-key-pm_alert_center .pm-alert-heading{font-size:.76rem;font-weight:850;letter-spacing:.015em;color:#283c57;display:flex;align-items:center;gap:7px;min-width:0}
+section[data-testid="stSidebar"] .st-key-pm_alert_center .pm-alert-heading svg{width:16px;height:16px;flex:none;stroke:#dc4659}
+section[data-testid="stSidebar"] .st-key-pm_alert_center .pm-alert-total{font-size:.76rem;font-weight:800;color:#ae3445;background:#fff0f2;border:1px solid #f6d9de;border-radius:100px;min-width:24px;text-align:center;padding:4px 7px;font-variant-numeric:tabular-nums}
+section[data-testid="stSidebar"] .st-key-pm_alert_center .pm-alert-group{font-size:.63rem;color:#8795aa;letter-spacing:.09em;font-weight:850;padding:9px 4px 5px;display:flex;justify-content:space-between;align-items:center;gap:6px}
+section[data-testid="stSidebar"] .st-key-pm_alert_center .pm-alert-group--follow{padding-top:13px;margin-top:2px;border-top:1px solid #f0f3f7}
+section[data-testid="stSidebar"] .st-key-pm_alert_center .pm-alert-group span{letter-spacing:0;color:#65768b;font-size:.69rem;font-variant-numeric:tabular-nums}
+section[data-testid="stSidebar"] .st-key-pm_alert_center [class*="st-key-pm_notice_"] button{position:relative!important;min-height:65px!important;width:100%!important;justify-content:flex-start!important;align-items:flex-start!important;text-align:left!important;border-radius:12px!important;border:1px solid #e8edf3!important;padding:9px 9px 25px 11px!important;background:#fff!important;box-shadow:none!important;transition:border-color .15s,background .15s,transform .15s!important;margin:0!important;overflow:hidden!important}
+section[data-testid="stSidebar"] .st-key-pm_alert_center [class*="st-key-pm_notice_"] button:hover{background:#f8fbff!important;border-color:#ccd9e8!important;transform:translateY(-1px)}
+section[data-testid="stSidebar"] .st-key-pm_alert_center [class*="st-key-pm_notice_"] button:focus-visible{outline:2px solid #225ec1!important;outline-offset:2px!important}
+section[data-testid="stSidebar"] .st-key-pm_alert_center [class*="st-key-pm_notice_"] button p{font-size:.765rem!important;font-weight:780!important;line-height:1.3!important;color:#31435d!important;white-space:normal!important;text-align:left!important;margin:0!important}
+section[data-testid="stSidebar"] .st-key-pm_alert_center [class*="st-key-pm_notice_"] button::after{position:absolute;bottom:8px;left:37px;right:7px;display:block;font-size:.65rem;font-weight:450;line-height:1.25;color:#7b899c;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
+section[data-testid="stSidebar"] .st-key-pm_alert_center .pm-alert-empty{display:flex;align-items:center;gap:10px;padding:10px;border-radius:12px;border:1px solid #dbeee4;background:#f5fbf7;color:#168153}
+section[data-testid="stSidebar"] .st-key-pm_alert_center .pm-alert-empty span{font-size:1.1rem}
+section[data-testid="stSidebar"] .st-key-pm_alert_center .pm-alert-empty b{display:block;font-size:.77rem}
+section[data-testid="stSidebar"] .st-key-pm_alert_center .pm-alert-empty small{display:block;font-size:.7rem;color:#648b74;margin-top:2px}
+section[data-testid="stSidebar"] .st-key-pm_alert_center .st-key-pm_alert_refresh button{border:0!important;background:transparent!important;min-height:32px!important;color:#627994!important;font-size:.72rem!important;box-shadow:none!important;justify-content:center!important;margin-top:5px!important}
+section[data-testid="stSidebar"] .st-key-pm_alert_center .st-key-pm_notice_refresh button:hover{background:#f2f6fb!important}
+section[data-testid="stSidebar"] .st-key-pm_alert_center .st-key-pm_av_history_sidebar button{min-height:34px!important;background:transparent!important;border:1px solid #edf1f6!important;border-radius:10px!important;font-size:.71rem!important}
+@media(max-width:780px){section[data-testid="stSidebar"] .st-key-pm_alert_center{padding:11px 9px!important}section[data-testid="stSidebar"] .st-key-pm_alert_center [class*="st-key-pm_notice_"] button{min-height:68px!important}}
+@media(prefers-reduced-motion:reduce){section[data-testid="stSidebar"] .st-key-pm_alert_center [class*="st-key-pm_notice_"] button{transition:none!important;transform:none!important}}
+</style>""" + '<style>' + _pm_notice_css_for_items(_pm_sidebar_alerts) + '</style>', unsafe_allow_html=True)
 st.sidebar.markdown('<div class="tp-note-t pm-restored-nav-title">Navegación</div>', unsafe_allow_html=True)
 st.sidebar.markdown('<div class="pm-nav-kind-' + ('admin' if rol_actual == 'admin' else 'employee') + '"></div>', unsafe_allow_html=True)
 # Menú lateral nativo, plano y siempre visible en ambas vistas.
