@@ -14533,10 +14533,181 @@ def _pm_sidebar_boletas(force=False):
 
 def _pm_sidebar_refresh():
     st.session_state.pop('_pm_sidebar_bol_cache',None)
+    st.session_state.pop('_pm_av_read_cache',None)
     st.session_state.pop('_pmi_cache',None)
     st.session_state.pop('_cap_cache',None)
     _pmc_reset_cache()
     st.session_state['_pm_sidebar_force_refresh']=True
+
+
+# =============================================================
+# PREMIUM MARKET · MENSAJES DE SUPERVISIÓN Y ACUSES PRIVADOS
+# Los mensajes nacen de los registros originales: rutinas, boletas y
+# solicitudes. No se duplican los textos ni se cambia ningún esquema previo.
+# Solo Avisos_Lecturas conserva qué mensaje leyó cada trabajador.
+# =============================================================
+_PM_AV_READS_SHEET = 'Avisos_Lecturas'
+_PM_AV_HEADERS = ['id_evento', 'dni', 'leido_el', 'leido_por']
+
+
+def _pm_av_sheet(create=False):
+    if not doc_sheets:
+        raise ConnectionError('Google Sheets no está disponible.')
+    try:
+        ws = doc_sheets.worksheet(_PM_AV_READS_SHEET)
+    except gspread.exceptions.WorksheetNotFound:
+        if not create:
+            return None
+        if rol_real != 'admin' or st.session_state.get('ver_como'):
+            raise PermissionError('Solo administración puede preparar los registros de lectura.')
+        try:
+            ws = doc_sheets.add_worksheet(title=_PM_AV_READS_SHEET, rows=2000, cols=len(_PM_AV_HEADERS))
+        except Exception:
+            ws = doc_sheets.worksheet(_PM_AV_READS_SHEET)
+    real = ws._ws if isinstance(ws, _HojaProxy) else ws
+    head = [str(h).strip() for h in real.row_values(1)]
+    if not head and create:
+        ws.append_row(_PM_AV_HEADERS, value_input_option='RAW')
+        head = list(_PM_AV_HEADERS)
+    if head != _PM_AV_HEADERS:
+        raise ValueError('Encabezados incompatibles en Avisos_Lecturas; no se modificaron datos.')
+    return ws
+
+
+def _pm_av_receipts(force=False):
+    # Caché por sesión asociada a la revisión remota y al usuario real.
+    sig = (str(st.session_state.get('usuario_login')), _revision_hoja(_PM_AV_READS_SHEET))
+    cached = st.session_state.get('_pm_av_read_cache')
+    if not force and isinstance(cached, dict) and cached.get('sig') == sig and time.monotonic()-cached.get('at',0) < 35:
+        return set(cached['ids']), bool(cached.get('ready'))
+    ws = _pm_av_sheet(create=False)
+    if ws is None:
+        return set(), False
+    if force and isinstance(ws, _HojaProxy):
+        ws._invalidar()
+    values = ws.get_all_values()
+    dni = _pm2_dni(dni_actual)
+    ids = {str(row[0]) for row in values[1:] if len(row) >= 3 and _pm2_dni(row[1]) == dni and str(row[2]).strip()}
+    st.session_state['_pm_av_read_cache'] = {'ids': ids, 'ready': True, 'sig': sig, 'at': time.monotonic()}
+    return ids, True
+
+
+def _pm_av_id(kind, ref, timestamp, body):
+    # Se genera un identificador estable sin registrar datos personales en el ID.
+    import hashlib as _pm_av_hashlib
+    raw = '|'.join((str(kind),str(ref),str(timestamp),str(body)))
+    return _pm_av_hashlib.sha256(raw.encode('utf-8')).hexdigest()[:32]
+
+
+def _pm_av_messages(dni, routines=None, boletas=None, solicitudes=None):
+    """Solo mensajes destinados al DNI solicitado; no registra escrituras."""
+    dni = _pm2_dni(dni)
+    found = []
+    if isinstance(routines, pd.DataFrame) and not routines.empty:
+        own = routines.loc[routines['dni'].astype(str).map(_pm2_dni).eq(dni)]
+        for _, r in own.iterrows():
+            note = str(r.get('comentario_revision') or '').strip()
+            at = str(r.get('fecha_revision') or '').strip()
+            if not note or not at:
+                continue
+            ref = str(r.get('id_rutina') or '')
+            if not ref:
+                continue
+            title = str(r.get('titulo') or 'Actividad')
+            kind = 'Revisión aprobada' if str(r.get('revision_estado')) == 'Aprobada' else 'Observación de supervisión'
+            found.append({'id': _pm_av_id('rutina',ref,at,note), 'titulo': kind + ': ' + title,
+                          'texto': note, 'modulo': 'Mis Rutinas', 'fecha': at, 'tipo': 'rutina'})
+    if isinstance(boletas, pd.DataFrame) and not boletas.empty:
+        own = boletas.loc[boletas['dni'].astype(str).map(_pm2_dni).eq(dni)]
+        for _, r in own.iterrows():
+            reply = str(r.get('respuesta_admin') or '').strip()
+            if not reply:
+                continue
+            ref = str(r.get('id_boleta') or '')
+            if not ref:
+                continue
+            at = str(r.get('fecha_emision') or '')
+            found.append({'id': _pm_av_id('boleta',ref,at,reply),
+                          'titulo': 'Respuesta sobre tu boleta · '+str(r.get('mes') or '')+' '+str(r.get('anio') or ''),
+                          'texto': reply, 'modulo': 'Mis Boletas', 'fecha': at, 'tipo': 'boleta'})
+    if isinstance(solicitudes, pd.DataFrame) and not solicitudes.empty and 'dni' in solicitudes.columns:
+        own = solicitudes.loc[solicitudes['dni'].astype(str).map(_pm2_dni).eq(dni)]
+        for _, r in own.iterrows():
+            reply = str(r.get('respuesta_admin') or '').strip()
+            status = str(r.get('estado') or '').strip()
+            if not reply or status == 'Pendiente':
+                continue
+            ref = str(r.get('id_solicitud') or '')
+            if not ref:
+                continue
+            at = str(r.get('fecha_respuesta') or r.get('fecha_aprobacion') or r.get('fecha_solicitud') or '')
+            found.append({'id': _pm_av_id('solicitud',ref,status,reply),
+                          'titulo': 'Respuesta de tu solicitud · '+status, 'texto': reply,
+                          'modulo': 'Solicitar Permiso / Adelanto', 'fecha': at, 'tipo':'solicitud'})
+    # El origen ya controla los permisos. Por seguridad no renderizar textos de otro DNI.
+    return sorted(found, key=lambda e: e['fecha'], reverse=True)
+
+
+def _pm_av_ack(message_id):
+    if not st.session_state.get('usuario_login') or st.session_state.get('ver_como'):
+        raise PermissionError('Inicia sesión como colaborador para confirmar la lectura.')
+    if rol_actual == 'admin':
+        raise PermissionError('Los mensajes de los colaboradores solo pueden confirmarlos sus destinatarios.')
+    actual = {x['id'] for x in st.session_state.get('_pm_av_current_messages', [])}
+    if message_id not in actual:
+        raise PermissionError('Este mensaje no corresponde a la sesión actual. Actualiza avisos.')
+    seen, ready = _pm_av_receipts(force=True)
+    if not ready:
+        raise ValueError('Administración todavía no activó Avisos_Lecturas.')
+    if message_id in seen:
+        return
+    ws = _pm_av_sheet(create=False)
+    ws.append_row([message_id, _pm2_dni(dni_actual), obtener_ahora_peru().strftime('%Y-%m-%d %H:%M:%S'),
+                   str(st.session_state.get('usuario_login'))], value_input_option='RAW')
+    st.session_state.pop('_pm_av_read_cache', None)
+
+
+def _pm_av_prepare():
+    _pm_av_sheet(create=True)
+    st.session_state.pop('_pm_av_read_cache', None)
+
+
+def _pm_av_open_message(target):
+    _ir_a(target)
+    if target == 'Mis Rutinas':
+        # Los comentarios antiguos deben encontrarse aunque la vista abra por defecto en «Hoy».
+        st.session_state['pm2_worker_scope'] = 'Historial completo'
+
+
+def _pm_av_render_inbox(messages, read_ids, ready):
+    unread = [m for m in messages if m['id'] not in read_ids]
+    if not unread:
+        return
+    with st.sidebar.expander(f'Mensajes del supervisor y administración · {len(unread)}', expanded=False):
+        st.caption('Revisa cada mensaje y confirma su lectura. No modifica la aprobación de tu tarea.')
+        if not ready:
+            st.warning('Administración debe activar primero el registro de lecturas.')
+        for idx, m in enumerate(unread[:8]):
+            st.markdown('**' + _html.escape(m['titulo']) + '**')
+            st.caption(str(m['fecha'])[:16])
+            st.write(m['texto'])
+            a,b = st.columns(2)
+            with a:
+                st.button('Abrir módulo', key='pm_av_open_'+m['id'], use_container_width=True,
+                          on_click=_pm_av_open_message, args=(m['modulo'],))
+            with b:
+                if st.button('Marcar leído', key='pm_av_ack_'+m['id'],
+                             disabled=not ready or bool(st.session_state.get('ver_como')),
+                             use_container_width=True):
+                    try:
+                        _pm_av_ack(m['id'])
+                        st.rerun()
+                    except Exception:
+                        st.error('No se pudo confirmar la lectura. Revisa la conexión y vuelve a intentarlo.')
+            if idx < min(len(unread),8)-1:
+                st.divider()
+        if len(unread)>8:
+            st.caption(f'Hay {len(unread)-8} mensaje(s) adicional(es). Confirma los anteriores para verlos.')
 
 
 def _pm_sidebar_active_alerts():
@@ -14550,7 +14721,11 @@ def _pm_sidebar_active_alerts():
         state=boletas['estado'].fillna('').astype(str).str.strip()
         if rol_actual=='admin':
             observed=int(state.eq('Observado').sum())
-            ready=len(_pm_bol_deposit_pending(boletas))
+            pending_deposits = _pm_bol_deposit_pending(boletas)
+            ready=len(pending_deposits)
+            signed=int(pending_deposits['estado'].fillna('').astype(str).str.strip().eq('Firmado').sum()) if ready else 0
+            if signed:
+                alerts.append(('Boletas firmadas · por depositar',signed,'Boletas de Pago',':material/draw:','pm_notice_signed'))
             if ready:
                 alerts.append(('Depósitos por registrar',ready,'Boletas de Pago',':material/account_balance_wallet:','pm_notice_deposit'))
             if observed:
@@ -14581,6 +14756,28 @@ def _pm_sidebar_active_alerts():
             # Las observadas también están en En curso: avisar sin doble conteo en total.
             if observed:
                 alerts.append(('Rutinas con observaciones',observed,'Mis Rutinas',':material/error_outline:','pm_notice_rut_observed'))
+    # Los comentarios de supervisión se notifican incluso después de aprobar la rutina.
+    # No sumarlos como tareas pendientes: el trabajador debe marcar el mensaje como leído.
+    st.session_state['_pm_av_current_messages'] = []
+    st.session_state['_pm_av_unread'] = []
+    st.session_state['_pm_av_ready'] = False
+    if rol_actual!='admin':
+        requests_df = st.session_state.get('solicitudes', pd.DataFrame())
+        messages = _pm_av_messages(dni_actual, routines=tasks if terr is None else None,
+                                   boletas=boletas if err is None else None,
+                                   solicitudes=requests_df)
+        st.session_state['_pm_av_current_messages'] = messages
+        try:
+            reads, ready = _pm_av_receipts(force=fresh)
+            st.session_state['_pm_av_ready'] = ready
+            unread = [m for m in messages if m['id'] not in reads]
+            st.session_state['_pm_av_unread'] = unread
+            if unread:
+                alerts.append(('Mensajes sin leer',len(unread),unread[0]['modulo'],
+                               ':material/markunread:','pm_notice_messages'))
+        except Exception as exc:
+            print('Premium: lectura de mensajes:', type(exc).__name__)
+            errors.append('mensajes')
     # Solicitudes actuales: admin revisa; colaborador consulta su expediente de solicitud.
     if _sol_pend_n:
         alerts.append((('Solicitudes por revisar' if rol_actual=='admin' else 'Mis solicitudes en revisión'),
@@ -14619,6 +14816,21 @@ if _pm_sidebar_errors:
     st.sidebar.caption('Algunos avisos no pudieron actualizarse: ' + ', '.join(sorted(set(_pm_sidebar_errors))))
 if not _pm_sidebar_alerts and not _pm_sidebar_errors:
     st.sidebar.caption('Sin acciones pendientes.')
+if rol_actual!='admin' and st.session_state.get('_pm_av_unread'):
+    try:
+        seen_ids, _ready = _pm_av_receipts()
+    except Exception:
+        seen_ids, _ready = set(), False
+    _pm_av_render_inbox(st.session_state.get('_pm_av_current_messages', []), seen_ids, _ready)
+if rol_actual=='admin':
+    with st.sidebar.expander('Configuración de mensajes', expanded=False):
+        st.caption('Una sola hoja de control de lectura, sin alterar Rutinas ni Boletas. Ejecuta una vez.')
+        if st.button('Activar mensajes con confirmación',key='pm_av_prepare',use_container_width=True):
+            try:
+                _pm_av_prepare()
+                st.success('Registro de lecturas preparado.')
+            except Exception:
+                st.error('No se pudieron preparar los mensajes. Comprueba Google Sheets y sus permisos.')
 st.sidebar.button('Actualizar avisos',key='pm_notice_refresh',
                   icon=':material/refresh:',use_container_width=True,on_click=_pm_sidebar_refresh)
 
@@ -14643,6 +14855,10 @@ section[data-testid="stSidebar"] .st-key-pm_notice_bol_worker button p{
 section[data-testid="stSidebar"] .st-key-pm_notice_rut_admin button,
 section[data-testid="stSidebar"] .st-key-pm_notice_rut_worker button{
     background:#edf5ff!important;border-color:#d4e6ff!important;
+}
+section[data-testid="stSidebar"] .st-key-pm_notice_messages button,
+section[data-testid="stSidebar"] .st-key-pm_notice_signed button{
+    background:#fff2e8!important;border-color:#f2d9b6!important;
 }
 section[data-testid="stSidebar"] .st-key-pm_notice_bottles button{
     background:#fff0f2!important;border-color:#f5ccd2!important;
@@ -16163,6 +16379,26 @@ elif choice == "Mis Rutinas":
     premium_module_shell("Mis Rutinas", "MI OPERACIÓN", "Tus actividades asignadas con fecha, hora, lugar e instrucciones claras.")
     with st.container(key="pm_v_mis_rutinas"):
         _pm2_css()
+        _my_messages = st.session_state.get('_pm_av_unread', [])
+        if _my_messages:
+            st.markdown('<div class="pm4-daily-note" style="padding:14px 17px;border-radius:16px;'
+                        'background:#fff8ed;border:1px solid #f2dbad;margin-bottom:14px">'
+                        '<b style="color:#915d11">Tienes '+str(len(_my_messages))+' mensaje(s) de supervisión o administración por leer</b>'
+                        '</div>', unsafe_allow_html=True)
+            with st.expander('Leer comentarios y respuestas pendientes', expanded=True):
+                st.caption('Los comentarios se conservan en su actividad o documento original. Confirmar lectura no aprueba ni modifica tareas.')
+                for _note in _my_messages[:8]:
+                    st.markdown('**'+_html.escape(_note['titulo'])+'**')
+                    st.caption(str(_note['fecha'])[:16])
+                    st.write(_note['texto'])
+                    if st.button('Ya leí este mensaje', key='pm_av_rut_ack_'+_note['id'],
+                                 disabled=not st.session_state.get('_pm_av_ready',False) or bool(st.session_state.get('ver_como'))):
+                        try:
+                            _pm_av_ack(_note['id'])
+                            st.rerun()
+                        except Exception:
+                            st.error('No se pudo registrar la lectura. Intenta nuevamente.')
+                    st.divider()
         # El encabezado blanco ya ofrece el contexto de esta pantalla.
         # Sin banner duplicado: las actividades comienzan directamente.
         data, err = _pm2_load()
