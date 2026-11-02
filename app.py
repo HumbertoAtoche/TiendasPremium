@@ -3792,6 +3792,537 @@ def _pmi_worker_ui():
                                        'Observación enviada a administración.')
 
 
+# =============================================================
+# PREMIUM MARKET · FASE 2 · PORTAL DEL EXPEDIENTE (2026)
+# Datos de ficha reutilizados de Colaboradores (solo lectura).
+# Documentos y uniformes proceden de Incorporación, sin autoaprobación.
+# Capacitaciones y constancias tienen hojas independientes y acceso privado.
+# =============================================================
+import hashlib as _pme_hashlib
+
+_PME_TRAIN = 'Exp_Capacitaciones'
+_PME_CERT = 'Exp_Constancias'
+_PME_SCHEMAS = {
+    _PME_TRAIN: ['id_capacitacion', 'dni', 'titulo', 'categoria', 'fecha', 'duracion_horas',
+                 'modalidad', 'estado', 'instructor', 'observacion', 'registrado_por', 'registrado_el'],
+    _PME_CERT: ['id_constancia', 'dni', 'tipo', 'titulo', 'nombre_archivo', 'mime',
+                'tamano', 'drive_file_id', 'fecha_documento', 'emitido_por',
+                'publicado_el', 'estado'],
+}
+_PME_CERT_LIMIT = 15 * 1024 * 1024
+
+
+def _pme_ws(name, create=False):
+    """Valida esquema exacto: no altera hojas existentes ni sus encabezados."""
+    if name not in _PME_SCHEMAS:
+        raise ValueError('Hoja de expediente no reconocida.')
+    if not doc_sheets:
+        raise ConnectionError('No se pudo conectar con Google Sheets.')
+    try:
+        ws = doc_sheets.worksheet(name)
+    except gspread.exceptions.WorksheetNotFound:
+        if not create:
+            return None
+        _pmi_check_access(dni_actual, write=True, admin_only=True)
+        try:
+            ws = doc_sheets.add_worksheet(title=name, rows=1500, cols=len(_PME_SCHEMAS[name]))
+        except Exception:
+            ws = doc_sheets.worksheet(name)
+    real = ws._ws if isinstance(ws, _HojaProxy) else ws
+    header = [str(x).strip() for x in real.row_values(1)]
+    if not header and create:
+        ws.append_row(_PME_SCHEMAS[name], value_input_option='RAW')
+        header = list(_PME_SCHEMAS[name])
+    if header != _PME_SCHEMAS[name]:
+        raise ValueError(f'Los encabezados de {name} no coinciden con los esperados. No se modificó nada.')
+    return ws
+
+
+def _pme_rows(name, dni):
+    _pmi_check_access(dni)
+    ws = _pme_ws(name)
+    if ws is None:
+        return []
+    real = ws._ws if isinstance(ws, _HojaProxy) else ws
+    values = real.get_all_values()
+    if not values:
+        return []
+    if [str(x).strip() for x in values[0]] != _PME_SCHEMAS[name]:
+        raise ValueError(f'Los encabezados de {name} fueron modificados.')
+    return [dict(zip(_PME_SCHEMAS[name], row + [''] * len(_PME_SCHEMAS[name])))
+            for row in values[1:] if row and str(row[0]).strip()
+            and _pmi_dni(row[1]) == _pmi_dni(dni)]
+
+
+def _pme_create_sheets():
+    _pmi_check_access(dni_actual, write=True, admin_only=True)
+    for name in _PME_SCHEMAS:
+        _pme_ws(name, create=True)
+    registrar_auditoria('Preparar portal del expediente', 'Expediente', 'Hojas de capacitaciones y constancias verificadas')
+
+
+def _pme_append(name, record):
+    _pmi_check_access(record.get('dni'), write=True, admin_only=True)
+    ws = _pme_ws(name, create=True)
+    ws.append_row([str(record.get(k, '')) for k in _PME_SCHEMAS[name]], value_input_option='RAW')
+    _pmi_clear()
+
+
+def _pme_add_training(dni, titulo, categoria, fecha, duracion, modalidad, estado, instructor, nota):
+    _pmi_check_access(dni, write=True, admin_only=True)
+    _pmi_person(dni)
+    titulo, instructor, nota = str(titulo).strip()[:140], str(instructor).strip()[:100], str(nota).strip()[:500]
+    if len(titulo) < 4:
+        raise ValueError('Escribe un título de capacitación de al menos 4 caracteres.')
+    if categoria not in ('Inducción', 'Operaciones', 'Seguridad', 'Atención al cliente', 'Otro'):
+        raise ValueError('Categoría de capacitación no permitida.')
+    if modalidad not in ('Presencial', 'Virtual', 'Mixta') or estado not in ('Programada', 'Completada'):
+        raise ValueError('Revisa la modalidad y el estado de la capacitación.')
+    if not isinstance(fecha, date) or not 0 <= float(duracion) <= 48:
+        raise ValueError('Fecha o duración inválida.')
+    _pme_append(_PME_TRAIN, {
+        'id_capacitacion': 'CAP-' + _pmi_uuid.uuid4().hex[:20].upper(),
+        'dni': _pmi_dni(dni), 'titulo': titulo, 'categoria': categoria,
+        'fecha': fecha.isoformat(), 'duracion_horas': f'{float(duracion):g}',
+        'modalidad': modalidad, 'estado': estado, 'instructor': instructor,
+        'observacion': nota, 'registrado_por': str(st.session_state.get('usuario_login')),
+        'registrado_el': _pmi_time(),
+    })
+    registrar_auditoria('Registrar capacitación', _PME_TRAIN, f'Colaborador {_pmi_dni(dni)} · {categoria}')
+
+
+def _pme_complete_training(dni, training_id):
+    """Marca capacitación programada como realizada, preservando fecha e historial."""
+    _pmi_check_access(dni, write=True, admin_only=True)
+    records = _pme_rows(_PME_TRAIN, dni)
+    matching = [r for r in records if r['id_capacitacion'] == str(training_id)]
+    if len(matching) != 1 or matching[0]['estado'] != 'Programada':
+        raise ValueError('Esta capacitación no está programada o ya fue completada.')
+    ws = _pme_ws(_PME_TRAIN)
+    real = ws._ws if isinstance(ws, _HojaProxy) else ws
+    source_rows = real.get_all_values()
+    index = [i for i, r in enumerate(source_rows[1:], 2)
+             if r and r[0] == str(training_id) and _pmi_dni(r[1]) == _pmi_dni(dni)]
+    if len(index) != 1:
+        raise RuntimeError('La capacitación no pudo identificarse de forma única.')
+    updated = dict(matching[0]); updated['estado'] = 'Completada'
+    ws.update(f'A{index[0]}', [[str(updated[k]) for k in _PME_SCHEMAS[_PME_TRAIN]]], value_input_option='RAW')
+    registrar_auditoria('Confirmar capacitación completada', _PME_TRAIN,
+                        f'DNI {_pmi_dni(dni)} · capacitación {training_id}')
+
+
+def _pme_revoke_certificate(dni, certificate_id):
+    """Revoca la publicación, sin eliminar el documento ni el historial."""
+    _pmi_check_access(dni, write=True, admin_only=True)
+    certs = _pme_rows(_PME_CERT, dni)
+    matched = [c for c in certs if c['id_constancia'] == str(certificate_id)]
+    if len(matched) != 1 or matched[0]['estado'] != 'Publicado':
+        raise ValueError('La constancia no está publicada o no corresponde al colaborador.')
+    ws = _pme_ws(_PME_CERT)
+    real = ws._ws if isinstance(ws, _HojaProxy) else ws
+    values = real.get_all_values()
+    idxs = [i for i, row in enumerate(values[1:], start=2)
+            if row and row[0] == certificate_id and _pmi_dni(row[1]) == _pmi_dni(dni)]
+    if len(idxs) != 1:
+        raise RuntimeError('La constancia no se pudo identificar de forma única.')
+    # Usar update en la fila completa como en el módulo existente.
+    rec = dict(matched[0]); rec['estado'] = 'Retirado'
+    ws.update(f'A{idxs[0]}', [[str(rec[k]) for k in _PME_SCHEMAS[_PME_CERT]]], value_input_option='RAW')
+    registrar_auditoria('Retirar constancia del portal', _PME_CERT,
+                        f'Colaborador {_pmi_dni(dni)} · constancia {certificate_id}')
+
+
+def _pme_cert_folder(drive, parent, dni):
+    """Reutiliza el expediente de fase 1; no crea otro expediente en Sheets."""
+    cases = [c for c in _pmi_remote_rows(_PMI_CASE)
+             if _pmi_dni(c.get('dni')) == _pmi_dni(dni) and c.get('estado') != 'Anulado']
+    if len(cases) > 1:
+        raise ValueError('Hay expedientes de incorporación duplicados.')
+    if cases:
+        return _pmi_worker_folder(drive, parent, cases[0]['id_expediente'])
+    # Colaborador antiguo, sin incorporación digital: carpeta identificada por hash.
+    # No usar el DNI ni el nombre en el nombre de carpeta.
+    suffix = _pme_hashlib.sha256(_pmi_dni(dni).encode('utf-8')).hexdigest()[:20].upper()
+    return _pmi_worker_folder(drive, parent, 'INC-LEGACY-' + suffix)
+
+
+def _pme_publish_certificate(dni, tipo, titulo, fecha, file_obj):
+    _pmi_check_access(dni, write=True, admin_only=True)
+    _pmi_person(dni)
+    if tipo not in ('Constancia', 'Certificado', 'Otro documento laboral'):
+        raise ValueError('Tipo de documento inválido.')
+    titulo = str(titulo).strip()[:140]
+    if len(titulo) < 4 or not isinstance(fecha, date):
+        raise ValueError('Escribe un título y selecciona una fecha válida.')
+    if file_obj is None:
+        raise ValueError('Adjunta el documento a publicar.')
+    filename = str(getattr(file_obj, 'name', '')).split('/')[-1].split('\\')[-1][:90]
+    extension = os.path.splitext(filename)[1].lower()
+    if extension not in ('.pdf', '.png', '.jpg', '.jpeg', '.webp', '.heic', '.heif'):
+        raise ValueError('Se admite PDF o fotografía (JPG, PNG, WebP, HEIC).')
+    data = file_obj.getvalue()
+    if not data or len(data) > _PME_CERT_LIMIT:
+        raise ValueError('El archivo debe pesar como máximo 15 MB.')
+    if extension == '.pdf':
+        if not data.startswith(b'%PDF-'):
+            raise ValueError('El archivo PDF no parece válido.')
+        mime, saved_name = 'application/pdf', filename
+    else:
+        data = _pm3_prepare_image(file_obj)
+        mime, saved_name = 'image/webp', os.path.splitext(filename)[0][:65] + '.webp'
+    drive, root = _pm3_drive_client()
+    _pm3_validate_private_folder(drive, root)
+    folder = _pme_cert_folder(drive, root, dni)
+    from googleapiclient.http import MediaIoBaseUpload
+    stored_id = ''
+    try:
+        stored = drive.files().create(
+            body={'name': 'constancia_' + _pmi_uuid.uuid4().hex[:12] + '_' + saved_name,
+                  'parents': [folder], 'mimeType': mime},
+            media_body=MediaIoBaseUpload(io.BytesIO(data), mimetype=mime, resumable=False),
+            fields='id', supportsAllDrives=True).execute()
+        stored_id = str(stored.get('id') or '')
+        if not stored_id:
+            raise RuntimeError('Google Drive no devolvió el identificador del archivo.')
+        _pme_append(_PME_CERT, {
+            'id_constancia': 'CON-' + _pmi_uuid.uuid4().hex[:20].upper(),
+            'dni': _pmi_dni(dni), 'tipo': tipo, 'titulo': titulo,
+            'nombre_archivo': saved_name, 'mime': mime, 'tamano': len(data),
+            'drive_file_id': stored_id, 'fecha_documento': fecha.isoformat(),
+            'emitido_por': str(st.session_state.get('usuario_login')),
+            'publicado_el': _pmi_time(), 'estado': 'Publicado',
+        })
+    except Exception:
+        # Si Sheets sí persistió, no eliminar el archivo: requiere conciliación.
+        if stored_id:
+            try:
+                exists = [r for r in _pme_rows(_PME_CERT, dni) if r.get('drive_file_id') == stored_id]
+                if not exists:
+                    drive.files().delete(fileId=stored_id, supportsAllDrives=True).execute()
+            except Exception:
+                print('Expediente: archivo pendiente de conciliación.')
+        raise
+    registrar_auditoria('Publicar constancia privada', _PME_CERT, f'DNI {_pmi_dni(dni)} · {tipo}')
+
+
+def _pme_download_certificate(dni, certificate_id):
+    """Autorización por DNI en servidor, no mediante enlace Drive público."""
+    _pmi_check_access(dni)
+    rows = [r for r in _pme_rows(_PME_CERT, dni)
+            if r['id_constancia'] == str(certificate_id)
+            and (r['estado'] == 'Publicado' or _pmi_is_admin())]
+    if len(rows) != 1:
+        raise PermissionError('La constancia no existe o no está disponible para tu cuenta.')
+    row = rows[0]
+    drive, _ = _pm3_drive_client()
+    body = drive.files().get_media(fileId=row['drive_file_id'], supportsAllDrives=True).execute()
+    if not isinstance(body, bytes) or not 0 < len(body) <= _PME_CERT_LIMIT:
+        raise ValueError('El documento privado está vacío o supera el límite permitido.')
+    return body, row
+
+
+def _pme_styles():
+    st.markdown('''<style>
+    .pme-overview{border:1px solid #e5ebf3;border-radius:22px;background:linear-gradient(155deg,#fff,#fbfcff);
+      padding:22px;box-shadow:0 16px 32px -28px rgba(23,36,58,.4);margin:12px 0 20px}
+    .pme-overview-top{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+    .pme-symbol{width:57px;height:57px;border-radius:19px;display:grid;place-items:center;background:#fff0f2;color:#bb263d;
+      font-size:1.7rem;flex:none;border:1px solid #f7dfe4}
+    .pme-overview h3{color:#20314b;font-size:1.12rem;font-weight:850;margin:0 0 4px}
+    .pme-overview p{font-size:.82rem;color:#75859b;line-height:1.6;margin:0}
+    .pme-data-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px;margin:16px 0}
+    .pme-datum{border:1px solid #e9eef5;background:#fff;border-radius:16px;padding:13px 15px;min-width:0}
+    .pme-datum small{display:block;color:#77889f;font-size:.72rem;font-weight:780;margin-bottom:5px}
+    .pme-datum strong{display:block;color:#233651;font-size:.91rem;font-weight:800;line-height:1.48;overflow-wrap:anywhere}
+    .pme-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;border:1px solid #e7edf4;
+      background:#fff;padding:14px 16px;border-radius:17px;margin:0 0 10px;box-shadow:0 8px 20px -23px #21334d80}
+    .pme-row-text{flex:1;min-width:0;overflow-wrap:anywhere}.pme-row-text b{color:#263953;font-size:.9rem}
+    .pme-row-text small{display:block;color:#7a8aa1;font-size:.76rem;line-height:1.55;margin-top:3px}
+    .pme-empty{padding:21px;border:1px dashed #dce5f0;background:#fafbfd;border-radius:17px;color:#667994;
+      font-size:.87rem;line-height:1.55;margin:10px 0}
+    .pme-section{font-size:.99rem;font-weight:850;color:#20334d;margin:19px 0 12px}
+    .st-key-pme_portal [data-testid="stFileUploader"]{border-radius:16px;background:#fff}
+    @media(max-width:780px){.pme-overview{padding:16px;border-radius:19px}
+      .pme-data-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+      .pme-datum{padding:11px 12px}.pme-datum strong{font-size:.82rem}
+      .pme-row{padding:12px 13px}.pme-symbol{width:47px;height:47px;border-radius:15px}}
+    @media(max-width:360px){.pme-data-grid{grid-template-columns:1fr}}
+    </style>''', unsafe_allow_html=True)
+
+
+def _pme_show_person(dni):
+    """Ficha no editable, reutiliza Gestión Colaboradores sin duplicar hoja."""
+    _pmi_check_access(dni)
+    person = _pmi_person(dni)
+    _safe = _html.escape
+    name = _safe(str(person.get('nombre', '') or 'Colaborador'))
+    cargo = _safe(str(person.get('cargo', '') or 'Sin registrar'))
+    status = str(person.get('estado', '')).casefold() == 'activo'
+    date_inicio = str(person.get('fecha_inicio', '')).strip()
+    fields = (
+        ('Identificación', _pmi_dni(dni)),
+        ('Puesto', str(person.get('cargo') or 'Sin registrar')),
+        ('Inicio de labores', date_inicio or 'Sin registrar'),
+        ('Teléfono', str(person.get('telefono') or 'Sin registrar')),
+        ('Domicilio', str(person.get('direccion') or 'Sin registrar')),
+        ('Contacto de emergencia', str(person.get('contacto_emergencia') or 'Sin registrar')),
+        ('Teléfono de emergencia', str(person.get('numero_emergencia') or 'Sin registrar')),
+        ('Fecha de nacimiento', str(person.get('fecha_nacimiento') or 'Sin registrar')),
+    )
+    cells = ''.join('<div class="pme-datum"><small>' + _safe(k) + '</small><strong>' + _safe(v) + '</strong></div>' for k, v in fields)
+    _avatar = ui_avatar(str(person.get('nombre') or 'Colaborador'), _pmi_dni(dni),
+                        str(person.get('foto') or ''), 64)
+    st.markdown('<div class="pme-overview"><div class="pme-overview-top">' + _avatar +
+                '<div><h3>' + name + '</h3><p>' + cargo + ' · ' + ('Activo' if status else 'Inactivo') +
+                '</p></div></div><div class="pme-data-grid">' + cells + '</div>'
+                '<p>Datos registrados en Gestión Colaboradores. No equivale a documentos verificados.</p></div>',
+                unsafe_allow_html=True)
+    link = str(person.get('link_domicilio', '')).strip()
+    if link:
+        try:
+            parsed = _pmi_urlsplit(link)
+            hostname = (parsed.hostname or '').lower()
+            if parsed.scheme == 'https' and (hostname == 'maps.app.goo.gl' or hostname in ('google.com','www.google.com','maps.google.com')):
+                st.link_button('Ver domicilio registrado en Maps', url=link, icon=':material/location_on:')
+            else:
+                st.caption('El enlace de Maps registrado requiere revisión por administración.')
+        except Exception:
+            st.caption('El enlace de Maps registrado requiere revisión por administración.')
+
+
+def _pme_personal_records(dni):
+    """No auto-crea casos ni marca documentos como aprobados."""
+    _pmi_check_access(dni)
+    raw = _pmi_load()
+    case = _pmi_case(raw, dni)
+    if not case:
+        return None, [], [], [], []
+    return (case, _pmi_subset(raw, case, _PMI_REQ),
+            _pmi_subset(raw, case, _PMI_FILES),
+            _pmi_subset(raw, case, _PMI_GEAR),
+            _pmi_subset(raw, case, _PMI_PROFILE))
+
+
+def _pme_file_button(dni, entry, kind, identity):
+    """Previsualización y descarga bajo demanda, asociadas al usuario y DNI."""
+    _pmi_check_access(dni)
+    document_id = str(entry['id_archivo'] if kind == 'inc' else entry['id_constancia'])
+    key = f'_pme_content_{kind}_{_pmi_dni(dni)}_{document_id}'
+    # Una vista previa no debe sobrevivir a un cambio de usuario / vista previa.
+    if st.button('Abrir archivo privado', key=f'pme_open_{identity}_{document_id}',
+                 icon=':material/visibility:', use_container_width=True):
+        try:
+            if kind == 'inc':
+                body, meta = _pmi_file_download(dni, document_id)
+            else:
+                body, meta = _pme_download_certificate(dni, document_id)
+            for sk in list(st.session_state):
+                if str(sk).startswith('_pme_content_'):
+                    st.session_state.pop(sk, None)
+            st.session_state[key] = (body, meta, str(st.session_state.get('usuario_login')))
+        except Exception:
+            st.error('No se pudo recuperar el archivo privado. Comprueba Drive y los permisos.')
+    loaded = st.session_state.get(key)
+    if not loaded or loaded[2] != str(st.session_state.get('usuario_login')):
+        return
+    body, meta, _ = loaded
+    mime = str(meta.get('mime', 'application/octet-stream'))
+    name = str(meta.get('nombre') if kind == 'inc' else meta.get('nombre_archivo') or 'documento')
+    if mime.startswith('image/'):
+        st.image(body, use_container_width=True)
+    elif mime == 'application/pdf':
+        if hasattr(st, 'pdf'):
+            st.pdf(body)
+        else:
+            st.caption('La vista PDF no está disponible en esta versión. Puedes descargarlo.')
+    st.download_button('Descargar', body, file_name=name, mime=mime,
+                       key=f'pme_save_{identity}_{document_id}', use_container_width=True)
+
+
+def _pme_portal_view(dni, admin=False):
+    _pmi_check_access(dni, admin_only=admin)
+    with st.container(key='pme_portal'):
+        _pme_show_person(dni)
+        try:
+            case, reqs, files, gear, profiles = _pme_personal_records(dni)
+            trainings = sorted(_pme_rows(_PME_TRAIN, dni), key=lambda r: (r['fecha'], r['registrado_el']), reverse=True)
+            certificates = sorted(_pme_rows(_PME_CERT, dni), key=lambda r: r['publicado_el'], reverse=True)
+            if not admin:
+                certificates = [r for r in certificates if r['estado'] == 'Publicado']
+        except Exception:
+            st.error('No se pudo consultar el historial del expediente. Comprueba la conexión y los encabezados de Sheets.')
+            return
+        valid_files = [r for r in files if r['estado'] == 'Validado']
+        received_items = [r for r in gear if r['estado'] == 'Recibido']
+        st.markdown('<div class="pmi-kpis">'
+                    f'<div class="pmi-kpi"><small>Documentos validados</small><strong>{len(valid_files)}</strong></div>'
+                    f'<div class="pmi-kpi"><small>Entregas recibidas</small><strong>{len(received_items)}</strong></div>'
+                    f'<div class="pmi-kpi"><small>Capacitaciones</small><strong>{len(trainings)}</strong></div>'
+                    '</div>', unsafe_allow_html=True)
+        tabs = st.tabs(['Documentos', 'Entregas', 'Capacitaciones', 'Constancias'])
+        with tabs[0]:
+            st.markdown('<div class="pme-section">Documentos del expediente</div>', unsafe_allow_html=True)
+            if not case:
+                st.info('No existe una incorporación digital para este colaborador. Su ficha ya está disponible; los documentos se incorporarán cuando administración prepare el expediente.')
+            elif not files:
+                st.markdown('<div class="pme-empty">Aún no hay documentos cargados en Drive para esta incorporación.</div>', unsafe_allow_html=True)
+            else:
+                for idx, record in enumerate(sorted(files, key=lambda x: x.get('subido_el', ''), reverse=True)):
+                    label = _PMI_LABELS.get(record['codigo'], record['codigo'].replace('_', ' ').title())
+                    state = record['estado']
+                    st.markdown('<div class="pme-row"><div class="pme-row-text"><b>' + _html.escape(label)
+                                + '</b><small>' + _html.escape(str(record.get('nombre') or 'Documento'))
+                                + ' · ' + _html.escape(str(record.get('subido_el', ''))[:16])
+                                + '</small></div>' + _pmi_state_chip(state) + '</div>', unsafe_allow_html=True)
+                    with st.expander('Consultar archivo ' + str(idx + 1)):
+                        _pme_file_button(dni, record, 'inc', f'docs_{idx}')
+            if case:
+                st.caption('Los estados de cada documento se toman de la incorporación digital. La ficha del personal no equivale a documento aprobado.')
+        with tabs[1]:
+            st.markdown('<div class="pme-section">Historial de uniformes y equipos</div>', unsafe_allow_html=True)
+            if not gear:
+                st.markdown('<div class="pme-empty">Todavía no hay entregas registradas. Las entregas antiguas no documentadas no se muestran como recibidas.</div>', unsafe_allow_html=True)
+            else:
+                for item in sorted(gear, key=lambda r: r.get('entregado_el', ''), reverse=True):
+                    info = (str(item.get('cantidad') or '0') + ' unidad(es) · Talla '
+                            + str(item.get('talla') or '—') + ' · ' + str(item.get('entregado_el') or '')[:16])
+                    st.markdown('<div class="pme-row"><div class="pme-row-text"><b>'
+                                + _html.escape(str(item.get('articulo') or 'Equipo'))
+                                + '</b><small>' + _html.escape(info) + '</small></div>'
+                                + _pmi_state_chip(item.get('estado', 'Pendiente')) + '</div>', unsafe_allow_html=True)
+                    if item.get('observacion'):
+                        st.caption('Observación: ' + str(item['observacion']))
+            st.caption('Los uniformes aparecen según el registro de entrega y la conformidad del trabajador.')
+        with tabs[2]:
+            st.markdown('<div class="pme-section">Mis capacitaciones</div>', unsafe_allow_html=True)
+            if not trainings:
+                st.markdown('<div class="pme-empty">Todavía no hay capacitaciones registradas para este colaborador. Administración puede incorporarlas desde el portal.</div>', unsafe_allow_html=True)
+            else:
+                for record in trainings:
+                    sub = (str(record.get('categoria', '')) + ' · ' + str(record.get('fecha',''))
+                           + ' · ' + str(record.get('modalidad', ''))
+                           + (' · ' + record['duracion_horas'] + ' h' if record.get('duracion_horas') else ''))
+                    st.markdown('<div class="pme-row"><div class="pme-row-text"><b>'
+                                + _html.escape(record.get('titulo', '')) + '</b><small>'
+                                + _html.escape(sub) + '</small></div>'
+                                + _pmi_state_chip(record.get('estado', '')) + '</div>', unsafe_allow_html=True)
+                    if record.get('instructor'):
+                        st.caption('Responsable: ' + record['instructor'])
+                    if record.get('observacion'):
+                        st.caption(record['observacion'])
+                    if admin and record.get('estado') == 'Programada':
+                        with st.expander('Registrar capacitación realizada'):
+                            verified = st.checkbox('Confirmo que el trabajador asistió y completó esta capacitación',
+                                                   key='pme_training_check_' + record['id_capacitacion'])
+                            if st.button('Marcar como completada', disabled=not verified,
+                                         key='pme_training_complete_' + record['id_capacitacion']):
+                                _pmi_ui_action(lambda training_id=record['id_capacitacion']:
+                                               _pme_complete_training(dni, training_id),
+                                               'Capacitación marcada como completada.')
+            st.caption('Las capacitaciones se registran por administración; no se presumen completadas por haberlas consultado.')
+        with tabs[3]:
+            st.markdown('<div class="pme-section">Mis constancias y certificados</div>', unsafe_allow_html=True)
+            if not certificates:
+                st.markdown('<div class="pme-empty">Todavía no tienes constancias publicadas en este expediente.</div>', unsafe_allow_html=True)
+            else:
+                for idx, row in enumerate(certificates):
+                    st.markdown('<div class="pme-row"><div class="pme-row-text"><b>'
+                                + _html.escape(row.get('titulo', ''))
+                                + '</b><small>' + _html.escape(row.get('tipo', '')) + ' · '
+                                + _html.escape(row.get('fecha_documento', '')) + '</small></div>'
+                                + _pmi_state_chip(row.get('estado', '')) + '</div>', unsafe_allow_html=True)
+                    with st.expander('Consultar constancia ' + str(idx + 1)):
+                        _pme_file_button(dni, row, 'cert', f'cert_{idx}')
+                    if admin and row['estado'] == 'Publicado':
+                        with st.expander('Retirar publicación de esta constancia'):
+                            agree = st.checkbox('Confirmo que la constancia debe retirarse del portal del trabajador',
+                                                key='pme_revoke_yes_' + row['id_constancia'])
+                            if st.button('Retirar publicación', disabled=not agree,
+                                         key='pme_revoke_' + row['id_constancia']):
+                                _pmi_ui_action(lambda ident=row['id_constancia']: _pme_revoke_certificate(dni, ident),
+                                               'Constancia retirada de la vista del colaborador.')
+
+
+def _pme_admin_ui():
+    if not _pmi_is_admin():
+        st.error('Acceso exclusivo de administración.')
+        return
+    _pmi_styles()
+    _pme_styles()
+    with st.container(key='pme_admin_dashboard'):
+        st.markdown('<div class="pmi-head"><div><h3>Portal del expediente</h3>'
+                    '<p>Ficha del equipo, documentos, historial de entregas, capacitaciones y constancias.</p>'
+                    '</div></div>', unsafe_allow_html=True)
+        people = st.session_state.get('empleados', pd.DataFrame())
+        if not isinstance(people, pd.DataFrame) or people.empty:
+            st.info('No hay trabajadores disponibles.')
+            return
+        all_people = [x.to_dict() for _, x in people.iterrows() if _pmi_dni(x.get('dni'))]
+        all_people.sort(key=lambda p: (str(p.get('estado', '')).strip().casefold() != 'activo',
+                                       str(p.get('nombre','')).casefold()))
+        ids = list(dict.fromkeys(_pmi_dni(p['dni']) for p in all_people))
+        person_map = {_pmi_dni(p['dni']): p for p in all_people}
+        person_dni = st.selectbox('Colaborador', ids, format_func=lambda d:
+            str(person_map[d].get('nombre', '')) + ' · ' + str(person_map[d].get('estado', '')),
+            key='pme_admin_person')
+        st.caption('La ficha se recupera directamente de Gestión Colaboradores. No altera los encabezados ni la información de esa hoja.')
+        with st.expander('Preparación de las hojas de Fase 2'):
+            st.caption('Solo se crean Exp_Capacitaciones y Exp_Constancias si aún no existen. '
+                       'Se comprueban sus encabezados y no se modifican hojas anteriores.')
+            if st.button('Verificar o preparar hojas del portal', key='pme_prepare_sheets',
+                         use_container_width=True):
+                _pmi_ui_action(_pme_create_sheets, 'Hojas del portal verificadas y listas para usar.')
+        _pme_portal_view(person_dni, admin=True)
+        st.markdown('<div class="pmi-subsection"><span>ADMINISTRACIÓN</span> Nuevos registros del expediente</div>', unsafe_allow_html=True)
+        cols = st.tabs(['Registrar capacitación', 'Publicar constancia'])
+        with cols[0]:
+            with st.form('pme_new_training', clear_on_submit=True):
+                title = st.text_input('Nombre de la capacitación', max_chars=140, placeholder='Ej. Inducción: procedimientos de caja')
+                ca, cb = st.columns(2)
+                category = ca.selectbox('Categoría', ['Inducción', 'Operaciones', 'Seguridad', 'Atención al cliente', 'Otro'])
+                date_done = cb.date_input('Fecha', value=obtener_ahora_peru().date())
+                cc, cd = st.columns(2)
+                duration = cc.number_input('Duración (horas)', min_value=0.0, max_value=48.0, value=1.0, step=0.5)
+                modality = cd.selectbox('Modalidad', ['Presencial', 'Virtual', 'Mixta'])
+                state = st.selectbox('Estado', ['Completada', 'Programada'])
+                instructor = st.text_input('Responsable de capacitación', max_chars=100)
+                notes = st.text_area('Observaciones (opcional)', max_chars=500)
+                submit = st.form_submit_button('Registrar capacitación', use_container_width=True)
+            if submit:
+                _pmi_ui_action(lambda: _pme_add_training(person_dni, title, category, date_done,
+                                                          duration, modality, state, instructor, notes),
+                               'Capacitación registrada en el expediente.')
+        with cols[1]:
+            st.caption('Solo administración publica constancias. El trabajador las consulta desde Mi Expediente.')
+            with st.form('pme_new_certificate', clear_on_submit=True):
+                file_type = st.selectbox('Tipo de documento', ['Constancia', 'Certificado', 'Otro documento laboral'])
+                cert_title = st.text_input('Título', max_chars=140, placeholder='Ej. Constancia de capacitación')
+                cert_date = st.date_input('Fecha del documento', value=obtener_ahora_peru().date())
+                cert_file = st.file_uploader('Archivo privado PDF o imagen',
+                                             type=['pdf','jpg','jpeg','png','webp','heic','heif'],
+                                             help='Máximo 15 MB. El documento se guarda en Drive privado.')
+                cert_confirm = st.checkbox('Confirmo que este documento corresponde al colaborador seleccionado')
+                save = st.form_submit_button('Publicar en su expediente', use_container_width=True)
+            if save and not cert_confirm:
+                st.error('Confirma que el documento pertenece al colaborador seleccionado.')
+            elif save:
+                _pmi_ui_action(lambda: _pme_publish_certificate(person_dni, file_type, cert_title,
+                                                                 cert_date, cert_file),
+                               'Constancia publicada en el expediente del colaborador.')
+
+
+def _pme_worker_ui():
+    _pme_styles()
+    _pmi_styles()
+    dni = _pmi_dni(dni_actual)
+    _pmi_check_access(dni)
+    st.markdown('<div class="pmi-head"><div><h3>Mi expediente laboral</h3>'
+                '<p>Tu información, documentos, entregas, capacitaciones y constancias en un solo lugar.</p>'
+                '</div></div>', unsafe_allow_html=True)
+    _pme_portal_view(dni, admin=False)
+    st.caption('Si necesitas corregir tus datos personales, comunícalo a administración. '
+               'Si tienes una incorporación abierta, realiza tus cargas y conformidades en Mi Incorporación.')
+
 # =========================================================
 # NUEVO MÓDULO: ONBOARDING / OFFBOARDING ESTRUCTURADO
 # =========================================================
@@ -5314,6 +5845,7 @@ _PM_DATOS_POR_VISTA = {
     "Gestión Colaboradores": set(),
     "Gestión del Colaborador": {"checklist"},
     "Mi Incorporación": set(),
+    "Mi Expediente": set(),
     "Gestión de Vacaciones": {"vacaciones"},
     "Programación de Turnos": set(),
     "Boletas de Pago": {"descuadres", "vacaciones", "boletas_historial", "incidencias", "feriados"},
@@ -5365,7 +5897,7 @@ def _pm_datos_requeridos():
              "Programación de Turnos", "Boletas de Pago", "Solicitudes y Permisos",
              "Historial de Descuadres", "Incidencias y Daños", "Botellas Fiadas",
              "Historial de Asistencias", "Auditoría y Configuración", "Rutinas Operativas", "Gestión de Comunicados") if viewing_admin else (
-             "Marcar Asistencia", "Mis Rutinas", "Mi Incorporación", "Registrar Descuadre", "Registrar Incidencia",
+             "Marcar Asistencia", "Mis Rutinas", "Mi Incorporación", "Mi Expediente", "Registrar Descuadre", "Registrar Incidencia",
              "Botellas Fiadas", "Mi Ficha Técnica", "Mis Vacaciones", "Mis Boletas",
              "Solicitar Permiso / Adelanto", "Mi Dashboard Mensual", "Mis Comunicados")
     if selected not in valid:
@@ -11263,7 +11795,7 @@ if rol_actual == "admin":
     # Estilo uniforme para paneles de operación: conserva lógica y menú original.
     menu = ["Dashboard General", "Centro de Alertas", "Rutinas Operativas", "Analítica (BI)", "Gestión Colaboradores", "Gestión del Colaborador", "Gestión de Vacaciones", "Programación de Turnos", "Boletas de Pago", "Solicitudes y Permisos", "Historial de Descuadres", "Incidencias y Daños", "Botellas Fiadas", "Historial de Asistencias", "Auditoría y Configuración", "Gestión de Comunicados"]
 else:
-    menu = ["Marcar Asistencia", "Mis Rutinas", "Mis Comunicados", "Mi Dashboard Mensual", "Mi Incorporación", "Registrar Descuadre", "Registrar Incidencia", "Botellas Fiadas", "Mi Ficha Técnica", "Mis Vacaciones", "Mis Boletas", "Solicitar Permiso / Adelanto"]
+    menu = ["Marcar Asistencia", "Mis Rutinas", "Mis Comunicados", "Mi Dashboard Mensual", "Mi Incorporación", "Mi Expediente", "Registrar Descuadre", "Registrar Incidencia", "Botellas Fiadas", "Mi Ficha Técnica", "Mis Vacaciones", "Mis Boletas", "Solicitar Permiso / Adelanto"]
 
 if rol_real == "admin":
     _opc_vc = ["Mi vista (admin)"] + sorted(n for n, d in USUARIOS.items() if d["rol"] != "admin")
@@ -11335,7 +11867,7 @@ _PM_NAV_SVG = {
 }
 _PM_NAV_KIND = {
     "Dashboard General":"home", "Centro de Alertas":"bell", "Rutinas Operativas":"list",
-    "Analítica (BI)":"chart", "Gestión Colaboradores":"users", "Gestión del Colaborador":"users", "Mi Incorporación":"briefcase",
+    "Analítica (BI)":"chart", "Gestión Colaboradores":"users", "Gestión del Colaborador":"users", "Mi Incorporación":"briefcase", "Mi Expediente":"file",
     "Gestión de Vacaciones":"calendar", "Programación de Turnos":"calendar", "Boletas de Pago":"file",
     "Solicitudes y Permisos":"inbox", "Historial de Descuadres":"cash", "Incidencias y Daños":"alert",
     "Botellas Fiadas":"bottle", "Historial de Asistencias":"history", "Auditoría y Configuración":"settings",
@@ -12308,6 +12840,7 @@ PM7_MODULES = {
     'Analítica (BI)': 'query_stats',
     'Gestión del Colaborador': 'person_add',
     'Mi Incorporación': 'assignment_ind',
+    'Mi Expediente': 'folder_shared',
     'Auditoría y Configuración': 'settings',
 }
 PM7_MODULES.update({'Rutinas Operativas': 'fact_check', 'Mis Rutinas': 'fact_check',
@@ -12316,7 +12849,7 @@ PM7_MODULES.update({'Rutinas Operativas': 'fact_check', 'Mis Rutinas': 'fact_che
 
 
 PM8_VIEW_DETAILS = {'Marcar Asistencia': ('Registro de jornada', 'Tus marcaciones se guardan al confirmar la operación.', 'personal'), 'Registrar Descuadre': ('Control de caja', 'Revisa el importe y la observación antes de registrar.', 'finanzas'), 'Registrar Incidencia': ('Registro operativo', 'Describe el hecho y verifica los datos del registro.', 'control'), 'Mi Ficha Técnica': ('Expediente personal', 'Información laboral y de contacto registrada.', 'personal'), 'Solicitar Permiso / Adelanto': ('Nueva solicitud', 'Completa los datos y revisa el estado de tus solicitudes.', 'personal'), 'Mis Boletas': ('Documentos personales', 'Consulta los documentos disponibles en tu historial.', 'personal'), 'Mi Dashboard Mensual': ('Resumen de mi mes', 'Consulta tus registros y resultados del periodo.', 'analitica'), 'Dashboard General': ('Centro de operaciones', 'Indicadores y asistencia para seguimiento diario.', 'analitica'), 'Gestión Colaboradores': ('Directorio de personal', 'Consulta, filtra y administra las fichas del equipo.', 'personal'), 'Boletas de Pago': ('Gestión documental', 'Consulta y administra los documentos de nómina.', 'finanzas'), 'Programación de Turnos': ('Planificación operativa', 'Organiza y revisa los horarios del equipo.', 'operaciones'), 'Solicitudes y Permisos': ('Bandeja de solicitudes', 'Revisa solicitudes y registra decisiones.', 'operaciones'), 'Historial de Descuadres': ('Auditoría de caja', 'Filtra movimientos y consulta el detalle de las diferencias.', 'finanzas'), 'Incidencias y Daños': ('Seguimiento de incidencias', 'Consulta y gestiona el estado de los casos.', 'control'), 'Botellas Fiadas': ('Préstamos y devoluciones', 'Consulta saldos pendientes y registros de devolución.', 'operaciones'), 'Historial de Asistencias': ('Control de asistencia', 'Consulta marcaciones y trazabilidad de jornadas.', 'personal'), 'Centro de Alertas': ('Prioridades del día', 'Revisa los pendientes que necesitan atención.', 'control'), 'Gestión de Vacaciones': ('Control de descansos', 'Consulta periodos, saldos y solicitudes registradas.', 'personal'), 'Mis Vacaciones': ('Mis descansos', 'Consulta tus periodos registrados.', 'personal'), 'Analítica (BI)': ('Inteligencia de negocio', 'Explora tendencias y reportes operativos.', 'analitica'), 'Gestión del Colaborador': ('Incorporación digital', 'Expedientes, documentos y entregas en un mismo lugar.', 'personal'),
-                         'Mi Incorporación': ('Tu incorporación', 'Consulta tus documentos, requisitos y uniformes.', 'personal'), 'Auditoría y Configuración': ('Administración del sistema', 'Consulta la trazabilidad y configuración autorizada.', 'control')}
+                         'Mi Incorporación': ('Tu incorporación', 'Consulta tus documentos, requisitos y uniformes.', 'personal'), 'Mi Expediente': ('Portal del colaborador', 'Ficha personal, documentos, capacitaciones y constancias privadas.', 'personal'), 'Auditoría y Configuración': ('Administración del sistema', 'Consulta la trazabilidad y configuración autorizada.', 'control')}
 PM8_VIEW_DETAILS.update({'Rutinas Operativas': ('Asignación personalizada', 'Actividades programadas con persona, lugar y horario.', 'operaciones'), 'Mis Rutinas': ('Mi trabajo del día', 'Actividades pendientes y completadas con instrucciones.', 'personal'),
                          'Gestión de Comunicados': ('Comunicación interna', 'Publicaciones, destinatarios y lecturas confirmadas.', 'operaciones'),
                          'Mis Comunicados': ('Comunicaciones oficiales', 'Mensajes y confirmaciones de lectura de tu tienda.', 'personal')})
@@ -13452,6 +13985,11 @@ elif choice == "Mi Dashboard Mensual":
 elif choice == "Mi Incorporación":
     premium_module_shell('Mi Incorporación', 'PERSONAS', 'Tu expediente, documentos y entregas de incorporación.')
     _pmi_worker_ui()
+
+elif choice == "Mi Expediente":
+    premium_module_shell('Mi Expediente', 'PERSONAS',
+                         'Documentos laborales, entregas, capacitaciones y constancias personales.')
+    _pme_worker_ui()
 
     # -------------------- MÓDULOS ADMIN --------------------
 
@@ -15821,66 +16359,71 @@ elif choice == "Analítica (BI)":
 
 
 elif choice == "Gestión del Colaborador":
-    premium_module_shell('Gestión del Colaborador', 'PERSONAS', 'Incorporación digital, documentos privados y conformidad de entregas.')
+    premium_module_shell('Gestión del Colaborador', 'PERSONAS',
+                         'Expedientes laborales, incorporación digital, capacitaciones y constancias.')
 
-    with st.container(key="pm_v_onboarding_offboarding"):
-        _pmi_legacy_tab = _pmi_admin_ui()
-        if _pmi_legacy_tab is not None:
-            with _pmi_legacy_tab:
-                if st.session_state.checklist.empty:
-                    ui_callout("No hay checklists generados todavía. Se crean automáticamente al registrar un nuevo colaborador o al dar de baja a uno existente.")
-                else:
-                    colabs_con_checklist = sorted(st.session_state.checklist["nombre"].unique().tolist())
-                    colab_chk_sel = st.selectbox("Seleccionar Colaborador", colabs_con_checklist, key="chk_colab_sel")
+    _pme_tab_portal, _pme_tab_process = st.tabs(['Portal del expediente', 'Incorporación y salidas'])
+    with _pme_tab_portal:
+        _pme_admin_ui()
+    with _pme_tab_process:
+        with st.container(key="pm_v_onboarding_offboarding"):
+            _pmi_legacy_tab = _pmi_admin_ui()
+            if _pmi_legacy_tab is not None:
+                with _pmi_legacy_tab:
+                    if st.session_state.checklist.empty:
+                        ui_callout("No hay checklists generados todavía. Se crean automáticamente al registrar un nuevo colaborador o al dar de baja a uno existente.")
+                    else:
+                        colabs_con_checklist = sorted(st.session_state.checklist["nombre"].unique().tolist())
+                        colab_chk_sel = st.selectbox("Seleccionar Colaborador", colabs_con_checklist, key="chk_colab_sel")
 
-                    df_chk_colab = st.session_state.checklist[st.session_state.checklist["nombre"] == colab_chk_sel]
-                    _d_ck, _f_ck = ui_dni_foto(colab_chk_sel)
-                    _emp_ck = st.session_state.empleados[st.session_state.empleados["nombre"] == colab_chk_sel]
-                    _cargo_ck = str(_emp_ck.iloc[0].get("cargo", "")) if not _emp_ck.empty else ""
-                    _activo_ck = (not _emp_ck.empty) and str(_emp_ck.iloc[0].get("estado", "")).lower() == "activo"
-                    st.markdown(f'<div class="tp-card"><div class="tp-op-head" style="margin:0">{ui_avatar(colab_chk_sel, _d_ck, _f_ck, 56)}<div><div class="tp-card-title">{_html.escape(colab_chk_sel)}</div>'
-                                f'<div class="tp-card-sub">{_html.escape(_cargo_ck)} · DNI {_html.escape(_d_ck)}</div></div>{ui_chip("Activo" if _activo_ck else "Dado de baja", "ok" if _activo_ck else "neutral")}</div></div>', unsafe_allow_html=True)
-                    _pct_t = {}
-                    for _t in ["Onboarding", "Offboarding"]:
-                        _dt_ = df_chk_colab[df_chk_colab["tipo"] == _t]
-                        _pct_t[_t] = int(len(_dt_[_dt_["estado"] == "Completado"]) * 100 / len(_dt_)) if len(_dt_) else None
-                    _pend_ck = int((df_chk_colab["estado"] != "Completado").sum())
-                    st.markdown('<div class="tp-gridk">' +
-                                ui_kpi_acc("Onboarding", f"{_pct_t['Onboarding']}%" if _pct_t["Onboarding"] is not None else "—", "incorporación completada" if _pct_t["Onboarding"] is not None else "No aplica", "ok" if _pct_t["Onboarding"] == 100 else "info") +
-                                ui_kpi_acc("Offboarding", f"{_pct_t['Offboarding']}%" if _pct_t["Offboarding"] is not None else "—", "salida completada" if _pct_t["Offboarding"] is not None else "No aplica", "ok" if _pct_t["Offboarding"] == 100 else "info") +
-                                ui_kpi_acc("Tareas pendientes", str(_pend_ck), "por completar" if _pend_ck else "Todo al día", "warn" if _pend_ck else "ok") + '</div>', unsafe_allow_html=True)
+                        df_chk_colab = st.session_state.checklist[st.session_state.checklist["nombre"] == colab_chk_sel]
+                        _d_ck, _f_ck = ui_dni_foto(colab_chk_sel)
+                        _emp_ck = st.session_state.empleados[st.session_state.empleados["nombre"] == colab_chk_sel]
+                        _cargo_ck = str(_emp_ck.iloc[0].get("cargo", "")) if not _emp_ck.empty else ""
+                        _activo_ck = (not _emp_ck.empty) and str(_emp_ck.iloc[0].get("estado", "")).lower() == "activo"
+                        st.markdown(f'<div class="tp-card"><div class="tp-op-head" style="margin:0">{ui_avatar(colab_chk_sel, _d_ck, _f_ck, 56)}<div><div class="tp-card-title">{_html.escape(colab_chk_sel)}</div>'
+                                    f'<div class="tp-card-sub">{_html.escape(_cargo_ck)} · DNI {_html.escape(_d_ck)}</div></div>{ui_chip("Activo" if _activo_ck else "Dado de baja", "ok" if _activo_ck else "neutral")}</div></div>', unsafe_allow_html=True)
+                        _pct_t = {}
+                        for _t in ["Onboarding", "Offboarding"]:
+                            _dt_ = df_chk_colab[df_chk_colab["tipo"] == _t]
+                            _pct_t[_t] = int(len(_dt_[_dt_["estado"] == "Completado"]) * 100 / len(_dt_)) if len(_dt_) else None
+                        _pend_ck = int((df_chk_colab["estado"] != "Completado").sum())
+                        st.markdown('<div class="tp-gridk">' +
+                                    ui_kpi_acc("Onboarding", f"{_pct_t['Onboarding']}%" if _pct_t["Onboarding"] is not None else "—", "incorporación completada" if _pct_t["Onboarding"] is not None else "No aplica", "ok" if _pct_t["Onboarding"] == 100 else "info") +
+                                    ui_kpi_acc("Offboarding", f"{_pct_t['Offboarding']}%" if _pct_t["Offboarding"] is not None else "—", "salida completada" if _pct_t["Offboarding"] is not None else "No aplica", "ok" if _pct_t["Offboarding"] == 100 else "info") +
+                                    ui_kpi_acc("Tareas pendientes", str(_pend_ck), "por completar" if _pend_ck else "Todo al día", "warn" if _pend_ck else "ok") + '</div>', unsafe_allow_html=True)
 
-                    for tipo_chk in ["Onboarding", "Offboarding"]:
-                        df_tipo_chk = df_chk_colab[df_chk_colab["tipo"] == tipo_chk]
-                        if df_tipo_chk.empty:
-                            continue
+                        for tipo_chk in ["Onboarding", "Offboarding"]:
+                            df_tipo_chk = df_chk_colab[df_chk_colab["tipo"] == tipo_chk]
+                            if df_tipo_chk.empty:
+                                continue
 
-                        completados = len(df_tipo_chk[df_tipo_chk["estado"] == "Completado"])
-                        total_items = len(df_tipo_chk)
-                        pct_chk = int((completados / total_items) * 100) if total_items else 0
+                            completados = len(df_tipo_chk[df_tipo_chk["estado"] == "Completado"])
+                            total_items = len(df_tipo_chk)
+                            pct_chk = int((completados / total_items) * 100) if total_items else 0
 
-                        with ui_card_container(f"chk_{tipo_chk}"):
-                            _tono_ck = "ok" if pct_chk == 100 else "warn"
-                            st.markdown(f'<div class="tp-card flat"><div class="tp-card-head"><div><div class="tp-card-title">Checklist de {tipo_chk}</div>'
-                                        f'<div class="tp-card-sub">{"Incorporación del colaborador" if tipo_chk == "Onboarding" else "Proceso de salida del colaborador"}</div></div>'
-                                        f'{ui_chip(str(completados) + " de " + str(total_items) + " completadas", _tono_ck)}</div>'
-                                        f'<div class="tp-prog {_tono_ck}" style="margin:14px 0 4px"><i style="width:{pct_chk}%"></i></div></div>', unsafe_allow_html=True)
+                            with ui_card_container(f"chk_{tipo_chk}"):
+                                _tono_ck = "ok" if pct_chk == 100 else "warn"
+                                st.markdown(f'<div class="tp-card flat"><div class="tp-card-head"><div><div class="tp-card-title">Checklist de {tipo_chk}</div>'
+                                            f'<div class="tp-card-sub">{"Incorporación del colaborador" if tipo_chk == "Onboarding" else "Proceso de salida del colaborador"}</div></div>'
+                                            f'{ui_chip(str(completados) + " de " + str(total_items) + " completadas", _tono_ck)}</div>'
+                                            f'<div class="tp-prog {_tono_ck}" style="margin:14px 0 4px"><i style="width:{pct_chk}%"></i></div></div>', unsafe_allow_html=True)
 
-                            for idx_chk, row_chk in df_tipo_chk.iterrows():
-                                marcado = row_chk["estado"] == "Completado"
-                                nuevo_marcado = st.checkbox(row_chk["tarea"], value=marcado, key=f"chk_{row_chk['id_item']}")
-                                if nuevo_marcado != marcado:
-                                    st.session_state.checklist.at[idx_chk, "estado"] = "Completado" if nuevo_marcado else "Pendiente"
-                                    st.session_state.checklist.at[idx_chk, "fecha_completado"] = obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S") if nuevo_marcado else ""
-                                    if not actualizar_hoja_completa("Checklist", st.session_state.checklist):
-                                        st.session_state.pop("checklist", None)
-                                        st.stop()
-                                    registrar_auditoria(f"Actualizar Ítem de {tipo_chk}", "Checklist", f"{colab_chk_sel}: '{row_chk['tarea']}' → {'Completado' if nuevo_marcado else 'Pendiente'}")
-                                    _pm62_confirmar_despues_de_actualizar("Checklist actualizado correctamente.")
-                                    st.rerun()
+                                for idx_chk, row_chk in df_tipo_chk.iterrows():
+                                    marcado = row_chk["estado"] == "Completado"
+                                    nuevo_marcado = st.checkbox(row_chk["tarea"], value=marcado, key=f"chk_{row_chk['id_item']}")
+                                    if nuevo_marcado != marcado:
+                                        st.session_state.checklist.at[idx_chk, "estado"] = "Completado" if nuevo_marcado else "Pendiente"
+                                        st.session_state.checklist.at[idx_chk, "fecha_completado"] = obtener_ahora_peru().strftime("%Y-%m-%d %H:%M:%S") if nuevo_marcado else ""
+                                        if not actualizar_hoja_completa("Checklist", st.session_state.checklist):
+                                            st.session_state.pop("checklist", None)
+                                            st.stop()
+                                        registrar_auditoria(f"Actualizar Ítem de {tipo_chk}", "Checklist", f"{colab_chk_sel}: '{row_chk['tarea']}' → {'Completado' if nuevo_marcado else 'Pendiente'}")
+                                        _pm62_confirmar_despues_de_actualizar("Checklist actualizado correctamente.")
+                                        st.rerun()
 
-                    st.markdown("<br>", unsafe_allow_html=True)
-                    st.download_button("Exportar Checklists a Excel", to_excel(st.session_state.checklist), "Checklists.xlsx", use_container_width=True)
+                        st.markdown("<br>", unsafe_allow_html=True)
+                        st.download_button("Exportar Checklists a Excel", to_excel(st.session_state.checklist), "Checklists.xlsx", use_container_width=True)
 
 elif choice == "Auditoría y Configuración":
     premium_module_shell('Auditoría y Configuración', 'ADMINISTRACIÓN', 'Configuración, controles y trazabilidad del sistema.')
