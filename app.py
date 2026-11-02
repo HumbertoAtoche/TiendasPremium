@@ -5633,12 +5633,12 @@ def render_busqueda(q, es_admin, dni_me, menu):
     h2.button("Limpiar búsqueda", key="gs_clear", on_click=_limpiar_busqueda, use_container_width=True)
     total = 0
 
-    sec = [m for m in menu if _gs_hit(q, m)]
+    sec = [m for m in menu if _gs_hit(q, _pm_admin_label(m) if es_admin else m)]
     if sec:
         total += len(sec); _gs_titulo("Ir a una sección", len(sec))
         cols = st.columns(min(len(sec), 3))
         for i, m in enumerate(sec[:6]):
-            cols[i % len(cols)].button(m, key=f"gs_sec_{i}", on_click=_gs_ir, args=(m,), use_container_width=True)
+            cols[i % len(cols)].button(_pm_admin_label(m) if es_admin else m, key=f"gs_sec_{i}", on_click=_gs_ir, args=(m,), use_container_width=True)
 
     if es_admin:
         r_e = _gs_filtrar(st.session_state.empleados, q, ["nombre", "dni", "cargo"])
@@ -12691,11 +12691,52 @@ def _pmc_admin_ui():
                         st.rerun()
 
 
+# Menú de administrador: nombres internos estables para no romper rutas,
+# vistas, caché, auditoría ni las claves existentes en Streamlit/Sheets.
+# Solo cambia el orden, la presentación y el alias visible «Mi equipo».
+_PM_ADMIN_NAV_SECTIONS = (
+    ("Inicio y análisis", (
+        "Dashboard General", "Centro de Alertas", "Analítica (BI)",
+    )),
+    ("Personas y equipo", (
+        "Gestión Colaboradores", "Gestión del Colaborador",
+        "Gestión de Vacaciones", "Historial de Asistencias",
+    )),
+    ("Operación diaria", (
+        "Programación de Turnos", "Rutinas Operativas",
+        "Gestión de Comunicados", "Solicitudes y Permisos",
+    )),
+    ("Control y registros", (
+        "Boletas de Pago", "Historial de Descuadres", "Incidencias y Daños",
+        "Botellas Fiadas", "Auditoría y Configuración",
+    )),
+)
+_PM_ADMIN_NAV_ICONS = {
+    "Dashboard General": ":material/dashboard:",
+    "Centro de Alertas": ":material/notifications_active:",
+    "Analítica (BI)": ":material/query_stats:",
+    "Gestión Colaboradores": ":material/groups:",
+    "Gestión del Colaborador": ":material/folder_shared:",
+    "Gestión de Vacaciones": ":material/beach_access:",
+    "Historial de Asistencias": ":material/history:",
+    "Programación de Turnos": ":material/calendar_month:",
+    "Rutinas Operativas": ":material/fact_check:",
+    "Gestión de Comunicados": ":material/campaign:",
+    "Solicitudes y Permisos": ":material/approval:",
+    "Boletas de Pago": ":material/receipt_long:",
+    "Historial de Descuadres": ":material/account_balance_wallet:",
+    "Incidencias y Daños": ":material/report_problem:",
+    "Botellas Fiadas": ":material/inventory_2:",
+    "Auditoría y Configuración": ":material/settings:",
+}
+
+def _pm_admin_label(destino):
+    return "Mi equipo" if destino == "Gestión Colaboradores" else destino
+
 if rol_actual == "admin":
-    # El asistente ahora se abre desde un botón flotante; no ocupa espacio en el menú.
-    # Estilo uniforme para paneles de operación: conserva lógica y menú original.
-    menu = ["Dashboard General", "Centro de Alertas", "Rutinas Operativas", "Analítica (BI)", "Gestión Colaboradores", "Gestión del Colaborador", "Gestión de Vacaciones", "Programación de Turnos", "Boletas de Pago", "Solicitudes y Permisos", "Historial de Descuadres", "Incidencias y Daños", "Botellas Fiadas", "Historial de Asistencias", "Auditoría y Configuración", "Gestión de Comunicados"]
+    menu = [mod for _, seccion in _PM_ADMIN_NAV_SECTIONS for mod in seccion]
 else:
+    # IMPORTANTE: este menú del trabajador se mantiene exactamente igual.
     menu = ["Marcar Asistencia", "Mis Rutinas", "Mis Comunicados", "Mi Dashboard Mensual", "Mi Incorporación", "Mi Expediente", "Registrar Descuadre", "Registrar Incidencia", "Botellas Fiadas", "Mi Ficha Técnica", "Mis Vacaciones", "Mis Boletas", "Solicitar Permiso / Adelanto"]
 
 if rol_real == "admin":
@@ -12741,9 +12782,95 @@ if rol_actual != "admin":
 
 st.sidebar.markdown('<div class="tp-note-t pm-restored-nav-title">Navegación</div>', unsafe_allow_html=True)
 st.sidebar.markdown('<div class="pm-nav-kind-' + ('admin' if rol_actual == 'admin' else 'employee') + '"></div>', unsafe_allow_html=True)
-choice = st.sidebar.radio("Navegación", menu, key="nav_radio", on_change=_limpiar_busqueda,
-                          format_func=_tp_nav_label, label_visibility="collapsed")
+if rol_actual == "admin":
+    # Desvincular nav_radio del radio usado en la vista del trabajador:
+    # Streamlit no debe eliminar esta clave al dejar de renderizar ese widget.
+    st.session_state["nav_radio"] = st.session_state["nav_radio"]
+    # Cuatro grupos plegables para 16 módulos; únicamente admin.
+    # Los botones conservan los destinos originales y pasan por _ir_a.
+    with st.sidebar:
+        with st.container(key="pm_admin_nav"):
+            for grupo_idx, (seccion, destinos) in enumerate(_PM_ADMIN_NAV_SECTIONS, start=1):
+                abierto = st.session_state.get("nav_radio") in destinos
+                with st.expander(f"{grupo_idx:02d}  ·  {seccion}", expanded=abierto):
+                    for destino in destinos:
+                        st.button(
+                            _pm_admin_label(destino),
+                            key="pm_admin_nav_" + str(grupo_idx) + "_" + destino,
+                            icon=_PM_ADMIN_NAV_ICONS.get(destino),
+                            type="primary" if abierto and st.session_state.get("nav_radio") == destino else "secondary",
+                            use_container_width=True,
+                            on_click=_ir_a, args=(destino,),
+                        )
+    choice = st.session_state["nav_radio"]
+else:
+    # Vista de colaboradores: control, estructura y estado originales.
+    choice = st.sidebar.radio("Navegación", menu, key="nav_radio", on_change=_limpiar_busqueda,
+                              format_func=_tp_nav_label, label_visibility="collapsed")
 
+
+
+_PM_ADMIN_NAV_CSS = """<style>
+section[data-testid="stSidebar"] .st-key-pm_admin_nav [data-testid="stExpander"] {
+  border:1px solid #e7ecf3!important;border-radius:15px!important;
+  background:#fff!important;margin:3px 0 7px!important;
+  box-shadow:0 3px 12px rgba(24,40,68,.035)!important;overflow:hidden!important;
+}
+section[data-testid="stSidebar"] .st-key-pm_admin_nav details>summary {
+  min-height:48px!important;padding:10px 12px!important;
+  background:#fff!important;border-radius:13px!important;
+}
+section[data-testid="stSidebar"] .st-key-pm_admin_nav details[open]>summary {
+  background:#fafbfe!important;border-bottom:1px solid #edf0f5!important;
+  border-radius:13px 13px 0 0!important;
+}
+section[data-testid="stSidebar"] .st-key-pm_admin_nav details>summary p {
+  color:#42506a!important;font-size:.78rem!important;font-weight:800!important;
+  letter-spacing:.01em!important;
+}
+section[data-testid="stSidebar"] .st-key-pm_admin_nav [data-testid="stExpanderDetails"] {
+  padding:7px 8px 10px!important;
+}
+section[data-testid="stSidebar"] .st-key-pm_admin_nav [data-testid="stExpanderDetails"] [data-testid="stVerticalBlock"] {
+  gap:3px!important;
+}
+section[data-testid="stSidebar"] .st-key-pm_admin_nav [data-testid="stButton"] button {
+  display:flex!important;justify-content:flex-start!important;text-align:left!important;
+  min-height:42px!important;border-radius:10px!important;padding:9px 11px!important;
+  background:#fff!important;color:#43516a!important;border:1px solid transparent!important;
+  font-size:.79rem!important;font-weight:650!important;box-shadow:none!important;
+  transition:background .16s ease,border-color .16s ease!important;
+}
+section[data-testid="stSidebar"] .st-key-pm_admin_nav [data-testid="stButton"] button p {
+  font-size:.79rem!important;font-weight:inherit!important;color:inherit!important;
+  text-align:left!important;white-space:normal!important;overflow-wrap:anywhere!important;
+}
+section[data-testid="stSidebar"] .st-key-pm_admin_nav [data-testid="stButton"] button:hover {
+  background:#f6f8fb!important;color:#b72d43!important;border-color:#edf0f5!important;
+}
+section[data-testid="stSidebar"] .st-key-pm_admin_nav [data-testid="stButton"] button[kind="primary"],
+section[data-testid="stSidebar"] .st-key-pm_admin_nav [data-testid="stButton"] button[data-testid="stBaseButton-primary"] {
+  background:#fff0f3!important;color:#b92540!important;border:1px solid #f4d4dc!important;
+  box-shadow:inset 3px 0 0 #d72c46!important;font-weight:800!important;
+}
+section[data-testid="stSidebar"] .st-key-pm_admin_nav [data-testid="stButton"] button[kind="primary"] *,
+section[data-testid="stSidebar"] .st-key-pm_admin_nav [data-testid="stButton"] button[data-testid="stBaseButton-primary"] * {
+  color:#b92540!important;
+}
+section[data-testid="stSidebar"] .st-key-pm_admin_nav [data-testid="stButton"] button:focus-visible {
+  outline:2px solid #e68a9b!important;outline-offset:2px!important;
+}
+@media(max-width:640px){
+  section[data-testid="stSidebar"] .st-key-pm_admin_nav [data-testid="stButton"] button {
+    min-height:46px!important;padding:10px 12px!important;
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  section[data-testid="stSidebar"] .st-key-pm_admin_nav [data-testid="stButton"] button{transition:none!important;}
+}
+</style>"""
+if rol_actual == "admin":
+    st.markdown(_PM_ADMIN_NAV_CSS, unsafe_allow_html=True)
 
 # Iconos SVG locales para la navegación. La lista de valores que controla
 # Streamlit no cambia; solo cambia su presentación mediante máscaras CSS.
@@ -12831,7 +12958,7 @@ with st.container(key="pm_mobile_topbar"):
 # Barra de ubicación: indica en qué sección estás y la fecha de hoy (hora de Perú).
 _chev = "<svg width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><path d='M9 6l6 6-6 6'/></svg>"
 st.markdown(
-    f'<div class="tp-crumbbar"><div class="tp-crumb">Tiendas Premium {_chev}<b>{_html.escape(str(choice))}</b></div>'
+    f'<div class="tp-crumbbar"><div class="tp-crumb">Tiendas Premium {_chev}<b>{_html.escape(_pm_admin_label(choice) if rol_actual == "admin" else str(choice))}</b></div>'
     f'<div class="tp-crumbmeta"><span class="tp-pill">{_tp_fecha_larga(obtener_ahora_peru())}</span>'
     f'<span class="tp-pill"><i></i>{_html.escape(str(rol_actual).capitalize())}</span></div></div>',
     unsafe_allow_html=True)
@@ -13727,7 +13854,7 @@ PM7_MODULES = {
     'Mis Boletas': 'receipt_long',
     'Mi Dashboard Mensual': 'monitoring',
     'Dashboard General': 'space_dashboard',
-    'Gestión Colaboradores': 'groups',
+    'Gestión Colaboradores': 'groups', 'Mi equipo': 'groups',
     'Boletas de Pago': 'receipt_long',
     'Programación de Turnos': 'calendar_month',
     'Solicitudes y Permisos': 'approval',
@@ -15166,7 +15293,7 @@ elif choice == "Dashboard General":
                 ui_callout(f"No hay registros de marcación para la fecha {f_dash_str}.")
 
 elif choice == "Gestión Colaboradores":
-    premium_module_shell('Gestión Colaboradores', 'PERSONAS', 'Directorio, fichas y administración del personal.')
+    premium_module_shell('Mi equipo', 'PERSONAS', 'Directorio, fichas y administración del personal.')
 
     with st.container(key="pm_v_gestion_colaboradores"):
 
@@ -16782,7 +16909,7 @@ elif choice == "Centro de Alertas":
         if _rut_err:
             st.warning("Las alertas de Rutinas no se pudieron actualizar desde Google Sheets.")
         grupos = [
-            {"k": "contratos", "t": "Contratos por vencer", "s": "Próximos 15 días", "n": len(contratos_por_vencer), "tono": "bad" if any(d <= 5 for _, _, d in contratos_por_vencer) else "warn", "f": g_contr, "dest": "Gestión Colaboradores", "btn": "Ir a Colaboradores"},
+            {"k": "contratos", "t": "Contratos por vencer", "s": "Próximos 15 días", "n": len(contratos_por_vencer), "tono": "bad" if any(d <= 5 for _, _, d in contratos_por_vencer) else "warn", "f": g_contr, "dest": "Gestión Colaboradores", "btn": "Ir a Mi equipo"},
             {"k": "tardanzas", "t": "Tardanzas recurrentes", "s": "3 o más en el mes actual", "n": len(tardanzas_recurrentes), "tono": "bad", "f": g_tard, "dest": "Historial de Asistencias", "btn": "Ver asistencias"},
             {"k": "solicitudes", "t": "Solicitudes pendientes", "s": "Esperan tu respuesta", "n": len(sol_pend_df), "tono": "warn", "f": g_sol, "dest": "Solicitudes y Permisos", "btn": "Revisar solicitudes"},
             {"k": "rutinas", "t": "Rutinas por validar", "s": "Actividades enviadas por el equipo", "n": len(_rut_pend), "tono": "warn", "f": _rut_filas, "dest": "Rutinas Operativas", "btn": "Validar actividades"},
