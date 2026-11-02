@@ -2568,28 +2568,40 @@ def registrar_auditoria(accion, entidad, detalle=""):
 # =============================================================
 import uuid as _pmi_uuid
 import threading as _pmi_threading
+from urllib.parse import urlsplit as _pmi_urlsplit
+import zipfile as _pmi_zipfile
 
 _PMI_CASE = 'Incorporaciones'
 _PMI_REQ = 'Incorp_Requisitos'
 _PMI_FILES = 'Incorp_Archivos'
 _PMI_GEAR = 'Incorp_Entregas'
+_PMI_PROFILE = 'Incorp_Datos'
 _PMI_SCHEMAS = {
     _PMI_CASE: ['id_expediente', 'dni', 'nombre', 'cargo', 'estado', 'fecha_inicio', 'creado_el', 'creado_por', 'actualizado_el', 'cerrado_el'],
     _PMI_REQ: ['id_requisito', 'id_expediente', 'dni', 'codigo', 'requisito', 'obligatorio', 'estado', 'actualizado_el', 'validado_por', 'observacion'],
     _PMI_FILES: ['id_archivo', 'id_expediente', 'dni', 'codigo', 'nombre', 'mime', 'tamano', 'drive_file_id', 'estado', 'subido_por', 'subido_el', 'validado_por', 'validado_el', 'observacion'],
     _PMI_GEAR: ['id_entrega', 'id_expediente', 'dni', 'articulo', 'talla', 'cantidad', 'entregado_el', 'entregado_por', 'estado', 'recibido_el', 'observacion'],
+    _PMI_PROFILE: ['id_dato', 'id_expediente', 'dni', 'codigo', 'valor', 'estado', 'actualizado_el', 'actualizado_por', 'validado_por', 'validado_el', 'observacion'],
 }
 _PMI_TEMPLATES = [
-    ('foto', 'Fotografía del colaborador', 'documento', 'Sí'),
     ('identidad', 'Documento de identidad', 'documento', 'Sí'),
-    ('contrato', 'Contrato o documento laboral firmado', 'documento', 'Sí'),
-    ('datos', 'Datos personales y contacto verificados', 'validacion', 'Sí'),
-    ('uniforme', 'Entrega y conformidad de uniforme', 'entrega', 'Sí'),
-    ('induccion', 'Inducción inicial y procedimientos', 'validacion', 'Sí'),
-    ('accesos', 'Cuenta y accesos preparados', 'validacion', 'Sí'),
-    ('credencial', 'Credencial o fotocheck', 'validacion', 'No'),
-    ('planilla', 'Registro de planilla cuando corresponda', 'validacion', 'No'),
+    ('foto', 'Fotografía personal', 'documento', 'Sí'),
+    ('frontis', 'Fotografía del frontis del domicilio', 'documento', 'Sí'),
+    ('recibo_servicio', 'Recibo de luz o agua', 'documento', 'Sí'),
+    ('maps_domicilio', 'Ubicación de domicilio en Google Maps', 'dato', 'Sí'),
+    ('cv', 'Currículum vitae (CV)', 'documento', 'Sí'),
+    ('talla_polo', 'Talla de polo', 'dato', 'Sí'),
+    ('contrato', 'Contrato laboral firmado · empresa', 'documento', 'Sí'),
+    ('uniforme', 'Entrega y conformidad de 2 polos · empresa', 'entrega', 'Sí'),
 ]
+_PMI_WORKER_DOCS = ('identidad', 'foto', 'frontis', 'recibo_servicio', 'cv')
+_PMI_COMPANY_DOCS = ('contrato',)
+_PMI_DATA_CODES = ('maps_domicilio', 'talla_polo')
+_PMI_WORKER_CODES = (*_PMI_WORKER_DOCS, *_PMI_DATA_CODES)
+_PMI_COMPANY_CODES = (*_PMI_COMPANY_DOCS, 'uniforme')
+_PMI_POLO_SIZES = ('XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', '4XL')
+_PMI_LEGACY_CODES = ('datos', 'induccion', 'accesos', 'credencial', 'planilla')
+_PMI_FILE_LABELS = {t[0]: t[1] for t in _PMI_TEMPLATES if t[2] == 'documento'}
 _PMI_LABELS = {r[0]: r[1] for r in _PMI_TEMPLATES}
 _PMI_FILE_MAX = 40 * 1024 * 1024
 _PMI_MUTEX = _pmi_threading.RLock()
@@ -2740,17 +2752,33 @@ def _pmi_ensure(dni):
                 now, str(st.session_state.get('usuario_login', '')), now, ''
             ]))
             _pmi_append(_PMI_CASE, case)
-        existing = {x['codigo'] for x in _pmi_remote_rows(_PMI_REQ)
-                    if x['id_expediente'] == case['id_expediente']}
-        for code, title, _, required in _PMI_TEMPLATES:
-            if code not in existing:
-                _pmi_append(_PMI_REQ, {
-                    'id_requisito': f'{case["id_expediente"]}-{code}',
-                    'id_expediente': case['id_expediente'], 'dni': _pmi_dni(dni),
-                    'codigo': code, 'requisito': title, 'obligatorio': required,
-                    'estado': 'Pendiente', 'actualizado_el': _pmi_time(),
-                    'validado_por': '', 'observacion': ''
-                })
+        if case['estado'] == 'En proceso':
+            # Migración no destructiva: conserva registros anteriores, vuelve opcionales
+            # los antiguos requisitos ajenos al proceso real y agrega los faltantes.
+            existing_rows = [x for x in _pmi_remote_rows(_PMI_REQ)
+                             if x['id_expediente'] == case['id_expediente']]
+            existing = {x['codigo']: x for x in existing_rows}
+            for code, title, _, required in _PMI_TEMPLATES:
+                if code not in existing:
+                    _pmi_append(_PMI_REQ, {
+                        'id_requisito': f'{case["id_expediente"]}-{code}',
+                        'id_expediente': case['id_expediente'], 'dni': _pmi_dni(dni),
+                        'codigo': code, 'requisito': title, 'obligatorio': required,
+                        'estado': 'Pendiente', 'actualizado_el': _pmi_time(),
+                        'validado_por': '', 'observacion': ''
+                    })
+                else:
+                    row = existing[code]
+                    correction = {}
+                    if row['requisito'] != title:
+                        correction['requisito'] = title
+                    if row['obligatorio'] != required:
+                        correction['obligatorio'] = required
+                    if correction:
+                        _pmi_row_update(_PMI_REQ, row['id_requisito'], correction)
+            for row in existing_rows:
+                if row['codigo'] not in _PMI_LABELS and row['obligatorio'] == 'Sí':
+                    _pmi_row_update(_PMI_REQ, row['id_requisito'], {'obligatorio': 'No'})
         _pmi_clear()
     registrar_auditoria('Preparar incorporación digital', _PMI_CASE, f'DNI {_pmi_dni(dni)}')
     return case
@@ -2782,10 +2810,158 @@ def _pmi_requirement(case, code):
     return rows[0]
 
 
+def _pmi_normalize_profile_value(code, value):
+    value = str(value or '').strip()
+    if code == 'talla_polo':
+        value = value.upper()
+        if value not in _PMI_POLO_SIZES:
+            raise ValueError('Selecciona una talla de polo válida.')
+    elif code == 'maps_domicilio':
+        if not value or len(value) > 1200 or any(ch.isspace() for ch in value):
+            raise ValueError('Copia un enlace completo de Google Maps, sin espacios.')
+        try:
+            url = _pmi_urlsplit(value)
+        except ValueError:
+            raise ValueError('El enlace de Google Maps no tiene formato válido.')
+        host = (url.hostname or '').lower()
+        if url.scheme != 'https' or url.username or url.password or url.port not in (None, 443):
+            raise ValueError('Utiliza un enlace HTTPS de Google Maps.')
+        if not ((host in ('www.google.com', 'google.com') and url.path.startswith('/maps'))
+                or host == 'maps.google.com'
+                or (host == 'maps.app.goo.gl' and url.path.strip('/'))
+                or (host == 'goo.gl' and url.path.startswith('/maps/'))):
+            raise ValueError('Se admiten enlaces de maps.google.com, google.com/maps o maps.app.goo.gl.')
+    else:
+        raise ValueError('Dato de incorporación no permitido.')
+    return value
+
+
+def _pmi_latest_profile(data, case, code):
+    matches = [r for r in data.get(_PMI_PROFILE, []) if
+               r.get('id_expediente') == case['id_expediente'] and r.get('codigo') == code]
+    return matches[-1] if matches else None
+
+
+def _pmi_submit_profile(dni, code, value):
+    _pmi_check_access(dni, write=True)
+    if code not in _PMI_DATA_CODES:
+        raise ValueError('Tipo de dato no admitido.')
+    value = _pmi_normalize_profile_value(code, value)
+    data = _pmi_load(force=True)
+    case = _pmi_case(data, dni)
+    if not case or case['estado'] != 'En proceso':
+        raise ValueError('No hay una incorporación abierta.')
+    req = _pmi_requirement(case, code)
+    if req['estado'] == 'Validado':
+        raise ValueError('El dato ya está validado; pide a administración que lo reabra si cambió.')
+    latest = _pmi_latest_profile(data, case, code)
+    if latest and latest['estado'] == 'En revisión':
+        if latest['valor'] != value:
+            raise ValueError('Ya hay un dato en revisión. Espera la validación.')
+        # Recuperación si quedó pendiente la segunda escritura tras una interrupción.
+        if req['estado'] != 'En revisión':
+            _pmi_row_update(_PMI_REQ, req['id_requisito'], {
+                'estado': 'En revisión', 'actualizado_el': _pmi_time(), 'observacion': ''
+            })
+        return
+    _pmi_append(_PMI_PROFILE, {
+        'id_dato': 'DAT-' + _pmi_uuid.uuid4().hex[:18].upper(),
+        'id_expediente': case['id_expediente'], 'dni': _pmi_dni(dni),
+        'codigo': code, 'valor': value, 'estado': 'En revisión',
+        'actualizado_el': _pmi_time(), 'actualizado_por': str(st.session_state['usuario_login']),
+        'validado_por': '', 'validado_el': '', 'observacion': ''
+    })
+    _pmi_row_update(_PMI_REQ, req['id_requisito'], {
+        'estado': 'En revisión', 'actualizado_el': _pmi_time(),
+        'validado_por': '', 'observacion': ''
+    })
+    registrar_auditoria('Enviar dato de incorporación', _PMI_PROFILE,
+                        f'DNI {_pmi_dni(dni)} · {code}')  # nunca registrar URL del domicilio
+
+
+def _pmi_verify_profile(dni, code, approved, note=''):
+    _pmi_check_access(dni, write=True, admin_only=True)
+    if code not in _PMI_DATA_CODES:
+        raise ValueError('Dato no permitido.')
+    data = _pmi_load(force=True)
+    case = _pmi_case(data, dni)
+    if not case or case['estado'] != 'En proceso':
+        raise ValueError('Expediente no disponible.')
+    record = _pmi_latest_profile(data, case, code)
+    if not record:
+        raise ValueError('El colaborador todavía no ha enviado el dato.')
+    req = _pmi_requirement(case, code)
+    note = str(note or '').strip()[:300]
+    if not approved and not note:
+        raise ValueError('Escribe qué debe corregir el colaborador.')
+    target = 'Validado' if approved else 'Observado'
+    if record['estado'] not in ('En revisión', target):
+        raise ValueError('Este dato fue revisado previamente.')
+    if record['estado'] == target and req['estado'] == target:
+        raise ValueError('La revisión ya fue registrada.')
+    if record['estado'] == 'En revisión':
+        _pmi_row_update(_PMI_PROFILE, record['id_dato'], {
+            'estado': target, 'validado_por': str(st.session_state['usuario_login']),
+            'validado_el': _pmi_time(), 'observacion': note
+        })
+    _pmi_row_update(_PMI_REQ, req['id_requisito'], {
+        'estado': target, 'actualizado_el': _pmi_time(),
+        'validado_por': str(st.session_state['usuario_login']) if approved else '',
+        'observacion': note
+    })
+    registrar_auditoria('Validar dato' if approved else 'Observar dato', _PMI_PROFILE,
+                        f'DNI {_pmi_dni(dni)} · {code}')
+
+
+def _pmi_reopen_profile(dni, code, reason):
+    _pmi_check_access(dni, write=True, admin_only=True)
+    data = _pmi_load(force=True)
+    case = _pmi_case(data, dni)
+    if not case or case['estado'] != 'En proceso':
+        raise ValueError('Solo se pueden reabrir expedientes abiertos.')
+    if code not in _PMI_DATA_CODES:
+        raise ValueError('Dato no permitido.')
+    record = _pmi_latest_profile(data, case, code)
+    if not record or record['estado'] != 'Validado':
+        raise ValueError('Solo se reabren datos validados.')
+    reason = str(reason or '').strip()[:300]
+    if not reason:
+        raise ValueError('Escribe el motivo de reapertura.')
+    req = _pmi_requirement(case, code)
+    _pmi_row_update(_PMI_PROFILE, record['id_dato'], {
+        'estado': 'Sustituido', 'observacion': reason
+    })
+    _pmi_row_update(_PMI_REQ, req['id_requisito'], {
+        'estado': 'Observado', 'validado_por': '',
+        'actualizado_el': _pmi_time(), 'observacion': reason
+    })
+    registrar_auditoria('Reabrir dato de incorporación', _PMI_PROFILE,
+                        f'DNI {_pmi_dni(dni)} · {code}')
+
+
+def _pmi_polo_status(data, case):
+    active = [g for g in _pmi_subset(data, case, _PMI_GEAR)
+              if g.get('estado') != 'Sustituido']
+    polos = [g for g in active if str(g.get('articulo', '')).strip().casefold() == 'polo de trabajo']
+    # Datos históricos incompletos nunca cuentan como entrega conforme.
+    quantities = []
+    for row in polos:
+        try:
+            qty = int(str(row.get('cantidad', '')).strip())
+        except (TypeError, ValueError):
+            raise ValueError('Una entrega de polos tiene una cantidad inválida. Revisa el historial.')
+        if qty < 1:
+            raise ValueError('Una entrega de polos tiene una cantidad inválida. Revisa el historial.')
+        quantities.append((row, qty))
+    received = sum(qty for row, qty in quantities if row['estado'] == 'Recibido')
+    committed = sum(qty for _, qty in quantities)
+    return active, polos, received, committed
+
+
 def _pmi_upload(dni, code, file_obj):
     """Valida identificación y estado desde Sheets, almacena privado y registra referencia."""
     _pmi_check_access(dni, write=True)
-    if code not in ('foto', 'identidad', 'contrato'):
+    if code not in (*_PMI_WORKER_DOCS, *_PMI_COMPANY_DOCS):
         raise ValueError('Tipo de documento no reconocido.')
     if code == 'contrato' and not _pmi_is_admin():
         raise PermissionError('El contrato lo carga administración.')
@@ -2801,10 +2977,14 @@ def _pmi_upload(dni, code, file_obj):
         raise ValueError('Ya hay un archivo en revisión. Espera la validación antes de reemplazarlo.')
     name = str(getattr(file_obj, 'name', '')).replace('\\', '/').split('/')[-1][:90]
     ext = os.path.splitext(name)[1].lower()
-    if ext not in ('.jpg', '.jpeg', '.png', '.webp', '.heic', '.heif', '.pdf'):
-        raise ValueError('Solo se permiten imágenes y PDF.')
-    if code == 'foto' and ext == '.pdf':
-        raise ValueError('La fotografía debe ser una imagen.')
+    if ext not in ('.jpg', '.jpeg', '.png', '.webp', '.heic', '.heif', '.pdf', '.docx'):
+        raise ValueError('Se admiten imágenes, PDF y CV en Word (.docx).')
+    if code in ('foto', 'frontis') and ext in ('.pdf', '.docx'):
+        raise ValueError('La fotografía debe enviarse como imagen.')
+    if code == 'cv' and ext not in ('.pdf', '.docx'):
+        raise ValueError('El CV debe ser un archivo PDF o Word (.docx).')
+    if ext == '.docx' and code != 'cv':
+        raise ValueError('Word (.docx) se admite solamente para el CV.')
     raw = file_obj.getvalue()
     if not raw or len(raw) > _PMI_FILE_MAX:
         raise ValueError('El archivo está vacío o supera 40 MB.')
@@ -2812,6 +2992,13 @@ def _pmi_upload(dni, code, file_obj):
         if len(raw) > 15 * 1024 * 1024 or not raw.startswith(b'%PDF-'):
             raise ValueError('El PDF debe ser válido y pesar como máximo 15 MB.')
         body, mime, file_name = raw, 'application/pdf', name
+    elif ext == '.docx':
+        if len(raw) > 15 * 1024 * 1024 or not _pmi_zipfile.is_zipfile(io.BytesIO(raw)):
+            raise ValueError('El CV Word debe ser un .docx válido y pesar hasta 15 MB.')
+        with _pmi_zipfile.ZipFile(io.BytesIO(raw)) as word:
+            if 'word/document.xml' not in word.namelist():
+                raise ValueError('El archivo Word no contiene un documento válido.')
+        body, mime, file_name = raw, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', name
     else:
         # Reutiliza la optimización iPhone de Rutinas (EXIF / HEIC / 48 MP).
         body, mime = _pm3_prepare_image(file_obj), 'image/webp'
@@ -2976,15 +3163,20 @@ def _pmi_mark_manual(dni, code, approved):
     if not case or case['estado'] != 'En proceso':
         raise ValueError('No existe una incorporación abierta.')
     req = _pmi_requirement(case, code)
-    if code in ('foto', 'identidad', 'contrato'):
-        raise ValueError('Los documentos se validan individualmente.')
+    if code in (*_PMI_WORKER_DOCS, *_PMI_COMPANY_DOCS, *_PMI_DATA_CODES):
+        raise ValueError('Los documentos y datos deben validarse en sus secciones específicas.')
     if approved and code == 'datos' and req['estado'] != 'En revisión':
         raise ValueError('El colaborador debe confirmar primero que revisó sus datos.')
     if approved and code == 'uniforme':
-        gear = [x for x in _pmi_remote_rows(_PMI_GEAR) if x['id_expediente'] == case['id_expediente']
-                and x['estado'] != 'Sustituido']
-        if not gear or any(x['estado'] != 'Recibido' for x in gear):
-            raise ValueError('Se requiere al menos una entrega y todas deben tener conformidad.')
+        data = _pmi_load(force=True)
+        gear, polos, received, committed = _pmi_polo_status(data, case)
+        size = _pmi_latest_profile(data, case, 'talla_polo')
+        if not size or size['estado'] != 'Validado':
+            raise ValueError('Primero debe validarse la talla de polo del colaborador.')
+        if not polos or received != 2 or committed != 2 or any(x['estado'] != 'Recibido' for x in gear):
+            raise ValueError('Se requieren exactamente 2 polos recibidos y conformes, sin otras entregas pendientes.')
+        if any(x['talla'] != size['valor'] for x in polos):
+            raise ValueError('La talla de los polos debe coincidir con la talla validada.')
     new_state = 'Validado' if approved else 'Pendiente'
     _pmi_row_update(_PMI_REQ, req['id_requisito'], {
         'estado': new_state, 'actualizado_el': _pmi_time(),
@@ -3021,6 +3213,16 @@ def _pmi_issue_gear(dni, item, size, qty, note):
     qty = int(qty)
     if not item or not 1 <= qty <= 20:
         raise ValueError('Revisa el artículo y la cantidad.')
+    if item.casefold() == 'polo de trabajo':
+        data = _pmi_load(force=True)
+        size_data = _pmi_latest_profile(data, case, 'talla_polo')
+        if not size_data or size_data['estado'] != 'Validado':
+            raise ValueError('La talla del colaborador debe estar validada antes de entregar polos.')
+        if size != size_data['valor']:
+            raise ValueError('La talla no coincide con la registrada y validada por el trabajador.')
+        _, _, _, committed = _pmi_polo_status(data, case)
+        if committed + qty > 2:
+            raise ValueError(f'La entrega obligatoria es de 2 polos. Ya hay {committed} registrado(s).')
     _pmi_append(_PMI_GEAR, {
         'id_entrega': 'ENT-' + _pmi_uuid.uuid4().hex[:18].upper(),
         'id_expediente': case['id_expediente'], 'dni': _pmi_dni(dni),
@@ -3088,12 +3290,22 @@ def _pmi_finish(dni):
     pct, done, total = _pmi_progress(reqs)
     if not total or done != total:
         raise ValueError(f'Faltan {total - done} requisitos obligatorios por validar.')
-    gear = [x for x in _pmi_subset(_pmi_load(force=True), case, _PMI_GEAR)
-            if x['estado'] != 'Sustituido']
-    if not gear or any(x['estado'] != 'Recibido' for x in gear):
-        raise ValueError('Quedan entregas sin conformidad del colaborador.')
-    files = _pmi_subset(_pmi_load(force=True), case, _PMI_FILES)
-    for code in ('foto', 'identidad', 'contrato'):
+    required_codes = {code for code, _, _, needed in _PMI_TEMPLATES if needed == 'Sí'}
+    saved_codes = {r['codigo'] for r in reqs if r['obligatorio'] == 'Sí'}
+    if not required_codes.issubset(saved_codes):
+        raise ValueError('Actualiza los requisitos del expediente antes de finalizar la incorporación.')
+    data = _pmi_load(force=True)
+    gear, polos, received, committed = _pmi_polo_status(data, case)
+    size = _pmi_latest_profile(data, case, 'talla_polo')
+    maps = _pmi_latest_profile(data, case, 'maps_domicilio')
+    if not size or size['estado'] != 'Validado' or not maps or maps['estado'] != 'Validado':
+        raise ValueError('La ubicación de Maps y la talla de polo deben estar validadas.')
+    if not polos or received != 2 or committed != 2 or any(x['estado'] != 'Recibido' for x in gear):
+        raise ValueError('Faltan los 2 polos recibidos y confirmados, o existe una entrega pendiente.')
+    if any(g['talla'] != size['valor'] for g in polos):
+        raise ValueError('La talla del uniforme no coincide con la declarada.')
+    files = _pmi_subset(data, case, _PMI_FILES)
+    for code in (*_PMI_WORKER_DOCS, *_PMI_COMPANY_DOCS):
         if not any(x['codigo'] == code and x['estado'] == 'Validado' for x in files):
             raise ValueError('Falta verificar un documento obligatorio.')
         if any(x['codigo'] == code and x['estado'] == 'En revisión' for x in files):
@@ -3128,6 +3340,11 @@ def _pmi_styles():
     .pmi-document{background:#f7fafc;border:1px solid #e5edf5;padding:12px 13px;border-radius:14px;margin-bottom:8px}
     .pmi-document strong{font-size:.82rem;color:#22354f;word-break:break-word}
     .pmi-status{background:#f0faf5;color:#14825f;border:1px solid #d4e9dd;border-radius:12px;padding:10px 14px;font-size:.8rem;font-weight:700}
+    .pmi-subsection{display:flex;align-items:center;gap:10px;margin:18px 0 10px;padding:11px 13px;border:1px solid #e5eaf1;border-radius:14px;background:#fff;font-weight:820;color:#253750;font-size:.88rem}
+    .pmi-subsection span{background:#fff0f3;color:#c72a42;padding:6px 9px;border-radius:10px;font-size:.7rem}
+    .pmi-polo-note{padding:12px 14px;border:1px solid #d3ebde;background:#f0faf5;border-radius:15px;margin:10px 0 14px;color:#196d51;font-size:.83rem;line-height:1.55}
+    .pmi-data-row{margin-bottom:11px;background:#fff;border:1px solid #e5eaf2;border-radius:17px;padding:14px 16px;overflow-wrap:anywhere}
+    .pmi-data-row strong{font-size:.84rem;color:#26374f}.pmi-data-row small{display:block;margin:5px 0;color:#75859b;font-size:.75rem;word-break:break-all}
     .st-key-pmi_admin_panel [data-testid='stFileUploader'], .st-key-pmi_worker_panel [data-testid='stFileUploader']{background:#fff;border-radius:16px}
     @media(max-width:780px){
       .pmi-card{padding:14px;border-radius:17px}.pmi-kpis{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
@@ -3250,13 +3467,27 @@ def _pmi_admin_ui():
             gear = _pmi_subset(data, case, _PMI_GEAR)
             _pmi_summary_card(case, reqs)
             st.caption('Expediente ' + case['id_expediente'] + ' · ' + str(person_map[dni].get('cargo', '')))
+            missing_required = {r[0] for r in _PMI_TEMPLATES if r[3] == 'Sí'} - {r['codigo'] for r in reqs}
+            if case['estado'] == 'En proceso' and missing_required:
+                st.warning('Este expediente se creó con el checklist anterior. Actualízalo para incorporar '
+                           'domicilio, recibo, CV, Maps, talla y la entrega de 2 polos. No se borrará el historial.')
+                if st.button('Actualizar requisitos de contratación', type='primary',
+                             key=f'pmi_upgrade_{dni}', use_container_width=True):
+                    _pmi_ui_action(lambda: _pmi_ensure(dni), 'Requisitos actualizados sin eliminar datos anteriores.')
             if case['estado'] == 'En proceso':
                 with st.expander('Verificar que todos los requisitos estén creados'):
                     if st.button('Comprobar / completar requisitos', key='pmi_recover', use_container_width=True):
                         _pmi_ui_action(lambda: _pmi_ensure(dni), 'Requisitos verificados.')
-            tab_req, tab_doc, tab_gear = st.tabs(['Checklist', 'Documentos privados', 'Uniformes y equipos'])
+            tab_req, tab_doc, tab_data, tab_gear = st.tabs(['Checklist', 'Documentos privados', 'Domicilio y talla', 'Entrega de polos'])
             with tab_req:
-                for r in reqs:
+                st.caption('Requisitos del colaborador y entregas de la empresa, separados para un seguimiento más claro.')
+                st.markdown('<div class="pmi-subsection"><span>COLABORADOR</span> Documentos y datos solicitados</div>', unsafe_allow_html=True)
+                for r in sorted(reqs, key=lambda x: (0 if x['codigo'] in _PMI_WORKER_CODES else 1 if x['codigo'] in _PMI_COMPANY_CODES else 2,
+                                                     next((i for i, t in enumerate(_PMI_TEMPLATES) if t[0] == x['codigo']), 99))):
+                    if r['codigo'] == 'contrato':
+                        st.markdown('<div class="pmi-subsection"><span>EMPRESA</span> Contrato y 2 polos de uniforme</div>', unsafe_allow_html=True)
+                    elif r['codigo'] not in (*_PMI_WORKER_CODES, *_PMI_COMPANY_CODES) and r == next((x for x in reqs if x['codigo'] not in (*_PMI_WORKER_CODES, *_PMI_COMPANY_CODES)), None):
+                        st.markdown('<div class="pmi-subsection"><span>HISTÓRICO</span> Requisitos anteriores conservados (opcionales)</div>', unsafe_allow_html=True)
                     with st.container(key='pmi_admin_r_' + r['id_requisito']):
                         st.markdown('<div class="pmi-card"><div class="pmi-row">'
                                     '<div><strong>' + _html.escape(r['requisito']) + '</strong>'
@@ -3264,7 +3495,7 @@ def _pmi_admin_ui():
                                     + _pmi_state_chip(r['estado']) + '</div>'
                                     + ('<div class="pmi-muted">' + _html.escape(r['observacion']) + '</div>' if r['observacion'] else '')
                                     + '</div>', unsafe_allow_html=True)
-                        if case['estado'] != 'En proceso' or r['codigo'] in ('foto', 'identidad', 'contrato'):
+                        if case['estado'] != 'En proceso' or r['codigo'] in (*_PMI_WORKER_DOCS, *_PMI_COMPANY_DOCS, *_PMI_DATA_CODES):
                             continue
                         if r['estado'] != 'Validado':
                             if st.button('Validar requisito', key='pmi_validate_' + r['id_requisito'],
@@ -3287,13 +3518,15 @@ def _pmi_admin_ui():
                             _pmi_ui_action(lambda: _pmi_finish(dni), 'Incorporación finalizada correctamente.')
             with tab_doc:
                 if case['estado'] == 'En proceso':
-                    label_to_code = {'Fotografía del trabajador': 'foto',
-                                     'Documento de identidad': 'identidad',
-                                     'Contrato laboral firmado': 'contrato'}
-                    doc_type = st.selectbox('Tipo de archivo', list(label_to_code), key='pmi_admin_doc_type')
+                    label_to_code = {label: code for code, label in _PMI_FILE_LABELS.items()}
+                    doc_type = st.selectbox('Tipo de archivo', list(label_to_code), key=f'pmi_admin_doc_type_{dni}')
+                    chosen_code = label_to_code[doc_type]
+                    allowed_types = (['jpg','jpeg','png','webp','heic','heif'] if chosen_code in ('foto', 'frontis')
+                                     else ['pdf','docx'] if chosen_code == 'cv'
+                                     else ['jpg','jpeg','png','webp','heic','heif','pdf'])
                     uploaded = st.file_uploader('Subir fotografía o documento',
-                        type=['jpg','jpeg','png','webp','heic','heif','pdf'], key='pmi_admin_upload',
-                        help='Imágenes hasta 40 MB (se comprimen); PDF hasta 15 MB. Drive privado.')
+                        type=allowed_types, key=f'pmi_admin_upload_{dni}_{chosen_code}',
+                        help='Imágenes hasta 40 MB; PDF/CV Word hasta 15 MB. Los archivos van a Drive privado.')
                     if st.button('Guardar documento privado', disabled=uploaded is None,
                                  key='pmi_admin_upload_btn', type='primary', use_container_width=True):
                         _pmi_ui_action(lambda: _pmi_upload(dni, label_to_code[doc_type], uploaded),
@@ -3320,14 +3553,66 @@ def _pmi_admin_ui():
                                          key='pmi_doc_replace_' + f['id_archivo'], use_container_width=True):
                                 _pmi_ui_action(lambda fid=f['id_archivo'], r=why: _pmi_reopen_document(dni, fid, r),
                                                'Documento reabierto; el colaborador podrá enviar una versión corregida.')
+            with tab_data:
+                st.markdown('<div class="pmi-head"><div><h3>Domicilio y talla del colaborador</h3>'
+                            '<p>Revisa el enlace de Maps y la talla declarada. Solo administración puede validarlos.</p></div></div>',
+                            unsafe_allow_html=True)
+                for code, label in (('maps_domicilio', 'Enlace de Google Maps del domicilio'),
+                                    ('talla_polo', 'Talla de polo solicitada')):
+                    latest = _pmi_latest_profile(data, case, code)
+                    req_dato = next((r for r in reqs if r['codigo'] == code), None)
+                    with st.container(key=f'pmi_admin_detail_{code}_{dni}'):
+                        if latest:
+                            st.markdown('<div class="pmi-data-row"><strong>' + _html.escape(label) + '</strong>'
+                                        '<small>' + _html.escape(latest['valor']) + '</small></div>',
+                                        unsafe_allow_html=True)
+                            st.caption('Estado: ' + latest['estado'] + ' · Enviado: ' + latest.get('actualizado_el', '')[:16])
+                            if latest.get('observacion'):
+                                st.caption('Observación: ' + latest['observacion'])
+                            if code == 'maps_domicilio':
+                                try:
+                                    _pmi_normalize_profile_value(code, latest['valor'])
+                                    st.link_button('Abrir ubicación en Google Maps', latest['valor'], use_container_width=True)
+                                except ValueError:
+                                    st.warning('El enlace registrado no es válido.')
+                            if case['estado'] == 'En proceso' and latest['estado'] == 'En revisión':
+                                note = st.text_input('Observación para corrección', max_chars=300,
+                                                     key=f'pmi_data_note_{dni}_{code}')
+                                c1, c2 = st.columns(2)
+                                if c1.button('Aprobar dato', key=f'pmi_data_yes_{dni}_{code}', use_container_width=True):
+                                    _pmi_ui_action(lambda c=code: _pmi_verify_profile(dni, c, True),
+                                                   'Dato de incorporación validado.')
+                                if c2.button('Solicitar corrección', key=f'pmi_data_no_{dni}_{code}', use_container_width=True):
+                                    _pmi_ui_action(lambda c=code, n=note: _pmi_verify_profile(dni, c, False, n),
+                                                   'Observación registrada; el colaborador podrá corregirla.')
+                            if case['estado'] == 'En proceso' and latest['estado'] == 'Validado':
+                                with st.expander('Reabrir dato validado'):
+                                    reason = st.text_input('Motivo de la reapertura', max_chars=300,
+                                                           key=f'pmi_data_reopen_reason_{dni}_{code}')
+                                    if st.button('Solicitar nuevo dato', key=f'pmi_data_reopen_{dni}_{code}', use_container_width=True):
+                                        _pmi_ui_action(lambda c=code, r=reason: _pmi_reopen_profile(dni, c, r),
+                                                       'Dato reabierto para actualización.')
+                        else:
+                            st.info(label + ': pendiente de envío por parte del colaborador.')
             with tab_gear:
+                st.markdown('<div class="pmi-polo-note"><strong>Uniforme de ingreso:</strong> 2 polos de trabajo, '
+                            'con la talla validada y la conformidad del colaborador. Se puede registrar una entrega de 2 '
+                            'o dos entregas de 1, sin superar las 2 unidades.</div>', unsafe_allow_html=True)
+                _, _, polos_recibidos, polos_registrados = _pmi_polo_status(data, case)
+                st.caption(f'Polos registrados: {polos_registrados}/2 · Confirmados por trabajador: {polos_recibidos}/2')
+                talla = _pmi_latest_profile(data, case, 'talla_polo')
+                talla_ok = bool(talla and talla['estado'] == 'Validado')
+                if not talla_ok and case['estado'] == 'En proceso':
+                    st.warning('Primero valida la talla del trabajador en «Domicilio y talla».')
                 if case['estado'] == 'En proceso':
                     with st.form('pmi_gear_form'):
                         item = st.selectbox('Artículo', ['Polo de trabajo', 'Pantalón', 'Mandil', 'Fotocheck',
                                                          'Llave', 'Otro'], key='pmi_gear_item')
                         custom = st.text_input('Especificar artículo (solo si eliges Otro)', max_chars=80)
-                        size = st.selectbox('Talla', ['No aplica', 'XS', 'S', 'M', 'L', 'XL', 'XXL'])
-                        qty = st.number_input('Cantidad entregada', min_value=1, max_value=20, value=1)
+                        sizes = ['No aplica', *_PMI_POLO_SIZES]
+                        chosen_size = str(talla['valor']) if talla_ok and talla['valor'] in sizes else 'No aplica'
+                        size = st.selectbox('Talla', sizes, index=sizes.index(chosen_size))
+                        qty = st.number_input('Cantidad entregada', min_value=1, max_value=20, value=2)
                         note = st.text_area('Observaciones de la entrega', max_chars=300)
                         submit = st.form_submit_button('Registrar entrega', type='primary', use_container_width=True)
                     if submit:
@@ -3376,20 +3661,65 @@ def _pmi_worker_ui():
         files = _pmi_subset(data, case, _PMI_FILES)
         gear = _pmi_subset(data, case, _PMI_GEAR)
         _pmi_summary_card(case, reqs)
+        if case['estado'] == 'En proceso':
+            missing_required = {r[0] for r in _PMI_TEMPLATES if r[3] == 'Sí'} - {r['codigo'] for r in reqs}
+            if missing_required:
+                st.info('Administración debe actualizar los requisitos de tu expediente para que '
+                        'puedas completar la nueva lista de contratación.')
         tab_requirements, tab_documents, tab_equipment = st.tabs(['Requisitos', 'Mis documentos', 'Mis entregas'])
         with tab_requirements:
+            st.markdown('<div class="pmi-head"><div><h3>Mi domicilio y mi talla de polo</h3>'
+                        '<p>Estos dos datos son obligatorios para tu ingreso y serán verificados por administración.</p></div></div>',
+                        unsafe_allow_html=True)
+            for code, label in (('maps_domicilio', 'Enlace de Google Maps de mi domicilio'),
+                                ('talla_polo', 'Mi talla de polo')):
+                latest = _pmi_latest_profile(data, case, code)
+                req_d = next((r for r in reqs if r['codigo'] == code), None)
+                with st.container(key=f'pmi_worker_data_{code}'):
+                    st.markdown('<div class="pmi-data-row"><strong>' + _html.escape(label) + '</strong>'
+                                '<small>' + (_html.escape('Dato enviado · ' + latest['estado']) if latest else 'Pendiente de registrar')
+                                + '</small></div>', unsafe_allow_html=True)
+                    if latest and latest.get('observacion'):
+                        st.caption('Observación de administración: ' + latest['observacion'])
+                    if case['estado'] != 'En proceso' or not req_d:
+                        continue
+                    if req_d['estado'] in ('Validado', 'En revisión'):
+                        st.info('Validado por administración.' if req_d['estado'] == 'Validado'
+                                else 'En revisión por administración.')
+                        continue
+                    if code == 'maps_domicilio':
+                        val = st.text_input('Pega tu enlace de Google Maps (Compartir → Copiar enlace)',
+                                            placeholder='https://maps.app.goo.gl/...',
+                                            key=f'pmi_maps_worker_{dni}', max_chars=1200)
+                        st.caption('En Google Maps selecciona tu domicilio, pulsa Compartir y copia el enlace. '
+                                   'Solo tú y administración podrán consultar este dato en el expediente.')
+                    else:
+                        val = st.selectbox('Selecciona tu talla de polo', ['Seleccionar talla', *_PMI_POLO_SIZES],
+                                            key=f'pmi_size_worker_{dni}')
+                        if val == 'Seleccionar talla':
+                            val = ''
+                    if st.button('Enviar a administración', disabled=not bool(val),
+                                 key=f'pmi_send_worker_{dni}_{code}', use_container_width=True):
+                        _pmi_ui_action(lambda c=code, v=val: _pmi_submit_profile(dni, c, v),
+                                       'Dato enviado correctamente; queda pendiente de validación.')
+            st.markdown('<div class="pmi-subsection"><span>SEGUIMIENTO</span> Estado de mis requisitos</div>', unsafe_allow_html=True)
             st.markdown('<div class="pmi-head"><div><h3>Mis requisitos</h3>'
                         '<p>Visualiza el estado de cada paso y las observaciones de administración.</p></div></div>',
                         unsafe_allow_html=True)
-            for r in reqs:
+            st.markdown('<div class="pmi-subsection"><span>TUS DOCUMENTOS</span> Archivos y datos para contratación</div>', unsafe_allow_html=True)
+            for r in sorted(reqs, key=lambda x: (0 if x['codigo'] in _PMI_WORKER_CODES else 1 if x['codigo'] in _PMI_COMPANY_CODES else 2,
+                                                 next((i for i, t in enumerate(_PMI_TEMPLATES) if t[0] == x['codigo']), 99))):
+                if r['codigo'] == 'contrato':
+                    st.markdown('<div class="pmi-subsection"><span>PREMIUM MARKET</span> Contrato y uniforme de 2 polos</div>', unsafe_allow_html=True)
                 st.markdown('<div class="pmi-card"><div class="pmi-row"><div><strong>'
                             + _html.escape(r['requisito']) + '</strong>'
                             + '<div class="pmi-muted">' + ('Obligatorio' if r['obligatorio'] == 'Sí' else 'Opcional')
                             + '</div></div>' + _pmi_state_chip(r['estado']) + '</div>'
                             + ('<div class="pmi-muted">' + _html.escape(r['observacion']) + '</div>' if r['observacion'] else '')
                             + '</div>', unsafe_allow_html=True)
-            if case['estado'] == 'En proceso':
-                with st.expander('Mis datos personales y contacto'):
+            if case['estado'] == 'En proceso' and any(r['codigo'] == 'datos' for r in reqs):
+                # Se conserva únicamente para expedientes antiguos que ya tenían este paso.
+                with st.expander('Mis datos personales y contacto (histórico)'):
                     me = _pmi_person(dni)
                     st.write('**Dirección:**', str(me.get('direccion', 'Sin registrar')))
                     st.write('**Teléfono:**', str(me.get('telefono', 'Sin registrar')))
@@ -3403,15 +3733,25 @@ def _pmi_worker_ui():
             if case['estado'] == 'En proceso':
                 with st.expander('Subir mis documentos'):
                     st.caption('Tus archivos se guardan en Drive privado. Solo tú y administración pueden consultarlos desde la app.')
-                    doc_selection = st.selectbox('Documento', ['Fotografía personal', 'Documento de identidad'], key='pmi_worker_doc')
-                    code = 'foto' if doc_selection == 'Fotografía personal' else 'identidad'
+                    doc_selection = st.selectbox('Documento',
+                        [ _PMI_FILE_LABELS[c] for c in _PMI_WORKER_DOCS ], key=f'pmi_worker_doc_{dni}')
+                    code = next(c for c in _PMI_WORKER_DOCS if _PMI_FILE_LABELS[c] == doc_selection)
                     current_req = next((r for r in reqs if r['codigo'] == code), None)
                     if current_req and current_req['estado'] == 'Validado':
                         st.success('Este documento ya está validado.')
                     else:
+                        allowed_types = (['jpg','jpeg','png','webp','heic','heif'] if code in ('foto', 'frontis')
+                                         else ['pdf','docx'] if code == 'cv'
+                                         else ['jpg','jpeg','png','webp','heic','heif','pdf'])
+                        guidance = {'identidad': 'Adjunta una imagen legible o PDF de tu documento de identidad.',
+                                    'foto': 'Sube una foto personal reciente y nítida.',
+                                    'frontis': 'Fotografía claramente la fachada de tu domicilio.',
+                                    'recibo_servicio': 'Adjunta el recibo de luz o agua en foto o PDF.',
+                                    'cv': 'Adjunta tu CV actualizado en PDF o Word (.docx).'}
+                        st.caption(guidance[code])
                         uploaded = st.file_uploader('Seleccionar archivo desde el celular',
-                            type=['jpg','jpeg','png','webp','heic','heif','pdf'], key='pmi_worker_upload',
-                            help='HEIC compatible si está instalado pillow-heif; fotos hasta 40 MB, PDF hasta 15 MB.')
+                            type=allowed_types, key=f'pmi_worker_upload_{dni}_{code}',
+                            help='Fotos iPhone HEIC/JPG hasta 40 MB. PDF o CV Word (.docx) hasta 15 MB.')
                         if st.button('Guardar documento en Drive', type='primary', key='pmi_worker_upload_btn',
                                      disabled=uploaded is None, use_container_width=True):
                             _pmi_ui_action(lambda: _pmi_upload(dni, code, uploaded),
@@ -3424,8 +3764,12 @@ def _pmi_worker_ui():
                     if f.get('observacion'):
                         st.caption('Observación: ' + f['observacion'])
         with tab_equipment:
-            st.markdown('<div class="pmi-head"><div><h3>Uniformes y equipos</h3>'
-                        '<p>Confirma solo los artículos que recibiste físicamente.</p></div></div>', unsafe_allow_html=True)
+            st.markdown('<div class="pmi-head"><div><h3>Mis uniformes</h3>'
+                        '<p>La empresa te entregará 2 polos de trabajo de tu talla. '
+                        'Confirma solamente lo que hayas recibido físicamente.</p></div></div>', unsafe_allow_html=True)
+            _, _, polos_recibidos, _ = _pmi_polo_status(data, case)
+            st.markdown('<div class="pmi-polo-note">Polos de trabajo confirmados: <strong>'
+                        + str(polos_recibidos) + ' de 2</strong></div>', unsafe_allow_html=True)
             if not gear:
                 st.info('Aún no hay entregas registradas a tu nombre.')
             for g in reversed(gear):
