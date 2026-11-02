@@ -12555,7 +12555,7 @@ def _pm2_task_compact_html(row, show_worker=False):
         'height:50px;width:50px;border-radius:15px;border:1px solid #d7e6fb;'
         'background:linear-gradient(145deg,#f0f6ff,#e8f1ff);color:#3467b6;flex-shrink:0">'
         + _pm4_icon(_pm4_task_type(str(row.get('titulo',''))), 23) + '</div>'
-        '<div class="pm4-mini-main" style="min-width:0;flex:1">'
+        '<div class="pm4-mini-main" style="min-width:0;flex:1;padding-bottom:18px;box-sizing:border-box">'
         '<div class="pm4-mini-top" style="display:flex;align-items:center;'
         'justify-content:space-between;gap:9px;flex-wrap:wrap;min-width:0">'
         '<div class="pm4-mini-titlewrap" style="flex:1 1 180px;min-width:0">'
@@ -12621,7 +12621,9 @@ def _pm4_admin_dashboard_css():
     .st-key-pm4_activities_panel .pm4-mini-titlewrap h4{font-size:.93rem!important;line-height:1.32!important;
       color:#1c2f4b!important;word-break:break-word}
     .st-key-pm4_activities_panel .pm4-mini-status{padding:5px 10px!important;font-size:.72rem!important}
-    .st-key-pm4_activities_panel .pm4-mini-meta-row{gap:6px!important;margin-top:9px!important}
+    /* Espacio inferior real en el contenido: las etiquetas nunca rozan el borde. */
+    .st-key-pm4_activities_panel .pm4-mini-main{box-sizing:border-box!important;padding-bottom:18px!important}
+    .st-key-pm4_activities_panel .pm4-mini-meta-row{gap:6px!important;margin-top:9px!important;align-content:start!important}
     .st-key-pm4_activities_panel .pm4-mini-meta{padding:5px 8px!important;font-size:.69rem!important;
       line-height:1.3!important;overflow-wrap:anywhere;max-width:100%}
     .st-key-pm4_activities_panel .pm4-mini-sub{font-size:.73rem!important;margin-top:5px!important}
