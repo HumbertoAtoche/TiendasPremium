@@ -12488,6 +12488,148 @@ def _pm2_legacy_count():
     return int(df["tipo"].astype(str).str.startswith("Rutina Operativa ").sum())
 
 
+def _pm2_task_compact_html(row, show_worker=False):
+    esc = _html.escape
+    current = str(row.get("estado", "Pendiente"))
+    status_label, tone = _pm2_state_visual(row)
+    status_class = {"success":"done", "info":"active", "warning":"pending", "danger":"urgent"}.get(tone, "pending")
+    if current == "Por validar":
+        status_class = "reviewing"
+    elif current == "Cancelada":
+        status_class = "cancelled"
+    day = str(row.get("fecha", ""))[:10]
+    try:
+        day = datetime.strptime(day, "%Y-%m-%d").strftime("%d/%m/%Y")
+    except Exception:
+        pass
+    timerange = " – ".join(v for v in (str(row.get("hora_inicio", "")).strip(), str(row.get("hora_limite", "")).strip()) if v)
+    meta = []
+    if day:
+        meta.append(("calendar", day))
+    if timerange:
+        meta.append(("clock", timerange))
+    if str(row.get("zona", "")).strip():
+        meta.append(("pin", str(row.get("zona", "")).strip()))
+    if str(row.get("tienda", "")).strip():
+        meta.append(("store", str(row.get("tienda", "")).strip()))
+    meta_html = ''.join('<span class="pm4-mini-meta">' + _pm4_icon(ic, 14) + esc(val) + '</span>' for ic, val in meta[:4])
+    worker = ('<div class="pm4-mini-sub">' + _pm4_icon('user', 14) + esc(str(row.get('nombre', ''))) + '</div>' if show_worker else '')
+    return (
+        '<article class="pm4-mini-card pm4-mini-card--' + status_class + '">'
+        '<div class="pm4-mini-left"><div class="pm4-mini-icon">' + _pm4_icon(_pm4_task_type(str(row.get('titulo',''))), 20) + '</div></div>'
+        '<div class="pm4-mini-main"><div class="pm4-mini-top">'
+        '<div class="pm4-mini-titlewrap"><h4>' + esc(str(row.get('titulo', 'Actividad programada'))) + '</h4>' + worker + '</div>'
+        '<span class="pm4-mini-status pm4-mini-status--' + status_class + '">' + esc(status_label) + '</span></div>'
+        '<div class="pm4-mini-meta-row">' + meta_html + '</div></div></article>'
+    )
+
+
+def _pm2_admin_focus_worker(label):
+    st.session_state['pm2_monitor_worker'] = label
+
+
+def _pm2_admin_open_task(task_id):
+    st.session_state['_pm2_admin_task_open'] = str(task_id)
+
+
+def _pm2_admin_close_task():
+    st.session_state['_pm2_admin_task_open'] = None
+
+
+def _pm2_render_admin_task_actions(task):
+    task_id = str(task['id_rutina'])
+    st.markdown(_pm2_task_summary_html(task, show_worker=True), unsafe_allow_html=True)
+    _pm3_gallery(task_id, 'admin')
+    current = str(task['estado'])
+    if current == 'Por validar':
+        with st.form('pm3_review_dialog_' + task_id):
+            st.caption('Validación del supervisor · revisa evidencias e instrucciones antes de decidir')
+            review_note = st.text_area('Comentario de revisión', key='pm3_review_note_dialog_' + task_id,
+                                       placeholder='Indica las correcciones necesarias si observas la tarea', max_chars=800)
+            r_a, r_b = st.columns(2)
+            approved = r_a.form_submit_button('Aprobar', use_container_width=True, type='primary')
+            rejected = r_b.form_submit_button('Solicitar corrección', use_container_width=True)
+        if approved or rejected:
+            ok, msg = _pm3_review(task_id, approved, review_note)
+            if ok:
+                _pm3_flash('admin', 'review', True, msg)
+                st.session_state['_pm2_admin_task_open'] = task_id
+                st.rerun()
+            elif 'actualizando' in msg.lower():
+                _pm3_flash('admin', 'review', False, msg)
+                _pm2_clear_cache()
+                st.session_state['_pm2_admin_task_open'] = task_id
+                st.rerun()
+            else:
+                st.error(msg)
+    if current not in ('Cancelada', 'Completada', 'Por validar'):
+        with st.expander('Editar horario, ubicación o instrucciones', expanded=False):
+            with st.form('pm2_edit_form_dialog_' + task_id):
+                edate = st.date_input('Fecha', value=datetime.strptime(str(task['fecha'])[:10], '%Y-%m-%d').date(), key='pm2_edate_dialog_' + task_id)
+                etitle = st.text_input('Actividad', value=str(task['titulo']), max_chars=120, key='pm2_etitle_dialog_' + task_id)
+                edesc = st.text_area('Instrucciones', value=str(task['instrucciones']), max_chars=1000, key='pm2_edesc_dialog_' + task_id)
+                c_st, c_zo = st.columns(2)
+                estore = c_st.text_input('Tienda', value=str(task['tienda']), key='pm2_estore_dialog_' + task_id)
+                ezone = c_zo.text_input('Ubicación', value=str(task['zona']), key='pm2_ezone_dialog_' + task_id)
+                ct1, ct2, ct3 = st.columns(3)
+                def _t(value, fallback):
+                    try:
+                        return datetime.strptime(str(value), '%H:%M').time()
+                    except Exception:
+                        return dt_time(*fallback)
+                ebegin = ct1.time_input('Desde', value=_t(task['hora_inicio'], (8, 45)), key='pm2_ebegin_dialog_' + task_id)
+                eend = ct2.time_input('Hasta', value=_t(task['hora_limite'], (9, 30)), key='pm2_eend_dialog_' + task_id)
+                epri = ct3.selectbox('Prioridad', ['Normal', 'Alta', 'Urgente'], index=['Normal', 'Alta', 'Urgente'].index(str(task['prioridad'])) if str(task['prioridad']) in ('Normal', 'Alta', 'Urgente') else 0, key='pm2_epri_dialog_' + task_id)
+                ereq = st.checkbox('Evidencia fotográfica obligatoria', value=str(task.get('evidencia_obligatoria', 'No')).lower() in ('sí', 'si', 'true', '1'), key='pm2_ereq_dialog_' + task_id)
+                edit_submitted = st.form_submit_button('Guardar cambios', use_container_width=True)
+            if edit_submitted:
+                ok, msg = _pm2_edit_task(task_id, edate, estore, ezone, etitle, edesc, ebegin.strftime('%H:%M'), eend.strftime('%H:%M'), epri, ereq)
+                if ok:
+                    _pm62_confirmar_despues_de_actualizar(msg)
+                    st.session_state['_pm2_admin_task_open'] = task_id
+                    st.rerun()
+                else:
+                    _pm2_notice(False, msg)
+    cta1, cta2 = st.columns(2)
+    if current not in ('Completada', 'Cancelada', 'Por validar'):
+        if cta1.button('Cancelar actividad', key='pm2_cancel_dialog_' + task_id, use_container_width=True):
+            ok, msg = _pm2_update_progress(task_id, 'Cancelada', str(task.get('observacion', '')))
+            if ok:
+                _pm62_confirmar_despues_de_actualizar(msg)
+                st.session_state['_pm2_admin_task_open'] = task_id
+                st.rerun()
+            else:
+                _pm2_notice(False, msg)
+    elif current in ('Cancelada', 'Completada'):
+        if cta1.button('Reabrir actividad', key='pm2_reopen_dialog_' + task_id, use_container_width=True):
+            ok, msg = _pm2_update_progress(task_id, 'Pendiente', str(task.get('observacion', '')))
+            if ok:
+                _pm62_confirmar_despues_de_actualizar(msg)
+                st.session_state['_pm2_admin_task_open'] = task_id
+                st.rerun()
+            else:
+                _pm2_notice(False, msg)
+    if cta2.button('Cerrar detalle', key='pm2_close_dialog_' + task_id, use_container_width=True):
+        _pm2_admin_close_task()
+        st.rerun()
+
+
+@st.dialog('Actividad programada', width='large', **_pm_dialog_dismiss_kwargs(_pm2_admin_close_task))
+def _pm2_admin_task_dialog(task_id):
+    data, err = _pm2_load()
+    if err:
+        st.error(err)
+        return
+    if data is None or data.empty:
+        st.info('No se encontró la actividad seleccionada.')
+        return
+    row = data[data['id_rutina'].astype(str) == str(task_id)]
+    if row.empty:
+        st.info('La actividad ya no está disponible con la información actual.')
+        return
+    _pm2_render_admin_task_actions(row.iloc[0])
+
+
 # Evita escrituras simultáneas dentro de una misma instancia de Streamlit.
 # Google Sheets no ofrece CAS/transactions entre instancias diferentes.
 @st.cache_resource(show_spinner=False)
@@ -20107,6 +20249,7 @@ elif choice == "Rutinas Operativas":
                                           "En marcha" if pct else "Jornada por comenzar")
                             _milestone_txt = ("Todas las actividades de esta selección están validadas." if total_g and pct == 100 else
                                               "Sigue el progreso de esta persona durante la jornada.")
+                            worker_label = str(worker_name) + " · " + dni_g[-4:]
                             html = (
                                 '<article class="pm4-staff-card"><div class="pm4-staff-head">'
                                 f'{ui_avatar(str(worker_name), dni_g, "", 48)}'
@@ -20121,77 +20264,28 @@ elif choice == "Rutinas Operativas":
                                 + _milestone_txt + '</small></div></div></article>'
                             )
                             st.markdown(html, unsafe_allow_html=True)
+                            st.button("Ver rutinas", key="pm2_focus_" + dni_g, use_container_width=True,
+                                      on_click=_pm2_admin_focus_worker, args=(worker_label,), icon=':material/visibility:')
                     with c_list:
                         st.markdown('<div class="pm2-split-title">Actividades programadas</div>', unsafe_allow_html=True)
                         df_day = df_day.sort_values(["hora_inicio", "nombre", "titulo"])
-                        for _, task in df_day.iterrows():
-                            task_id = str(task["id_rutina"])
-                            with st.container(border=True, key="pm2_admin_" + task_id):
-                                st.markdown(_pm2_task_summary_html(task, show_worker=True), unsafe_allow_html=True)
-                                _pm3_gallery(task_id, "admin")
-                                current = str(task["estado"])
-                                if current == "Por validar":
-                                    with st.form("pm3_review_" + task_id):
-                                        st.caption("Validación del supervisor · revisa evidencias e instrucciones antes de decidir")
-                                        review_note = st.text_area("Comentario de revisión", key="pm3_review_note_" + task_id,
-                                                                   placeholder="Indica las correcciones necesarias si observas la tarea", max_chars=800)
-                                        r_a, r_b = st.columns(2)
-                                        approved = r_a.form_submit_button("Aprobar", use_container_width=True, type="primary")
-                                        rejected = r_b.form_submit_button("Solicitar corrección", use_container_width=True)
-                                    if approved or rejected:
-                                        ok, msg = _pm3_review(task_id, approved, review_note)
-                                        if ok:
-                                            _pm3_flash("admin", "review", True, msg)
-                                            st.rerun()
-                                        elif "actualizando" in msg.lower():
-                                            _pm3_flash("admin", "review", False, msg)
-                                            _pm2_clear_cache()
-                                            st.rerun()
-                                        else:
-                                            st.error(msg)
-                                if current not in ("Cancelada", "Completada", "Por validar"):
-                                    with st.expander("Editar horario, ubicación o instrucciones", expanded=False):
-                                        with st.form("pm2_edit_form_" + task_id):
-                                            edate = st.date_input("Fecha", value=datetime.strptime(str(task["fecha"])[:10], "%Y-%m-%d").date(), key="pm2_edate_" + task_id)
-                                            etitle = st.text_input("Actividad", value=str(task["titulo"]), max_chars=120, key="pm2_etitle_" + task_id)
-                                            edesc = st.text_area("Instrucciones", value=str(task["instrucciones"]), max_chars=1000, key="pm2_edesc_" + task_id)
-                                            c_st, c_zo = st.columns(2)
-                                            estore = c_st.text_input("Tienda", value=str(task["tienda"]), key="pm2_estore_" + task_id)
-                                            ezone = c_zo.text_input("Ubicación", value=str(task["zona"]), key="pm2_ezone_" + task_id)
-                                            ct1, ct2, ct3 = st.columns(3)
-                                            def _t(value, fallback):
-                                                try:
-                                                    return datetime.strptime(str(value), "%H:%M").time()
-                                                except Exception:
-                                                    return dt_time(*fallback)
-                                            ebegin = ct1.time_input("Desde", value=_t(task["hora_inicio"], (8, 45)), key="pm2_ebegin_" + task_id)
-                                            eend = ct2.time_input("Hasta", value=_t(task["hora_limite"], (9, 30)), key="pm2_eend_" + task_id)
-                                            epri = ct3.selectbox("Prioridad", ["Normal", "Alta", "Urgente"], index=["Normal", "Alta", "Urgente"].index(str(task["prioridad"])) if str(task["prioridad"]) in ("Normal", "Alta", "Urgente") else 0, key="pm2_epri_" + task_id)
-                                            ereq = st.checkbox("Evidencia fotográfica obligatoria", value=str(task.get("evidencia_obligatoria", "No")).lower() in ("sí", "si", "true", "1"), key="pm2_ereq_" + task_id)
-                                            edit_submitted = st.form_submit_button("Guardar cambios", use_container_width=True)
-                                        if edit_submitted:
-                                            ok, msg = _pm2_edit_task(task_id, edate, estore, ezone, etitle, edesc, ebegin.strftime("%H:%M"), eend.strftime("%H:%M"), epri, ereq)
-                                            if ok:
-                                                _pm62_confirmar_despues_de_actualizar(msg)
-                                                st.rerun()
-                                            else:
-                                                _pm2_notice(False, msg)
-                                if current not in ("Completada", "Cancelada", "Por validar"):
-                                    if st.button("Cancelar actividad", key="pm2_cancel_" + task_id, use_container_width=True):
-                                        ok, msg = _pm2_update_progress(task_id, "Cancelada", str(task.get("observacion", "")))
-                                        if ok:
-                                            _pm62_confirmar_despues_de_actualizar(msg)
-                                            st.rerun()
-                                        else:
-                                            _pm2_notice(False, msg)
-                                elif current in ("Cancelada", "Completada"):
-                                    if st.button("Reabrir actividad", key="pm2_reopen_" + task_id, use_container_width=True):
-                                        ok, msg = _pm2_update_progress(task_id, "Pendiente", str(task.get("observacion", "")))
-                                        if ok:
-                                            _pm62_confirmar_despues_de_actualizar(msg)
-                                            st.rerun()
-                                        else:
-                                            _pm2_notice(False, msg)
+                        if selected_worker != "Todos":
+                            st.caption("Mostrando las actividades del colaborador seleccionado. Usa el filtro superior o las tarjetas de la izquierda para cambiar de persona.")
+                        else:
+                            st.caption("Vista compacta: revisa una actividad por vez con el botón de detalle.")
+                        _summary = df_day.copy()
+                        st.markdown('<style>.pm4-mini-card{display:flex;gap:14px;align-items:flex-start;border:1px solid #e6edf5;background:#fff;border-radius:20px;padding:15px 16px;box-shadow:0 16px 32px -28px rgba(28,40,69,.28)}.pm4-mini-left{flex:0 0 auto}.pm4-mini-icon{width:54px;height:54px;border-radius:16px;display:grid;place-items:center;background:#f4f8ff;color:#2f61b2;border:1px solid #dbe7f7}.pm4-mini-main{min-width:0;flex:1}.pm4-mini-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}.pm4-mini-titlewrap h4{margin:0;color:#20314a;font-size:1.08rem;line-height:1.35}.pm4-mini-sub{display:flex;align-items:center;gap:6px;color:#708199;font-size:.83rem;margin-top:5px}.pm4-mini-meta-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.pm4-mini-meta{display:inline-flex;align-items:center;gap:6px;font-size:.78rem;color:#607087;background:#f7f9fc;border:1px solid #e8edf4;padding:6px 9px;border-radius:999px}.pm4-mini-status{display:inline-flex;align-items:center;justify-content:center;padding:7px 12px;border-radius:999px;font-size:.79rem;font-weight:800;border:1px solid transparent}.pm4-mini-status--done{background:#e9f9ef;color:#1a8c53;border-color:#cbeed8}.pm4-mini-status--active{background:#e9f2ff;color:#2458bd;border-color:#d8e4ff}.pm4-mini-status--pending,.pm4-mini-status--urgent{background:#fff5e8;color:#9a620c;border-color:#f7e0bb}.pm4-mini-status--reviewing{background:#eef3ff;color:#3256c7;border-color:#dbe3ff}.pm4-mini-status--cancelled{background:#fff1f1;color:#b94a58;border-color:#f5d7db}@media(max-width:780px){.pm4-mini-top{flex-direction:column;align-items:flex-start}}</style>', unsafe_allow_html=True)
+                        for _, task in _summary.iterrows():
+                            task_id = str(task['id_rutina'])
+                            with st.container(border=False, key='pm2_admin_compact_' + task_id):
+                                row_left, row_right = st.columns([1, .22], vertical_alignment='center')
+                                with row_left:
+                                    st.markdown(_pm2_task_compact_html(task, show_worker=(selected_worker == 'Todos')), unsafe_allow_html=True)
+                                with row_right:
+                                    st.button('Ver', key='pm2_open_task_' + task_id, use_container_width=True,
+                                              on_click=_pm2_admin_open_task, args=(task_id,), icon=':material/visibility:')
+                        if st.session_state.get('_pm2_admin_task_open'):
+                            _pm2_admin_task_dialog(st.session_state.get('_pm2_admin_task_open'))
 
         with t_create:
             st.markdown('<div class="pm2-split-title">Nueva asignación personalizada</div>', unsafe_allow_html=True)
