@@ -14683,73 +14683,245 @@ def _pm_av_open_message(target):
 def _pm_av_request_panel():
     st.session_state['_pm_av_panel_owner'] = _pm2_dni(dni_actual)
     st.session_state['_pm_av_panel_open'] = True
+    st.session_state['_pm_av_filter'] = 'Pendientes' if st.session_state.get('_pm_av_unread') else 'Leídos'
+    st.session_state['_pm_av_selected_id'] = ''
+    st.session_state['_pm_av_last_read'] = ''
+    st.session_state['_pm_av_page_size'] = 8
 
 
 def _pm_av_close_panel():
     st.session_state['_pm_av_panel_open'] = False
+    st.session_state['_pm_av_selected_id'] = ''
+    st.session_state.pop('_pm_av_toast_after_ack', None)
 
 
-@st.dialog("Mensajes del supervisor y administración", width="large", **_pm_dialog_dismiss_kwargs(_pm_av_close_panel))
+def _pm_av_view_state(messages, read_ids, view='Pendientes', selected_id=''):
+    """Modelo puro de la bandeja: filtra sin descartar el historial leído."""
+    unique = {m['id']: m for m in messages if isinstance(m, dict) and m.get('id')}
+    ordered = sorted(unique.values(), key=lambda item: str(item.get('fecha', '')), reverse=True)
+    pending = [m for m in ordered if m['id'] not in read_ids]
+    read = [m for m in ordered if m['id'] in read_ids]
+    view = view if view in ('Pendientes', 'Leídos') else 'Pendientes'
+    visible = pending if view == 'Pendientes' else read
+    selected = next((m for m in visible if m['id'] == selected_id), visible[0] if visible else None)
+    return {'pending': pending, 'read': read, 'visible': visible, 'selected': selected, 'view': view}
+
+
+def _pm_av_readable_date(value):
+    """Fecha breve para el listado, sin depender de la configuración regional."""
+    raw = str(value or '').strip()
+    try:
+        parsed = datetime.strptime(raw[:16], '%Y-%m-%d %H:%M')
+        months = ('ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic')
+        return f'{parsed.day:02d} {months[parsed.month-1]}, {parsed:%H:%M}'
+    except (ValueError, TypeError):
+        return raw[:16] if raw else 'Sin fecha'
+
+
+def _pm_av_refresh_dialog():
+    """Actualiza únicamente el diálogo; evita que se cierre y abra tras un acuse."""
+    try:
+        st.rerun(scope='fragment')
+    except TypeError:  # Compatibilidad con versiones previas de Streamlit.
+        st.rerun()
+
+
+@st.dialog('Mis mensajes', width='large', **_pm_dialog_dismiss_kwargs(_pm_av_close_panel))
 def _pm_av_dialog(messages, read_ids, ready):
-    unread = [m for m in messages if m['id'] not in read_ids]
-    if not unread:
-        st.success('No tienes mensajes pendientes por leer.')
-        if st.button('Cerrar', key='pm_av_dialog_close_empty', use_container_width=True):
-            _pm_av_close_panel()
-            st.rerun()
-        return
-    st.markdown('''<style>
-    .pm-av-wrap{display:flex;flex-direction:column;gap:12px;padding-top:2px}
-    .pm-av-card{border:1px solid #e8edf4;border-radius:18px;background:linear-gradient(180deg,#ffffff,#fbfcff);padding:16px 16px 14px;box-shadow:0 14px 28px -26px rgba(22,35,57,.35)}
-    .pm-av-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:10px}
-    .pm-av-meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
-    .pm-av-chip{display:inline-flex;align-items:center;padding:5px 10px;border-radius:999px;font-size:.72rem;font-weight:780;border:1px solid #e4e9f0;background:#f9fbfd;color:#516274}
-    .pm-av-chip.mod{background:#eef5ff;border-color:#d7e6ff;color:#2458bd}
-    .pm-av-chip.tipo{background:#fff4e8;border-color:#fde2be;color:#9a5b0a}
-    .pm-av-title{font-size:1.05rem;font-weight:850;color:#1f2f46;line-height:1.35;margin:0}
-    .pm-av-date{font-size:.78rem;color:#708199;white-space:nowrap}
-    .pm-av-text{font-size:.95rem;line-height:1.65;color:#31445f;background:#f9fbfd;border:1px solid #edf1f6;padding:12px 13px;border-radius:14px;margin:10px 0 14px;white-space:pre-wrap}
-    .pm-av-headnote{padding:12px 14px;border-radius:16px;border:1px solid #f0d7a6;background:#fff8eb;color:#935e12;font-size:.88rem;line-height:1.6;margin-bottom:12px}
-    </style>''', unsafe_allow_html=True)
-    st.markdown('<div class="pm-av-headnote"><b>Tienes ' + str(len(unread)) + ' mensaje(s) pendiente(s)</b><br>Se muestran por módulo, tema y fecha para que entiendas rápidamente de qué se trata cada comentario.</div>', unsafe_allow_html=True)
-    st.markdown('<div class="pm-av-wrap">', unsafe_allow_html=True)
-    for idx, m in enumerate(unread[:12]):
-        modulo = _html.escape(str(m.get('modulo') or 'Premium Market'))
-        tipo = _html.escape(str(m.get('tipo') or 'mensaje').capitalize())
-        titulo = _html.escape(str(m.get('titulo') or 'Mensaje'))
-        fecha = _html.escape(str(m.get('fecha') or '')[:16])
-        texto = _html.escape(str(m.get('texto') or ''))
-        st.markdown(
-            '<div class="pm-av-card"><div class="pm-av-top"><div style="min-width:0;flex:1">'
-            '<div class="pm-av-meta"><span class="pm-av-chip mod">' + modulo + '</span><span class="pm-av-chip tipo">' + tipo + '</span></div>'
-            '<p class="pm-av-title">' + titulo + '</p></div><div class="pm-av-date">' + fecha + '</div></div>'
-            '<div class="pm-av-text">' + texto + '</div></div>', unsafe_allow_html=True)
-        c1, c2 = st.columns(2)
-        with c1:
-            st.button('Abrir origen', key='pm_av_dialog_open_' + m['id'], use_container_width=True,
-                      on_click=_pm_av_open_message, args=(m['modulo'],))
-        with c2:
-            if st.button('Marcar leído', key='pm_av_dialog_ack_' + m['id'],
-                         disabled=not ready or bool(st.session_state.get('ver_como')), use_container_width=True, type='primary'):
-                try:
-                    _pm_av_ack(m['id'])
-                    st.session_state['_pm_av_panel_open'] = True
-                    st.rerun()
-                except Exception:
-                    st.error('No se pudo registrar la lectura. Revisa la conexión y vuelve a intentarlo.')
-        if idx < min(len(unread), 12) - 1:
-            st.divider()
-    st.markdown('</div>', unsafe_allow_html=True)
-    if len(unread) > 12:
-        st.caption(f'Hay {len(unread)-12} mensaje(s) adicional(es). Marca algunos como leídos para ver el resto.')
-    a,b=st.columns([1,1])
-    with a:
-        if st.button('Cerrar panel', key='pm_av_dialog_close', use_container_width=True):
-            _pm_av_close_panel()
-            st.rerun()
-    with b:
-        st.button('Ir a Marcar Asistencia', key='pm_av_dialog_go_home', use_container_width=True,
-                  on_click=_pm_av_open_message, args=('Marcar Asistencia',))
+    """Bandeja compacta con historial; confirmar lectura no cierra la ventana."""
+    # st.dialog es un fragmento: al interactuar no se reejecuta automáticamente
+    # el sidebar. Se consulta la caché vigente y se refresca después de cada acuse.
+    try:
+        current_reads, current_ready = _pm_av_receipts(force=False)
+        read_ids, ready = current_reads, current_ready
+    except Exception:
+        st.warning('No fue posible actualizar el estado de lectura. Intenta de nuevo antes de confirmar.')
+        ready = False
+
+    st.markdown("""<style>
+    div[data-testid="stDialog"] div[role="dialog"]{border-radius:24px!important;box-shadow:0 28px 75px rgba(22,35,57,.21)!important}
+    div[data-testid="stDialog"] h2{font-size:1.56rem!important;color:#1b2940!important;font-weight:850!important;letter-spacing:-.035em!important}
+    div[data-testid="stDialog"] h2::before{content:"✉";display:inline-grid;place-items:center;
+      width:43px;height:43px;margin-right:12px;background:#fff0f3;color:#bd3049;border-radius:13px;
+      font-size:1.35rem;vertical-align:middle;font-weight:500}
+    .pm-av-subtitle{font-size:.88rem;color:#6f7f96;margin:-1px 0 16px;line-height:1.55}
+    .pm-av-list-title{font-size:.69rem;color:#78879b;text-transform:uppercase;letter-spacing:.085em;font-weight:800;margin:4px 0 12px}
+    .pm-av-list-note{font-size:.78rem;color:#738399;margin:7px 0 0;line-height:1.5}
+    .pm-av-detail{border:1px solid #e5eaf2;border-radius:19px;padding:19px 19px 15px;background:linear-gradient(155deg,#fff,#fbfcff);
+      box-shadow:0 12px 28px -26px rgba(18,30,49,.36);min-height:270px}
+    .pm-av-detail-meta{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-bottom:15px}
+    .pm-av-chip{display:inline-flex;align-items:center;border-radius:999px;padding:6px 11px;background:#f1f4f8;
+      color:#53647a;font-size:.75rem;font-weight:750;border:1px solid #e8edf4}
+    .pm-av-chip.module{color:#285fb4;background:#edf4ff;border-color:#dce9ff}
+    .pm-av-datetime{margin-left:auto;color:#7a889c;font-size:.76rem}
+    .pm-av-detail h3{font-size:1.1rem;line-height:1.45;letter-spacing:-.013em;margin:0 0 14px;color:#1c2c45;font-weight:840;overflow-wrap:anywhere}
+    .pm-av-body{padding:15px 16px;background:#f5f7fa;border:1px solid #edf0f5;border-radius:14px;color:#273951;
+      font-size:.96rem;line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere}
+    .pm-av-seen{display:flex;gap:9px;align-items:center;margin:15px 0 4px;padding:11px 13px;border-radius:12px;
+      background:#ecf8f0;color:#17774c;font-size:.83rem;font-weight:740}
+    .pm-av-seen-dot{width:20px;height:20px;border-radius:100%;display:grid;place-items:center;background:#19a16a;color:white;font-weight:900}
+    .pm-av-hint{color:#74839a;font-size:.8rem;line-height:1.55;margin:12px 0}
+    .pm-av-empty{border:1px dashed #dbe3ed;border-radius:16px;background:#fafbfd;color:#718199;
+      padding:28px 17px;text-align:center;font-size:.87rem;line-height:1.6}
+    .pm-av-footer{display:flex;align-items:center;gap:8px;color:#6c7b93;font-size:.79rem;padding:12px 0 2px}
+    div[data-testid="stDialog"] [class*="st-key-pm_av_tab_"] button{
+      min-height:39px!important;border-radius:13px!important;font-size:.79rem!important;
+      font-weight:780!important;box-shadow:none!important}
+    div[data-testid="stDialog"] [class*="st-key-pm_av_tab_active_"] button{
+      background:#ffeff1!important;color:#a92d42!important;border:1px solid #f6d8dd!important}
+    div[data-testid="stDialog"] [class*="st-key-pm_av_tab_idle_"] button{
+      background:#f5f7fa!important;color:#4e5d75!important;border:1px solid #e7ebf2!important}
+    div[data-testid="stDialog"] [class*="st-key-pm_av_item_"]{
+      padding:9px 11px 7px;border-radius:14px;border:1px solid #e9edf4;margin-bottom:6px;background:#fff}
+    div[data-testid="stDialog"] [class*="st-key-pm_av_item_active_"]{
+      background:#fff5f6!important;border-color:#f4dce0!important}
+    div[data-testid="stDialog"] [class*="st-key-pm_av_item_"] button{
+      background:transparent!important;color:#20324c!important;border:0!important;box-shadow:none!important;
+      justify-content:flex-start!important;text-align:left!important;min-height:35px!important;padding:2px 0!important}
+    div[data-testid="stDialog"] [class*="st-key-pm_av_item_"] button p{
+      color:#20324c!important;font-size:.83rem!important;font-weight:790!important;line-height:1.37!important;
+      white-space:normal!important;text-align:left!important;overflow-wrap:anywhere}
+    div[data-testid="stDialog"] [class*="st-key-pm_av_item_"] [data-testid="stCaptionContainer"]{
+      margin-top:-3px!important;margin-bottom:2px!important}
+    div[data-testid="stDialog"] [class*="st-key-pm_av_item_"] [data-testid="stCaptionContainer"] p{
+      font-size:.72rem!important;color:#738298!important;line-height:1.3!important}
+    div[data-testid="stDialog"] [class*="st-key-pm_av_action_"] button{
+      min-height:44px!important;border-radius:12px!important;font-weight:740!important}
+    @media(max-width:750px){
+      div[data-testid="stDialog"] h2{font-size:1.18rem!important}
+      div[data-testid="stDialog"] h2::before{width:34px;height:34px;font-size:1.12rem;margin-right:8px}
+      .pm-av-detail{padding:14px;border-radius:16px;min-height:0}
+      .pm-av-detail h3{font-size:1.02rem}.pm-av-body{padding:12px;font-size:.89rem}
+      .pm-av-datetime{margin-left:0}
+    }
+    </style>""", unsafe_allow_html=True)
+
+    st.markdown('<p class="pm-av-subtitle">Comentarios e indicaciones de tu supervisor y administración.</p>',
+                unsafe_allow_html=True)
+
+    # Si se acaba de confirmar una lectura, permanecer en el mismo mensaje,
+    # moverlo a Leídos y mostrar una única notificación de agradecimiento.
+    flash_id = st.session_state.pop('_pm_av_toast_after_ack', None)
+    if flash_id:
+        try:
+            st.toast('Gracias, mensaje marcado como leído.', icon=':material/check_circle:')
+        except Exception:
+            pass
+
+    view = st.session_state.get('_pm_av_filter', 'Pendientes')
+    selected_id = st.session_state.get('_pm_av_selected_id', '')
+    model = _pm_av_view_state(messages, read_ids, view, selected_id)
+    left, right = st.columns([0.92, 1.45], gap='medium')
+    with left:
+        tab_l, tab_r = st.columns(2, gap='small')
+        with tab_l:
+            tab_key = 'pm_av_tab_' + ('active_' if view == 'Pendientes' else 'idle_') + 'pending'
+            with st.container(key=tab_key):
+                if st.button(f'Pendientes ({len(model["pending"])})', key='pm_av_tab_btn_pending',
+                             use_container_width=True):
+                    st.session_state['_pm_av_filter'] = 'Pendientes'
+                    st.session_state['_pm_av_selected_id'] = ''
+                    st.session_state['_pm_av_last_read'] = ''
+                    _pm_av_refresh_dialog()
+        with tab_r:
+            tab_key = 'pm_av_tab_' + ('active_' if view == 'Leídos' else 'idle_') + 'read'
+            with st.container(key=tab_key):
+                if st.button(f'Leídos ({len(model["read"])})', key='pm_av_tab_btn_read',
+                             use_container_width=True):
+                    st.session_state['_pm_av_filter'] = 'Leídos'
+                    st.session_state['_pm_av_selected_id'] = ''
+                    st.session_state['_pm_av_last_read'] = ''
+                    _pm_av_refresh_dialog()
+        st.markdown('<div class="pm-av-list-title">' + ('Por revisar' if view == 'Pendientes' else 'Historial de mensajes') + '</div>',
+                    unsafe_allow_html=True)
+        if not model['visible']:
+            st.markdown('<div class="pm-av-empty">' +
+                        ('No tienes mensajes pendientes.<br>Todo está al día.' if view == 'Pendientes'
+                         else 'Aún no has marcado mensajes como leídos.') + '</div>',
+                        unsafe_allow_html=True)
+        else:
+            limit = int(st.session_state.get('_pm_av_page_size', 8))
+            for m in model['visible'][:limit]:
+                is_active = bool(model['selected'] and m['id'] == model['selected']['id'])
+                prefix = 'pm_av_item_' + ('active_' if is_active else 'idle_') + m['id']
+                with st.container(key=prefix):
+                    module = str(m.get('modulo') or 'Premium Market')
+                    icon = (':material/fact_check:' if m.get('tipo') == 'rutina'
+                            else ':material/receipt_long:' if m.get('tipo') == 'boleta'
+                            else ':material/markunread:')
+                    if st.button(str(m.get('titulo') or 'Mensaje')[:140], key='pm_av_select_' + m['id'],
+                                 icon=icon, use_container_width=True):
+                        st.session_state['_pm_av_selected_id'] = m['id']
+                        st.session_state['_pm_av_last_read'] = ''
+                        _pm_av_refresh_dialog()
+                    st.caption(module + ' · ' + _pm_av_readable_date(m.get('fecha')))
+            if len(model['visible']) > limit:
+                if st.button('Ver más mensajes', key='pm_av_more_messages', use_container_width=True):
+                    st.session_state['_pm_av_page_size'] = limit + 8
+                    _pm_av_refresh_dialog()
+
+    with right:
+        m = model['selected']
+        if not m:
+            st.markdown('<div class="pm-av-empty">Selecciona un mensaje de la lista para ver su contenido.</div>',
+                        unsafe_allow_html=True)
+        else:
+            is_read = m['id'] in read_ids
+            module = _html.escape(str(m.get('modulo') or 'Premium Market'))
+            tipo = {'rutina':'Rutina', 'boleta':'Boleta', 'solicitud':'Solicitud'}.get(
+                str(m.get('tipo') or ''), 'Mensaje')
+            titulo = _html.escape(str(m.get('titulo') or 'Mensaje'))
+            body = _html.escape(str(m.get('texto') or ''))
+            date_text = _html.escape(_pm_av_readable_date(m.get('fecha')))
+            st.markdown(
+                '<div class="pm-av-detail"><div class="pm-av-detail-meta">'
+                '<span class="pm-av-chip module">' + module + '</span>'
+                '<span class="pm-av-chip">' + _html.escape(tipo) + '</span>'
+                '<span class="pm-av-datetime">' + date_text + '</span></div>'
+                '<h3>' + titulo + '</h3><div class="pm-av-body">' + body + '</div>'
+                + ('<div class="pm-av-seen"><span class="pm-av-seen-dot">✓</span>'
+                   + ('Gracias, mensaje marcado como leído.' if st.session_state.get('_pm_av_last_read') == m['id']
+                      else 'Mensaje leído') + '</div>' if is_read else '')
+                + '</div>', unsafe_allow_html=True)
+            if not ready and not is_read:
+                st.caption('El administrador debe activar el registro de lectura para confirmar mensajes.')
+            a, b = st.columns([1, 1], gap='small')
+            with a:
+                with st.container(key='pm_av_action_origin'):
+                    if st.button('Abrir en ' + str(m.get('modulo') or 'su módulo'),
+                                 key='pm_av_open_origin_' + m['id'], use_container_width=True,
+                                 icon=':material/open_in_new:'):
+                        _pm_av_open_message(m['modulo'])
+                        st.rerun()
+            with b:
+                with st.container(key='pm_av_action_ack'):
+                    if st.button('Leído' if is_read else 'Marcar leído',
+                                 key='pm_av_ack_' + m['id'], use_container_width=True,
+                                 type='secondary' if is_read else 'primary',
+                                 icon=':material/check:' if is_read else ':material/done:',
+                                 disabled=is_read or not ready or bool(st.session_state.get('ver_como'))):
+                        try:
+                            _pm_av_ack(m['id'])
+                            st.session_state['_pm_av_selected_id'] = m['id']
+                            st.session_state['_pm_av_filter'] = 'Leídos'
+                            st.session_state['_pm_av_last_read'] = m['id']
+                            st.session_state['_pm_av_toast_after_ack'] = m['id']
+                            _pm_av_refresh_dialog()
+                        except Exception:
+                            st.error('No se pudo confirmar la lectura. Comprueba Sheets y vuelve a intentarlo.')
+
+    st.divider()
+    footer_col, close_col = st.columns([3.1, 0.7], vertical_alignment='center')
+    with footer_col:
+        st.markdown('<div class="pm-av-footer">✉&nbsp; ' + str(len(model['pending']))
+                    + ' pendiente(s) · ' + str(len(model['read'])) + ' leído(s)</div>',
+                    unsafe_allow_html=True)
+    with close_col:
+        with st.container(key='pm_av_action_close'):
+            if st.button('Cerrar', key='pm_av_close', use_container_width=True):
+                _pm_av_close_panel()
+                st.rerun()
+
 
 
 def _pm_av_home_summary():
@@ -14758,6 +14930,15 @@ def _pm_av_home_summary():
         return
     unread = st.session_state.get('_pm_av_unread') or []
     if not unread:
+        if st.session_state.get('_pm_av_current_messages'):
+            with st.container(key='pm_av_home_history'):
+                st.markdown('<div style="border:1px solid #e6ebf2;background:#fff;border-radius:16px;'
+                            'padding:13px 16px;margin:8px 0 12px;color:#30415a;font-weight:700">'
+                            'Mis mensajes <span style="font-size:.81rem;font-weight:500;color:#7a8a9d">'
+                            ' · Todos leídos, puedes consultar el historial</span></div>', unsafe_allow_html=True)
+                st.button('Ver historial de mensajes', key='pm_av_home_history_btn',
+                          icon=':material/mail:', use_container_width=True,
+                          on_click=_pm_av_request_panel)
         return
     count = len(unread)
     modules = list(dict.fromkeys(str(m.get('modulo') or 'Premium Market') for m in unread))
@@ -14910,10 +15091,14 @@ def _mismo_dni_wrapper(dni):
 
 # Pendientes: un solo acceso por tema (muestra el número y lleva directo a la pantalla).
 def _btn_pendiente(etiqueta, key, destino, icono):
+    callback = _pm_av_request_panel if key == 'pm_notice_messages' else _ir_a
+    args = () if key == 'pm_notice_messages' else (destino,)
     try:
-        st.sidebar.button(etiqueta, key=key, use_container_width=True, on_click=_ir_a, args=(destino,), icon=icono)
+        st.sidebar.button(etiqueta, key=key, use_container_width=True,
+                          on_click=callback, args=args, icon=icono)
     except TypeError:   # versiones antiguas de Streamlit sin parámetro icon
-        st.sidebar.button(etiqueta, key=key, use_container_width=True, on_click=_ir_a, args=(destino,))
+        st.sidebar.button(etiqueta, key=key, use_container_width=True,
+                          on_click=callback, args=args)
 
 _pm_sidebar_alerts, _pm_sidebar_errors = _pm_sidebar_active_alerts()
 st.sidebar.markdown('<div class="tp-note-t pm-notice-title">AVISOS Y PENDIENTES' +
@@ -14921,6 +15106,11 @@ st.sidebar.markdown('<div class="tp-note-t pm-notice-title">AVISOS Y PENDIENTES'
                     '</div>', unsafe_allow_html=True)
 for _label,_count,_destination,_icon,_key in _pm_sidebar_alerts:
     _btn_pendiente(f'{_label} · {_count}',_key,_destination,_icon)
+if (rol_actual!='admin' and st.session_state.get('_pm_av_current_messages')
+        and not st.session_state.get('_pm_av_unread')):
+    st.sidebar.button('Mis mensajes · historial', key='pm_av_history_sidebar',
+                      icon=':material/mail:', use_container_width=True,
+                      on_click=_pm_av_request_panel)
 if _pm_sidebar_errors:
     st.sidebar.caption('Algunos avisos no pudieron actualizarse: ' + ', '.join(sorted(set(_pm_sidebar_errors))))
 if not _pm_sidebar_alerts and not _pm_sidebar_errors:
