@@ -17345,18 +17345,36 @@ def _pm_notice_button(item):
 def _pm_notice_css_for_items(items):
     """Microdescripción visual, segura para CSS y sin elementos clicables falsos."""
     rules=[]
+    accent_map = {
+        'pm_notice_messages': ('#d96b8f', '#fff7fa'),
+        'pm_notice_bottles': ('#d0a049', '#fffbf2'),
+        'pm_notice_training': ('#8eaee2', '#f5f9ff'),
+        'pm_notice_comm': ('#9a86da', '#faf7ff'),
+        'pm_notice_requests': ('#5f9dd9', '#f5f9ff'),
+        'pm_notice_deposit': ('#df6471', '#fff7f8'),
+        'pm_notice_bol_obs': ('#e06b5f', '#fff8f6'),
+        'pm_notice_bol_worker': ('#e58066', '#fff8f5'),
+        'pm_notice_rut_admin': ('#59b1a8', '#f4fcfa'),
+        'pm_notice_rut_worker': ('#63b69f', '#f4fbf8'),
+        'pm_notice_rut_observed': ('#d98b57', '#fff8f2'),
+    }
+    tone_map = {
+        'urgent': ('#df6471', '#fff7f8'),
+        'info': ('#8eaee2', '#f5f9ff'),
+        'message': ('#d96b8f', '#fff7fa'),
+        'neutral': ('#aab7c8', '#fbfcfe'),
+    }
     for _, _, _, _, key in items:
         group, subtitle, tone = _PM_NOTICE_PRESENTATION.get(key, ('Mensajes y seguimiento', 'Revisar información', 'neutral'))
         if key == 'pm_notice_deposit':
             signed = min(int(st.session_state.get('_pm_notice_signed_count') or 0), int(next((x[1] for x in items if x[4] == key), 0)))
             conforme = max(int(next((x[1] for x in items if x[4] == key), 0)) - signed, 0)
             subtitle = f'{signed} firmada(s) · {conforme} conforme(s) sin depósito'
-        safe_sub = str(subtitle).replace('\\','\\\\').replace('"','\\"').replace('\n',' ')
+        safe_sub = str(subtitle).replace('\\', '\\\\').replace('"', '\\"').replace('\n', ' ')
+        accent, bg = accent_map.get(key, tone_map.get(tone, ('#aab7c8', '#fbfcfe')))
         rules.append('section[data-testid="stSidebar"] .st-key-pm_alert_center .st-key-' + key + ' button::after{content:"' + safe_sub + '";}')
-        if tone == 'urgent':
-            rules.append('section[data-testid="stSidebar"] .st-key-pm_alert_center .st-key-' + key + ' button{border-left:3px solid #df6471!important;}')
-        elif tone == 'info':
-            rules.append('section[data-testid="stSidebar"] .st-key-pm_alert_center .st-key-' + key + ' button{border-left:3px solid #8eaee2!important;}')
+        rules.append('section[data-testid="stSidebar"] .st-key-pm_alert_center .st-key-' + key + ' button{border-left:4px solid ' + accent + '!important;background:linear-gradient(90deg,' + bg + ' 0%,#ffffff 18%)!important;}')
+        rules.append('section[data-testid="stSidebar"] .st-key-pm_alert_center .st-key-' + key + ' button:hover{background:linear-gradient(90deg,' + bg + ' 0%,#f8fbff 18%)!important;border-color:#d8e2ef!important;}')
     return ''.join(rules)
 
 
