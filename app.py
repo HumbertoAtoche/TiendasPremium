@@ -16804,18 +16804,31 @@ _PM_DAY_HUB_CSS = """<style>
   max-width:470px!important;flex:0 1 470px!important}
 .st-key-pm_day_card_mail,.st-key-pm_day_card_training,.st-key-pm_day_card_routines{
   display:flex!important;flex-direction:column!important;min-width:0!important;
-  min-height:286px!important;height:286px!important;padding:15px 16px 13px!important;
-  background:#fff!important;border:1px solid #e6ebf3!important;border-radius:16px!important;
+  height:336px!important;min-height:336px!important;max-height:336px!important;
+  padding:16px 17px 13px!important;overflow:hidden!important;
+  background:var(--pm-day-bg,#fff)!important;border:1px solid var(--pm-day-border,#e6ebf3)!important;border-radius:16px!important;
   box-shadow:0 4px 12px -12px rgba(23,42,73,.15)!important;box-sizing:border-box!important;
   transition:border-color .16s,box-shadow .16s!important}
 .st-key-pm_day_card_mail:hover,.st-key-pm_day_card_training:hover,.st-key-pm_day_card_routines:hover{
-  border-color:#cfd9e8!important;box-shadow:0 12px 25px -25px rgba(23,42,73,.26)!important}
+  border-color:var(--pm-day-accent,#cfd9e8)!important;
+  box-shadow:0 12px 25px -25px rgba(23,42,73,.26)!important}
 .st-key-pm_day_card_mail [data-testid="stVerticalBlock"],
 .st-key-pm_day_card_training [data-testid="stVerticalBlock"],
 .st-key-pm_day_card_routines [data-testid="stVerticalBlock"]{
-  display:flex!important;flex-direction:column!important;flex:1 1 auto!important;min-width:0!important}
-.pm-day-card-main{min-width:0;display:flex;flex-direction:column;gap:0;flex:1 1 auto}
-.pm-day-card-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:13px}
+  display:flex!important;flex-direction:column!important;flex:1 1 auto!important;
+  height:100%!important;min-height:0!important;min-width:0!important}
+/* Streamlit suele envolver st.markdown en un stElementContainer. Darle flex
+   a ese envoltorio (y no solo al article) ancla los tres pies en la misma línea. */
+.st-key-pm_day_card_mail [data-testid="stElementContainer"]:has(.pm-day-card-main),
+.st-key-pm_day_card_training [data-testid="stElementContainer"]:has(.pm-day-card-main),
+.st-key-pm_day_card_routines [data-testid="stElementContainer"]:has(.pm-day-card-main){
+  flex:1 1 auto!important;min-height:0!important;min-width:0!important}
+.pm-day-card-main{min-width:0;min-height:0;display:flex;flex-direction:column;gap:0;flex:1 1 auto}
+/* Tres colores muy suaves; la prioridad es la legibilidad del contenido. */
+.st-key-pm_day_card_mail{--pm-day-bg:#fffafb;--pm-day-border:#f2dce3;--pm-day-accent:#d45770;--pm-day-rule:#f1e0e5}
+.st-key-pm_day_card_training{--pm-day-bg:#f8fbff;--pm-day-border:#dbe8f8;--pm-day-accent:#4a83c6;--pm-day-rule:#dfeaf7}
+.st-key-pm_day_card_routines{--pm-day-bg:#f8fdfa;--pm-day-border:#d9ece1;--pm-day-accent:#33986c;--pm-day-rule:#deeee4}
+.pm-day-card-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
 .pm-day-card-icon{width:38px;height:38px;flex:none;border-radius:12px;display:grid;place-items:center;
   background:#fff0f3;color:#cb344f}
 .pm-day-card-icon svg{width:21px!important;height:21px!important}
@@ -16834,9 +16847,19 @@ _PM_DAY_HUB_CSS = """<style>
 .pm-day-progress i{height:100%;display:block;background:#3e82dd;border-radius:99px}
 .pm-day-progress-label{display:flex;justify-content:space-between;gap:8px;color:#72839a;font-size:.73rem;margin-bottom:3px}
 .st-key-pm_day_hub [class*="st-key-pm_day_action_"]{margin-top:auto!important;
-  padding-top:9px!important;border-top:1px solid #eef1f5!important}
+  padding-top:9px!important;border-top:1px solid var(--pm-day-rule,#eef1f5)!important}
+/* Rutinas comparte el mismo pie que Mensajes y Capacitaciones. */
+.st-key-pm_day_actions_routines{margin-top:auto!important;
+  border-top:1px solid var(--pm-day-rule,#eef1f5)!important;
+  padding-top:9px!important;width:100%!important}
+.st-key-pm_day_card_routines [class*="st-key-pm_day_action_routines"]{
+  margin-top:0!important;padding-top:0!important;border-top:0!important}
+/* Los contenedores internos de acciones no deben heredar el alto total de la tarjeta. */
+.st-key-pm_day_hub [class*="st-key-pm_day_action_"] [data-testid="stVerticalBlock"],
+.st-key-pm_day_actions_routines [data-testid="stVerticalBlock"]{
+  flex:0 0 auto!important;height:auto!important;min-height:0!important}
 .st-key-pm_day_hub [class*="st-key-pm_day_action_"] button{display:flex!important;
-  justify-content:space-between!important;align-items:center!important;min-height:38px!important;
+  justify-content:center!important;align-items:center!important;min-height:39px!important;
   padding:6px 1px!important;border:0!important;border-radius:0!important;background:transparent!important;
   box-shadow:none!important;color:#2e486a!important;font-size:.77rem!important;font-weight:790!important;
   text-align:left!important;transition:color .15s!important}
@@ -16849,12 +16872,12 @@ _PM_DAY_HUB_CSS = """<style>
 .pm-day-empty{background:#f8fbf9;border:1px solid #e1efe7;border-radius:13px;
   padding:14px 16px;display:flex;gap:10px;align-items:center;color:#315d49;font-size:.83rem;font-weight:730}
 .pm-day-empty svg{width:21px!important;height:21px!important;color:#23986b;flex:none}
-@media(max-width:850px){
+@media(max-width:900px){
   .st-key-pm_day_hub{padding:15px!important;margin:9px 0 17px!important}
   .st-key-pm_day_hub [data-testid="stHorizontalBlock"]{gap:10px!important}
-  .st-key-pm_day_card_mail,.st-key-pm_day_card_training,.st-key-pm_day_card_routines{padding:13px!important;min-height:268px!important;height:268px!important}
+  .st-key-pm_day_card_mail,.st-key-pm_day_card_training,.st-key-pm_day_card_routines{padding:14px!important;min-height:238px!important;height:auto!important;max-height:none!important;overflow:visible!important}
 }
-@media(max-width:720px){
+@media(max-width:900px){
   .st-key-pm_day_hub{padding:14px 12px!important;border-radius:18px!important}
   /* La fila principal se apila, sin alterar los dos botones de la tarjeta de rutinas. */
   .st-key-pm_day_hub [data-testid="stHorizontalBlock"]:has(.st-key-pm_day_card_mail),
@@ -16865,9 +16888,10 @@ _PM_DAY_HUB_CSS = """<style>
   .st-key-pm_day_hub [data-testid="stHorizontalBlock"]:has(.st-key-pm_day_card_training)>[data-testid="stColumn"],
   .st-key-pm_day_hub [data-testid="stHorizontalBlock"]:has(.st-key-pm_day_card_routines)>[data-testid="stColumn"]{
      width:100%!important;flex:1 1 auto!important;min-width:0!important}
-  .st-key-pm_day_card_mail,.st-key-pm_day_card_training,.st-key-pm_day_card_routines{min-height:220px!important;height:auto!important}
+  .st-key-pm_day_card_mail,.st-key-pm_day_card_training,.st-key-pm_day_card_routines{min-height:214px!important;height:auto!important;max-height:none!important}
   .st-key-pm_day_hub [data-testid="stHorizontalBlock"]>[data-testid="stColumn"]:only-child{
     max-width:none!important;flex:1 1 100%!important}
+  .st-key-pm_day_card_mail .pm-day-card-main,.st-key-pm_day_card_training .pm-day-card-main,.st-key-pm_day_card_routines .pm-day-card-main{flex:1 1 auto}
   .pm-day-card-top{margin-bottom:9px}
   .pm-day-head{margin-bottom:13px}
 }
@@ -16923,7 +16947,7 @@ def _pm_worker_day_hub():
                         item = unread[0]
                         title = _html.escape(str(item.get('titulo') or 'Mensaje del equipo'))
                         preview = str(item.get('texto') or '').replace('\n', ' ').strip()
-                        excerpt = _html.escape(preview[:160] + ('…' if len(preview)>160 else ''))
+                        excerpt = _html.escape(preview[:98] + ('…' if len(preview)>98 else ''))
                         st.markdown(
                             '<article class="pm-day-card-main pm-day-card--mail">'
                             '<div class="pm-day-card-top"><span class="pm-day-card-icon">'+_pm_day_icon('mail')+'</span>'
@@ -16946,6 +16970,7 @@ def _pm_worker_day_hub():
                             '<div class="pm-day-card-top"><span class="pm-day-card-icon">'+_pm_day_icon('school')+'</span>'
                             '<span class="pm-day-card-count">'+str(count_training)+' pendiente'+('s' if count_training != 1 else '')+'</span></div>'
                             '<div class="pm-day-card-title">Capacitaciones</div>'
+                            '<div class="pm-day-card-kicker">Mi aprendizaje</div>'
                             '<p class="pm-day-card-detail">'+name+'</p>'
                             '<p class="pm-day-card-copy">'+('Continúa donde lo dejaste.' if pct>0 else 'Un nuevo aprendizaje te espera.')+'</p>'
                             '<div class="pm-day-progress-label"><span>Mi avance</span><b>'+str(pct)+' %</b></div>'
@@ -16969,16 +16994,17 @@ def _pm_worker_day_hub():
                             '<p class="pm-day-card-copy">'+(str(observed)+' actividad(es) observada(s) por supervisión.'
                                  if observed else 'Revisa tus actividades programadas para hoy.')+'</p>'
                             '</article>', unsafe_allow_html=True)
-                        col_go, col_hide = st.columns([1.65,1], gap='small')
-                        with col_go:
-                            with st.container(key='pm_day_action_routines'):
-                                st.button('Ver mis rutinas  →', key='pm_day_open_routines',
-                                          use_container_width=True, on_click=_pm_day_go_routines)
-                        with col_hide:
-                            with st.container(key='pm_day_action_routines_hide'):
-                                st.button('Ocultar hoy', key='pm_day_hide_routines',
-                                          use_container_width=True, on_click=_pm_day_hide_routines,
-                                          help='Oculta solo este recordatorio por hoy; no modifica la actividad.')
+                        with st.container(key='pm_day_actions_routines'):
+                            col_go, col_hide = st.columns([1.65,1], gap='small')
+                            with col_go:
+                                with st.container(key='pm_day_action_routines'):
+                                    st.button('Ver mis rutinas  →', key='pm_day_open_routines',
+                                              use_container_width=True, on_click=_pm_day_go_routines)
+                            with col_hide:
+                                with st.container(key='pm_day_action_routines_hide'):
+                                    st.button('Ocultar hoy', key='pm_day_hide_routines',
+                                              use_container_width=True, on_click=_pm_day_hide_routines,
+                                              help='Oculta solo este recordatorio por hoy; no modifica la actividad.')
 
 
 def _pm_av_home_summary():
