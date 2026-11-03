@@ -12730,6 +12730,360 @@ def _pm2_task_compact_html(row, show_worker=False):
     )
 
 
+# =============================================================
+# PREMIUM MARKET · PLANIFICACIÓN SEMANAL DE RUTINAS (solo lectura)
+# Reutiliza Rutinas_Operativas, no crea ni modifica hojas de Sheets.
+# =============================================================
+_PMW_DAYS = ('Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom')
+_PMW_DAYS_FULL = ('Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo')
+
+
+def _pmw_monday(value):
+    """Fecha ISO de comienzo de semana; lunes como día 0."""
+    if isinstance(value, datetime):
+        value = value.date()
+    if not isinstance(value, date):
+        value = datetime.strptime(str(value)[:10], '%Y-%m-%d').date()
+    return value - timedelta(days=value.weekday())
+
+
+def _pmw_week_data(data, week_start, dni=None, store=None, status='Todos'):
+    """Base de cobertura y vista filtrada; evita falsos huecos por estado."""
+    if not isinstance(data, pd.DataFrame) or data.empty:
+        empty = pd.DataFrame(columns=_PM2_COLS)
+        return empty, empty.copy()
+    required = {'fecha', 'dni', 'tienda', 'estado'}
+    if not required.issubset(set(data.columns)):
+        raise ValueError('Faltan columnas necesarias en el registro de rutinas.')
+    monday = _pmw_monday(week_start)
+    end = (monday + timedelta(days=6)).isoformat()
+    start = monday.isoformat()
+    dates = data['fecha'].astype(str).str[:10]
+    base = data.loc[dates.ge(start) & dates.le(end)].copy()
+    if dni:
+        base = base[base['dni'].astype(str).map(_pm2_dni).eq(_pm2_dni(dni))].copy()
+    if store:
+        base = base[base['tienda'].astype(str).str.strip().eq(str(store).strip())].copy()
+    if status == 'Vencida':
+        shown = base[base.apply(lambda r: _pm2_state_visual(r)[0] == 'Vencida', axis=1)].copy()
+    elif status not in ('Todos', '', None):
+        shown = base[base['estado'].astype(str).eq(status)].copy()
+    else:
+        shown = base.copy()
+    return base, shown
+
+
+def _pmw_conflicts(week_data):
+    """Cruces estrictos de horarios activos por mismo DNI y fecha.
+
+    Contacto de horarios (10:30-11:00) NO es conflicto.
+    Las rutinas canceladas nunca generan conflicto.
+    """
+    if not isinstance(week_data, pd.DataFrame) or week_data.empty:
+        return []
+    if not {'fecha', 'dni', 'hora_inicio', 'hora_limite', 'estado'}.issubset(week_data.columns):
+        return []
+    active = week_data[week_data['estado'].astype(str).ne('Cancelada')].copy()
+    conflicts = []
+    for (day, dni), group in active.groupby(['fecha', 'dni'], sort=True):
+        valid = []
+        for _, row in group.iterrows():
+            start, end = str(row.get('hora_inicio', '')).strip(), str(row.get('hora_limite', '')).strip()
+            if not _pm2_validate_time(start, end):
+                continue
+            valid.append((start, end, row))
+        valid.sort(key=lambda z: z[0])
+        for ix, (s1, e1, r1) in enumerate(valid):
+            for s2, e2, r2 in valid[ix+1:]:
+                if s2 >= e1:
+                    break
+                if s1 < e2:
+                    conflicts.append({
+                        'fecha': str(day)[:10], 'dni': str(dni),
+                        'nombre': str(r1.get('nombre', 'Colaborador')),
+                        'primera': str(r1.get('titulo', 'Actividad')),
+                        'segunda': str(r2.get('titulo', 'Actividad')),
+                        'inicio': max(s1, s2), 'fin': min(e1, e2),
+                        'id_rutina': str(r1.get('id_rutina', '')),
+                    })
+    return conflicts
+
+
+def _pmw_week_stats(base, visible, week_start):
+    """Los indicadores de cobertura usan base, no el filtro de estado."""
+    active = base[base['estado'].astype(str).ne('Cancelada')] if not base.empty else base
+    weekdays = {(week_start + timedelta(days=i)).isoformat() for i in range(7)}
+    scheduled_days = set(active['fecha'].astype(str).str[:10]) if not active.empty else set()
+    return {
+        'activities': len(active),
+        'workers': active['dni'].astype(str).map(_pm2_dni).nunique() if not active.empty else 0,
+        'review': int(active['estado'].astype(str).eq('Por validar').sum()) if not active.empty else 0,
+        'gaps': len(weekdays - scheduled_days),
+        'filtered': len(visible),
+    }
+
+
+def _pmw_day_preview(day_data, scheduled_count):
+    """Vista breve y escapada para un día; máximo dos tareas visibles."""
+    if day_data.empty:
+        hint = 'Sin coincidencias' if scheduled_count else 'Sin programación'
+        return '<div class="pmw-preview-empty">' + _html.escape(hint) + '</div>'
+    items = []
+    order = day_data.sort_values(['hora_inicio', 'nombre', 'titulo'], kind='stable')
+    for _, item in order.head(2).iterrows():
+        state, tone = _pm2_state_visual(item)
+        tone = tone if tone in ('success', 'warning', 'info', 'neutral', 'danger') else 'neutral'
+        title = _html.escape(str(item.get('titulo', 'Actividad')))
+        worker = _html.escape(str(item.get('nombre', 'Colaborador')).split(' ')[0])
+        hour = _html.escape(str(item.get('hora_inicio', ''))[:5])
+        items.append('<div class="pmw-preview-task"><span class="pmw-state-dot pmw-state-' + tone + '"></span>'
+                     '<div class="pmw-preview-task-body"><strong title="' + title + '">' + title + '</strong>'
+                     '<small>' + hour + ' · ' + worker + '</small></div></div>')
+    if len(order) > 2:
+        items.append('<div class="pmw-preview-more">+' + str(len(order)-2) + ' actividades más</div>')
+    return '<div class="pmw-preview-list">' + ''.join(items) + '</div>'
+
+
+def _pmw_person_matrix(base, week_start):
+    """Resumen por DNI; no mezcla colaboradores con el mismo nombre."""
+    columns = ['Colaborador'] + [f'{_PMW_DAYS[i]} {(week_start + timedelta(days=i)).day:02d}' for i in range(7)] + ['Total', 'Por validar']
+    if base.empty:
+        return pd.DataFrame(columns=columns)
+    active = base[base['estado'].astype(str).ne('Cancelada')].copy()
+    records = []
+    for dni, group in active.groupby(active['dni'].astype(str).map(_pm2_dni), sort=False):
+        if not dni:
+            continue
+        row = {'Colaborador': str(group.iloc[0].get('nombre', 'Colaborador'))}
+        for i in range(7):
+            day = (week_start + timedelta(days=i)).isoformat()
+            count = int(group['fecha'].astype(str).str[:10].eq(day).sum())
+            row[columns[i+1]] = str(count) if count else '—'
+        row['Total'] = len(group)
+        row['Por validar'] = int(group['estado'].astype(str).eq('Por validar').sum())
+        records.append((str(row['Colaborador']).casefold(), str(dni), row))
+    return pd.DataFrame([row for _, _, row in sorted(records)], columns=columns)
+
+
+def _pmw_shift_week(offset):
+    anchor = st.session_state.get('pmw_week_anchor', obtener_ahora_peru().date())
+    new_week = _pmw_monday(anchor) + timedelta(days=7 * int(offset))
+    st.session_state['pmw_week_anchor'] = new_week
+    st.session_state['pmw_selected_day'] = new_week.isoformat()
+
+
+def _pmw_current_week():
+    today = obtener_ahora_peru().date()
+    st.session_state['pmw_week_anchor'] = today
+    st.session_state['pmw_selected_day'] = today.isoformat()
+
+
+def _pmw_anchor_changed():
+    st.session_state['pmw_selected_day'] = _pmw_monday(st.session_state['pmw_week_anchor']).isoformat()
+
+
+def _pmw_choose_day(iso):
+    st.session_state['pmw_selected_day'] = str(iso)
+
+
+def _pmw_css():
+    st.markdown(r'''<style>
+    /* Exclusivo del calendario de Rutinas Operativas: no cambia otras vistas. */
+    .pmw-title{display:flex;align-items:center;gap:10px;color:#1d304a;font-size:1.06rem;font-weight:850;margin:8px 0 6px}
+    .pmw-title svg{width:21px;height:21px;flex:none}
+    .pmw-sub{color:#708198;font-size:.80rem;line-height:1.5;margin:0 0 13px}
+    .st-key-pmw_week_controls{background:#fff;border:1px solid #e5ebf4;border-radius:17px;padding:11px 14px;margin:9px 0 13px;box-shadow:0 13px 29px -28px rgba(26,44,76,.35)}
+    .st-key-pmw_week_controls label p{font-size:.76rem!important;font-weight:750!important;color:#60738c!important}
+    .st-key-pmw_week_controls button{min-height:43px!important;border-radius:12px!important}
+    .st-key-pmw_week_filters{padding:0 3px 9px}
+    .st-key-pmw_week_filters label p{font-size:.77rem!important;font-weight:750!important;color:#60738c!important}
+    .pmw-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px;margin:12px 0 13px}
+    .pmw-kpi{background:#fff;border:1px solid #e3eaf4;border-radius:16px;padding:14px 15px;min-width:0}
+    .pmw-kpi small{display:block;color:#71829a;font-size:.74rem;font-weight:720;line-height:1.35}
+    .pmw-kpi strong{display:block;color:#243956;font-weight:860;font-size:1.52rem;letter-spacing:-.03em;margin-top:4px;line-height:1.2;font-variant-numeric:tabular-nums}
+    .pmw-kpi--warn strong{color:#bc4658}
+    .pmw-week-caption{color:#718198;font-size:.76rem;margin:7px 0 14px}
+    .st-key-pmw_week_calendar{margin:6px 0 19px}
+    .st-key-pmw_week_calendar [class*="st-key-pmw_day_"]{border:1px solid #e4eaf3;border-radius:15px;background:#fff;padding:8px!important;min-width:0;box-shadow:none;}
+    .st-key-pmw_week_calendar [class*="st-key-pmw_day_active_"]{border-color:#e5adb6;background:#fff8f9;box-shadow:0 7px 25px -21px rgba(175,40,62,.35)}
+    .st-key-pmw_week_calendar [class*="st-key-pmw_day_"] button{width:100%!important;min-width:0!important;min-height:38px!important;max-height:none!important;padding:7px 3px!important;border:0!important;border-radius:10px!important;background:#f4f7fb!important;color:#304763!important;font-weight:800!important;box-shadow:none!important}
+    .st-key-pmw_week_calendar [class*="st-key-pmw_day_active_"] button{background:#c93148!important;color:#fff!important}
+    .st-key-pmw_week_calendar [class*="st-key-pmw_day_"] button p{font-size:.69rem!important;white-space:normal!important;line-height:1.25!important;overflow-wrap:anywhere!important}
+    .pmw-preview-list{padding:8px 1px 4px;display:grid;gap:7px;min-width:0;min-height:113px;align-content:start}
+    .pmw-preview-task{display:flex;gap:5px;align-items:flex-start;min-width:0}
+    .pmw-preview-task-body{min-width:0;flex:1}
+    .pmw-preview-task strong{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden;overflow-wrap:anywhere;font-size:.66rem;color:#273d5b;line-height:1.3;font-weight:760}
+    .pmw-preview-task small{display:block;font-size:.62rem;color:#8493a7;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .pmw-state-dot{width:7px;height:7px;flex:none;border-radius:50%;margin-top:4px;background:#a0aec0}
+    .pmw-state-success{background:#2b9873}.pmw-state-warning{background:#e7a33c}.pmw-state-danger{background:#cc465d}.pmw-state-info{background:#4f8ad3}.pmw-state-neutral{background:#a0aec0}
+    .pmw-preview-more{font-size:.65rem;color:#687e9c;font-weight:750;padding-left:12px}
+    .pmw-preview-empty{color:#a0aabc;font-size:.70rem;text-align:center;padding:28px 3px 15px;min-height:113px}
+    .pmw-agenda-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:9px 0 13px}
+    .pmw-agenda-heading strong{font-size:.95rem;color:#253c5b}.pmw-agenda-heading span{font-size:.76rem;color:#72839b}
+    [class*="st-key-pmw_agenda_task_"]{padding:12px 14px!important;border:1px solid #e4ebf4!important;border-radius:16px!important;margin:0 0 9px!important;background:#fff!important;box-shadow:none!important}
+    [class*="st-key-pmw_agenda_task_"] [class*="st-key-pmw_open_"] button{border:1px solid #d5e1ef!important;border-radius:11px!important;background:#fff!important;color:#274a7c!important;min-height:38px!important;font-weight:740!important}
+    .pmw-agenda-title{font-size:.87rem;font-weight:790;color:#213650;line-height:1.35;overflow-wrap:anywhere}
+    .pmw-agenda-meta{display:flex;gap:6px;flex-wrap:wrap;font-size:.71rem;color:#74849c;margin-top:6px;line-height:1.4}
+    .pmw-agenda-status{display:inline-block;font-size:.69rem;font-weight:790;border-radius:999px;padding:3px 8px;background:#f0f4f9;color:#61748d}
+    .pmw-agenda-status--warning{background:#fff5e9;color:#aa681b}.pmw-agenda-status--danger{background:#fff0f1;color:#bb4054}.pmw-agenda-status--success{background:#eaf8f0;color:#218b60}.pmw-agenda-status--info{background:#edf5ff;color:#3974b7}
+    .pmw-conflict{padding:10px 12px;background:#fff9ec;border:1px solid #f4e6c7;border-radius:12px;color:#76562c;font-size:.79rem;line-height:1.5;margin:7px 0}
+    .pmw-grid-note{font-size:.74rem;color:#76859b;line-height:1.45;margin:5px 0 13px}
+    @media(max-width:1100px){.pmw-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:780px){
+      .st-key-pmw_week_calendar [data-testid="stHorizontalBlock"]{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px!important;align-items:stretch!important}
+      .st-key-pmw_week_calendar [data-testid="stColumn"]{width:100%!important;min-width:0!important;flex:initial!important}
+      .pmw-preview-list,.pmw-preview-empty{min-height:76px}
+      .st-key-pmw_week_controls{padding:10px!important}
+    }
+    @media(max-width:380px){.pmw-kpis{gap:8px}.pmw-kpi{padding:10px}.pmw-kpi strong{font-size:1.28rem}}
+    </style>''', unsafe_allow_html=True)
+
+
+def _pmw_render_week(data, err):
+    """Planificador semanal sin escrituras; los detalles usan el diálogo existente."""
+    _pmw_css()
+    st.markdown('<div class="pmw-title">' + _pm4_icon('calendar', 21) +
+                'Planificación semanal</div><div class="pmw-sub">'
+                'Visualiza las actividades por día, revisa la carga del equipo y detecta cruces de horario. '
+                'Programa nuevas tareas desde «Asignar actividades».</div>', unsafe_allow_html=True)
+    today = obtener_ahora_peru().date()
+    if 'pmw_week_anchor' not in st.session_state:
+        st.session_state['pmw_week_anchor'] = today
+    with st.container(key='pmw_week_controls', border=False):
+        a, b, c, d = st.columns([0.88, 1.65, 0.88, 1.05], gap='small', vertical_alignment='bottom')
+        with a:
+            st.button('Anterior', key='pmw_prev', icon=':material/chevron_left:',
+                      on_click=_pmw_shift_week, args=(-1,), use_container_width=True)
+        with b:
+            st.date_input('Semana de referencia', key='pmw_week_anchor', on_change=_pmw_anchor_changed)
+        with c:
+            st.button('Siguiente', key='pmw_next', icon=':material/chevron_right:',
+                      on_click=_pmw_shift_week, args=(1,), use_container_width=True)
+        with d:
+            st.button('Esta semana', key='pmw_today', icon=':material/today:',
+                      on_click=_pmw_current_week, use_container_width=True)
+    monday = _pmw_monday(st.session_state['pmw_week_anchor'])
+    last = monday + timedelta(days=6)
+    st.caption(f'Semana del {monday:%d/%m/%Y} al {last:%d/%m/%Y} · Horarios de Perú')
+    if err or data is None:
+        st.error(err or 'No se pudo cargar la planificación semanal.')
+        if st.button('Reintentar lectura', key='pmw_retry', use_container_width=True):
+            _pm2_clear_cache()
+            st.rerun()
+        return
+    # Los filtros se construyen sobre registros de la semana, sin perder
+    # trabajadores que ya no están activos pero tienen actividades históricas.
+    week_all, _ = _pmw_week_data(data, monday)
+    worker_labels = {'Todos los colaboradores': None}
+    for _, r in week_all.sort_values('nombre').iterrows():
+        ident = _pm2_dni(r.get('dni', ''))
+        if ident:
+            label = str(r.get('nombre', 'Colaborador')).strip() + ' · ' + ident[-4:]
+            worker_labels[label] = ident
+    stores = sorted(set(x.strip() for x in week_all['tienda'].astype(str) if x.strip()))
+    with st.container(key='pmw_week_filters', border=False):
+        wf, sf, ef = st.columns([1.35, 1.0, 1.05], gap='small')
+        with wf:
+            person_label = st.selectbox('Colaborador', list(worker_labels), key='pmw_filter_worker')
+        with sf:
+            store_name = st.selectbox('Tienda / sede', ['Todas las tiendas'] + stores, key='pmw_filter_store')
+        with ef:
+            state_name = st.selectbox('Estado', ['Todos', 'Pendiente', 'En curso', 'Por validar', 'Completada', 'Vencida', 'Cancelada'], key='pmw_filter_state')
+    base, shown = _pmw_week_data(data, monday, dni=worker_labels.get(person_label),
+                                 store=None if store_name == 'Todas las tiendas' else store_name,
+                                 status=state_name)
+    kpis = _pmw_week_stats(base, shown, monday)
+    conflicts = _pmw_conflicts(base)
+    stat_cards = [
+        ('Asignaciones activas', kpis['activities'], ''),
+        ('Colaboradores', kpis['workers'], ''),
+        ('Por validar', kpis['review'], 'warn' if kpis['review'] else ''),
+        ('Cruces de horario', len(conflicts), 'warn' if conflicts else ''),
+    ]
+    st.markdown('<div class="pmw-kpis">' + ''.join(
+        '<div class="pmw-kpi ' + ('pmw-kpi--warn' if tone else '') + '"><small>'
+        + _html.escape(title) + '</small><strong>' + str(value) + '</strong></div>'
+        for title, value, tone in stat_cards) + '</div>', unsafe_allow_html=True)
+    st.markdown('<div class="pmw-week-caption">' + str(kpis['gaps']) +
+                ' día(s) sin actividades activas en esta selección. Los descansos y domingos pueden no requerir programación.'
+                + (' · ' + str(kpis['filtered']) + ' actividades coinciden con el filtro de estado.' if state_name != 'Todos' else '')
+                + '</div>', unsafe_allow_html=True)
+    selected_day = str(st.session_state.get('pmw_selected_day', ''))
+    iso_days = [(monday + timedelta(days=i)).isoformat() for i in range(7)]
+    if selected_day not in iso_days:
+        selected_day = today.isoformat() if today.isoformat() in iso_days else iso_days[0]
+        st.session_state['pmw_selected_day'] = selected_day
+    # Vista compacta: máximo dos tareas mostradas por día; el detalle nunca se trunca.
+    with st.container(key='pmw_week_calendar', border=False):
+        columns = st.columns(7, gap='small')
+        for i, iso_day in enumerate(iso_days):
+            day_items = shown[shown['fecha'].astype(str).str[:10].eq(iso_day)]
+            actual_count = int(base[base['fecha'].astype(str).str[:10].eq(iso_day) &
+                                    base['estado'].astype(str).ne('Cancelada')].shape[0])
+            with columns[i]:
+                key_suffix = ('active_' if iso_day == selected_day else '') + iso_day.replace('-', '_')
+                with st.container(key='pmw_day_' + key_suffix, border=False):
+                    st.button(f'{_PMW_DAYS[i]} {int(iso_day[-2:]):02d} · {len(day_items)}',
+                              key='pmw_choose_' + iso_day, on_click=_pmw_choose_day,
+                              args=(iso_day,), use_container_width=True,
+                              help=f'Ver todas las actividades del {_PMW_DAYS_FULL[i]} {iso_day[-2:]}')
+                    st.markdown(_pmw_day_preview(day_items, actual_count), unsafe_allow_html=True)
+    day = datetime.strptime(selected_day, '%Y-%m-%d').date()
+    day_items = shown[shown['fecha'].astype(str).str[:10].eq(selected_day)]
+    st.markdown('<div class="pmw-agenda-heading"><strong>Agenda del ' +
+                _PMW_DAYS_FULL[day.weekday()] + ' ' + day.strftime('%d/%m/%Y') +
+                '</strong><span>' + str(len(day_items)) + ' actividad(es) en la selección</span></div>',
+                unsafe_allow_html=True)
+    if day_items.empty:
+        active_on_day = base[(base['fecha'].astype(str).str[:10] == selected_day) &
+                             (base['estado'].astype(str) != 'Cancelada')]
+        st.info('No hay actividades que coincidan con los filtros de este día.' if not active_on_day.empty
+                else 'Este día no tiene actividades activas programadas. Puedes asignarlas en «Asignar actividades».')
+    else:
+        day_items = day_items.sort_values(['hora_inicio', 'nombre', 'titulo'], kind='stable')
+        for _pmw_row_index, (_, record) in enumerate(day_items.iterrows()):
+            task_id = str(record.get('id_rutina', '')).strip()
+            if not task_id:
+                continue
+            state_text, tone = _pm2_state_visual(record)
+            tone = tone if tone in ('success', 'warning', 'info', 'neutral', 'danger') else 'neutral'
+            with st.container(key='pmw_agenda_task_' + task_id + '_' + str(_pmw_row_index), border=True):
+                info, action = st.columns([5, 1], gap='small', vertical_alignment='center')
+                with info:
+                    st.markdown('<div class="pmw-agenda-title">' + _html.escape(str(record.get('titulo', 'Actividad'))) + '</div>'
+                                '<div class="pmw-agenda-meta">'
+                                '<span>' + _html.escape(str(record.get('nombre', 'Colaborador'))) + '</span>'
+                                '<span>· ' + _html.escape(str(record.get('hora_inicio', ''))[:5]) +
+                                '–' + _html.escape(str(record.get('hora_limite', ''))[:5]) + '</span>'
+                                '<span>· ' + _html.escape(str(record.get('zona', ''))) + '</span>'
+                                '<span class="pmw-agenda-status pmw-agenda-status--' + tone + '">' +
+                                _html.escape(state_text) + '</span></div>', unsafe_allow_html=True)
+                with action:
+                    st.button('Ver', key='pmw_open_' + task_id + '_' + str(_pmw_row_index), icon=':material/visibility:',
+                              on_click=_pm2_admin_open_task, args=(task_id,), use_container_width=True)
+    if conflicts:
+        with st.expander(f'Atención: {len(conflicts)} cruce(s) de horario detectado(s)', expanded=False):
+            st.caption('Solo se muestran rutinas activas asignadas al mismo colaborador, el mismo día y con horarios superpuestos. No se modifica ninguna actividad.')
+            for x in conflicts[:15]:
+                st.markdown('<div class="pmw-conflict"><strong>' + _html.escape(x['nombre']) +
+                            '</strong> · ' + _html.escape(x['fecha']) + ' · ' + _html.escape(x['inicio'] + '–' + x['fin']) +
+                            '<div>' + _html.escape(x['primera']) + ' / ' + _html.escape(x['segunda']) + '</div></div>',
+                            unsafe_allow_html=True)
+            if len(conflicts) > 15:
+                st.caption(f'Se muestran los primeros 15 de {len(conflicts)} cruces.')
+    st.markdown('<div class="pmw-title" style="margin-top:24px">' + _pm4_icon('user', 20) +
+                'Distribución por colaborador</div><div class="pmw-grid-note">'
+                'Cada casilla muestra cuántas actividades activas tiene la persona ese día. '
+                'Un guion significa que no se programaron tareas; no implica necesariamente una incidencia.</div>',
+                unsafe_allow_html=True)
+    matrix = _pmw_person_matrix(base, monday)
+    if matrix.empty:
+        st.caption('Todavía no hay actividades activas para mostrar en esta semana y selección.')
+    else:
+        st.dataframe(matrix, use_container_width=True, hide_index=True, height=min(390, 58 + len(matrix)*35))
+    st.caption('Consulta de solo lectura. Para crear rutinas utiliza «Asignar actividades»; para revisar, editar, aprobar o cancelar selecciona «Ver» en la agenda.')
+
+
 def _pm4_admin_dashboard_css():
     """Solo presentación del seguimiento administrativo; no afecta Mis Rutinas."""
     st.markdown("""<style>
@@ -20679,7 +21033,7 @@ elif choice == "Rutinas Operativas":
         _pm2_css()
         _pm3_evidence_setup_ui()
         _pmt_telegram_admin_ui()
-        t_monitor, t_create, t_library = st.tabs(["Seguimiento", "Asignar actividades", "Biblioteca e historial"])
+        t_monitor, t_week, t_create, t_library = st.tabs(["Seguimiento", "Planificación semanal", "Asignar actividades", "Biblioteca e historial"])
 
         with t_monitor:
             _pm3_show_flash("admin", "review")
@@ -20787,8 +21141,9 @@ elif choice == "Rutinas Operativas":
                                         st.button('Ver', key='pm2_open_task_' + task_id,
                                                   on_click=_pm2_admin_open_task, args=(task_id,),
                                                   use_container_width=True, icon=':material/visibility:')
-                    if st.session_state.get('_pm2_admin_task_open'):
-                        _pm2_admin_task_dialog(st.session_state['_pm2_admin_task_open'])
+        with t_week:
+            _pmw_history, _pmw_error = _pm2_load()
+            _pmw_render_week(_pmw_history, _pmw_error)
 
         # La biblioteca proviene del historial real, sin otra hoja de configuración.
         _pm2_history_for_library, _pm2_history_library_error = _pm2_load()
@@ -20970,6 +21325,11 @@ elif choice == "Rutinas Operativas":
                         st.rerun()
                     else:
                         _pm2_notice(ok, msg)
+
+        # El detalle es común a Seguimiento y Planificación semanal.
+        # No depender del filtro del día en Seguimiento para poder abrirlo.
+        if st.session_state.get('_pm2_admin_task_open'):
+            _pm2_admin_task_dialog(st.session_state['_pm2_admin_task_open'])
 
 
 # --- PIE DE PÁGINA (FOOTER ESTILO WEB/APP) ---
