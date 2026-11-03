@@ -16830,6 +16830,7 @@ def _pm_day_icon(kind):
         'mail': '<rect x="3" y="5" width="18" height="15" rx="3"/><path d="m4 7 8 7 8-7"/>',
         'school': '<path d="m2 9 10-5 10 5-10 5L2 9Z"/><path d="M6 12v6c4 3 8 3 12 0v-6M22 9v7"/>',
         'tasks': '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="m8 9 2 2 3-3M8 16h8"/>',
+        'bottles': '<path d="M9 3h6M10 3v4l-4 5v8a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-8l-4-5V3M7 14h10"/>',
         'check': '<path d="m5 12 4 4L19 6"/>',
         'calendar': '<rect x="3" y="5" width="18" height="16" rx="2"/>'
                     '<path d="M7 3v4M17 3v4M3 10h18"/>',
@@ -16881,8 +16882,30 @@ def _pm_day_go_routines():
     _ir_a('Mis Rutinas')
 
 
+def _pm_day_bottles():
+    """Devoluciones de la tienda, compartidas por todos los turnos.
+    Misma fuente y criterio de registro pendiente que el sidebar; sin escrituras.
+    """
+    pending = globals().get('_bf_pendientes_aviso')
+    if not isinstance(pending, pd.DataFrame) or pending.empty:
+        return {'count': 0, 'bottles': 0}
+    try:
+        count = len(pending)
+        if 'cantidad_botellas' in pending.columns:
+            amount = int(pd.to_numeric(pending['cantidad_botellas'], errors='coerce').fillna(0).clip(lower=0).sum())
+        else:
+            amount = 0
+        return {'count': count, 'bottles': amount}
+    except (ValueError, TypeError, KeyError):
+        return {'count': len(pending), 'bottles': 0}
+
+
+def _pm_day_go_bottles():
+    _ir_a('Botellas Fiadas')
+
+
 _PM_DAY_HUB_CSS = """<style>
-/* Mi día: un solo encabezado secundario, tres tarjetas y acciones discretas. */
+/* Mi día: un solo encabezado secundario, hasta cuatro tarjetas y acciones discretas. */
 .st-key-pm_day_hub{margin:9px 0 22px!important;padding:19px 20px 20px!important;
   background:#fff!important;border:1px solid #e4eaf2!important;border-radius:21px!important;
   box-shadow:0 14px 34px -32px rgba(23,42,73,.26)!important}
@@ -16903,41 +16926,46 @@ _PM_DAY_HUB_CSS = """<style>
 /* Si queda una sola tarea, evitar que se estire como un banner gigante. */
 .st-key-pm_day_hub [data-testid="stHorizontalBlock"]>[data-testid="stColumn"]:only-child{
   max-width:470px!important;flex:0 1 470px!important}
-.st-key-pm_day_card_mail,.st-key-pm_day_card_training,.st-key-pm_day_card_routines{
-  display:flex!important;flex-direction:column!important;min-width:0!important;
+.st-key-pm_day_card_mail,.st-key-pm_day_card_training,.st-key-pm_day_card_routines,.st-key-pm_day_card_bottles{
+  display:flex!important;flex-direction:column!important;width:100%!important;align-self:stretch!important;min-width:0!important;
   height:336px!important;min-height:336px!important;max-height:336px!important;
   padding:16px 17px 13px!important;overflow:hidden!important;
   background:var(--pm-day-bg,#fff)!important;border:1px solid var(--pm-day-border,#e6ebf3)!important;border-radius:16px!important;
   box-shadow:0 4px 12px -12px rgba(23,42,73,.15)!important;box-sizing:border-box!important;
   transition:border-color .16s,box-shadow .16s!important}
-.st-key-pm_day_card_mail:hover,.st-key-pm_day_card_training:hover,.st-key-pm_day_card_routines:hover{
+.st-key-pm_day_card_mail:hover,.st-key-pm_day_card_training:hover,.st-key-pm_day_card_routines:hover,.st-key-pm_day_card_bottles:hover{
   border-color:var(--pm-day-accent,#cfd9e8)!important;
   box-shadow:0 12px 25px -25px rgba(23,42,73,.26)!important}
 .st-key-pm_day_card_mail [data-testid="stVerticalBlock"],
 .st-key-pm_day_card_training [data-testid="stVerticalBlock"],
-.st-key-pm_day_card_routines [data-testid="stVerticalBlock"]{
+.st-key-pm_day_card_routines [data-testid="stVerticalBlock"],
+.st-key-pm_day_card_bottles [data-testid="stVerticalBlock"]{
   display:flex!important;flex-direction:column!important;flex:1 1 auto!important;
   height:100%!important;min-height:0!important;min-width:0!important}
 /* Streamlit suele envolver st.markdown en un stElementContainer. Darle flex
    a ese envoltorio (y no solo al article) ancla los tres pies en la misma línea. */
 .st-key-pm_day_card_mail [data-testid="stElementContainer"]:has(.pm-day-card-main),
 .st-key-pm_day_card_training [data-testid="stElementContainer"]:has(.pm-day-card-main),
-.st-key-pm_day_card_routines [data-testid="stElementContainer"]:has(.pm-day-card-main){
+.st-key-pm_day_card_routines [data-testid="stElementContainer"]:has(.pm-day-card-main),
+.st-key-pm_day_card_bottles [data-testid="stElementContainer"]:has(.pm-day-card-main){
   flex:1 1 auto!important;min-height:0!important;min-width:0!important}
 .pm-day-card-main{min-width:0;min-height:0;display:flex;flex-direction:column;gap:0;flex:1 1 auto}
-/* Tres colores muy suaves; la prioridad es la legibilidad del contenido. */
+/* Cuatro tonos pastel discretos: identificación rápida sin recargar la vista. */
 .st-key-pm_day_card_mail{--pm-day-bg:#fffafb;--pm-day-border:#f2dce3;--pm-day-accent:#d45770;--pm-day-rule:#f1e0e5}
 .st-key-pm_day_card_training{--pm-day-bg:#f8fbff;--pm-day-border:#dbe8f8;--pm-day-accent:#4a83c6;--pm-day-rule:#dfeaf7}
 .st-key-pm_day_card_routines{--pm-day-bg:#f8fdfa;--pm-day-border:#d9ece1;--pm-day-accent:#33986c;--pm-day-rule:#deeee4}
+.st-key-pm_day_card_bottles{--pm-day-bg:#fffcf6;--pm-day-border:#efdfc5;--pm-day-accent:#c8954c;--pm-day-rule:#f1e5d5}
 .pm-day-card-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
 .pm-day-card-icon{width:38px;height:38px;flex:none;border-radius:12px;display:grid;place-items:center;
   background:#fff0f3;color:#cb344f}
 .pm-day-card-icon svg{width:21px!important;height:21px!important}
 .pm-day-card--training .pm-day-card-icon{background:#edf4ff;color:#366ebc}
 .pm-day-card--routines .pm-day-card-icon{background:#eaf8f1;color:#148e60}
+.pm-day-card--bottles .pm-day-card-icon{background:#fff1dc;color:#ae762d}
 .pm-day-card-count{font-size:.7rem;line-height:1.25;color:#6e7f95;font-weight:780;
   background:#f6f8fb;border-radius:999px;padding:5px 9px;white-space:nowrap}
 .pm-day-card--mail .pm-day-card-count{background:#fff0f3;color:#bf2d47}
+.pm-day-card--bottles .pm-day-card-count{background:#fff3e3;color:#956326}
 .pm-day-card-title{font-size:.93rem;font-weight:850;color:#243651;line-height:1.3;margin:0 0 9px}
 .pm-day-card-kicker{font-size:.71rem;color:#7a8ca3;font-weight:700;margin:0 0 4px}
 .pm-day-card-detail{font-size:.8rem;line-height:1.48;color:#334862;font-weight:700;
@@ -16976,28 +17004,34 @@ _PM_DAY_HUB_CSS = """<style>
 @media(max-width:900px){
   .st-key-pm_day_hub{padding:15px!important;margin:9px 0 17px!important}
   .st-key-pm_day_hub [data-testid="stHorizontalBlock"]{gap:10px!important}
-  .st-key-pm_day_card_mail,.st-key-pm_day_card_training,.st-key-pm_day_card_routines{padding:14px!important;min-height:238px!important;height:auto!important;max-height:none!important;overflow:visible!important}
+  .st-key-pm_day_card_mail,.st-key-pm_day_card_training,.st-key-pm_day_card_routines,.st-key-pm_day_card_bottles{padding:14px!important;min-height:238px!important;height:auto!important;max-height:none!important;overflow:visible!important}
 }
 @media(max-width:900px){
   .st-key-pm_day_hub{padding:14px 12px!important;border-radius:18px!important}
   /* La fila principal se apila, sin alterar los dos botones de la tarjeta de rutinas. */
   .st-key-pm_day_hub [data-testid="stHorizontalBlock"]:has(.st-key-pm_day_card_mail),
   .st-key-pm_day_hub [data-testid="stHorizontalBlock"]:has(.st-key-pm_day_card_training),
-  .st-key-pm_day_hub [data-testid="stHorizontalBlock"]:has(.st-key-pm_day_card_routines){
+  .st-key-pm_day_hub [data-testid="stHorizontalBlock"]:has(.st-key-pm_day_card_routines),
+  .st-key-pm_day_hub [data-testid="stHorizontalBlock"]:has(.st-key-pm_day_card_bottles){
      flex-direction:column!important;align-items:stretch!important}
   .st-key-pm_day_hub [data-testid="stHorizontalBlock"]:has(.st-key-pm_day_card_mail)>[data-testid="stColumn"],
   .st-key-pm_day_hub [data-testid="stHorizontalBlock"]:has(.st-key-pm_day_card_training)>[data-testid="stColumn"],
-  .st-key-pm_day_hub [data-testid="stHorizontalBlock"]:has(.st-key-pm_day_card_routines)>[data-testid="stColumn"]{
+  .st-key-pm_day_hub [data-testid="stHorizontalBlock"]:has(.st-key-pm_day_card_routines)>[data-testid="stColumn"],
+  .st-key-pm_day_hub [data-testid="stHorizontalBlock"]:has(.st-key-pm_day_card_bottles)>[data-testid="stColumn"]{
      width:100%!important;flex:1 1 auto!important;min-width:0!important}
-  .st-key-pm_day_card_mail,.st-key-pm_day_card_training,.st-key-pm_day_card_routines{min-height:214px!important;height:auto!important;max-height:none!important}
+  .st-key-pm_day_card_mail,.st-key-pm_day_card_training,.st-key-pm_day_card_routines,.st-key-pm_day_card_bottles{min-height:214px!important;height:auto!important;max-height:none!important}
   .st-key-pm_day_hub [data-testid="stHorizontalBlock"]>[data-testid="stColumn"]:only-child{
     max-width:none!important;flex:1 1 100%!important}
-  .st-key-pm_day_card_mail .pm-day-card-main,.st-key-pm_day_card_training .pm-day-card-main,.st-key-pm_day_card_routines .pm-day-card-main{flex:1 1 auto}
+  .st-key-pm_day_card_mail .pm-day-card-main,.st-key-pm_day_card_training .pm-day-card-main,.st-key-pm_day_card_routines .pm-day-card-main,.st-key-pm_day_card_bottles .pm-day-card-main{flex:1 1 auto}
   .pm-day-card-top{margin-bottom:9px}
   .pm-day-head{margin-bottom:13px}
 }
 @media(prefers-reduced-motion:reduce){.st-key-pm_day_hub [class*="st-key-pm_day_action_"] button,
-  .st-key-pm_day_card_mail,.st-key-pm_day_card_training,.st-key-pm_day_card_routines{transition:none!important}}
+  .st-key-pm_day_card_mail,.st-key-pm_day_card_training,.st-key-pm_day_card_routines,.st-key-pm_day_card_bottles{transition:none!important}}
+
+/* Se añaden solo cuando hay cuatro categorías con pendientes. */
+.st-key-pm_day_hub .st-key-pm_day_row_2{margin-top:15px!important}
+@media(max-width:900px){.st-key-pm_day_hub .st-key-pm_day_row_2{margin-top:9px!important}}
 </style>"""
 
 
@@ -17018,8 +17052,11 @@ def _pm_worker_day_hub():
     count_messages = len(unread)
     count_training = int(training.get('count') or 0) if not training.get('error') else 0
     count_routines = int(routines.get('count') or 0) if not routines.get('error') else 0
-    total = count_messages + count_training + count_routines
-    types = [t for t, n in (('mail', count_messages), ('training', count_training), ('routines', count_routines)) if n]
+    bottles = _pm_day_bottles()
+    count_bottles = int(bottles['count'])
+    total = count_messages + count_training + count_routines + count_bottles
+    types = [t for t, n in (('mail', count_messages), ('training', count_training),
+                              ('routines', count_routines), ('bottles', count_bottles)) if n]
     st.markdown(_PM_DAY_HUB_CSS, unsafe_allow_html=True)
     with st.container(key='pm_day_hub'):
         st.markdown(
@@ -17040,72 +17077,94 @@ def _pm_worker_day_hub():
             else:
                 st.caption('No se pudo actualizar todo el resumen. Puedes usar los accesos del menú lateral.')
             return
-        columns = st.columns(len(types), gap='medium')
-        for col, kind in zip(columns, types):
-            with col:
-                if kind == 'mail':
-                    with st.container(key='pm_day_card_mail'):
-                        item = unread[0]
-                        title = _html.escape(str(item.get('titulo') or 'Mensaje del equipo'))
-                        preview = str(item.get('texto') or '').replace('\n', ' ').strip()
-                        excerpt = _html.escape(preview[:98] + ('…' if len(preview)>98 else ''))
-                        st.markdown(
-                            '<article class="pm-day-card-main pm-day-card--mail">'
-                            '<div class="pm-day-card-top"><span class="pm-day-card-icon">'+_pm_day_icon('mail')+'</span>'
-                            '<span class="pm-day-card-count">'+str(count_messages)+' sin leer</span></div>'
-                            '<div class="pm-day-card-title">Mensajes</div>'
-                            '<div class="pm-day-card-kicker">'+_html.escape(str(item.get('modulo') or 'Premium Market'))+'</div>'
-                            '<p class="pm-day-card-detail">'+title+'</p>'
-                            '<p class="pm-day-card-copy">'+excerpt+'</p></article>',
-                            unsafe_allow_html=True)
-                        with st.container(key='pm_day_action_mail'):
-                            st.button('Leer mensaje  →', key='pm_day_read', use_container_width=True,
-                                      on_click=_pm_av_request_panel)
-                elif kind == 'training':
-                    with st.container(key='pm_day_card_training'):
-                        item = (training.get('items') or [{}])[0]
-                        name = _html.escape(str(item.get('titulo') or 'Capacitación asignada'))
-                        pct = max(0, min(100, int(item.get('pct') or 0)))
-                        st.markdown(
-                            '<article class="pm-day-card-main pm-day-card--training">'
-                            '<div class="pm-day-card-top"><span class="pm-day-card-icon">'+_pm_day_icon('school')+'</span>'
-                            '<span class="pm-day-card-count">'+str(count_training)+' pendiente'+('s' if count_training != 1 else '')+'</span></div>'
-                            '<div class="pm-day-card-title">Capacitaciones</div>'
-                            '<div class="pm-day-card-kicker">Mi aprendizaje</div>'
-                            '<p class="pm-day-card-detail">'+name+'</p>'
-                            '<p class="pm-day-card-copy">'+('Continúa donde lo dejaste.' if pct>0 else 'Un nuevo aprendizaje te espera.')+'</p>'
-                            '<div class="pm-day-progress-label"><span>Mi avance</span><b>'+str(pct)+' %</b></div>'
-                            '<div class="pm-day-progress"><i style="width:'+str(pct)+'%"></i></div>'
-                            '</article>', unsafe_allow_html=True)
-                        with st.container(key='pm_day_action_training'):
-                            st.button('Continuar capacitación  →' if pct else 'Comenzar curso  →',
-                                      key='pm_day_open_training', use_container_width=True,
-                                      on_click=_pm_open_pending_training)
-                elif kind == 'routines':
-                    with st.container(key='pm_day_card_routines'):
-                        name = _html.escape(str(routines.get('next') or 'Revisa tus actividades programadas.'))
-                        observed = int(routines.get('observed') or 0)
-                        st.markdown(
-                            '<article class="pm-day-card-main pm-day-card--routines">'
-                            '<div class="pm-day-card-top"><span class="pm-day-card-icon">'+_pm_day_icon('tasks')+'</span>'
-                            '<span class="pm-day-card-count">'+str(count_routines)+' para hoy</span></div>'
-                            '<div class="pm-day-card-title">Mis rutinas</div>'
-                            '<div class="pm-day-card-kicker">'+('Por corregir' if observed and observed==count_routines else 'Próxima actividad')+'</div>'
-                            '<p class="pm-day-card-detail">'+name+'</p>'
-                            '<p class="pm-day-card-copy">'+(str(observed)+' actividad(es) observada(s) por supervisión.'
-                                 if observed else 'Revisa tus actividades programadas para hoy.')+'</p>'
-                            '</article>', unsafe_allow_html=True)
-                        with st.container(key='pm_day_actions_routines'):
-                            col_go, col_hide = st.columns([1.65,1], gap='small')
-                            with col_go:
-                                with st.container(key='pm_day_action_routines'):
-                                    st.button('Ver mis rutinas  →', key='pm_day_open_routines',
-                                              use_container_width=True, on_click=_pm_day_go_routines)
-                            with col_hide:
-                                with st.container(key='pm_day_action_routines_hide'):
-                                    st.button('Ocultar hoy', key='pm_day_hide_routines',
-                                              use_container_width=True, on_click=_pm_day_hide_routines,
-                                              help='Oculta solo este recordatorio por hoy; no modifica la actividad.')
+        # Una fila para 1-3 pendientes; 2 x 2 solo al activar las cuatro categorías.
+        card_rows = [types[:2], types[2:]] if len(types) == 4 else [types]
+        for row_number, row_types in enumerate(card_rows, start=1):
+            with st.container(key=f'pm_day_row_{row_number}'):
+                columns = st.columns(len(row_types), gap='medium')
+                for col, kind in zip(columns, row_types):
+                    with col:
+                        if kind == 'mail':
+                            with st.container(key='pm_day_card_mail'):
+                                item = unread[0]
+                                title = _html.escape(str(item.get('titulo') or 'Mensaje del equipo'))
+                                preview = str(item.get('texto') or '').replace('\n', ' ').strip()
+                                excerpt = _html.escape(preview[:98] + ('…' if len(preview)>98 else ''))
+                                st.markdown(
+                                    '<article class="pm-day-card-main pm-day-card--mail">'
+                                    '<div class="pm-day-card-top"><span class="pm-day-card-icon">'+_pm_day_icon('mail')+'</span>'
+                                    '<span class="pm-day-card-count">'+str(count_messages)+' sin leer</span></div>'
+                                    '<div class="pm-day-card-title">Mensajes</div>'
+                                    '<div class="pm-day-card-kicker">'+_html.escape(str(item.get('modulo') or 'Premium Market'))+'</div>'
+                                    '<p class="pm-day-card-detail">'+title+'</p>'
+                                    '<p class="pm-day-card-copy">'+excerpt+'</p></article>',
+                                    unsafe_allow_html=True)
+                                with st.container(key='pm_day_action_mail'):
+                                    st.button('Leer mensaje  →', key='pm_day_read', use_container_width=True,
+                                              on_click=_pm_av_request_panel)
+                        elif kind == 'training':
+                            with st.container(key='pm_day_card_training'):
+                                item = (training.get('items') or [{}])[0]
+                                name = _html.escape(str(item.get('titulo') or 'Capacitación asignada'))
+                                pct = max(0, min(100, int(item.get('pct') or 0)))
+                                st.markdown(
+                                    '<article class="pm-day-card-main pm-day-card--training">'
+                                    '<div class="pm-day-card-top"><span class="pm-day-card-icon">'+_pm_day_icon('school')+'</span>'
+                                    '<span class="pm-day-card-count">'+str(count_training)+' pendiente'+('s' if count_training != 1 else '')+'</span></div>'
+                                    '<div class="pm-day-card-title">Capacitaciones</div>'
+                                    '<div class="pm-day-card-kicker">Mi aprendizaje</div>'
+                                    '<p class="pm-day-card-detail">'+name+'</p>'
+                                    '<p class="pm-day-card-copy">'+('Continúa donde lo dejaste.' if pct>0 else 'Un nuevo aprendizaje te espera.')+'</p>'
+                                    '<div class="pm-day-progress-label"><span>Mi avance</span><b>'+str(pct)+' %</b></div>'
+                                    '<div class="pm-day-progress"><i style="width:'+str(pct)+'%"></i></div>'
+                                    '</article>', unsafe_allow_html=True)
+                                with st.container(key='pm_day_action_training'):
+                                    st.button('Continuar capacitación  →' if pct else 'Comenzar curso  →',
+                                              key='pm_day_open_training', use_container_width=True,
+                                              on_click=_pm_open_pending_training)
+                        elif kind == 'routines':
+                            with st.container(key='pm_day_card_routines'):
+                                name = _html.escape(str(routines.get('next') or 'Revisa tus actividades programadas.'))
+                                observed = int(routines.get('observed') or 0)
+                                st.markdown(
+                                    '<article class="pm-day-card-main pm-day-card--routines">'
+                                    '<div class="pm-day-card-top"><span class="pm-day-card-icon">'+_pm_day_icon('tasks')+'</span>'
+                                    '<span class="pm-day-card-count">'+str(count_routines)+' para hoy</span></div>'
+                                    '<div class="pm-day-card-title">Mis rutinas</div>'
+                                    '<div class="pm-day-card-kicker">'+('Por corregir' if observed and observed==count_routines else 'Próxima actividad')+'</div>'
+                                    '<p class="pm-day-card-detail">'+name+'</p>'
+                                    '<p class="pm-day-card-copy">'+(str(observed)+' actividad(es) observada(s) por supervisión.'
+                                         if observed else 'Revisa tus actividades programadas para hoy.')+'</p>'
+                                    '</article>', unsafe_allow_html=True)
+                                with st.container(key='pm_day_actions_routines'):
+                                    col_go, col_hide = st.columns([1.65,1], gap='small')
+                                    with col_go:
+                                        with st.container(key='pm_day_action_routines'):
+                                            st.button('Ver mis rutinas  →', key='pm_day_open_routines',
+                                                      use_container_width=True, on_click=_pm_day_go_routines)
+                                    with col_hide:
+                                        with st.container(key='pm_day_action_routines_hide'):
+                                            st.button('Ocultar hoy', key='pm_day_hide_routines',
+                                                      use_container_width=True, on_click=_pm_day_hide_routines,
+                                                      help='Oculta solo este recordatorio por hoy; no modifica la actividad.')
+                        elif kind == 'bottles':
+                            with st.container(key='pm_day_card_bottles'):
+                                quantity = int(bottles.get('bottles') or 0)
+                                detail = (str(quantity) + (' botella por devolver' if quantity == 1 else ' botellas por devolver')
+                                          if quantity > 0 else str(count_bottles) + ' devoluciones por revisar')
+                                st.markdown(
+                                    '<article class="pm-day-card-main pm-day-card--bottles">'
+                                    '<div class="pm-day-card-top"><span class="pm-day-card-icon">'+_pm_day_icon('bottles')+'</span>'
+                                    '<span class="pm-day-card-count">'+str(count_bottles)+' abierto'+('s' if count_bottles!=1 else '')+'</span></div>'
+                                    '<div class="pm-day-card-title">Botellas fiadas</div>'
+                                    '<div class="pm-day-card-kicker">Pendientes de la tienda</div>'
+                                    '<p class="pm-day-card-detail">'+detail+'</p>'
+                                    '<p class="pm-day-card-copy">'+str(count_bottles)+(' registro abierto' if count_bottles==1 else ' registros abiertos')
+                                    +' · Devoluciones de todos los turnos.</p>'
+                                    '</article>', unsafe_allow_html=True)
+                                with st.container(key='pm_day_action_bottles'):
+                                    st.button('Revisar botellas  →', key='pm_day_open_bottles', use_container_width=True,
+                                              on_click=_pm_day_go_bottles)
 
 
 def _pm_av_home_summary():
