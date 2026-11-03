@@ -16719,6 +16719,267 @@ def _pm_cap_home_notice():
                   type='primary', use_container_width=True, on_click=_pm_open_pending_training)
 
 
+# =============================================================
+# PREMIUM MARKET · MI DÍA: 3 AVISOS EN UNA ÚNICA SECCIÓN
+# Los botones son widgets reales. Solo se consultan datos de la sesión,
+# rutinas y la caché de capacitaciones; no se escriben hojas desde aquí.
+# =============================================================
+def _pm_day_icon(kind):
+    paths = {
+        'mail': '<rect x="3" y="5" width="18" height="15" rx="3"/><path d="m4 7 8 7 8-7"/>',
+        'school': '<path d="m2 9 10-5 10 5-10 5L2 9Z"/><path d="M6 12v6c4 3 8 3 12 0v-6M22 9v7"/>',
+        'tasks': '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="m8 9 2 2 3-3M8 16h8"/>',
+        'check': '<path d="m5 12 4 4L19 6"/>',
+        'calendar': '<rect x="3" y="5" width="18" height="16" rx="2"/>'
+                    '<path d="M7 3v4M17 3v4M3 10h18"/>',
+    }
+    return ('<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" '
+            'stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+            + paths.get(kind, paths['check']) + '</svg>')
+
+
+def _pm_day_routines(dni, date_iso, seen=False):
+    """Rutinas propias de hoy, sin duplicar las observadas entre pendientes."""
+    result = {'count': 0, 'observed': 0, 'next': '', 'error': False}
+    if seen:
+        return result
+    data, err = _pm2_load()
+    if err or not isinstance(data, pd.DataFrame):
+        result['error'] = True
+        return result
+    try:
+        own = _pm5_routine_slice(data, dni=dni, date_iso=date_iso)
+        if own.empty:
+            return result
+        status = own['estado'].fillna('').astype(str).str.strip()
+        revision = own['revision_estado'].fillna('').astype(str).str.strip()
+        observed_mask = revision.eq('Observada') & ~status.isin(('Cancelada', 'Completada'))
+        actionable_mask = status.isin(('Pendiente', 'En curso'))
+        selected = own.loc[observed_mask | actionable_mask]
+        result['count'] = len(selected)
+        result['observed'] = int(observed_mask.sum())
+        if not selected.empty:
+            ordinary = selected.loc[~observed_mask.loc[selected.index]]
+            first_set = ordinary if not ordinary.empty else selected
+            sort_cols = [col for col in ('hora_inicio','titulo') if col in first_set.columns]
+            first = first_set.sort_values(sort_cols).iloc[0] if sort_cols else first_set.iloc[0]
+            result['next'] = str(first.get('titulo') or 'Actividad programada')
+    except (KeyError, ValueError, TypeError):
+        result['error'] = True
+    return result
+
+
+def _pm_day_hide_routines():
+    today = obtener_ahora_peru().date().isoformat()
+    flag = '_pm5_routine_notice_dismissed_' + _pm2_dni(dni_actual) + '_' + today
+    st.session_state[flag] = True
+
+
+def _pm_day_go_routines():
+    # Navegación diferida: no modificar nav_radio después de instanciarlo.
+    _ir_a('Mis Rutinas')
+
+
+_PM_DAY_HUB_CSS = """<style>
+/* Mi día: un solo encabezado secundario, tres tarjetas y acciones discretas. */
+.st-key-pm_day_hub{margin:9px 0 22px!important;padding:19px 20px 20px!important;
+  background:#fff!important;border:1px solid #e4eaf2!important;border-radius:21px!important;
+  box-shadow:0 14px 34px -32px rgba(23,42,73,.26)!important}
+.pm-day-head{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  margin:0 0 17px;min-width:0;flex-wrap:wrap}
+.pm-day-head-main{display:flex;gap:11px;align-items:center;min-width:0}
+.pm-day-head-icon{display:grid;place-items:center;flex:none;width:38px;height:38px;
+  color:#ca2a43;background:#fff1f4;border:1px solid #f6e0e5;border-radius:12px}
+.pm-day-head-icon svg{width:20px!important;height:20px!important}
+.pm-day-head-title{margin:0!important;font-size:1rem!important;color:#22344f;
+  letter-spacing:-.02em;line-height:1.3!important;font-weight:850!important}
+.pm-day-head-sub{margin:2px 0 0!important;font-size:.75rem!important;color:#7a89a0!important}
+.pm-day-total{white-space:nowrap;color:#455771;background:#f5f7fa;border:1px solid #e5ebf2;
+  padding:6px 11px;border-radius:999px;font-size:.71rem;font-weight:780;font-variant-numeric:tabular-nums}
+.st-key-pm_day_hub [data-testid="stHorizontalBlock"]{align-items:stretch!important;gap:13px!important}
+.st-key-pm_day_hub [data-testid="stColumn"]{min-width:0!important}
+/* Si queda una sola tarea, evitar que se estire como un banner gigante. */
+.st-key-pm_day_hub [data-testid="stHorizontalBlock"]>[data-testid="stColumn"]:only-child{
+  max-width:470px!important;flex:0 1 470px!important}
+.st-key-pm_day_card_mail,.st-key-pm_day_card_training,.st-key-pm_day_card_routines{
+  display:flex!important;flex-direction:column!important;min-width:0!important;
+  min-height:257px!important;height:100%!important;padding:15px 16px 13px!important;
+  background:#fff!important;border:1px solid #e6ebf3!important;border-radius:16px!important;
+  box-shadow:0 4px 12px -12px rgba(23,42,73,.15)!important;box-sizing:border-box!important;
+  transition:border-color .16s,box-shadow .16s!important}
+.st-key-pm_day_card_mail:hover,.st-key-pm_day_card_training:hover,.st-key-pm_day_card_routines:hover{
+  border-color:#cfd9e8!important;box-shadow:0 12px 25px -25px rgba(23,42,73,.26)!important}
+.st-key-pm_day_card_mail [data-testid="stVerticalBlock"],
+.st-key-pm_day_card_training [data-testid="stVerticalBlock"],
+.st-key-pm_day_card_routines [data-testid="stVerticalBlock"]{
+  display:flex!important;flex-direction:column!important;flex:1 1 auto!important;min-width:0!important}
+.pm-day-card-main{min-width:0;display:flex;flex-direction:column;gap:0}
+.pm-day-card-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:13px}
+.pm-day-card-icon{width:38px;height:38px;flex:none;border-radius:12px;display:grid;place-items:center;
+  background:#fff0f3;color:#cb344f}
+.pm-day-card-icon svg{width:21px!important;height:21px!important}
+.pm-day-card--training .pm-day-card-icon{background:#edf4ff;color:#366ebc}
+.pm-day-card--routines .pm-day-card-icon{background:#eaf8f1;color:#148e60}
+.pm-day-card-count{font-size:.7rem;line-height:1.25;color:#6e7f95;font-weight:780;
+  background:#f6f8fb;border-radius:999px;padding:5px 9px;white-space:nowrap}
+.pm-day-card--mail .pm-day-card-count{background:#fff0f3;color:#bf2d47}
+.pm-day-card-title{font-size:.93rem;font-weight:850;color:#243651;line-height:1.3;margin:0 0 9px}
+.pm-day-card-kicker{font-size:.71rem;color:#7a8ca3;font-weight:700;margin:0 0 4px}
+.pm-day-card-detail{font-size:.8rem;line-height:1.48;color:#334862;font-weight:700;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;margin:0 0 7px}
+.pm-day-card-copy{font-size:.74rem;color:#728197;line-height:1.5;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;margin:0 0 8px}
+.pm-day-progress{height:7px;background:#e9eef5;overflow:hidden;border-radius:99px;margin:5px 0 7px}
+.pm-day-progress i{height:100%;display:block;background:#3e82dd;border-radius:99px}
+.pm-day-progress-label{display:flex;justify-content:space-between;gap:8px;color:#72839a;font-size:.73rem;margin-bottom:3px}
+.st-key-pm_day_hub [class*="st-key-pm_day_action_"]{margin-top:auto!important;
+  padding-top:9px!important;border-top:1px solid #eef1f5!important}
+.st-key-pm_day_hub [class*="st-key-pm_day_action_"] button{display:flex!important;
+  justify-content:space-between!important;align-items:center!important;min-height:38px!important;
+  padding:6px 1px!important;border:0!important;border-radius:0!important;background:transparent!important;
+  box-shadow:none!important;color:#2e486a!important;font-size:.77rem!important;font-weight:790!important;
+  text-align:left!important;transition:color .15s!important}
+.st-key-pm_day_hub [class*="st-key-pm_day_action_"] button:hover{color:#bf2843!important;background:transparent!important}
+.st-key-pm_day_hub [class*="st-key-pm_day_action_"] button:focus-visible{outline:2px solid #295ec1!important;outline-offset:2px!important;border-radius:6px!important}
+.st-key-pm_day_card_routines .pm-day-card-actions{margin-top:auto}
+.st-key-pm_day_card_routines [data-testid="stHorizontalBlock"]{gap:5px!important;align-items:center!important}
+.st-key-pm_day_card_routines [data-testid="stColumn"]:last-child button{color:#8794a6!important;
+  font-size:.68rem!important;font-weight:660!important;justify-content:flex-end!important}
+.pm-day-empty{background:#f8fbf9;border:1px solid #e1efe7;border-radius:13px;
+  padding:14px 16px;display:flex;gap:10px;align-items:center;color:#315d49;font-size:.83rem;font-weight:730}
+.pm-day-empty svg{width:21px!important;height:21px!important;color:#23986b;flex:none}
+@media(max-width:850px){
+  .st-key-pm_day_hub{padding:15px!important;margin:9px 0 17px!important}
+  .st-key-pm_day_hub [data-testid="stHorizontalBlock"]{gap:10px!important}
+  .st-key-pm_day_card_mail,.st-key-pm_day_card_training,.st-key-pm_day_card_routines{padding:13px!important;min-height:248px!important}
+}
+@media(max-width:720px){
+  .st-key-pm_day_hub{padding:14px 12px!important;border-radius:18px!important}
+  /* La fila principal se apila, sin alterar los dos botones de la tarjeta de rutinas. */
+  .st-key-pm_day_hub [data-testid="stHorizontalBlock"]:has(.st-key-pm_day_card_mail),
+  .st-key-pm_day_hub [data-testid="stHorizontalBlock"]:has(.st-key-pm_day_card_training),
+  .st-key-pm_day_hub [data-testid="stHorizontalBlock"]:has(.st-key-pm_day_card_routines){
+     flex-direction:column!important;align-items:stretch!important}
+  .st-key-pm_day_hub [data-testid="stHorizontalBlock"]:has(.st-key-pm_day_card_mail)>[data-testid="stColumn"],
+  .st-key-pm_day_hub [data-testid="stHorizontalBlock"]:has(.st-key-pm_day_card_training)>[data-testid="stColumn"],
+  .st-key-pm_day_hub [data-testid="stHorizontalBlock"]:has(.st-key-pm_day_card_routines)>[data-testid="stColumn"]{
+     width:100%!important;flex:1 1 auto!important;min-width:0!important}
+  .st-key-pm_day_card_mail,.st-key-pm_day_card_training,.st-key-pm_day_card_routines{min-height:200px!important}
+  .st-key-pm_day_hub [data-testid="stHorizontalBlock"]>[data-testid="stColumn"]:only-child{
+    max-width:none!important;flex:1 1 100%!important}
+  .pm-day-card-top{margin-bottom:9px}
+  .pm-day-head{margin-bottom:13px}
+}
+@media(prefers-reduced-motion:reduce){.st-key-pm_day_hub [class*="st-key-pm_day_action_"] button,
+  .st-key-pm_day_card_mail,.st-key-pm_day_card_training,.st-key-pm_day_card_routines{transition:none!important}}
+</style>"""
+
+
+def _pm_worker_day_hub():
+    """Portada compacta con datos del trabajador autenticado y enlaces seguros.
+    Sin escrituras ni confirmaciones automáticas: solo muestra pendientes reales.
+    """
+    if rol_actual == 'admin' or st.session_state.get('ver_como'):
+        return
+    unread = list(st.session_state.get('_pm_av_unread') or [])
+    training = st.session_state.get('_pm_cap_pending')
+    if training is None:
+        training = _cap_worker_pending_summary(dni_actual)
+        st.session_state['_pm_cap_pending'] = training
+    today = obtener_ahora_peru().date().isoformat()
+    flag = '_pm5_routine_notice_dismissed_' + _pm2_dni(dni_actual) + '_' + today
+    routines = _pm_day_routines(dni_actual, today, seen=bool(st.session_state.get(flag)))
+    count_messages = len(unread)
+    count_training = int(training.get('count') or 0) if not training.get('error') else 0
+    count_routines = int(routines.get('count') or 0) if not routines.get('error') else 0
+    total = count_messages + count_training + count_routines
+    types = [t for t, n in (('mail', count_messages), ('training', count_training), ('routines', count_routines)) if n]
+    st.markdown(_PM_DAY_HUB_CSS, unsafe_allow_html=True)
+    with st.container(key='pm_day_hub'):
+        st.markdown(
+            '<div class="pm-day-head"><div class="pm-day-head-main">'
+            '<span class="pm-day-head-icon">'+_pm_day_icon('calendar' if total else 'check')+'</span>'
+            '<div><div class="pm-day-head-title">Mi día en Premium Market</div>'
+            '<div class="pm-day-head-sub">Lo importante para ti, en un solo lugar</div></div></div>'
+            '<span class="pm-day-total">'+str(total)+(' pendiente' if total==1 else ' pendientes')+'</span></div>',
+            unsafe_allow_html=True)
+        if not types:
+            # Un fallo de lectura de mensajes no equivale a tener cero pendientes.
+            errors = globals().get('_pm_sidebar_errors', []) or []
+            if (not routines.get('error') and not training.get('error')
+                    and 'mensajes' not in errors):
+                st.markdown('<div class="pm-day-empty">'+_pm_day_icon('check')+
+                            '<span>Todo al día. No tienes acciones pendientes en este resumen.</span></div>',
+                            unsafe_allow_html=True)
+            else:
+                st.caption('No se pudo actualizar todo el resumen. Puedes usar los accesos del menú lateral.')
+            return
+        columns = st.columns(len(types), gap='medium')
+        for col, kind in zip(columns, types):
+            with col:
+                if kind == 'mail':
+                    with st.container(key='pm_day_card_mail'):
+                        item = unread[0]
+                        title = _html.escape(str(item.get('titulo') or 'Mensaje del equipo'))
+                        preview = str(item.get('texto') or '').replace('\n', ' ').strip()
+                        excerpt = _html.escape(preview[:160] + ('…' if len(preview)>160 else ''))
+                        st.markdown(
+                            '<article class="pm-day-card-main pm-day-card--mail">'
+                            '<div class="pm-day-card-top"><span class="pm-day-card-icon">'+_pm_day_icon('mail')+'</span>'
+                            '<span class="pm-day-card-count">'+str(count_messages)+' sin leer</span></div>'
+                            '<div class="pm-day-card-title">Mensajes</div>'
+                            '<div class="pm-day-card-kicker">'+_html.escape(str(item.get('modulo') or 'Premium Market'))+'</div>'
+                            '<p class="pm-day-card-detail">'+title+'</p>'
+                            '<p class="pm-day-card-copy">'+excerpt+'</p></article>',
+                            unsafe_allow_html=True)
+                        with st.container(key='pm_day_action_mail'):
+                            st.button('Leer mensaje  →', key='pm_day_read', use_container_width=True,
+                                      on_click=_pm_av_request_panel)
+                elif kind == 'training':
+                    with st.container(key='pm_day_card_training'):
+                        item = (training.get('items') or [{}])[0]
+                        name = _html.escape(str(item.get('titulo') or 'Capacitación asignada'))
+                        pct = max(0, min(100, int(item.get('pct') or 0)))
+                        st.markdown(
+                            '<article class="pm-day-card-main pm-day-card--training">'
+                            '<div class="pm-day-card-top"><span class="pm-day-card-icon">'+_pm_day_icon('school')+'</span>'
+                            '<span class="pm-day-card-count">'+str(count_training)+' pendiente'+('s' if count_training != 1 else '')+'</span></div>'
+                            '<div class="pm-day-card-title">Capacitaciones</div>'
+                            '<p class="pm-day-card-detail">'+name+'</p>'
+                            '<p class="pm-day-card-copy">'+('Continúa donde lo dejaste.' if pct>0 else 'Un nuevo aprendizaje te espera.')+'</p>'
+                            '<div class="pm-day-progress-label"><span>Mi avance</span><b>'+str(pct)+' %</b></div>'
+                            '<div class="pm-day-progress"><i style="width:'+str(pct)+'%"></i></div>'
+                            '</article>', unsafe_allow_html=True)
+                        with st.container(key='pm_day_action_training'):
+                            st.button('Continuar capacitación  →' if pct else 'Comenzar curso  →',
+                                      key='pm_day_open_training', use_container_width=True,
+                                      on_click=_pm_open_pending_training)
+                elif kind == 'routines':
+                    with st.container(key='pm_day_card_routines'):
+                        name = _html.escape(str(routines.get('next') or 'Revisa tus actividades programadas.'))
+                        observed = int(routines.get('observed') or 0)
+                        st.markdown(
+                            '<article class="pm-day-card-main pm-day-card--routines">'
+                            '<div class="pm-day-card-top"><span class="pm-day-card-icon">'+_pm_day_icon('tasks')+'</span>'
+                            '<span class="pm-day-card-count">'+str(count_routines)+' para hoy</span></div>'
+                            '<div class="pm-day-card-title">Mis rutinas</div>'
+                            '<div class="pm-day-card-kicker">'+('Por corregir' if observed and observed==count_routines else 'Próxima actividad')+'</div>'
+                            '<p class="pm-day-card-detail">'+name+'</p>'
+                            '<p class="pm-day-card-copy">'+(str(observed)+' actividad(es) observada(s) por supervisión.'
+                                 if observed else 'Revisa tus actividades programadas para hoy.')+'</p>'
+                            '</article>', unsafe_allow_html=True)
+                        col_go, col_hide = st.columns([1.65,1], gap='small')
+                        with col_go:
+                            with st.container(key='pm_day_action_routines'):
+                                st.button('Ver mis rutinas  →', key='pm_day_open_routines',
+                                          use_container_width=True, on_click=_pm_day_go_routines)
+                        with col_hide:
+                            with st.container(key='pm_day_action_routines_hide'):
+                                st.button('Ocultar hoy', key='pm_day_hide_routines',
+                                          use_container_width=True, on_click=_pm_day_hide_routines,
+                                          help='Oculta solo este recordatorio por hoy; no modifica la actividad.')
+
+
 def _pm_av_home_summary():
     """Bandeja central en Marcar Asistencia: lectura sin consultar Sheets de nuevo."""
     if rol_actual == 'admin' or st.session_state.get('ver_como'):
@@ -18638,14 +18899,9 @@ elif choice == "Marcar Asistencia":
     premium_module_shell('Marcar Asistencia', 'MI JORNADA', 'Registra y consulta tus marcaciones.')
     _pm_attendance_ui_styles()
 
-    # Único centro visible de mensajes de supervisor, boletas y solicitudes.
-    # El sidebar conserva únicamente el contador para el acceso rápido.
-    _pm_av_home_summary()
-    _pm_cap_home_notice()
-
-    # Recordatorio breve al abrir la jornada: no compite con los diálogos
-    # existentes ni invade otras vistas. Se puede descartar durante el día.
-    _pm5_daily_worker_notice()
+    # Mi día reúne mensajes, capacitaciones y rutinas en un bloque compacto.
+    # Las notificaciones del sidebar continúan como accesos independientes.
+    _pm_worker_day_hub()
 
     # Panel específico para teléfonos; conserva el formulario existente y su lógica.
     _pm_mobile_home()
