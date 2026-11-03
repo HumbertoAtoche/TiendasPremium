@@ -16797,13 +16797,14 @@ _PM_DAY_HUB_CSS = """<style>
 .pm-day-total{white-space:nowrap;color:#455771;background:#f5f7fa;border:1px solid #e5ebf2;
   padding:6px 11px;border-radius:999px;font-size:.71rem;font-weight:780;font-variant-numeric:tabular-nums}
 .st-key-pm_day_hub [data-testid="stHorizontalBlock"]{align-items:stretch!important;gap:13px!important}
-.st-key-pm_day_hub [data-testid="stColumn"]{min-width:0!important}
+.st-key-pm_day_hub [data-testid="stColumn"]{min-width:0!important;display:flex!important}
+.st-key-pm_day_hub [data-testid="stColumn"]>div{display:flex!important;flex:1 1 auto!important;min-width:0!important}
 /* Si queda una sola tarea, evitar que se estire como un banner gigante. */
 .st-key-pm_day_hub [data-testid="stHorizontalBlock"]>[data-testid="stColumn"]:only-child{
   max-width:470px!important;flex:0 1 470px!important}
 .st-key-pm_day_card_mail,.st-key-pm_day_card_training,.st-key-pm_day_card_routines{
   display:flex!important;flex-direction:column!important;min-width:0!important;
-  min-height:257px!important;height:100%!important;padding:15px 16px 13px!important;
+  min-height:286px!important;height:286px!important;padding:15px 16px 13px!important;
   background:#fff!important;border:1px solid #e6ebf3!important;border-radius:16px!important;
   box-shadow:0 4px 12px -12px rgba(23,42,73,.15)!important;box-sizing:border-box!important;
   transition:border-color .16s,box-shadow .16s!important}
@@ -16813,7 +16814,7 @@ _PM_DAY_HUB_CSS = """<style>
 .st-key-pm_day_card_training [data-testid="stVerticalBlock"],
 .st-key-pm_day_card_routines [data-testid="stVerticalBlock"]{
   display:flex!important;flex-direction:column!important;flex:1 1 auto!important;min-width:0!important}
-.pm-day-card-main{min-width:0;display:flex;flex-direction:column;gap:0}
+.pm-day-card-main{min-width:0;display:flex;flex-direction:column;gap:0;flex:1 1 auto}
 .pm-day-card-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:13px}
 .pm-day-card-icon{width:38px;height:38px;flex:none;border-radius:12px;display:grid;place-items:center;
   background:#fff0f3;color:#cb344f}
@@ -16851,7 +16852,7 @@ _PM_DAY_HUB_CSS = """<style>
 @media(max-width:850px){
   .st-key-pm_day_hub{padding:15px!important;margin:9px 0 17px!important}
   .st-key-pm_day_hub [data-testid="stHorizontalBlock"]{gap:10px!important}
-  .st-key-pm_day_card_mail,.st-key-pm_day_card_training,.st-key-pm_day_card_routines{padding:13px!important;min-height:248px!important}
+  .st-key-pm_day_card_mail,.st-key-pm_day_card_training,.st-key-pm_day_card_routines{padding:13px!important;min-height:268px!important;height:268px!important}
 }
 @media(max-width:720px){
   .st-key-pm_day_hub{padding:14px 12px!important;border-radius:18px!important}
@@ -16864,7 +16865,7 @@ _PM_DAY_HUB_CSS = """<style>
   .st-key-pm_day_hub [data-testid="stHorizontalBlock"]:has(.st-key-pm_day_card_training)>[data-testid="stColumn"],
   .st-key-pm_day_hub [data-testid="stHorizontalBlock"]:has(.st-key-pm_day_card_routines)>[data-testid="stColumn"]{
      width:100%!important;flex:1 1 auto!important;min-width:0!important}
-  .st-key-pm_day_card_mail,.st-key-pm_day_card_training,.st-key-pm_day_card_routines{min-height:200px!important}
+  .st-key-pm_day_card_mail,.st-key-pm_day_card_training,.st-key-pm_day_card_routines{min-height:220px!important;height:auto!important}
   .st-key-pm_day_hub [data-testid="stHorizontalBlock"]>[data-testid="stColumn"]:only-child{
     max-width:none!important;flex:1 1 100%!important}
   .pm-day-card-top{margin-bottom:9px}
