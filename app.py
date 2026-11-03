@@ -11057,8 +11057,8 @@ def _pm2_validate_time(a, b):
         return False
 
 
-def _pm2_assign(dnis, day, days, title, details, store, zone, start, end, priority, origin="Manual", evidencia_obligatoria=False):
-    """Una escritura por lote, sin filas locales ficticias ni borrado de la hoja."""
+def _pm2_assign(dnis, day, days, title, details, store, zone, start, end, priority, origin="Manual", evidencia_obligatoria=False, selected_dates=None):
+    """Una escritura por lote. Admite fechas sueltas sin tocar el esquema de Sheets."""
     if not _pm2_is_admin():
         return False, "Solo un administrador real puede asignar actividades.", 0
     persons = {p["dni"]: p for p in _pm2_people()}
@@ -11074,11 +11074,25 @@ def _pm2_assign(dnis, day, days, title, details, store, zone, start, end, priori
         return False, "Revisa la prioridad y las horas: el límite debe ser posterior a la hora inicial.", 0
     try:
         days = int(days)
-        day = day if isinstance(day, date) else datetime.strptime(str(day)[:10], "%Y-%m-%d").date()
-    except (TypeError, ValueError):
-        return False, "La fecha de asignación no es válida.", 0
-    if days < 1 or days > 14 or days * len(dnis) > 120:
-        return False, "El máximo por operación es 14 días y 120 asignaciones.", 0
+        day = day.date() if isinstance(day, datetime) else (
+            day if isinstance(day, date) else datetime.strptime(str(day)[:10], "%Y-%m-%d").date())
+        if selected_dates is None:
+            planned_dates = [day + timedelta(days=i) for i in range(days)]
+        else:
+            if isinstance(selected_dates, (str, bytes)):
+                raise ValueError("Fechas inválidas")
+            planned_dates = []
+            for raw_day in selected_dates:
+                one_day = raw_day.date() if isinstance(raw_day, datetime) else (
+                    raw_day if isinstance(raw_day, date) else datetime.strptime(str(raw_day)[:10], "%Y-%m-%d").date())
+                planned_dates.append(one_day)
+            planned_dates = sorted(set(planned_dates))
+    except (TypeError, ValueError, OverflowError):
+        return False, "Las fechas de asignación no son válidas.", 0
+    if not planned_dates:
+        return False, "Selecciona por lo menos una fecha para programar la actividad.", 0
+    if len(planned_dates) > 14 or len(planned_dates) * len(dnis) > 120:
+        return False, "El máximo por operación es 14 fechas y 120 asignaciones.", 0
     stamp = _pm2_now()
     new_rows = []
     try:
@@ -11088,8 +11102,8 @@ def _pm2_assign(dnis, day, days, title, details, store, zone, start, end, priori
                   str(r.get("titulo", "")).strip().casefold(), str(r.get("hora_inicio", "")),
                   str(r.get("tienda", "")).strip().casefold(), str(r.get("zona", "")).strip().casefold())
                  for _, r in existing.iterrows() if str(r.get("estado")) != "Cancelada"}
-        for offset in range(days):
-            task_day = (day + timedelta(days=offset)).isoformat()
+        for assigned_day in planned_dates:
+            task_day = assigned_day.isoformat()
             for dni in dnis:
                 key = (dni, task_day, title.casefold(), str(start), store.casefold(), zone.casefold())
                 if key in known:
@@ -11118,10 +11132,104 @@ def _pm2_assign(dnis, day, days, title, details, store, zone, start, end, priori
         return True, "Las actividades indicadas ya estaban asignadas; no se crearon duplicados.", 0
     try:
         registrar_auditoria("Asignar rutinas", "Rutinas Operativas",
-                            f"{len(new_rows)} actividades para {len(dnis)} colaborador(es) desde {day.isoformat()}")
+                            f"{len(new_rows)} actividades para {len(dnis)} colaborador(es) en {len(planned_dates)} fecha(s), primera {planned_dates[0].isoformat()}")
     except Exception:
         pass
     return True, f"Se guardaron {len(new_rows)} actividades personalizadas.", len(new_rows)
+
+
+def _pm2_saved_library(history, max_entries=200):
+    """Biblioteca derivada de las rutinas guardadas; no añade hojas de Sheets.
+
+    Agrupa asignaciones de varios trabajadores/fechas y conserva parámetros
+    distintos de una actividad aunque el título coincida.
+    """
+    import hashlib as _hashlib
+    if not isinstance(history, pd.DataFrame) or history.empty:
+        return {}
+    result = {}
+    by_date = (history.assign(_pm2_library_order=history["fecha_creacion"].astype(str))
+               .sort_values("_pm2_library_order", ascending=False)) if "fecha_creacion" in history else history
+    for _, record in by_date.iterrows():
+        title = str(record.get("titulo") or "").strip()
+        details = str(record.get("instrucciones") or "").strip()
+        zone = str(record.get("zona") or "").strip()
+        store = str(record.get("tienda") or "Premium Market").strip()
+        if not title or not details or not zone:
+            continue
+        start = str(record.get("hora_inicio") or "08:45").strip()
+        end = str(record.get("hora_limite") or "09:30").strip()
+        priority = str(record.get("prioridad") or "Normal").strip()
+        if priority not in ("Normal", "Alta", "Urgente"):
+            priority = "Normal"
+        if not _pm2_validate_time(start, end):
+            start, end = "08:45", "09:30"
+        evidence = str(record.get("evidencia_obligatoria") or "").strip().casefold() in ("sí", "si", "true", "1")
+        identity = (title.casefold(), details.casefold(), store.casefold(), zone.casefold(), start, end, priority, evidence)
+        token = _hashlib.sha256(repr(identity).encode("utf-8")).hexdigest()[:12]
+        if token in result:
+            result[token]["times"] += 1
+            continue
+        result[token] = dict(title=title, details=details, store=store or "Premium Market", zone=zone,
+                             start=start, end=end, priority=priority, evidence=evidence,
+                             last_date=str(record.get("fecha") or "")[:10], times=1)
+        if len(result) >= max_entries:
+            break
+    return result
+
+
+def _pm2_assignment_source_values(source, saved_library):
+    if source.startswith("Guardada · "):
+        return saved_library.get(source.rsplit(" · ID ", 1)[-1]) or _pm2_assignment_source_values("Personalizada · desde cero", saved_library)
+    base = _PM2_TEMPLATES.get(source, _PM2_TEMPLATES["Personalizada · desde cero"])
+    return dict(title=base[0], details=base[1], zone=base[2], store="Premium Market",
+                start="08:45", end="09:30", priority=base[4],
+                evidence=(source in ("Control de refrigeradoras", "Limpieza y orden", "Cierre operativo")))
+
+
+def _pm2_assignment_apply_source(version, saved_library):
+    """Callback ejecutado antes de instanciar inputs; evita errores Streamlit."""
+    selected = st.session_state.get(f"pm2_template_choice_{version}", "Personalizada · desde cero")
+    data = _pm2_assignment_source_values(selected, saved_library)
+    fieldmap = dict(title=data["title"], details=data["details"], area=data["zone"],
+                    store=data["store"], priority=data["priority"],
+                    evidence_required=bool(data["evidence"]))
+    for part, val in fieldmap.items():
+        # No reutilizar claves de la interfaz antigua, que conservaban textos
+        # al cambiar de plantilla y daban la impresión de campos «pegados».
+        prefix = "pm2_assignment" if part in ("title", "details", "area", "priority") else "pm2"
+        st.session_state[f"{prefix}_{part}_{version}"] = val
+    for part, val in (("start", data["start"]), ("due", data["end"])):
+        try:
+            st.session_state[f"pm2_{part}_{version}"] = datetime.strptime(val, "%H:%M").time()
+        except (ValueError, TypeError):
+            pass
+
+
+def _pm2_assignment_pick_library(source):
+    """Solicita reabrir el editor con la actividad escogida, sin mutar widgets creados."""
+    st.session_state["_pm2_assignment_requested_source"] = str(source)
+    st.session_state["_pm2_assignment_library_notice"] = True
+
+
+def _pm2_assignment_change_day(version):
+    """Al mover el inicio, reinicia las fechas anteriores de forma segura."""
+    new_date = st.session_state.get(f"pm2_ass_date_{version}")
+    if isinstance(new_date, date):
+        st.session_state[f"pm2_selected_dates_{version}"] = [new_date]
+
+
+def _pm2_assignment_source_label(value):
+    """El identificador técnico es estable, pero no se muestra al administrador."""
+    value = str(value)
+    return value.rsplit(" · ID ", 1)[0] if value.startswith("Guardada · ") else value
+
+
+_PM2_WEEKDAY_NAMES = ("Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom")
+
+
+def _pm2_date_label(d):
+    return f"{_PM2_WEEKDAY_NAMES[d.weekday()]} {d.strftime('%d/%m/%Y')}"
 
 
 def _pm2_remote_row(task_id, writable=False):
@@ -16159,6 +16267,9 @@ def _pm3_live_hub_once():
         old = st.session_state.get("_pm3_worker_last_states")
         if old is not None:
             previous = {r[0]: (r[1], r[2]) for r in old}
+            new_assigned = [r for r in key_states if r[0] not in previous]
+            if new_assigned:
+                st.toast(f"Tienes {len(new_assigned)} actividad(es) nueva(s) asignada(s). Revísalas en Mis Rutinas.")
             changed = [(a, b, c) for a, b, c in key_states
                        if a in previous and previous[a] != (b, c)]
             if any(b == "Completada" for _, b, _ in changed):
@@ -20679,47 +20790,155 @@ elif choice == "Rutinas Operativas":
                     if st.session_state.get('_pm2_admin_task_open'):
                         _pm2_admin_task_dialog(st.session_state['_pm2_admin_task_open'])
 
+        # La biblioteca proviene del historial real, sin otra hoja de configuración.
+        _pm2_history_for_library, _pm2_history_library_error = _pm2_load()
+        _pm2_saved_templates = _pm2_saved_library(_pm2_history_for_library)
+        _pm2_saved_labels = {
+            f"Guardada · {v['title'][:48]} · {v['zone'][:22]} · ID {token}": token
+            for token, v in _pm2_saved_templates.items()
+        }
+        _pm2_source_options = list(_PM2_TEMPLATES) + list(_pm2_saved_labels)
+
         with t_create:
             st.markdown('<div class="pm2-split-title">Nueva asignación personalizada</div>', unsafe_allow_html=True)
-            st.caption("Puedes asignar una actividad diferente a cada trabajador, reutilizar un ejemplo y repetirla varios días. Todas las fechas y horas son de Perú.")
+            st.caption("Asigna una actividad, reutiliza tu biblioteca y programa varios días. Fechas y horas de Perú.")
+            _pm3_show_flash("admin", "assignment")
+            _pm2_form_version = int(st.session_state.get("_pm2_assignment_form_version", 0))
+            _pm2_source_key = f"pm2_template_choice_{_pm2_form_version}"
+            _pm2_requested = st.session_state.pop("_pm2_assignment_requested_source", None)
+            if _pm2_requested in _pm2_source_options:
+                _pm2_form_version += 1
+                st.session_state["_pm2_assignment_form_version"] = _pm2_form_version
+                _pm2_source_key = f"pm2_template_choice_{_pm2_form_version}"
+                st.session_state[_pm2_source_key] = _pm2_requested
+            template_selected = st.selectbox(
+                "Empezar desde", _pm2_source_options, key=_pm2_source_key,
+                format_func=_pm2_assignment_source_label,
+                on_change=_pm2_assignment_apply_source,
+                args=(_pm2_form_version, _pm2_saved_templates),
+                help="Las actividades asignadas anteriormente aparecen en «Guardada».")
+            preset = _pm2_assignment_source_values(template_selected, _pm2_saved_templates)
             active_people = _pm2_people()
             label_to_person = {p["nombre"] + " · " + p["dni"][-4:] + " · " + p["cargo"]: p for p in active_people}
             if not active_people:
                 st.warning("No hay colaboradores operativos activos para asignar actividades.")
-            template_selected = st.selectbox("Empezar desde", list(_PM2_TEMPLATES), key="pm2_template_choice")
-            preset = _PM2_TEMPLATES[template_selected]
-            with st.form("pm2_new_assignment", clear_on_submit=False):
-                assigned_labels = st.multiselect("¿Quién realizará esta actividad?", list(label_to_person),
-                                                 placeholder="Selecciona uno o varios colaboradores", key="pm2_assignees")
-                ct1, ct2 = st.columns([1.4, 1])
-                day = ct1.date_input("Fecha programada", value=obtener_ahora_peru().date(), key="pm2_ass_date")
-                repetition = ct2.selectbox("Frecuencia", ["Una sola fecha", "Repetir diariamente"], key="pm2_repeat")
-                repeat_days = st.number_input("Cantidad de días (máx. 14)", min_value=1, max_value=14, value=1, step=1, key="pm2_repeat_days") if repetition == "Repetir diariamente" else 1
-                title = st.text_input("Título de la actividad", value=preset[0], max_chars=120,
-                                      placeholder="Ej. Revisar fechas de vencimiento en lácteos", key="pm2_title_" + str(list(_PM2_TEMPLATES).index(template_selected)))
-                details = st.text_area("Instrucciones para el colaborador", value=preset[1], max_chars=1000,
-                                       placeholder="Describe claramente qué debe revisar y cómo reportar novedades.", key="pm2_details_" + str(list(_PM2_TEMPLATES).index(template_selected)))
+            _v = _pm2_form_version
+            assigned_labels = st.multiselect(
+                "¿Quién realizará esta actividad?", list(label_to_person),
+                placeholder="Selecciona uno o varios colaboradores", key=f"pm2_assignees_{_v}")
+            ct1, ct2 = st.columns([1.4, 1])
+            day = ct1.date_input("Fecha programada / inicio", value=obtener_ahora_peru().date(),
+                                 key=f"pm2_ass_date_{_v}", on_change=_pm2_assignment_change_day,
+                                 args=(_v,))
+            repetition = ct2.selectbox(
+                "Frecuencia", ["Una sola fecha", "Seleccionar varias fechas", "Repetir diariamente"], key=f"pm2_repeat_{_v}")
+            repeat_days = 1
+            selected_dates = None
+            if repetition == "Repetir diariamente":
+                repeat_days = st.number_input(
+                    "Cantidad de días (máx. 14)", min_value=1, max_value=14, value=1,
+                    step=1, key=f"pm2_repeat_days_{_v}")
+            elif repetition == "Seleccionar varias fechas":
+                date_options = [day + timedelta(days=i) for i in range(28)]
+                selected_dates = st.multiselect(
+                    "Elige las fechas de tu planificación (máx. 14)", date_options,
+                    default=[day], format_func=_pm2_date_label, key=f"pm2_selected_dates_{_v}",
+                    help="Marca los días específicos. Puedes elegir lunes, miércoles y viernes, por ejemplo.")
+                st.caption("Selecciona hasta 14 fechas dentro de las cuatro semanas siguientes a la fecha inicial. No se crean rutinas en días no marcados.")
+            _count_dates_preview = (len(selected_dates) if repetition == "Seleccionar varias fechas" else
+                                    int(repeat_days) if repetition == "Repetir diariamente" else 1)
+            if assigned_labels and _count_dates_preview:
+                _count_assignment_preview = len(assigned_labels) * _count_dates_preview
+                st.caption(f"Plan: {_count_dates_preview} fecha(s) × {len(assigned_labels)} colaborador(es) = {_count_assignment_preview} asignación(es).")
+            if repetition == "Seleccionar varias fechas" and not selected_dates:
+                st.warning("Selecciona al menos una fecha para continuar.")
+            elif _count_dates_preview > 14 or _count_dates_preview * len(assigned_labels) > 120:
+                st.warning("Máximo 14 fechas o 120 asignaciones por operación. Ajusta tu planificación.")
+            with st.container(key="pm2_new_assignment", border=True):
+                title = st.text_input(
+                    "Título de la actividad", value=preset["title"], max_chars=120,
+                    placeholder="Ej. Revisar fechas de vencimiento en lácteos", key=f"pm2_assignment_title_{_v}")
+                details = st.text_area(
+                    "Instrucciones para el colaborador", value=preset["details"], max_chars=1000,
+                    placeholder="Describe qué debe revisar y cómo reportar novedades.", key=f"pm2_assignment_details_{_v}")
                 store_col, area_col = st.columns(2)
-                store = store_col.text_input("Tienda / sede", value="Premium Market", key="pm2_store")
-                zone = area_col.text_input("Lugar exacto", value=preset[2], placeholder="Ej. Refrigeradora del fondo", key="pm2_area_" + str(list(_PM2_TEMPLATES).index(template_selected)))
+                store = store_col.text_input("Tienda / sede", value=preset["store"], key=f"pm2_store_{_v}")
+                zone = area_col.text_input(
+                    "Lugar exacto", value=preset["zone"], placeholder="Ej. Refrigeradora del fondo", key=f"pm2_assignment_area_{_v}")
                 start_col, end_col, pri_col = st.columns(3)
-                start_time = start_col.time_input("Inicia a las", value=dt_time(8, 45), key="pm2_start")
-                due_time = end_col.time_input("Debe finalizar a las", value=dt_time(9, 30), key="pm2_due")
-                priority = pri_col.selectbox("Prioridad", ["Normal", "Alta", "Urgente"], index=["Normal", "Alta", "Urgente"].index(preset[4]), key="pm2_priority_" + str(list(_PM2_TEMPLATES).index(template_selected)))
-                evidence_required = st.checkbox("Solicitar fotografía obligatoria de evidencia", value=template_selected in ("Control de refrigeradoras", "Limpieza y orden", "Cierre operativo"), key="pm2_evidence_required")
-                submitted = st.form_submit_button("Asignar actividad al equipo", type="primary", use_container_width=True)
+                try:
+                    _preset_start = datetime.strptime(preset["start"], "%H:%M").time()
+                    _preset_due = datetime.strptime(preset["end"], "%H:%M").time()
+                except (ValueError, TypeError):
+                    _preset_start, _preset_due = dt_time(8, 45), dt_time(9, 30)
+                start_time = start_col.time_input("Inicia a las", value=_preset_start, key=f"pm2_start_{_v}")
+                due_time = end_col.time_input("Debe finalizar a las", value=_preset_due, key=f"pm2_due_{_v}")
+                priority = pri_col.selectbox(
+                    "Prioridad", ["Normal", "Alta", "Urgente"],
+                    index=["Normal", "Alta", "Urgente"].index(preset["priority"]), key=f"pm2_assignment_priority_{_v}")
+                evidence_required = st.checkbox(
+                    "Solicitar fotografía obligatoria de evidencia", value=preset["evidence"],
+                    key=f"pm2_evidence_required_{_v}")
+                _plan_invalid = (not bool(active_people) or not bool(assigned_labels) or
+                                 _count_dates_preview == 0 or _count_dates_preview > 14 or
+                                 _count_dates_preview * len(assigned_labels) > 120)
+                submitted = st.button(
+                    "Asignar actividad al equipo", type="primary", use_container_width=True,
+                    disabled=_plan_invalid, key=f"pm2_submit_assignment_{_v}")
             if submitted:
-                ok, msg, added = _pm2_assign([label_to_person[l]["dni"] for l in assigned_labels], day, repeat_days,
-                                             title, details, store, zone, start_time.strftime("%H:%M"), due_time.strftime("%H:%M"), priority,
-                                             "Plantilla: " + template_selected if template_selected != "Personalizada · desde cero" else "Manual", evidencia_obligatoria=evidence_required)
-                _pm2_notice(ok, msg)
+                _chosen_dates = selected_dates if repetition == "Seleccionar varias fechas" else None
+                _origin = "Biblioteca: " + template_selected if template_selected.startswith("Guardada · ") else (
+                    "Plantilla: " + template_selected if template_selected != "Personalizada · desde cero" else "Manual")
+                ok, msg, added = _pm2_assign(
+                    [label_to_person[l]["dni"] for l in assigned_labels], day, repeat_days,
+                    title, details, store, zone, start_time.strftime("%H:%M"),
+                    due_time.strftime("%H:%M"), priority, _origin,
+                    evidencia_obligatoria=evidence_required, selected_dates=_chosen_dates)
                 if ok and added:
-                    st.caption("Las nuevas actividades ya están disponibles para los colaboradores asignados en «Mis Rutinas».")
-            st.info("Consejo: para asignar tareas diferentes a cada persona, selecciona un trabajador y crea una actividad por vez. Usa «Empezar desde» para reutilizar una plantilla sin volver a escribir todo.")
+                    # Importante: no mutar widgets ya instanciados. La nueva versión
+                    # del formulario aparece vacía antes de crear los widgets en el rerun.
+                    _pm3_flash("admin", "assignment", True,
+                               f"¡Asignación guardada! {added} actividad(es) disponibles para el equipo en Mis Rutinas. El formulario está listo para la siguiente.")
+                    st.session_state["_pm2_assignment_form_version"] = _v + 1
+                    st.rerun()
+                elif ok:
+                    st.warning(msg + " Revisa las fechas u horarios antes de volver a guardar.")
+                else:
+                    st.error(msg + " Tus datos siguen en el formulario para corregir o reintentar.")
+            st.caption("Cada asignación guardada también queda disponible en la pestaña «Biblioteca e historial», sin duplicar hojas de Google Sheets.")
 
         with t_library:
-            st.markdown('<div class="pm2-split-title">Biblioteca de actividades</div>', unsafe_allow_html=True)
-            st.caption("Ideas reutilizables para apertura, reposición, limpieza, frío y cierre. Puedes cambiar el texto y crear tareas completamente nuevas.")
+            st.markdown('<div class="pm2-split-title">Mi biblioteca de actividades</div>', unsafe_allow_html=True)
+            if st.session_state.pop("_pm2_assignment_library_notice", False):
+                st.success("Actividad cargada. Abre «Asignar actividades» para elegir el trabajador y las fechas.")
+            st.caption("Las rutinas asignadas se guardan automáticamente aquí. Elige una para reutilizar título, instrucciones, lugar, horario y prioridad.")
+            if _pm2_history_library_error:
+                st.warning("No se pudo actualizar la biblioteca desde Google Sheets. Los ejemplos incorporados siguen disponibles.")
+            elif _pm2_saved_labels:
+                _pm2_library_query = st.text_input(
+                    "Buscar actividad guardada", placeholder="Buscar por título o ubicación",
+                    key="pm2_library_search")
+                _pm2_matches = [label for label, token in _pm2_saved_labels.items()
+                                if not _pm2_library_query.strip() or
+                                _pm2_library_query.casefold().strip() in
+                                (label + " " + _pm2_saved_templates[token]["details"]).casefold()]
+                if _pm2_matches:
+                    _pm2_library_label = st.selectbox(
+                        "Actividad guardada", _pm2_matches, key="pm2_library_pick",
+                        format_func=_pm2_assignment_source_label)
+                    _pm2_lib = _pm2_saved_templates[_pm2_saved_labels[_pm2_library_label]]
+                    with st.container(border=True):
+                        st.markdown("**" + _html.escape(_pm2_lib["title"]) + "**")
+                        st.write(_pm2_lib["details"])
+                        st.caption(f"{_pm2_lib['zone']} · {_pm2_lib['start']}–{_pm2_lib['end']} · Prioridad {_pm2_lib['priority']} · Última asignación: {_pm2_lib['last_date']}")
+                        st.button("Usar en nueva asignación", type="primary", icon=":material/auto_awesome:",
+                                  key="pm2_library_use", use_container_width=True,
+                                  on_click=_pm2_assignment_pick_library, args=(_pm2_library_label,))
+                else:
+                    st.info("No hay actividades que coincidan con la búsqueda.")
+            else:
+                st.info("Tu biblioteca se irá formando con las actividades que asignes. No necesitas guardar la misma rutina dos veces.")
+            st.markdown('<div class="pm2-split-title">Ejemplos de inicio</div>', unsafe_allow_html=True)
             for name, tpl in _PM2_TEMPLATES.items():
                 if name.startswith("Personalizada"):
                     continue
