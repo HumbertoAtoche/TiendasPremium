@@ -6433,8 +6433,8 @@ def _cap_styles():
     .cap-heading{display:flex;align-items:flex-start;gap:10px;margin:0 0 14px}.cap-heading .cap-heading-icon{display:grid;place-items:center;flex:none;width:34px;height:34px;border-radius:12px;background:#fff1f3;font-size:1.1rem}
     .cap-heading h3{color:#18263c;font-weight:820;font-size:1.05rem;line-height:1.3;margin:0}.cap-heading p{font-size:.79rem;color:#75839a;line-height:1.5;margin:3px 0 0}
     .cap-panel{border:1px solid #e7edf3;border-radius:22px;padding:17px 16px;background:#fff;box-shadow:0 13px 27px -23px rgba(16,32,55,.28);margin-bottom:15px}
-    .cap-course-card{min-height:275px;overflow:hidden;background:#fff;border:1px solid #e8ecf2;border-radius:18px;box-shadow:0 7px 22px -23px rgba(21,32,48,.33)}
-    .cap-course-card .cap-cover{height:137px;position:relative;overflow:hidden;background:linear-gradient(130deg,#fee8ed,#f6f8fc)}
+    .cap-course-card{min-height:242px;overflow:hidden;background:#fff;border:1px solid #e8ecf2;border-radius:18px;box-shadow:0 7px 22px -23px rgba(21,32,48,.33)}
+    .cap-course-card .cap-cover{height:132px;position:relative;overflow:hidden;background:linear-gradient(130deg,#fee8ed,#f6f8fc)}
     .cap-course-card .cap-cover img{height:100%;width:100%;object-fit:cover;display:block;transition:transform .22s ease}
     .cap-course-card:hover img{transform:scale(1.035)}.cap-course-content{padding:13px 13px 10px}
     .cap-course-content h4{font-weight:850;color:#182940;font-size:.96rem;line-height:1.36;margin:0 0 5px;overflow-wrap:anywhere}
@@ -6452,7 +6452,7 @@ def _cap_styles():
     .cap-certificate .cap-cert-icon{display:grid;place-items:center;border-radius:12px;background:#fff0f2;color:#b22b44;width:40px;height:40px;flex:none;font-size:1.15rem}
     .cap-certificate .cap-cert-copy{min-width:0;flex:1}.cap-certificate strong{font-size:.78rem;color:#25344e;display:block;overflow-wrap:anywhere}
     .cap-certificate small{font-size:.69rem;color:#77879d;display:block;margin-top:4px}
-    .cap-video-thumb{height:106px;background:#f4f6f9;border-radius:12px;overflow:hidden;position:relative}.cap-video-thumb img{width:100%;height:100%;object-fit:cover}
+    .cap-video-thumb{height:124px;background:#f4f6f9;border-radius:12px;overflow:hidden;position:relative}.cap-video-thumb img{width:100%;height:100%;object-fit:cover}
     .cap-video-thumb::after{content:'▶';position:absolute;right:11px;bottom:10px;display:grid;place-items:center;border-radius:50%;width:29px;height:29px;background:#18233ba8;color:#fff;font-size:.7rem;border:1px solid #ffffff75}
     .cap-video-name{margin:8px 0 5px;font-size:.76rem;color:#27364c;font-weight:800;min-height:33px;line-height:1.35}
     .cap-video-sub{font-size:.72rem;color:#7a8aa1}.cap-performance{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
@@ -6466,12 +6466,12 @@ def _cap_styles():
     .st-key-cap_routes_panel,.st-key-cap_sessions_panel,.st-key-cap_cert_panel,.st-key-cap_library_panel,.st-key-cap_performance_panel{
        background:#fff;border:1px solid #e7edf3;border-radius:22px;padding:18px 16px;
        box-shadow:0 13px 27px -23px rgba(16,32,55,.28);margin-bottom:16px}
-    .st-key-cap_shell .cap-hero{height:205px;min-height:205px}
-    .st-key-cap_shell .cap-stat-grid{margin:0 0 12px;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
-    .st-key-cap_shell .cap-stat{padding:12px 9px;min-height:205px}
+    .st-key-cap_shell .cap-hero{height:auto;min-height:166px}
+    .st-key-cap_shell .cap-stat-grid{margin:0 0 17px;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+    .st-key-cap_shell .cap-stat{padding:15px 14px;min-height:116px}
     .st-key-cap_shell .cap-stat .cap-ico{width:35px;height:35px}
     .st-key-cap_shell .cap-stat strong{font-size:1.37rem}
-    .st-key-cap_shell .cap-stat small{font-size:.7rem;min-height:53px}
+    .st-key-cap_shell .cap-stat small{font-size:.73rem;min-height:0;margin-top:5px}
     .st-key-cap_shell button{border-radius:12px!important;min-height:40px!important;font-weight:700!important}
     .st-key-cap_shell button[kind="primary"]{background:#d6253d!important;border-color:#d6253d!important}
     .st-key-cap_shell [data-testid="stFileUploader"]{border-radius:15px}
@@ -6492,11 +6492,106 @@ def _cap_styles():
       .st-key-cap_shell button{min-height:44px!important}.cap-performance{gap:12px}}
     @media (max-width:385px){.cap-hero img{width:70px}.cap-stat-grid{gap:7px}.cap-stat{padding:10px}.cap-upcoming{padding:8px}.cap-badges{gap:5px}}
     @media (prefers-reduced-motion:reduce){.cap-course-card .cap-cover img{transition:none!important}.cap-course-card:hover img{transform:none!important}}
+
+    /* Premium Market / Capacitaciones 2026 - diseño gerencial y portal colaborador */
+    .cap-admin-navhint{color:#728196;font-size:.78rem;margin:2px 0 12px}
+    .capm-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px;margin:8px 0 20px}
+    .capm-kpi{background:#fff;border:1px solid #e6ecf4;border-radius:17px;padding:17px;min-width:0;box-shadow:0 8px 25px -26px #162b47}
+    .capm-kpi-top{display:flex;align-items:center;justify-content:space-between;gap:9px}
+    .capm-kpi-ico{width:42px;height:42px;display:grid;place-items:center;background:#fff0f2;color:#d42b42;border-radius:12px;flex:none}
+    .capm-kpi:nth-child(2) .capm-kpi-ico{background:#edf3ff;color:#3869c4}
+    .capm-kpi:nth-child(3) .capm-kpi-ico{background:#fff5e8;color:#c58226}
+    .capm-kpi:nth-child(4) .capm-kpi-ico{background:#eaf9f1;color:#158953}
+    .capm-kpi-ico svg{width:21px!important;height:21px!important;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+    .capm-kpi small{display:block;color:#63738b;font-weight:750;font-size:.73rem;line-height:1.35}
+    .capm-kpi strong{display:block;color:#16253c;font-weight:850;letter-spacing:-.035em;font-size:1.85rem;line-height:1.16;margin-top:6px}
+    .capm-kpi p{font-size:.68rem;color:#8290a4;margin:6px 0 0}
+    .capm-card{min-width:0;background:#fff;border:1px solid #e6edf5;border-radius:19px;padding:18px 18px 16px;margin-bottom:12px;box-shadow:0 15px 32px -30px rgba(20,36,59,.35)}
+    .st-key-capm_quick_actions{border:1px solid #e6edf5;background:#fff;border-radius:19px;padding:18px 18px 16px;margin-bottom:12px}
+    .st-key-capm_quick_actions button{min-height:38px!important;text-align:left!important;justify-content:flex-start!important;margin-top:5px}
+    .capm-track-label{font-size:.75rem;color:#2a3e58;font-variant-numeric:tabular-nums}
+    .st-key-cap_routes_panel [class*="st-key-cap_course_wrap_"],
+    .st-key-cap_library_panel [class*="st-key-cap_video_wrap_"]{max-width:400px;width:100%}
+    .st-key-cap_routes_panel [class*="st-key-cap_course_wrap_"] button,
+    .st-key-cap_library_panel [class*="st-key-cap_video_wrap_"] button{margin-top:6px!important}
+
+    .capm-card h3{font-size:.95rem!important;color:#20324e!important;margin:0 0 4px!important}
+    .capm-card small{color:#7a899e;font-size:.72rem}
+    .capm-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
+    .capm-heading span{font-weight:820;color:#253653;font-size:.92rem}
+    .capm-progress-main{display:flex;align-items:center;gap:21px;padding:15px 0 6px}
+    .capm-ring{width:142px;height:142px;border-radius:50%;display:grid;place-items:center;flex:0 0 142px;background:conic-gradient(#1ca66e 0 var(--cap-p),#e9edf3 var(--cap-p) 100%)}
+    .capm-ring-inner{width:110px;height:110px;border-radius:50%;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center}
+    .capm-ring-inner strong{font-size:1.65rem;font-weight:850;color:#1d2b43;line-height:1.15}
+    .capm-ring-inner small{font-size:.66rem}
+    .capm-ring-legend{flex:1;min-width:0}.capm-legend-row{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:.75rem;margin:11px 0;color:#54657e}
+    .capm-legend-row b{color:#22314a;font-variant-numeric:tabular-nums}
+    .capm-dot{display:inline-block;border-radius:50%;width:9px;height:9px;margin-right:7px;background:#1da76a}
+    .capm-dot.progress{background:#f4ad39}.capm-dot.pending{background:#e3e8f1}
+    .capm-activity{display:flex;align-items:flex-start;gap:9px;padding:10px 0;border-bottom:1px solid #f0f3f7}
+    .capm-activity:last-child{border:0}.capm-activity-icon{display:grid;place-items:center;color:#16895a;background:#e9f8f0;border-radius:10px;width:32px;height:32px;flex:none;font-size:.9rem}
+    .capm-activity-copy{min-width:0;flex:1}.capm-activity-copy b{display:block;color:#27364e;font-size:.77rem;line-height:1.35;font-weight:700;overflow-wrap:anywhere}.capm-activity-copy small{display:block;margin-top:4px}
+    .capm-course{border:1px solid #e6ebf3;border-radius:16px;overflow:hidden;background:white;margin-bottom:5px;min-width:0}
+    .capm-cover{height:133px;overflow:hidden;background:#fff0f3;position:relative}
+    .capm-cover img{width:100%;height:100%;object-fit:cover;display:block}
+    .capm-course-body{padding:13px 13px 11px;min-height:142px}
+    .capm-course-body h4{color:#243450;font-size:.87rem;font-weight:820;line-height:1.35;margin:0 0 9px;min-height:34px;overflow-wrap:anywhere}
+    .capm-course-body p{font-size:.69rem;color:#7a899d;margin:5px 0;line-height:1.4}
+    .capm-tag{display:inline-block;border-radius:99px;padding:5px 9px;font-size:.64rem;font-weight:780;background:#fff2dc;color:#9d681d}
+    .capm-tag.published{background:#e4f7ed;color:#17824e}.capm-tag.archived{background:#edf0f5;color:#667387}
+    .capm-course-foot{display:flex;align-items:center;justify-content:space-between;gap:7px;padding-top:9px;border-top:1px solid #eff2f7;margin-top:10px;color:#62748b;font-size:.67rem}
+    .capm-track{height:7px;background:#e8edf3;border-radius:99px;overflow:hidden;min-width:48px;flex:1}
+    .capm-track i{height:100%;display:block;background:#24a96c;border-radius:99px}
+    .capm-mini-row{display:flex;align-items:center;gap:10px;min-width:0;padding:11px 0;border-bottom:1px solid #edf1f5;min-width:0}
+    .capm-mini-row:last-child{border-bottom:0}
+    .capm-mini-row img{width:54px;height:48px;object-fit:cover;border-radius:9px;flex:none}
+    .capm-mini-copy{flex:1;min-width:0;overflow:hidden}.capm-mini-copy b{color:#263750;font-size:.79rem;font-weight:770;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .capm-mini-copy small{display:block;margin-top:3px}
+    .capm-section-intro{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:3px 0 16px}
+    .capm-section-intro b{color:#20334e;font-size:1rem}.capm-section-intro p{margin:4px 0 0;color:#7b8ba2;font-size:.76rem}
+    .capm-formhelp{background:#f8fafc;border:1px dashed #dee6f0;border-radius:13px;padding:13px;font-size:.78rem;color:#687990;line-height:1.55}
+    .capm-worker-lead{color:#637891;font-size:.76rem;margin:2px 0 14px}
+    .st-key-cap_admin_view [role="radiogroup"] label:has(input:checked){background:#d92642!important;border-color:#d92642!important;box-shadow:0 5px 13px -10px #c22239!important}
+    .st-key-cap_admin_view [role="radiogroup"] label:has(input:checked) p{color:#fff!important}
+    .st-key-cap_admin_view [role="radiogroup"] label input[type="radio"]{width:1px!important;height:1px!important;opacity:0!important;position:absolute!important}
+    .st-key-cap_admin_view [role="radiogroup"] label{min-height:41px!important;padding:9px 13px!important;align-items:center!important}
+    .st-key-cap_admin_view [role="radiogroup"]{margin-bottom:6px}
+    .st-key-cap_shell .cap-heading{margin:5px 0 15px}
+    .st-key-cap_shell .cap-heading .cap-heading-icon{width:32px;height:32px;overflow:hidden;flex:none}
+    .st-key-cap_shell .cap-heading .cap-heading-icon svg{width:19px!important;height:19px!important}
+    .st-key-cap_shell .cap-course-card .cap-cover{height:125px}
+    .st-key-cap_shell .cap-course-content p{min-height:41px}
+    .st-key-cap_shell .cap-course-card{min-height:235px}
+    .st-key-cap_shell .cap-video-thumb{height:124px}
+    .st-key-cap_shell .cap-hero{box-shadow:none;border-radius:17px;padding:17px 22px;min-height:155px;margin-bottom:0}
+    .st-key-cap_shell .cap-hero h2{font-size:2.15rem}
+    .st-key-cap_shell .cap-hero img{width:107px;height:115px}
+    .st-key-cap_shell .cap-stat{box-shadow:none;border-radius:15px}
+    .st-key-cap_shell .cap-panel,.st-key-cap_routes_panel,.st-key-cap_sessions_panel,.st-key-cap_cert_panel,.st-key-cap_library_panel,.st-key-cap_performance_panel{box-shadow:none!important;border-radius:17px!important}
+    @media(max-width:720px){
+      .st-key-cap_shell [data-testid="stHorizontalBlock"]{flex-direction:column!important;align-items:stretch!important}
+      .st-key-cap_shell [data-testid="column"]{width:100%!important;min-width:0!important;flex:1 1 auto!important}
+      .st-key-cap_shell .capm-course{max-width:420px}
+    }
+    @media(max-width:1100px){.capm-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.capm-progress-main{gap:12px}.capm-ring{width:118px;height:118px;flex-basis:118px}.capm-ring-inner{width:91px;height:91px}}
+    @media(max-width:700px){.capm-kpis{gap:9px}.capm-kpi{padding:12px}.capm-kpi strong{font-size:1.5rem}.capm-kpi-ico{width:34px;height:34px}.capm-kpi-ico svg{width:18px!important;height:18px!important}
+      .capm-card{padding:14px 12px}.capm-section-intro{align-items:flex-start;flex-wrap:wrap}
+      .capm-progress-main{flex-direction:column;align-items:flex-start}.capm-ring-legend{width:100%}
+      .st-key-cap_shell .cap-hero{min-height:130px;padding:13px}.st-key-cap_shell .cap-hero img{width:75px;height:100px}
+      .st-key-cap_shell .cap-hero h2{font-size:1.85rem}.st-key-cap_shell .cap-stat-grid{gap:8px}.st-key-cap_shell .cap-stat{min-height:95px;padding:11px}
+      .capm-cover{height:145px}.capm-mini-row .capm-track{display:none}.capm-mini-row img{width:43px;height:42px}.capm-mini-row{gap:7px}}
     </style>''',unsafe_allow_html=True)
 
 
 def _cap_section(icon,title,description=''):
-    st.markdown('<div class="cap-heading"><span class="cap-heading-icon">'+_cap_escape(icon)+'</span><div><h3>'+
+    mapping={'Rutas de aprendizaje':'book','Próximas sesiones':'clock','Mis certificados':'award',
+             'Biblioteca de videos':'play','Mi desempeño':'chart','Catálogo de cursos':'book',
+             'Biblioteca de contenido':'play','Asignación de cursos':'users',
+             'Banco de evaluaciones':'check','Importación desde Excel':'upload',
+             'Seguimiento de capacitaciones':'chart','Certificados emitidos':'award',
+             'Contenido del curso':'book','Evaluación del curso':'check'}
+    icon_name=mapping.get(title,'book')
+    st.markdown('<div class="cap-heading"><span class="cap-heading-icon">'+_capm_svg(icon_name)+'</span><div><h3>'+
        _cap_escape(title)+'</h3><p>'+_cap_escape(description)+'</p></div></div>',unsafe_allow_html=True)
 
 
@@ -6525,15 +6620,16 @@ def _cap_course_tile(course,state,idx):
     tone='done' if state['completed'] else ('pending' if not pct else '')
     cover=_cap_thumb(course.get('miniatura',''))
     image='<img src="'+cover+'" alt="Portada del curso">' if cover else ''
-    st.markdown('<div class="cap-course-card"><div class="cap-cover">'+image+
-         '<span class="cap-state '+tone+'">'+_cap_escape(status)+'</span></div><div class="cap-course-content">'
-         '<h4>'+_cap_escape(course['titulo'])+'</h4><p>'+_cap_escape(course['descripcion'])+'</p>'
-         '<div class="cap-course-meter"><div class="cap-progress '+('done' if state['completed'] else '')+'"><i style="width:'+str(pct)+'%"></i></div><b>'+str(pct)+'%</b></div>'
-         '<div class="cap-meta"><span>◷ '+str(round(int(course.get('duracion_min') or 0)/60,1))+' h</span><span>▤ '+str(len(state['lessons']))+' módulos</span></div>'
-         '</div></div>',unsafe_allow_html=True)
-    if st.button('Continuar curso' if pct and pct<100 else ('Ver curso completado' if state['completed'] else 'Comenzar curso'),
-                 key='cap_open_'+cid+'_'+str(idx),icon=':material/play_circle:',use_container_width=True):
-        _cap_open_course(cid);st.rerun()
+    with st.container(key='cap_course_wrap_'+cid):
+        st.markdown('<div class="cap-course-card"><div class="cap-cover">'+image+
+             '<span class="cap-state '+tone+'">'+_cap_escape(status)+'</span></div><div class="cap-course-content">'
+             '<h4>'+_cap_escape(course['titulo'])+'</h4><p>'+_cap_escape(course['descripcion'])+'</p>'
+             '<div class="cap-course-meter"><div class="cap-progress '+('done' if state['completed'] else '')+'"><i style="width:'+str(pct)+'%"></i></div><b>'+str(pct)+'%</b></div>'
+             '<div class="cap-meta"><span>◷ '+str(round(int(course.get('duracion_min') or 0)/60,1))+' h</span><span>▤ '+str(len(state['lessons']))+' módulos</span></div>'
+             '</div></div>',unsafe_allow_html=True)
+        st.button('Continuar curso' if pct and pct<100 else ('Ver curso completado' if state['completed'] else 'Comenzar curso'),
+                  key='cap_open_'+cid+'_'+str(idx),icon=':material/play_circle:',use_container_width=True,
+                  on_click=_cap_open_course,args=(cid,))
 
 
 def _cap_learner_dashboard(data,dni):
@@ -6547,20 +6643,18 @@ def _cap_learner_dashboard(data,dni):
     certs=[r for r in data[_CAP_CERTS] if _pmi_dni(r['dni'])==_pmi_dni(dni)
            and any(c['id_curso']==r['id_curso'] for c in data[_CAP_COURSES])]
     hours=sum(int(c.get('duracion_min') or 0) for c in courses if statuses[c['id_curso']]['completed'])/60
-    ill=_cap_thumb('hero'); im='<img src="'+ill+'" alt="Libros y birrete">' if ill else '🎓'
+    ill=_cap_thumb('hero'); im='<img src="'+ill+'" alt="Material educativo">' if ill else ''
     with st.container(key='cap_shell'):
-        top_l,top_r=st.columns([3.15,2.3],gap='small')
-        with top_l:
-            st.markdown('<div class="cap-hero">'+im+'<div class="cap-hero-body"><div class="cap-hero-kicker">MI PROGRESO DE APRENDIZAJE</div>'
-                        '<h2>'+str(pct)+'%</h2><div class="cap-progress"><i style="width:'+str(pct)+'%"></i></div>'
-                        '<p>Has completado '+str(progress)+' de '+str(planned)+' actividades de tu plan de formación.</p></div></div>',unsafe_allow_html=True)
-            next_course=next((c for c in courses if not statuses[c['id_curso']]['completed']),None)
-            if next_course and st.button('▶ Continuar aprendizaje',key='cap_continue',type='primary'):
-                _cap_open_course(next_course['id_curso']);st.rerun()
-        with top_r:
-            kpis=[('📚','Cursos asignados',str(len(courses))),('✅','Completados',str(completed)),
-                  ('🕒','Horas de formación',f'{hours:.1f} h'),('🏅','Certificados',str(len(certs)))]
-            st.markdown('<div class="cap-stat-grid">'+''.join('<div class="cap-stat"><span class="cap-ico">'+icon+'</span><small>'+_cap_escape(label)+'</small><strong>'+_cap_escape(value)+'</strong></div>' for icon,label,value in kpis)+'</div>',unsafe_allow_html=True)
+        st.markdown('<div class="cap-hero">'+im+'<div class="cap-hero-body"><div class="cap-hero-kicker">MI PROGRESO DE APRENDIZAJE</div>'
+                    '<h2>'+str(pct)+'% completado</h2><div class="cap-progress"><i style="width:'+str(pct)+'%"></i></div>'
+                    '<p>'+str(progress)+' de '+str(planned)+' actividades completadas · '+str(len(courses))+' curso(s) asignado(s)</p></div></div>',unsafe_allow_html=True)
+        next_course=next((c for c in courses if not statuses[c['id_curso']]['completed']),None)
+        if next_course:
+            st.button('Continuar aprendizaje',key='cap_continue',type='primary',icon=':material/play_arrow:',
+                      on_click=_cap_open_course,args=(next_course['id_curso'],))
+        kpis=[('book','Cursos asignados',str(len(courses))),('check','Completados',str(completed)),
+              ('clock','Horas de formación',f'{hours:.1f} h'),('award','Certificados',str(len(certs)))]
+        st.markdown('<div class="cap-stat-grid">'+''.join('<div class="cap-stat"><span class="cap-ico">'+_capm_svg(icon)+'</span><small>'+_cap_escape(label)+'</small><strong>'+_cap_escape(value)+'</strong></div>' for icon,label,value in kpis)+'</div>',unsafe_allow_html=True)
 
         middle_l,middle_r=st.columns([2.1,1.05],gap='medium')
         with middle_l:
@@ -6569,7 +6663,7 @@ def _cap_learner_dashboard(data,dni):
                 if not courses:
                     st.markdown('<div class="cap-empty">Todavía no tienes capacitaciones asignadas.<br>Cuando administración publique tus cursos, aparecerán aquí.</div>',unsafe_allow_html=True)
                 else:
-                    route_cols=st.columns(min(3,len(courses)),gap='small')
+                    route_cols=st.columns(min(2,len(courses)),gap='small')
                     for i,c in enumerate(courses[:3]):
                         with route_cols[i%len(route_cols)]:
                             _cap_course_tile(c,statuses[c['id_curso']],i)
@@ -6625,15 +6719,16 @@ def _cap_learner_dashboard(data,dni):
                 if not items:
                     st.markdown('<div class="cap-empty">Los videos publicados en tus cursos aparecerán aquí.</div>',unsafe_allow_html=True)
                 else:
-                    v_cols=st.columns(min(3,len(items)),gap='small')
+                    v_cols=st.columns(min(2,len(items)),gap='small')
                     for i,(c,l) in enumerate(items[:3]):
                         with v_cols[i%len(v_cols)]:
-                            img=_cap_thumb(c.get('miniatura',''))
-                            st.markdown('<div class="cap-video-thumb"><img src="'+img+'" alt="Video de capacitación"></div>'
-                                '<div class="cap-video-name">'+_cap_escape(l['titulo'])+'</div>'
-                                '<div class="cap-video-sub">▷ '+_cap_escape(str(l.get('minutos') or '0'))+' min · '+_cap_escape(c['titulo'])+'</div>',unsafe_allow_html=True)
-                            if st.button('Ver video',key='cap_v_lib_'+l['id_leccion'],use_container_width=True):
-                                _cap_open_course(c['id_curso'],l['id_leccion']);st.rerun()
+                            with st.container(key='cap_video_wrap_'+l['id_leccion']):
+                                img=_cap_thumb(c.get('miniatura',''))
+                                st.markdown('<div class="cap-video-thumb"><img src="'+img+'" alt="Video de capacitación"></div>'
+                                    '<div class="cap-video-name">'+_cap_escape(l['titulo'])+'</div>'
+                                    '<div class="cap-video-sub">▷ '+_cap_escape(str(l.get('minutos') or '0'))+' min · '+_cap_escape(c['titulo'])+'</div>',unsafe_allow_html=True)
+                                st.button('Ver video',key='cap_v_lib_'+l['id_leccion'],use_container_width=True,
+                                          on_click=_cap_open_course,args=(c['id_curso'],l['id_leccion']))
         with bottom_r:
             with st.container(key='cap_performance_panel'):
                 _cap_section('📊','Mi desempeño','Evaluaciones y reconocimientos obtenidos.')
@@ -6656,12 +6751,11 @@ def _cap_course_detail(data,dni,cid):
         course=_cap_authorize_course(data,dni,cid)
     except (PermissionError,ValueError):
         st.warning('Esta capacitación ya no está disponible en tu cuenta.')
-        if st.button('Volver a capacitaciones',key='cap_back_absent',on_click=_cap_close_course):st.rerun()
+        st.button('Volver a capacitaciones',key='cap_back_absent',on_click=_cap_close_course)
         return
     state=_cap_status(data,course,dni)
     with st.container(key='cap_shell'):
-        if st.button('← Volver a mis capacitaciones',key='cap_back',on_click=_cap_close_course):
-            st.rerun()
+        st.button('← Volver a mis capacitaciones',key='cap_back',on_click=_cap_close_course)
         st.markdown('<div class="cap-hero"><div class="cap-hero-body"><div class="cap-hero-kicker">MI RUTA DE APRENDIZAJE</div>'
             '<h2 style="font-size:1.5rem">'+_cap_escape(course['titulo'])+'</h2><p>'+_cap_escape(course['descripcion'])+'</p>'
             '<div class="cap-progress '+('done' if state['completed'] else '')+'"><i style="width:'+str(state['pct'])+'%"></i></div>'
@@ -7155,21 +7249,110 @@ def _cap_excel_import(preview, mode, target_course=None):
             'omitidas':ignored}
 
 
+
+# ---------- Capacitaciones / diseño de administración (solo presentación) ----------
+def _capm_svg(kind):
+    paths={
+        'book':'<path d="M12 6c-2-2-6-2-9-1v14c3-1 7-1 9 1m0-14c2-2 6-2 9-1v14c-3-1-7-1-9 1V6Z"/>',
+        'users':'<path d="M16 19v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM16 8a3 3 0 0 1 0 6m5 5v-2a4 4 0 0 0-3-3.87"/>',
+        'award':'<circle cx="12" cy="8" r="5"/><path d="m8.5 12-1 9 4.5-2 4.5 2-1-9"/>',
+        'check':'<path d="M20 6 9 17l-5-5"/><circle cx="12" cy="12" r="10"/>',
+        'play':'<path d="m8 5 11 7-11 7V5Z"/>',
+        'upload':'<path d="M12 16V3m-5 5 5-5 5 5M4 17v4h16v-4"/>',
+        'clock':'<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+        'chart':'<path d="M4 19h16M7 15V9M12 15V5M17 15v-3"/>',
+    }
+    return '<svg xmlns="http://www.w3.org/2000/svg" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+paths.get(kind,paths['book'])+'</svg>'
+
+
+def _capm_nav(area):
+    # Callback ejecutado ANTES de instanciar el radio: evita errores de Streamlit.
+    st.session_state['cap_admin_view']=area
+    st.session_state['cap_admin_last_view']=area
+
+
+def _capm_kpis(courses, data):
+    items=[('book','Cursos creados',len(courses),'Rutas de formación registradas'),
+           ('play','Publicados',sum(c['estado']=='Publicado' for c in courses),'Disponibles para asignación'),
+           ('users','Asignaciones vigentes',sum(a['estado']=='Activa' for a in data[_CAP_ASSIGNS]),'Registros activos; TODOS cuenta como uno'),
+           ('award','Certificados',len(data[_CAP_CERTS]),'Constancias emitidas')]
+    html='<div class="capm-kpis">'
+    for kind,title,n,sub in items:
+        html+='<div class="capm-kpi"><div class="capm-kpi-top"><small>'+_cap_escape(title)+'</small><span class="capm-kpi-ico">'+_capm_svg(kind)+'</span></div><strong>'+str(n)+'</strong><p>'+_cap_escape(sub)+'</p></div>'
+    st.markdown(html+'</div>',unsafe_allow_html=True)
+
+
+def _capm_progress_rows(data,mapping):
+    result=[]
+    for pid,name in mapping.items():
+        for course in _cap_assigned(data,pid):
+            state=_cap_status(data,course,pid)
+            attempts=state['tries']
+            best=max((float(a.get('nota_pct') or 0) for a in attempts),default=None)
+            result.append({'dni':pid,'nombre':name,'curso':course['titulo'],'cid':course['id_curso'],
+                           'pct':state['pct'],'done':state['completed'],'passed':state['passed'],
+                           'best':best,'lessons':len(state['lessons']),'completed_lessons':len(state['done'])})
+    return result
+
+
+def _capm_coverage(data,mapping):
+    report=_capm_progress_rows(data,mapping)
+    done=sum(x['done'] for x in report)
+    started=sum(0<x['pct']<100 for x in report)
+    pending=len(report)-done-started
+    pct=round(done*100/len(report)) if report else 0
+    return report,done,started,pending,pct
+
+
+def _capm_overview(data,courses,mapping,names):
+    report,done,started,pending,pct=_capm_coverage(data,mapping)
+    left,right=st.columns([1.45,1],gap='medium')
+    with left:
+        html=('<div class="capm-card"><div class="capm-heading"><span>Avance general del equipo</span></div>'
+          '<small>Combinaciones de colaborador y curso asignado</small>'
+          '<div class="capm-progress-main"><div class="capm-ring" style="--cap-p:'+str(pct)+'%"><div class="capm-ring-inner"><strong>'+str(pct)+'%</strong><small>Completados</small></div></div>'
+          '<div class="capm-ring-legend">')
+        for cls,label,n in [('','Completados',done),('progress','En proceso',started),('pending','Sin iniciar',pending)]:
+            html+='<div class="capm-legend-row"><span><i class="capm-dot '+cls+'"></i>'+label+'</span><b>'+str(n)+'</b></div>'
+        st.markdown(html+'</div></div></div>',unsafe_allow_html=True)
+    with right:
+        with st.container(key='capm_quick_actions'):
+            st.markdown('<div class="capm-heading"><span>Accesos rápidos</span></div><div class="cap-admin-navhint">Continúa con la gestión del equipo</div>',unsafe_allow_html=True)
+            for text,destination,icon in [('Crear un curso','Cursos',':material/add_circle:'),
+                                          ('Asignar capacitación','Asignaciones',':material/groups:'),
+                                          ('Importar desde Excel','Importar Excel',':material/upload_file:')]:
+                st.button(text,key='capm_quick_'+destination,icon=icon,use_container_width=True,
+                          on_click=_capm_nav,args=(destination,))
+    bleft,bright=st.columns([1.45,1],gap='medium')
+    with bleft:
+        html='<div class="capm-card"><div class="capm-heading"><span>Avance por curso</span></div>'
+        for course in courses[:6]:
+            rows=[r for r in report if r['cid']==course['id_curso']]
+            value=round(100*sum(x['done'] for x in rows)/len(rows)) if rows else 0
+            html+='<div class="capm-mini-row"><img src="'+_cap_thumb(course.get('miniatura',''))+'" alt="Portada">'
+            html+='<div class="capm-mini-copy"><b>'+_cap_escape(course['titulo'])+'</b><small>'+str(len(rows))+' colaborador(es) asignado(s)</small></div>'
+            html+='<div class="capm-track"><i style="width:'+str(value)+'%"></i></div><b class="capm-track-label">'+str(value)+'%</b></div>'
+        if not courses:html+='<div class="cap-empty">Aún no hay cursos creados.</div>'
+        st.markdown(html+'</div>',unsafe_allow_html=True)
+    with bright:
+        events=[]
+        for r in data[_CAP_ASSIGNS]:
+            events.append((r.get('asignado_el',''), 'Asignación '+('activa' if r['estado']=='Activa' else 'retirada'),names.get(r['id_curso'],'Curso')))
+        for r in data[_CAP_ATTEMPTS]:
+            events.append((r.get('realizado_el',''),'Evaluación registrada',names.get(r['id_curso'],'Curso')))
+        for r in data[_CAP_CERTS]:
+            events.append((r.get('emitido_el',''),'Constancia emitida',names.get(r['id_curso'],'Curso')))
+        html='<div class="capm-card"><div class="capm-heading"><span>Actividad reciente</span></div>'
+        for date,title,subtitle in sorted(events,key=lambda x:x[0],reverse=True)[:4]:
+            html+='<div class="capm-activity"><span class="capm-activity-icon">'+_capm_svg('check')+'</span><div class="capm-activity-copy"><b>'+_cap_escape(title)+'</b><small>'+_cap_escape(subtitle)+' · '+_cap_escape(str(date)[:16])+'</small></div></div>'
+        if not events:html+='<div class="cap-empty">Todavía no hay movimientos registrados.</div>'
+        st.markdown(html+'</div>',unsafe_allow_html=True)
+
+
 def _cap_admin_panel():
     _cap_admin_guard()
     _cap_styles()
     with st.container(key='cap_shell'):
-        st.markdown('<div class="cap-admin-bar"><h3>🎓 Centro de formación Premium Market</h3>'
-          '<p>Organiza rutas de aprendizaje, publica contenido, programa sesiones y consulta el avance real de tu equipo. '
-          'Este módulo es independiente del proceso de inducción.</p></div>',unsafe_allow_html=True)
-        if st.button('⚙️ Verificar o preparar hojas de Capacitaciones',key='cap_prepare_btn',use_container_width=True):
-            _pmi_ui_action(_cap_prepare,'Hojas de capacitaciones verificadas y listas.')
-        with st.expander('✨ Crear las tres rutas sugeridas del diseño'):
-            st.caption('Prepara Sistema de ventas, Facturación y Atención al cliente como borradores. '
-                       'No publica videos ni asigna cursos automáticamente; no duplica títulos existentes.')
-            agree=st.checkbox('Confirmo que deseo crear las rutas sugeridas',key='cap_starter_confirm')
-            if st.button('Crear rutas en borrador',key='cap_starter_create',disabled=not agree,use_container_width=True):
-                _pmi_ui_action(_cap_create_starter_courses,'Rutas sugeridas preparadas. Agrega contenido y publícalas.')
         try:
             data=_cap_data()
         except Exception:
@@ -7184,61 +7367,78 @@ def _cap_admin_panel():
                 if dni:mapping[dni]=str(p.get('nombre') or dni)
         options=[c['id_curso'] for c in courses]
         names={c['id_curso']:c['titulo'] for c in courses}
-        k1,k2,k3,k4=st.columns(4,gap='small')
-        k1.metric('Rutas creadas',len(courses))
-        k2.metric('Cursos publicados',sum(c['estado']=='Publicado' for c in courses))
-        k3.metric('Asignaciones activas',sum(r['estado']=='Activa' for r in data[_CAP_ASSIGNS]))
-        k4.metric('Certificados emitidos',len(data[_CAP_CERTS]))
+        _capm_kpis(courses,data)
         # Streamlit reinicia st.tabs al guardar y hacer st.rerun().
         # Un radio con key conserva la sección activa (también en móvil).
-        _cap_admin_areas=['Cursos','Materiales','Asignaciones','Evaluaciones',
+        _cap_admin_areas=['Resumen','Cursos','Materiales','Asignaciones','Evaluaciones',
                           'Importar Excel','Sesiones','Seguimiento','Certificados']
         if st.session_state.get('cap_admin_view') not in _cap_admin_areas:
-            st.session_state['cap_admin_view']=st.session_state.get('cap_admin_last_view','Cursos')
+            st.session_state['cap_admin_view']=st.session_state.get('cap_admin_last_view','Resumen')
         if st.session_state['cap_admin_view'] not in _cap_admin_areas:
-            st.session_state['cap_admin_view']='Cursos'
+            st.session_state['cap_admin_view']='Resumen'
         _cap_current=st.radio('Área de Gestión de Capacitaciones',_cap_admin_areas,
                     horizontal=True,key='cap_admin_view',label_visibility='collapsed',
                     on_change=lambda:st.session_state.__setitem__('cap_admin_last_view',
-                                                      st.session_state.get('cap_admin_view','Cursos')))
+                                                      st.session_state.get('cap_admin_view','Resumen')))
+        if _cap_current == 'Resumen':
+            _capm_overview(data,courses,mapping,names)
         if _cap_current == 'Cursos':
-            _cap_section('📚','Crear una ruta de aprendizaje','El curso se guarda como borrador hasta que publiques una lección.')
+            with st.expander('Opciones de configuración y rutas sugeridas',expanded=False):
+                if st.button('Verificar o preparar hojas de Capacitaciones',key='cap_prepare_btn',use_container_width=True):
+                    _pmi_ui_action(_cap_prepare,'Hojas de capacitaciones verificadas y listas.')
+                st.caption('Las tres rutas sugeridas se crean únicamente como borradores, sin asignación automática.')
+                agree=st.checkbox('Confirmo que deseo crear las rutas sugeridas',key='cap_starter_confirm')
+                if st.button('Crear rutas en borrador',key='cap_starter_create',disabled=not agree,use_container_width=True):
+                    _pmi_ui_action(_cap_create_starter_courses,'Rutas sugeridas preparadas. Agrega contenido y publícalas.')
+            _cap_section('📚','Catálogo de cursos','Administra tus rutas de aprendizaje y publica nuevas capacitaciones.')
             st.button('Crear o importar cursos desde Excel',icon=':material/table_view:',
                       key='cap_courses_open_excel',use_container_width=True,
                       on_click=lambda:st.session_state.update(cap_admin_view='Importar Excel',
                                                                cap_admin_last_view='Importar Excel',
                                                                cap_import_type='Curso completo'))
-            with st.form('cap_new_course',clear_on_submit=True):
-                title=st.text_input('Nombre del curso',max_chars=130,placeholder='Ej. Sistema de ventas — Nivel básico')
-                desc=st.text_area('Descripción',max_chars=900,placeholder='Qué aprenderá el colaborador en esta ruta de aprendizaje')
-                c1,c2=st.columns(2)
-                cat=c1.selectbox('Categoría',['Ventas','Facturación','Atención al cliente','Operaciones','Seguridad','General'])
-                mini=c2.selectbox('Portada',['sales','invoice','service','negosy','receipt','client'],
-                    format_func=lambda x:{'sales':'Sistema de ventas','invoice':'Facturación','service':'Atención al cliente',
-                      'negosy':'Negosy','receipt':'Comprobantes','client':'Experiencia de compra'}.get(x,x))
-                c3,c4=st.columns(2)
-                dur=c3.number_input('Duración estimada (minutos)',min_value=5,max_value=1800,value=120,step=15)
-                threshold=c4.slider('Nota mínima aprobatoria (%)',min_value=50,max_value=100,value=70,step=5)
-                save=st.form_submit_button('Crear curso en borrador',type='primary',use_container_width=True)
-            if save:_pmi_ui_action(lambda:_cap_create_course(title,desc,cat,dur,mini,threshold),'Curso creado como borrador.')
+            with st.expander('Crear nuevo curso',expanded=not bool(courses)):
+                with st.form('cap_new_course',clear_on_submit=True):
+                    title=st.text_input('Nombre del curso',max_chars=130,placeholder='Ej. Sistema de ventas — Nivel básico')
+                    desc=st.text_area('Descripción',max_chars=900,placeholder='Qué aprenderá el colaborador en esta ruta de aprendizaje')
+                    c1,c2=st.columns(2)
+                    cat=c1.selectbox('Categoría',['Ventas','Facturación','Atención al cliente','Operaciones','Seguridad','General'])
+                    mini=c2.selectbox('Portada',['sales','invoice','service','negosy','receipt','client'],
+                        format_func=lambda x:{'sales':'Sistema de ventas','invoice':'Facturación','service':'Atención al cliente',
+                          'negosy':'Negosy','receipt':'Comprobantes','client':'Experiencia de compra'}.get(x,x))
+                    c3,c4=st.columns(2)
+                    dur=c3.number_input('Duración estimada (minutos)',min_value=5,max_value=1800,value=120,step=15)
+                    threshold=c4.slider('Nota mínima aprobatoria (%)',min_value=50,max_value=100,value=70,step=5)
+                    save=st.form_submit_button('Crear curso en borrador',type='primary',use_container_width=True)
+                if save:_pmi_ui_action(lambda:_cap_create_course(title,desc,cat,dur,mini,threshold),'Curso creado como borrador.')
             if courses:
-                st.markdown('#### Cursos existentes')
-                for c in courses[:40]:
-                    with st.container(key='cap_admin_course_'+c['id_curso']):
-                        st.markdown('<div class="cap-certificate"><span class="cap-cert-icon">📚</span><div class="cap-cert-copy"><strong>'+
-                         _cap_escape(c['titulo'])+'</strong><small>'+_cap_escape(c['categoria'])+' · '+_cap_escape(c['estado'])+
-                         ' · '+str(sum(l['id_curso']==c['id_curso'] for l in data[_CAP_LESSONS]))+' lecciones</small></div></div>',unsafe_allow_html=True)
-                        if c['estado']=='Borrador':
-                            if st.button('Publicar curso',key='cap_publish_'+c['id_curso'],use_container_width=True):
-                                _pmi_ui_action(lambda cid=c['id_curso']:_cap_set_course(cid,'Publicado'),'Curso publicado.')
-                        elif c['estado']=='Publicado':
-                            with st.expander('Archivar curso'):
-                                yes=st.checkbox('Confirmo que quiero archivar este curso',key='cap_archive_chk_'+c['id_curso'])
-                                if st.button('Archivar',disabled=not yes,key='cap_archive_'+c['id_curso']):
-                                    _pmi_ui_action(lambda cid=c['id_curso']:_cap_set_course(cid,'Archivado'),'Curso archivado.')
-                        elif c['estado']=='Archivado':
-                            if st.button('Reactivar curso',key='cap_reactivate_'+c['id_curso'],use_container_width=True):
-                                _pmi_ui_action(lambda cid=c['id_curso']:_cap_set_course(cid,'Publicado'),'Curso reactivado.')
+                c_search,c_filter=st.columns([2,1],gap='small')
+                query=c_search.text_input('Buscar curso',placeholder='Buscar por nombre o categoría...',key='capm_courses_search')
+                stage=c_filter.selectbox('Estado',['Todos','Publicado','Borrador','Archivado'],key='capm_courses_stage')
+                visible=[c for c in courses if (stage=='Todos' or c['estado']==stage)
+                         and (not query or query.casefold() in (c['titulo']+' '+c['categoria']).casefold())]
+                if not visible:
+                    st.info('No se encontraron cursos con los filtros seleccionados.')
+                for start_idx in range(0,min(len(visible),60),3):
+                    grid=st.columns(3,gap='small')
+                    for j,c in enumerate(visible[start_idx:start_idx+3]):
+                        with grid[j]:
+                            cover=_cap_thumb(c.get('miniatura',''))
+                            st.markdown('<div class="capm-course"><div class="capm-cover"><img src="'+cover+'" alt="Portada del curso"></div><div class="capm-course-body">'
+                                '<h4>'+_cap_escape(c['titulo'])+'</h4><span class="capm-tag '+('published' if c['estado']=='Publicado' else ('archived' if c['estado']=='Archivado' else ''))+'">'+_cap_escape(c['estado'])+'</span>'
+                                '<p>'+_cap_escape(c['categoria'])+' · '+str(c.get('umbral_pct') or 70)+'% mínimo</p>'
+                                '<div class="capm-course-foot"><span>'+str(sum(l['id_curso']==c['id_curso'] for l in data[_CAP_LESSONS]))+' lecciones</span>'
+                                '<span>'+str(sum(q['id_curso']==c['id_curso'] for q in data[_CAP_QUESTIONS]))+' preguntas</span></div></div></div>',unsafe_allow_html=True)
+                            if c['estado']=='Borrador':
+                                if st.button('Publicar curso',key='cap_publish_'+c['id_curso'],use_container_width=True):
+                                    _pmi_ui_action(lambda cid=c['id_curso']:_cap_set_course(cid,'Publicado'),'Curso publicado.')
+                            elif c['estado']=='Publicado':
+                                with st.expander('Archivar curso'):
+                                    yes=st.checkbox('Confirmo que quiero archivar este curso',key='cap_archive_chk_'+c['id_curso'])
+                                    if st.button('Archivar',disabled=not yes,key='cap_archive_'+c['id_curso']):
+                                        _pmi_ui_action(lambda cid=c['id_curso']:_cap_set_course(cid,'Archivado'),'Curso archivado.')
+                            elif c['estado']=='Archivado':
+                                if st.button('Reactivar curso',key='cap_reactivate_'+c['id_curso'],use_container_width=True):
+                                    _pmi_ui_action(lambda cid=c['id_curso']:_cap_set_course(cid,'Publicado'),'Curso reactivado.')
         if _cap_current == 'Materiales':
             _cap_section('🎬','Biblioteca de contenido','Publica enlaces de YouTube, MP4 en Drive privado o material de lectura.')
             if not courses:st.info('Primero crea un curso.')
@@ -7257,29 +7457,45 @@ def _cap_admin_panel():
                 if saved:
                     _pmi_ui_action(lambda:_cap_create_lesson(cid,title,kind,desc,mins,order,url,upload),
                                    'Lección publicada correctamente.')
-                st.markdown('#### Contenido existente')
-                for l in sorted(data[_CAP_LESSONS],key=lambda x:(x['id_curso'],str(x['orden'])))[:80]:
-                    st.markdown('<div class="cap-certificate"><span class="cap-cert-icon">▶</span><div class="cap-cert-copy"><strong>'+
-                        _cap_escape(l['titulo'])+'</strong><small>'+_cap_escape(names.get(l['id_curso'],'Curso'))+' · '+
-                        _cap_escape(l['tipo'])+' · Orden '+_cap_escape(l['orden'])+'</small></div></div>',unsafe_allow_html=True)
+                st.markdown('#### Contenido del curso seleccionado')
+                current=sorted((l for l in data[_CAP_LESSONS] if l['id_curso']==cid),
+                               key=lambda x:(int(x.get('orden') or 999) if str(x.get('orden') or '').isdigit() else 999,
+                                             str(x.get('titulo') or '')))[:80]
+                if not current:st.info('Todavía no hay lecciones en este curso.')
+                for l in current:
+                    st.markdown('<div class="capm-mini-row"><img src="'+_cap_thumb(next((c.get('miniatura','') for c in courses if c['id_curso']==cid),'service'))+'" alt="Lección">'
+                        '<div class="capm-mini-copy"><b>'+_cap_escape(l['titulo'])+'</b><small>'+_cap_escape(l['tipo'])+
+                        ' · Orden '+_cap_escape(l['orden'])+' · '+_cap_escape(l.get('minutos','0'))+' min</small></div>'
+                        '<span class="capm-tag published">'+_cap_escape(l['estado'])+'</span></div>',unsafe_allow_html=True)
         if _cap_current == 'Asignaciones':
-            _cap_section('👥','Asignación de rutas','El contenido solo es visible para los colaboradores con asignación activa.')
+            _cap_section('👥','Asignación de cursos','Elige un curso publicado y define quiénes deben completarlo.')
             if not courses:st.info('Primero crea un curso.')
             else:
-                with st.form('cap_assign_course'):
-                    cid=st.selectbox('Curso',options,format_func=lambda x:names[x],key='cap_assign_cid')
-                    dest=st.selectbox('Destinatario',['TODOS']+sorted(mapping),
-                        format_func=lambda x:'Todo el equipo (incluye futuras altas)' if x=='TODOS' else mapping[x]+' · '+x)
-                    confirm=st.checkbox('Confirmo que deseo asignar esta capacitación')
-                    # Los widgets de un st.form solo envían su valor al pulsar submit.
-                    # Deshabilitar el submit según una casilla del mismo formulario
-                    # impide confirmar, porque la casilla no provoca un rerun.
-                    saved=st.form_submit_button('Asignar curso',type='primary',use_container_width=True)
-                if saved:
-                    if not confirm:
-                        st.warning('Marca la casilla de confirmación antes de asignar el curso.')
-                    else:
-                        _pmi_ui_action(lambda:_cap_assign(cid,dest),'Capacitación asignada.')
+                assignable=[c['id_curso'] for c in courses if c['estado']=='Publicado']
+                if not assignable:
+                    st.info('Publica al menos un curso para poder asignarlo.')
+                else:
+                    if st.session_state.get('cap_assign_cid') not in assignable:
+                        st.session_state.pop('cap_assign_cid',None)
+                    left,right=st.columns([1.2,1],gap='medium')
+                    with left:
+                        with st.container(border=True):
+                            cid=st.selectbox('Curso',assignable,format_func=lambda x:names[x],key='cap_assign_cid')
+                            dest=st.selectbox('Destinatario',['TODOS']+sorted(mapping),
+                                format_func=lambda x:'Todo el equipo (incluye futuras altas)' if x=='TODOS' else mapping[x]+' · '+x,
+                                key='capm_assign_audience')
+                            confirm=st.checkbox('Confirmo que deseo asignar esta capacitación',key='capm_assign_confirm')
+                            if st.button('Asignar curso',type='primary',use_container_width=True,
+                                         disabled=not confirm,key='capm_assign_save'):
+                                _pmi_ui_action(lambda:_cap_assign(cid,dest),'Capacitación asignada.')
+                    with right:
+                        chosen=next((c for c in courses if c['id_curso']==cid),None)
+                        if chosen:
+                            st.markdown('<div class="capm-course"><div class="capm-cover"><img src="'+_cap_thumb(chosen.get('miniatura',''))+'" alt="Portada"></div>'
+                                '<div class="capm-course-body"><h4>'+_cap_escape(chosen['titulo'])+'</h4>'
+                                '<span class="capm-tag published">Publicado</span><p>'+_cap_escape(chosen['categoria'])+'</p>'
+                                '<div class="capm-course-foot"><span>'+str(sum(l['id_curso']==cid for l in data[_CAP_LESSONS]))+' lección(es)</span><span>'+str(sum(q['id_curso']==cid for q in data[_CAP_QUESTIONS]))+' pregunta(s)</span><span>Nota '+_cap_escape(chosen.get('umbral_pct','70'))+'%</span></div>'
+                                '</div></div>',unsafe_allow_html=True)
                 if data[_CAP_ASSIGNS]:
                     st.caption('Nota: las asignaciones individuales retiradas prevalecen sobre la asignación general.')
                     for a in reversed(data[_CAP_ASSIGNS][-60:]):
@@ -7300,34 +7516,46 @@ def _cap_admin_panel():
             if not courses:st.info('Primero crea un curso.')
             else:
                 cid=st.selectbox('Curso evaluado',options,format_func=lambda x:names[x],key='cap_quest_course')
-                with st.form('cap_new_question',clear_on_submit=True):
-                    q=st.text_area('Pregunta',max_chars=450)
-                    col1,col2=st.columns(2)
-                    A=col1.text_input('Opción A',max_chars=240)
-                    B=col2.text_input('Opción B',max_chars=240)
-                    C=col1.text_input('Opción C',max_chars=240)
-                    D=col2.text_input('Opción D',max_chars=240)
-                    correct=st.radio('Respuesta correcta',['A','B','C','D'],horizontal=True)
-                    saved=st.form_submit_button('Añadir pregunta',type='primary',use_container_width=True)
-                if saved:_pmi_ui_action(lambda:_cap_add_question(cid,q,A,B,C,D,correct),'Pregunta añadida a la evaluación.')
-                count={cid:sum(q['id_curso']==cid and q['estado']=='Publicado' for q in data[_CAP_QUESTIONS]) for cid in options}
-                st.dataframe(pd.DataFrame([{'Curso':names[cid],'Preguntas':count[cid],
-                          'Nota mínima':str(next(c['umbral_pct'] for c in courses if c['id_curso']==cid))+'%'}
-                         for cid in options]),hide_index=True,use_container_width=True)
+                with st.expander('Añadir una pregunta manualmente',expanded=False):
+                    with st.form('cap_new_question',clear_on_submit=True):
+                        q=st.text_area('Pregunta',max_chars=450)
+                        col1,col2=st.columns(2)
+                        A=col1.text_input('Opción A',max_chars=240)
+                        B=col2.text_input('Opción B',max_chars=240)
+                        C=col1.text_input('Opción C',max_chars=240)
+                        D=col2.text_input('Opción D',max_chars=240)
+                        correct=st.radio('Respuesta correcta',['A','B','C','D'],horizontal=True)
+                        saved=st.form_submit_button('Añadir pregunta',type='primary',use_container_width=True)
+                    if saved:_pmi_ui_action(lambda:_cap_add_question(cid,q,A,B,C,D,correct),'Pregunta añadida a la evaluación.')
+                count=sum(q['id_curso']==cid and q['estado']=='Publicado' for q in data[_CAP_QUESTIONS])
+                minimum=next((c['umbral_pct'] for c in courses if c['id_curso']==cid),'70')
+                st.markdown('<div class="capm-formhelp">'+str(count)+' preguntas registradas · Nota mínima '+
+                            _cap_escape(minimum)+'% · Máximo 3 intentos por trabajador.</div>',unsafe_allow_html=True)
+                current_questions=[q for q in data[_CAP_QUESTIONS] if q['id_curso']==cid and q['estado']=='Publicado']
+                st.markdown('#### Preguntas del curso seleccionado')
+                if current_questions:
+                    st.dataframe(pd.DataFrame([{'N.º':i,'Pregunta':q['enunciado'],
+                        'Correcta':q['correcta'],'Respuesta correcta':q.get('op_'+q['correcta'].lower(),'')}
+                        for i,q in enumerate(current_questions,1)]),hide_index=True,use_container_width=True)
+                else:st.info('Este curso todavía no tiene preguntas de evaluación.')
                 st.caption('El trabajador puede realizar como máximo tres intentos. Cada intento y nota quedan registrados.')
         if _cap_current == 'Importar Excel':
             _cap_section('📥','Importación desde Excel',
                          'Una plantilla para crear cursos y evaluaciones sin introducir cada pregunta por separado.')
-            st.info('Revisa la vista previa antes de guardar. Los cursos nuevos se crean en borrador; '
-                    'no se publican ni se asignan automáticamente.')
-            st.caption('1. Descarga la plantilla.  2. Completa sus hojas en Excel.  '
-                       '3. Sube el archivo.  4. Revisa y confirma.')
-            # Archivo preparado con la misma estructura que valida la aplicación.
-            import base64 as _cap_b64
-            st.download_button('Descargar plantilla Excel',_cap_b64.b64decode(_CAP_EXCEL_TEMPLATE_B64),
-                file_name='Plantilla_Capacitaciones_Premium_Market.xlsx',
-                mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                icon=':material/download:',use_container_width=True,key='cap_import_template')
+            upload_left,upload_right=st.columns([1.5,1],gap='medium')
+            with upload_left:
+                st.markdown('<div class="capm-card"><div class="capm-heading"><span>Carga masiva de contenido</span></div>'
+                    '<p class="cap-admin-navhint">Sube cursos, videos y preguntas de forma organizada. La aplicación mostrará una vista previa antes de guardar.</p>'
+                    '<div class="capm-formhelp">Los nuevos cursos se crean como borradores. Nada se publica ni asigna automáticamente.</div></div>',
+                    unsafe_allow_html=True)
+            with upload_right:
+                st.markdown('<div class="capm-heading"><span>Plantilla y guía</span></div>',unsafe_allow_html=True)
+                st.caption('1. Descarga  ·  2. Completa  ·  3. Sube  ·  4. Confirma')
+                import base64 as _cap_b64
+                st.download_button('Descargar plantilla Excel',_cap_b64.b64decode(_CAP_EXCEL_TEMPLATE_B64),
+                    file_name='Plantilla_Capacitaciones_Premium_Market.xlsx',
+                    mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    icon=':material/download:',use_container_width=True,key='cap_import_template')
             _mode_text=st.selectbox('Qué deseas importar',
                 ['Curso completo','Solo preguntas a curso existente'],key='cap_import_type')
             _mode='nuevo' if _mode_text=='Curso completo' else 'preguntas'
@@ -7433,20 +7661,35 @@ def _cap_admin_panel():
                                 _cap_admin_guard()
                                 _pmi_ui_action(lambda ident=s['id_sesion']:_cap_update(_CAP_SESSIONS,ident,{'estado':'Cancelada'}),'Sesión cancelada.')
         if _cap_current == 'Seguimiento':
-            _cap_section('📊','Seguimiento de aprendizaje','Avance, evaluaciones y constancias de cursos asignados.')
-            report=[]
-            for pid,person in mapping.items():
-                for c in _cap_assigned(data,pid):
-                    state=_cap_status(data,c,pid)
-                    report.append({'Colaborador':person,'DNI':pid,'Curso':c['titulo'],'Avance':str(state['pct'])+'%',
-                        'Lecciones':str(len(state['done']))+'/'+str(len(state['lessons'])),
-                        'Evaluación':'Aprobada' if state['passed'] else ('Pendiente' if state['questions'] else 'No aplica'),
-                        'Estado':'Completado' if state['completed'] else 'En proceso'})
+            _cap_section('📊','Seguimiento de capacitaciones','Revisa progreso, resultados y pendientes del equipo.')
+            report=_capm_progress_rows(data,mapping)
+            c1,c2,c3=st.columns(3,gap='small')
+            c1.metric('Colaboradores y cursos',len(report))
+            c2.metric('Completados',sum(r['done'] for r in report))
+            c3.metric('En proceso',sum(0<r['pct']<100 for r in report))
             if report:
-                st.dataframe(pd.DataFrame(report),use_container_width=True,hide_index=True)
-                csv=pd.DataFrame(report).to_csv(index=False).encode('utf-8-sig')
-                st.download_button('⬇ Descargar seguimiento CSV',csv,file_name='Seguimiento_Capacitaciones.csv',
-                    mime='text/csv',key='cap_report_csv',use_container_width=True)
+                f1,f2,f3=st.columns(3,gap='small')
+                by_course=f1.selectbox('Curso',['Todos']+sorted({r['curso'] for r in report}),key='capm_track_course')
+                by_state=f2.selectbox('Estado',['Todos','Completado','En proceso','Sin iniciar'],key='capm_track_status')
+                search=f3.text_input('Buscar colaborador',key='capm_track_search',placeholder='Nombre...')
+                filtered=[]
+                for row in report:
+                    status='Completado' if row['done'] else ('En proceso' if row['pct']>0 else 'Sin iniciar')
+                    if by_course!='Todos' and row['curso']!=by_course:continue
+                    if by_state!='Todos' and status!=by_state:continue
+                    if search and search.casefold() not in row['nombre'].casefold():continue
+                    filtered.append({'Colaborador':row['nombre'],'Curso':row['curso'],
+                        'Avance':row['pct'],'Lecciones':f"{row['completed_lessons']}/{row['lessons']}",
+                        'Nota':str(round(row['best']))+'%' if row['best'] is not None else '—',
+                        'Evaluación':'Aprobada' if row['passed'] else 'Pendiente','Estado':status})
+                if filtered:
+                    df=pd.DataFrame(filtered)
+                    st.dataframe(df,hide_index=True,use_container_width=True,
+                         column_config={'Avance':st.column_config.ProgressColumn('Avance',min_value=0,max_value=100,format='%d%%')})
+                    st.download_button('Descargar seguimiento CSV',df.to_csv(index=False).encode('utf-8-sig'),
+                          file_name='Seguimiento_Capacitaciones.csv',mime='text/csv',key='cap_report_csv',
+                          icon=':material/download:')
+                else:st.info('No hay registros que coincidan con los filtros.')
             else:st.info('Todavía no hay asignaciones activas con cursos publicados.')
         if _cap_current == 'Certificados':
             _cap_section('🏅','Certificados emitidos','Constancias generadas después de completar los cursos.')
@@ -17798,7 +18041,7 @@ def premium_module_shell(titulo, categoria, descripcion):
 
 # Protección transversal contra iconos de tamaño heredado en pantallas móviles.
 # No se aplica a ilustraciones, logos ni gráficos de las vistas.
-st.markdown('<style>\n.pm-workspace-glyph>svg{display:block!important;width:24px!important;height:24px!important;max-width:24px!important;max-height:24px!important;flex:none!important}\n.pm-exec-kpi-glyph>svg{display:block!important;width:20px!important;height:20px!important;max-width:20px!important;max-height:20px!important}\n.pm4-svg{max-width:36px;max-height:36px}\n/* Los iconos Material de botones no cambian las dimensiones de su fila. */\n.stApp button [data-testid="stIconMaterial"]{display:inline-flex!important;align-items:center!important;justify-content:center!important;max-width:22px!important;max-height:22px!important;font-size:20px!important;line-height:1!important;flex:0 0 auto!important}\n@media(max-width:780px){\n .pm-workspace-glyph>svg{width:21px!important;height:21px!important;max-width:21px!important;max-height:21px!important}\n .st-key-tp_bottomnav button::before{max-width:21px!important;max-height:21px!important}\n}\n</style>', unsafe_allow_html=True)
+st.markdown('<style>\n.pm-workspace-glyph>svg{display:block!important;width:24px!important;height:24px!important;max-width:24px!important;max-height:24px!important;flex:none!important}\n.pm-exec-kpi-glyph>svg{display:block!important;width:20px!important;height:20px!important;max-width:20px!important;max-height:20px!important}\n.pm4-svg{max-width:36px;max-height:36px}\n/* Las transiciones nunca deben estirar los iconos SVG o Material de widgets.\n   No afecta imagenes de cursos, logos ni graficos de datos. */\n.stApp button svg,.stApp [data-testid="stLinkButton"] svg,\n.stApp [data-testid="stIconMaterial"] svg,.stApp [data-testid="stIconMaterial"]{\n  width:20px!important;height:20px!important;max-width:22px!important;\n  max-height:22px!important;flex:0 0 20px!important;vertical-align:middle!important;\n}\n.stApp [data-testid="stIconMaterial"]{font-size:20px!important;line-height:1!important;overflow:hidden!important}\n/* Los iconos Material de botones no cambian las dimensiones de su fila. */\n.stApp button [data-testid="stIconMaterial"]{display:inline-flex!important;align-items:center!important;justify-content:center!important;max-width:22px!important;max-height:22px!important;font-size:20px!important;line-height:1!important;flex:0 0 auto!important}\n@media(max-width:780px){\n .pm-workspace-glyph>svg{width:21px!important;height:21px!important;max-width:21px!important;max-height:21px!important}\n .st-key-tp_bottomnav button::before{max-width:21px!important;max-height:21px!important}\n}\n</style>', unsafe_allow_html=True)
 
 
 def pm_render_dashboard_kpis():
