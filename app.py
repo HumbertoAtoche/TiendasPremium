@@ -12992,6 +12992,85 @@ def _pm_attendance_ui_styles():
           .st-key-pm_v_marcar_asistencia .tp-hero.pm-att-hero{padding:15px 15px!important}
           .st-key-pm_v_marcar_asistencia .pm-att-hero .tp-hero-top{gap:10px!important}
         }
+
+        /* ASISTENCIA: calendario → jornada a todo el ancho → dos tarjetas equilibradas. */
+        .st-key-pm_v_marcar_asistencia .st-key-pm_attendance_summary_full{margin:14px 0 18px!important;width:100%!important;min-width:0!important}
+        .st-key-pm_v_marcar_asistencia .st-key-pm_attendance_summary_full .pm-att-summary{
+            margin:0!important;padding:20px 22px 18px!important;border-radius:21px!important;
+            border:1px solid #e3eaf3!important;background:#fff!important;
+            box-shadow:0 13px 29px -29px rgba(26,43,72,.30)!important;
+        }
+        .st-key-pm_v_marcar_asistencia .st-key-pm_attendance_summary_full .pm-att-summary-grid{
+            grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:12px!important;
+        }
+        .st-key-pm_v_marcar_asistencia .st-key-pm_attendance_summary_full .pm-att-summary-card{
+            min-width:0!important;min-height:109px!important;padding:15px!important;
+            display:flex!important;flex-direction:column!important;justify-content:center!important;
+            border-radius:15px!important;
+        }
+        .st-key-pm_v_marcar_asistencia .st-key-pm_attendance_summary_full .pm-att-summary-card:not(.accent):not(.ok):not(.warn){
+            background:#fffafd!important;border-color:#f3e1e8!important;
+        }
+        .st-key-pm_v_marcar_asistencia .st-key-pm_attendance_summary_full .pm-att-summary-card.accent{
+            background:#f7fbff!important;border-color:#dbe9fa!important;
+        }
+        .st-key-pm_v_marcar_asistencia .st-key-pm_attendance_summary_full .pm-att-summary-card.ok{
+            background:#f0fbf6!important;border-color:#d4eee0!important;
+        }
+        .st-key-pm_v_marcar_asistencia .st-key-pm_attendance_summary_full .pm-att-summary-card.warn{
+            background:#fff9ef!important;border-color:#f2e2c4!important;
+        }
+        .st-key-pm_v_marcar_asistencia .pm-att-summary-head b.pm-att-shift-pill.pending{
+            color:#687990!important;background:#f3f5f8!important;border-color:#e4eaf2!important;
+        }
+        .st-key-pm_v_marcar_asistencia .pm-att-summary-head b.pm-att-shift-pill.closed{
+            color:#2b65a1!important;background:#eef5ff!important;border-color:#d9e7fa!important;
+        }
+        .st-key-pm_v_marcar_asistencia .st-key-pm_attendance_summary_full .pm-att-progress{margin-top:17px!important}
+        .st-key-pm_v_marcar_asistencia .st-key-pm_attendance_summary_full .pm-att-summary-head{margin-bottom:15px!important}
+        .st-key-pm_v_marcar_asistencia [data-testid="stHorizontalBlock"]:has(.st-key-pm_attendance_form):not(:has(.pm-att-hero)){
+            gap:18px!important;align-items:stretch!important;
+        }
+        .st-key-pm_v_marcar_asistencia [data-testid="stHorizontalBlock"]:has(.st-key-pm_attendance_form)>[data-testid="stColumn"]{
+            min-width:0!important;align-self:stretch!important;
+        }
+        .st-key-pm_v_marcar_asistencia .st-key-pm_attendance_form,
+        .st-key-pm_v_marcar_asistencia .st-key-pm_attendance_history{
+            box-sizing:border-box!important;width:100%!important;min-width:0!important;
+            min-height:350px!important;border:1px solid #e5ebf3!important;
+            border-radius:20px!important;background:#fff!important;
+            box-shadow:0 10px 25px -28px rgba(28,46,74,.28)!important;
+            padding:18px!important;
+        }
+        .st-key-pm_v_marcar_asistencia .st-key-pm_attendance_form{border-color:#f1dfe6!important;border-top:1px solid #f1dfe6!important;background:#fffcfd!important}
+        .st-key-pm_v_marcar_asistencia .st-key-pm_attendance_history{border-color:#dfe9f5!important;background:#fbfdff!important}
+        .st-key-pm_v_marcar_asistencia .pm-att-section-head,
+        .st-key-pm_v_marcar_asistencia .pm-att-form-head{margin:0 0 17px!important;min-height:44px!important}
+        .st-key-pm_v_marcar_asistencia .pm-att-history-empty{
+            min-height:185px;display:flex;flex-direction:column;justify-content:center;align-items:center;
+            text-align:center;gap:7px;padding:20px;border-radius:14px;
+            border:1px dashed #dbe5f2;background:#f7faff;
+        }
+        .st-key-pm_v_marcar_asistencia .pm-att-history-empty strong{font-size:.87rem;color:#2a3e58}
+        .st-key-pm_v_marcar_asistencia .pm-att-history-empty span{font-size:.76rem;color:#75869b;line-height:1.5}
+        @media(max-width:1100px){
+          .st-key-pm_v_marcar_asistencia .st-key-pm_attendance_summary_full .pm-att-summary-grid{
+              grid-template-columns:repeat(2,minmax(0,1fr))!important;
+          }
+        }
+        @media(max-width:780px){
+          .st-key-pm_v_marcar_asistencia .st-key-pm_attendance_summary_full{margin:10px 0 13px!important}
+          .st-key-pm_v_marcar_asistencia .st-key-pm_attendance_summary_full .pm-att-summary{padding:15px 13px!important;border-radius:17px!important}
+          .st-key-pm_v_marcar_asistencia .st-key-pm_attendance_summary_full .pm-att-summary-grid{gap:8px!important}
+          .st-key-pm_v_marcar_asistencia .st-key-pm_attendance_summary_full .pm-att-summary-card{min-height:93px!important;padding:11px!important}
+          .st-key-pm_v_marcar_asistencia .st-key-pm_attendance_form,
+          .st-key-pm_v_marcar_asistencia .st-key-pm_attendance_history{min-height:0!important;padding:14px!important;border-radius:17px!important}
+          .st-key-pm_v_marcar_asistencia .pm-att-history-empty{min-height:115px}
+        }
+        @media(max-width:360px){
+          .st-key-pm_v_marcar_asistencia .st-key-pm_attendance_summary_full .pm-att-summary-card strong{font-size:1.04rem!important}
+          .st-key-pm_v_marcar_asistencia .st-key-pm_attendance_summary_full .pm-att-summary-card small{font-size:.68rem!important}
+        }
     </style>""", unsafe_allow_html=True)
 
 
@@ -18997,7 +19076,54 @@ elif choice == "Marcar Asistencia":
         st.markdown("<div style='height:14px'></div>", unsafe_allow_html=True)
 
         ui_mi_programacion(dni_actual)
-        col_main, col_preview = st.columns([1.1, 1])
+
+        # Resumen de asistencia a lo ancho, inmediatamente debajo del calendario.
+        # Solo presentación: reutiliza los mismos registros y el cálculo de jornada.
+        _marcas_hoy = pd.DataFrame()
+        if (isinstance(st.session_state.asistencia, pd.DataFrame)
+                and not st.session_state.asistencia.empty):
+            _marcas_hoy = st.session_state.asistencia.loc[
+                (st.session_state.asistencia["fecha"].astype(str) == _hoy_h)
+                & (st.session_state.asistencia["dni"].astype(str) == str(dni_actual))
+            ].copy()
+        _mins_lab, _mins_ext, _mins_tot = 0, 0, 0
+        _estado_turno = "Sin registros hoy"
+        _shift_status = "pending"
+        if not _marcas_hoy.empty:
+            _marcas_hoy["dt"] = pd.to_datetime(_marcas_hoy["fecha_hora"], errors="coerce")
+            _valid_marca_dt = _marcas_hoy.dropna(subset=["dt"]).sort_values("dt")
+            if not _valid_marca_dt.empty:
+                _mins_lab, _mins_ext, _mins_tot, _ = calcular_jornada_y_horas_extras(_valid_marca_dt)
+                if str(_valid_marca_dt.iloc[-1]["tipo"]) == "INGRESO":
+                    _estado_turno, _shift_status = "Turno activo", "active"
+                else:
+                    _estado_turno, _shift_status = "Jornada cerrada", "closed"
+        _pct_turno = min(100, int(round((_mins_lab * 100) / max(jornada_base_min(), 1))))
+        _extra_lbl = formatear_horas_minutos(_mins_ext) if _mins_ext > 0 else "0 min"
+        _extra_sub = "Generadas hoy" if _mins_ext > 0 else "Aún no registradas"
+        with st.container(key="pm_attendance_summary_full"):
+            st.markdown(
+                f'''<section class="pm-att-summary">
+                    <div class="pm-att-summary-head">
+                      <div><small>SEGUIMIENTO DE JORNADA</small><strong>Así va tu asistencia de hoy</strong></div>
+                      <b class="pm-att-shift-pill {_shift_status}">{_html.escape(_estado_turno)}</b>
+                    </div>
+                    <div class="pm-att-summary-grid">
+                      <div class="pm-att-summary-card"><small>Horas trabajadas</small><strong>{formatear_horas_minutos(_mins_tot)}</strong><span>Total acumulado del día</span></div>
+                      <div class="pm-att-summary-card accent"><small>Jornada efectiva</small><strong>{formatear_horas_minutos(_mins_lab)}</strong><span>de {jornada_base_txt()}</span></div>
+                      <div class="pm-att-summary-card {'ok' if _mins_ext > 0 else 'accent'}"><small>Horas extra</small><strong>{_extra_lbl}</strong><span>{_extra_sub}</span></div>
+                      <div class="pm-att-summary-card warn"><small>Avance de jornada</small><strong>{_pct_turno}%</strong><span>Progreso sobre tu jornada base</span></div>
+                    </div>
+                    <div class="pm-att-progress">
+                      <div class="pm-att-progress-label"><span>Progreso de la jornada</span><b>{_pct_turno}%</b></div>
+                      <div class="pm-att-progress-track"><i style="width:{_pct_turno}%"></i></div>
+                    </div>
+                  </section>''',
+                unsafe_allow_html=True
+            )
+
+        # Operación abajo: dos superficies hermanas, con la misma jerarquía visual.
+        col_main, col_preview = st.columns([1, 1], gap="medium")
 
         with col_main:
             with st.container(border=True, key="pm_attendance_form"):
@@ -19045,59 +19171,31 @@ elif choice == "Marcar Asistencia":
                             st.rerun()
     
         with col_preview:
-            st.markdown('<div class="pm-att-section-head"><span class="pm-att-section-glyph">'
-                        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" '
-                        'stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/>'
-                        '<path d="M8 2v4M16 2v4M3 10h18m-13 5 2 2 5-5"/></svg></span>'
-                        '<div><strong>Marcaciones de hoy</strong><small>Registro de entradas, salidas y jornada.</small></div></div>',
-                        unsafe_allow_html=True)
-            hoy_str = obtener_ahora_peru().strftime("%Y-%m-%d")
-        
-            if not st.session_state.asistencia.empty:
-                df_mismarcas = st.session_state.asistencia[
-                    (st.session_state.asistencia["fecha"].astype(str) == hoy_str) & 
-                    (st.session_state.asistencia["dni"].astype(str) == str(dni_actual))
-                ].copy()
-
-                if not df_mismarcas.empty:
+            with st.container(border=True, key="pm_attendance_history"):
+                st.markdown('<div class="pm-att-section-head"><span class="pm-att-section-glyph">'
+                            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" '
+                            'stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/>'
+                            '<path d="M8 2v4M16 2v4M3 10h18m-13 5 2 2 5-5"/></svg></span>'
+                            '<div><strong>Marcaciones de hoy</strong><small>Registro de entradas y salidas de tu jornada.</small></div></div>',
+                            unsafe_allow_html=True)
+                if _marcas_hoy.empty:
+                    st.markdown('<div class="pm-att-history-empty">'
+                                '<strong>Aún no hay marcaciones</strong>'
+                                '<span>Cuando registres tu ingreso o salida, aparecerá aquí.</span>'
+                                '</div>', unsafe_allow_html=True)
+                else:
                     _filas = ""
-                    for _, _r in df_mismarcas.sort_values("fecha_hora", ascending=False).iterrows():
+                    for _, _r in _marcas_hoy.sort_values("fecha_hora", ascending=False).iterrows():
                         _es_ing = str(_r["tipo"]) == "INGRESO"
                         _obs = str(_r.get("observacion", "")).strip() or "Sin observación"
-                        _chips = ui_chip("Ingreso" if _es_ing else "Salida", "ok" if _es_ing else "bad") + (ui_chip("Extra", "warn") if str(_r.get("es_extra", "")) == "SI" else "")
-                        _filas += f'<div class="tp-row"><div class="tp-row-time">{str(_r["fecha_hora"])[11:16]}</div><div class="tp-row-main"><b>{"Ingreso" if _es_ing else "Salida"}</b><span>{_obs}</span></div><div class="tp-chips">{_chips}</div></div>'
+                        _chips = ui_chip("Ingreso" if _es_ing else "Salida", "ok" if _es_ing else "bad")
+                        if str(_r.get("es_extra", "")) == "SI":
+                            _chips += ui_chip("Extra", "warn")
+                        _hora = _html.escape(str(_r["fecha_hora"])[11:16])
+                        _filas += (f'<div class="tp-row"><div class="tp-row-time">{_hora}</div>'
+                                   f'<div class="tp-row-main"><b>{"Ingreso" if _es_ing else "Salida"}</b>'
+                                   f'<span>{_html.escape(_obs)}</span></div><div class="tp-chips">{_chips}</div></div>')
                     st.markdown(_filas, unsafe_allow_html=True)
-                
-                    df_mismarcas["dt"] = pd.to_datetime(df_mismarcas["fecha_hora"])
-                    mins_lab, mins_ext, mins_tot, _ = calcular_jornada_y_horas_extras(df_mismarcas)
-                
-                    _pct_turno = min(100, int(round((mins_lab * 100) / max(jornada_base_min(), 1))))
-                    _estado_turno = "Turno activo" if not df_mismarcas.empty and str(df_mismarcas.sort_values("dt").iloc[-1]["tipo"]) == "INGRESO" else "Jornada cerrada"
-                    _extra_lbl = formatear_horas_minutos(mins_ext) if mins_ext > 0 else "0 min"
-                    _extra_sub = "Generadas hoy" if mins_ext > 0 else "Aún no registradas"
-                    st.markdown(
-                        f'''<div class="pm-att-summary">
-                              <div class="pm-att-summary-head">
-                                <div><small>Seguimiento de jornada</small><strong>Así va tu asistencia de hoy</strong></div>
-                                <b>{_html.escape(_estado_turno)}</b>
-                              </div>
-                              <div class="pm-att-summary-grid">
-                                <div class="pm-att-summary-card"><small>Horas trabajadas</small><strong>{formatear_horas_minutos(mins_tot)}</strong><span>Total acumulado del día</span></div>
-                                <div class="pm-att-summary-card accent"><small>Jornada efectiva</small><strong>{formatear_horas_minutos(mins_lab)}</strong><span>de {jornada_base_txt()}</span></div>
-                                <div class="pm-att-summary-card {'ok' if mins_ext > 0 else 'accent'}"><small>Horas extra</small><strong>{_extra_lbl}</strong><span>{_extra_sub}</span></div>
-                                <div class="pm-att-summary-card warn"><small>Avance de jornada</small><strong>{_pct_turno}%</strong><span>Progreso sobre tu jornada base</span></div>
-                              </div>
-                              <div class="pm-att-progress">
-                                <div class="pm-att-progress-label"><span>Progreso de la jornada</span><b>{_pct_turno}%</b></div>
-                                <div class="pm-att-progress-track"><i style="width:{_pct_turno}%"></i></div>
-                              </div>
-                            </div>''',
-                        unsafe_allow_html=True
-                    )
-                else:
-                    st.info("No hay marcaciones registradas la jornada de hoy.")
-            else:
-                st.info("No hay marcaciones registradas la jornada de hoy.")
 
 elif choice == "Mis Rutinas":
     premium_module_shell("Mis Rutinas", "MI OPERACIÓN", "Tus actividades asignadas con fecha, hora, lugar e instrucciones claras.")
