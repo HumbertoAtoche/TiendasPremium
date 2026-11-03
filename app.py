@@ -1217,14 +1217,14 @@ section[data-testid="stSidebar"] button{pointer-events:auto!important;}
 .pm-exec-stat{background:#fff;border:1px solid #e7ebf1;box-shadow:0 7px 22px -19px rgba(20,35,55,.25);border-radius:17px;padding:19px 20px;min-width:0;transition:transform .2s ease,box-shadow .2s ease;}
 .pm-exec-stat:hover{transform:translateY(-2px);box-shadow:0 15px 26px -18px rgba(20,35,55,.3);}
 .pm-exec-stat-head{display:flex;align-items:center;justify-content:space-between;gap:10px;color:#738099;font-size:.76rem;font-weight:750;line-height:1.4;}
-.pm-exec-stat-head .material-symbols-rounded{width:37px;height:37px;display:grid;place-items:center;background:#fff1f3;color:#c63446;border-radius:11px;font-size:20px!important;font-family:'Material Symbols Rounded'!important;flex:none;}
-.pm-exec-asistencia .pm-exec-stat-head .material-symbols-rounded{background:#e9f8f3;color:#148e65;}
-.pm-exec-solicitudes .pm-exec-stat-head .material-symbols-rounded{background:#fff5e5;color:#b7791f;}
-.pm-exec-fiados .pm-exec-stat-head .material-symbols-rounded{background:#eaf3ff;color:#3975bb;}
+.pm-exec-stat-head .pm-exec-kpi-glyph{width:37px;height:37px;display:grid;place-items:center;background:#fff1f3;color:#c63446;border-radius:11px;font-size:20px!important;font-family:'Material Symbols Rounded'!important;flex:none;}
+.pm-exec-asistencia .pm-exec-stat-head .pm-exec-kpi-glyph{background:#e9f8f3;color:#148e65;}
+.pm-exec-solicitudes .pm-exec-stat-head .pm-exec-kpi-glyph{background:#fff5e5;color:#b7791f;}
+.pm-exec-fiados .pm-exec-stat-head .pm-exec-kpi-glyph{background:#eaf3ff;color:#3975bb;}
 .pm-exec-stat-number{color:#1b293d;font-size:2.12rem;font-weight:800;line-height:1.2;letter-spacing:-.06em;margin:10px 0 5px;font-variant-numeric:tabular-nums;}
 .pm-exec-stat-detail{color:#97a2b1;font-size:.72rem;font-weight:600;line-height:1.4;}
 @media(max-width:1080px){.pm-exec-kpis{grid-template-columns:repeat(2,minmax(0,1fr));}}
-@media(max-width:570px){.pm-exec-kpis{gap:9px;margin-bottom:14px;}.pm-exec-stat{padding:13px 14px;border-radius:13px;}.pm-exec-stat-head{font-size:.66rem;}.pm-exec-stat-head .material-symbols-rounded{width:30px;height:30px;font-size:17px!important;}.pm-exec-stat-number{font-size:1.55rem;margin:8px 0 4px;}.pm-exec-stat-detail{font-size:.63rem;}}
+@media(max-width:570px){.pm-exec-kpis{gap:9px;margin-bottom:14px;}.pm-exec-stat{padding:13px 14px;border-radius:13px;}.pm-exec-stat-head{font-size:.66rem;}.pm-exec-stat-head .pm-exec-kpi-glyph{width:30px;height:30px;font-size:17px!important;}.pm-exec-stat-number{font-size:1.55rem;margin:8px 0 4px;}.pm-exec-stat-detail{font-size:.63rem;}}
 
 /* ──────────────────────────────────────────────────────────────
    PREMIUM ELITE · VISTA REAL Y MÓVIL
@@ -8530,15 +8530,26 @@ def _pm_datos_requeridos():
     preview = st.session_state.get("ver_como")
     viewing_admin = is_admin and not preview
     default_view = "Dashboard General" if viewing_admin else "Marcar Asistencia"
-    selected = st.session_state.get("nav_radio")
+    # Una acción desde un diálogo, aviso o fragmento puede solicitar otra vista.
+    # Consumimos el destino virtual también durante la precarga de datos: antes
+    # se consultaban las hojas de la pantalla anterior y la nueva quedaba vacía
+    # durante una ejecución, dando la impresión de que la navegación se pegó.
+    requested = st.session_state.get('_pm_navigation_requested')
+    if requested == 'Mi Ficha Técnica':
+        requested = 'Mi Expediente'
     valid = ("Dashboard General", "Centro de Alertas", "Analítica (BI)",
              "Gestión Colaboradores", "Gestión del Colaborador", "Gestión de Vacaciones",
              "Programación de Turnos", "Boletas de Pago", "Solicitudes y Permisos",
              "Historial de Descuadres", "Incidencias y Daños", "Botellas Fiadas",
-             "Historial de Asistencias", "Auditoría y Configuración", "Rutinas Operativas", "Gestión de Comunicados") if viewing_admin else (
+             "Historial de Asistencias", "Auditoría y Configuración", "Rutinas Operativas", "Gestión de Comunicados", "Gestión de Capacitaciones") if viewing_admin else (
              "Marcar Asistencia", "Mis Rutinas", "Mi Incorporación", "Mi Expediente", "Registrar Descuadre", "Registrar Incidencia",
-             "Botellas Fiadas", "Mis Vacaciones", "Mis Boletas",
+             "Botellas Fiadas", "Mis Vacaciones", "Mis Boletas", "Capacitaciones",
              "Solicitar Permiso / Adelanto", "Mi Dashboard Mensual", "Mis Comunicados")
+    # Un destino de otro rol o inexistente nunca debe desplazar la vista
+    # válida actual ni provocar carga de datos equivocados.
+    selected = requested if requested in valid else st.session_state.get('nav_radio')
+    if selected == 'Mi Ficha Técnica':
+        selected = 'Mi Expediente'
     if selected not in valid:
         selected = default_view
     return _PM_NUCLEO_AUTENTICADO | _PM_DATOS_POR_VISTA.get(selected, set())
@@ -8702,11 +8713,32 @@ if _pm_necesita_datos("botellas_fiadas"):
     st.session_state.botellas_fiadas = obtener_botellas_fiadas_gsheets()
     _pm_datos_cargados("botellas_fiadas")
 
-if st.session_state.get("_hojas_fallidas"):
-    for _k in ["empleados", "asistencia", "descuadres", "solicitudes", "feriados", "vacaciones", "auditoria", "checklist", "boletas_historial", "incidencias", "botellas_fiadas", "horarios", "programacion"]:
-        st.session_state.pop(_k, None)
-    st.markdown('<div class="tp-banner warn"><div><b>Google Sheets está ocupado en este momento</b><span class="s">Es temporal. Espera unos segundos y presiona el botón para reintentar. No se perdió ningún dato.</span></div></div>', unsafe_allow_html=True)
-    st.button("Reintentar", key="reintentar_lectura")
+def _pm_reintentar_lecturas():
+    """Restaura solo conjuntos afectados, nunca sobrescribe datos en Sheets."""
+    affected = set(st.session_state.get('_hojas_fallidas', set()))
+    if not affected:
+        return
+    for name, hoja in _PM_HOJA_DE_DATO.items():
+        if hoja in affected:
+            st.session_state.pop(name, None)
+            st.session_state.get('_pm_datos_vigencia', {}).pop(name, None)
+    st.session_state['_hojas_fallidas'] = set()
+    st.session_state.pop('_pm_sidebar_bol_cache', None)
+    st.session_state['_pm_sidebar_force_refresh'] = True
+
+
+# Un fallo de una hoja secundaria no debe detener vistas que no la necesitan.
+_pm_fallidas_relevantes = set(st.session_state.get('_hojas_fallidas', set())) & (
+    {'Colaboradores'} | {_PM_HOJA_DE_DATO[n] for n in _pm_datos_requeridos()
+                      if n in _PM_HOJA_DE_DATO}
+)
+if _pm_fallidas_relevantes:
+    st.markdown('<div class="tp-banner warn"><div><b>Conexión temporalmente interrumpida</b>'
+                '<span class="s">Algunos datos de esta vista no pudieron actualizarse. '
+                'Tus registros en Sheets permanecen intactos. Reintenta la lectura.</span></div></div>',
+                unsafe_allow_html=True)
+    st.button('Reintentar conexión', key='reintentar_lectura',
+              on_click=_pm_reintentar_lecturas, use_container_width=False)
     st.stop()
 
 # Compatibilidad: si la sesión conserva un historial de boletas con el esquema antiguo, se completan las columnas nuevas
@@ -8750,7 +8782,11 @@ def _cambiar_preview():
     nuevo = None if sel in (None, "Mi vista (admin)") else sel
     st.session_state["ver_como"] = None            # primero se libera, para poder auditar
     if nuevo:
-        registrar_auditoria("Vista previa de la app", "Usuarios", f"{st.session_state.get('usuario_login')} vio la app como {nuevo} (solo lectura)")
+        try:
+            registrar_auditoria("Vista previa de la app", "Usuarios", f"{st.session_state.get('usuario_login')} vio la app como {nuevo} (solo lectura)")
+        except Exception as exc:
+            # Un corte temporal de Sheets no debe impedir volver a la navegación.
+            print('Premium: auditoría de vista previa no disponible:', type(exc).__name__)
     st.session_state["ver_como"] = nuevo
     for k in _DATOS_SESION:                         # descarta cualquier cambio en memoria y recarga desde Sheets
         st.session_state.pop(k, None)
@@ -16667,20 +16703,55 @@ def premium_module_context(titulo):
         unsafe_allow_html=True,
     )
 
+_PM_WORKSPACE_ICON_KIND = {
+    'Marcar Asistencia': 'fingerprint', 'Registrar Descuadre': 'cash',
+    'Registrar Incidencia': 'alert', 'Mi Expediente': 'file',
+    'Mi Incorporación': 'briefcase', 'Capacitaciones': 'book',
+    'Mis Boletas': 'file', 'Mis Vacaciones': 'calendar',
+    'Mi Dashboard Mensual': 'chart', 'Dashboard General': 'home',
+    'Gestión Colaboradores': 'users', 'Mi equipo': 'users',
+    'Boletas de Pago': 'file', 'Programación de Turnos': 'calendar',
+    'Solicitudes y Permisos': 'inbox', 'Historial de Descuadres': 'history',
+    'Incidencias y Daños': 'alert', 'Botellas Fiadas': 'bottle',
+    'Historial de Asistencias': 'history', 'Centro de Alertas': 'bell',
+    'Gestión de Vacaciones': 'calendar', 'Analítica (BI)': 'chart',
+    'Gestión del Colaborador': 'users', 'Gestión de Capacitaciones': 'book',
+    'Auditoría y Configuración': 'settings', 'Rutinas Operativas': 'list',
+    'Mis Rutinas': 'list', 'Gestión de Comunicados': 'bell',
+    'Mis Comunicados': 'bell', 'Solicitar Permiso / Adelanto': 'inbox',
+}
+
+
+def _pm_workspace_icon_svg(title):
+    """Iconos vectoriales locales de tamaño fijo; no requieren fuentes remotas."""
+    kind = _PM_WORKSPACE_ICON_KIND.get(title, 'home')
+    book_path = '<path d="M12 5c-3-2-6-2-9-1v15c3-1 6-1 9 1 3-2 6-2 9-1V4c-3-1-6-1-9 1zM12 5v15"/>'
+    path = book_path if kind == 'book' else _PM_NAV_SVG.get(kind, _PM_NAV_SVG['home'])
+    return ('<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" '
+            'viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+            'stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" '
+            'aria-hidden="true" style="width:24px;height:24px;display:block;flex:none">'
+            + path + '</svg>')
+
+
 def premium_module_shell(titulo, categoria, descripcion):
-    """Una sola cabecera clara para cada módulo, con datos escapados para HTML."""
+    """Una sola cabecera clara, con SVG local fijo y texto escapado."""
     from html import escape as esc
-    icono = PM7_MODULES.get(titulo, "apps")
     st.markdown(
         '<header class="pm-workspace-head">'
         '<div class="pm-workspace-top"><span class="pm-workspace-breadcrumb">Premium Market <b>/</b> '
         + esc(titulo) + '</span><span class="pm-workspace-badge">' + esc(categoria) + '</span></div>'
         '<div class="pm-workspace-main"><div><h1>' + esc(titulo) + '</h1>'
         '<p>' + esc(descripcion) + '</p></div>'
-        '<div class="pm-workspace-glyph" aria-hidden="true"><span class="material-symbols-rounded">'
-        + esc(icono) + '</span></div></div></header>',
+        '<div class="pm-workspace-glyph" aria-hidden="true">'
+        + _pm_workspace_icon_svg(titulo) + '</div></div></header>',
         unsafe_allow_html=True,
     )
+
+# Protección transversal contra iconos de tamaño heredado en pantallas móviles.
+# No se aplica a ilustraciones, logos ni gráficos de las vistas.
+st.markdown('<style>\n.pm-workspace-glyph>svg{display:block!important;width:24px!important;height:24px!important;max-width:24px!important;max-height:24px!important;flex:none!important}\n.pm-exec-kpi-glyph>svg{display:block!important;width:20px!important;height:20px!important;max-width:20px!important;max-height:20px!important}\n.pm4-svg{max-width:36px;max-height:36px}\n/* Los iconos Material de botones no cambian las dimensiones de su fila. */\n.stApp button [data-testid="stIconMaterial"]{display:inline-flex!important;align-items:center!important;justify-content:center!important;max-width:22px!important;max-height:22px!important;font-size:20px!important;line-height:1!important;flex:0 0 auto!important}\n@media(max-width:780px){\n .pm-workspace-glyph>svg{width:21px!important;height:21px!important;max-width:21px!important;max-height:21px!important}\n .st-key-tp_bottomnav button::before{max-width:21px!important;max-height:21px!important}\n}\n</style>', unsafe_allow_html=True)
+
 
 def pm_render_dashboard_kpis():
     """Indicadores reales, de solo lectura; faltantes no se interpretan como registros.
@@ -16739,7 +16810,7 @@ def pm_render_dashboard_kpis():
         cajas.append(
             '<div class="pm-exec-stat pm-exec-' + tono + '">'
             '<div class="pm-exec-stat-head"><span>' + esc(titulo) + '</span>'
-            '<span class="material-symbols-rounded" aria-hidden="true">' + _svg_kpi + '</span></div>'
+            '<span class="pm-exec-kpi-glyph" aria-hidden="true">' + _svg_kpi + '</span></div>'
             '<div class="pm-exec-stat-number">' + str(valor) + '</div>'
             '<div class="pm-exec-stat-detail">' + esc(detalle) + '</div></div>'
         )
