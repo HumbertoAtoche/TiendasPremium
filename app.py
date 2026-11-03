@@ -12970,6 +12970,28 @@ def _pm_attendance_ui_styles():
       .st-key-pm_v_marcar_asistencia .pm-att-summary-card{padding:10px!important}
       .st-key-pm_v_marcar_asistencia .pm-att-summary-card strong{font-size:1.05rem!important}
     }
+
+        .st-key-pm_v_marcar_asistencia .tp-hero.pm-att-hero{
+            box-sizing:border-box!important;width:100%!important;height:168px!important;
+            min-height:168px!important;margin:0!important;padding:18px 21px!important;
+            display:flex!important;flex-direction:column!important;justify-content:center!important;
+            border:1px solid #e3e9f1!important;border-radius:20px!important;
+            background:#fff!important;box-shadow:0 5px 18px -17px rgba(27,45,73,.25)!important;
+        }
+        .st-key-pm_v_marcar_asistencia .pm-att-hero .tp-hero-top{margin-bottom:13px!important;min-width:0!important}
+        .st-key-pm_v_marcar_asistencia [data-testid="stHorizontalBlock"]:has(.pm-att-hero){
+            align-items:stretch!important;gap:16px!important;
+        }
+        .st-key-pm_v_marcar_asistencia [data-testid="stHorizontalBlock"]:has(.pm-att-hero)>[data-testid="stColumn"]{
+            min-width:0!important;align-self:stretch!important;
+        }
+        .st-key-pm_v_marcar_asistencia [data-testid="stHorizontalBlock"]:has(.pm-att-hero) iframe{
+            width:100%!important;display:block!important;border:0!important;
+        }
+        @media(min-width:781px) and (max-width:1000px){
+          .st-key-pm_v_marcar_asistencia .tp-hero.pm-att-hero{padding:15px 15px!important}
+          .st-key-pm_v_marcar_asistencia .pm-att-hero .tp-hero-top{gap:10px!important}
+        }
     </style>""", unsafe_allow_html=True)
 
 
@@ -18953,11 +18975,25 @@ elif choice == "Marcar Asistencia":
                     _estado, _chip = f"Salida registrada a las {_u['dt'].strftime('%H:%M')}", "info"
                 _lab_h = calcular_jornada_y_horas_extras(_mh)[0]
         _pct_h = min(100, int(_lab_h * 100 / jornada_base_min()))
-        _hc1, _hc2 = st.columns([1.5, 1])
+        # Ambas tarjetas comparten altura y superficie; los estilos afectan solo a esta vista.
+        _hc1, _hc2 = st.columns([1.5, 1], gap="medium")
         with _hc1:
-            st.markdown(f'<div class="tp-hero"><div class="tp-hero-top">{ui_avatar(user_actual, dni_actual, _foto_actual, 54)}<div><div class="tp-hero-hi">Hola, {user_actual.split()[0]}</div>{ui_chip(_estado, _chip)}</div></div><div class="tp-prog-lbl"><span>Jornada de hoy</span><span>{formatear_horas_minutos(_lab_h)} de {jornada_base_txt()}</span></div><div class="tp-prog"><i style="width:{_pct_h}%"></i></div></div>', unsafe_allow_html=True)
+            _primer_nombre = _html.escape(str(user_actual).split()[0] if user_actual else 'equipo')
+            st.markdown(f'<div class="tp-hero pm-att-hero"><div class="tp-hero-top">{ui_avatar(user_actual, dni_actual, _foto_actual, 54)}<div><div class="tp-hero-hi">Hola, {_primer_nombre}</div>{ui_chip(_estado, _chip)}</div></div><div class="tp-prog-lbl"><span>Jornada de hoy</span><span>{formatear_horas_minutos(_lab_h)} de {jornada_base_txt()}</span></div><div class="tp-prog"><i style="width:{_pct_h}%"></i></div></div>', unsafe_allow_html=True)
         with _hc2:
-            components.html("""<body style="margin:0;font-family:Montserrat,Arial,sans-serif"><div style="box-sizing:border-box;height:132px;background:#fff;border:1px solid #E3E6EC;border-radius:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(15,23,42,.05)"><div id="t" style="font-size:2.3rem;font-weight:700;color:#0F172A;font-variant-numeric:tabular-nums">--:--:--</div><div id="d" style="font-size:.8rem;color:#64748B;font-weight:600;text-transform:capitalize"></div></div><script>function u(){var n=new Date(),o={timeZone:"America/Lima"};document.getElementById("t").textContent=n.toLocaleTimeString("es-PE",{timeZone:"America/Lima",hour12:false});document.getElementById("d").textContent=n.toLocaleDateString("es-PE",{timeZone:"America/Lima",weekday:"long",day:"numeric",month:"long"})}u();setInterval(u,1000)</script></body>""", height=134)
+            components.html("""<!doctype html><html lang="es"><head><meta charset="utf-8"><style>
+            html,body{width:100%;height:100%;margin:0;padding:0;overflow:hidden;box-sizing:border-box}
+            *,*::before,*::after{box-sizing:inherit}
+            body{font-family:Montserrat,Arial,sans-serif}
+            .pm-att-clock{width:100%;height:100%;border:1px solid #e3e9f1;border-radius:20px;
+               background:#fff;box-shadow:0 5px 18px -17px rgba(27,45,73,.25);
+               display:flex;flex-direction:column;align-items:center;justify-content:center;
+               gap:3px;text-align:center;padding:16px 10px}
+            #t{font-size:clamp(1.65rem,3vw,2.3rem);font-weight:750;line-height:1.15;color:#18263d;
+               letter-spacing:-.025em;font-variant-numeric:tabular-nums}
+            #d{font-size:.78rem;line-height:1.5;color:#65768e;font-weight:650;text-transform:capitalize}
+            </style></head><body><div class="pm-att-clock"><div id="t" role="timer">--:--:--</div><div id="d"></div></div>
+            <script>function u(){const n=new Date();document.getElementById('t').textContent=n.toLocaleTimeString('es-PE',{timeZone:'America/Lima',hour12:false});document.getElementById('d').textContent=n.toLocaleDateString('es-PE',{timeZone:'America/Lima',weekday:'long',day:'numeric',month:'long'})}u();setInterval(u,1000)</script></body></html>""", height=168, scrolling=False)
         st.markdown("<div style='height:14px'></div>", unsafe_allow_html=True)
 
         ui_mi_programacion(dni_actual)
