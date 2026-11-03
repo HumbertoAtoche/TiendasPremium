@@ -14890,68 +14890,64 @@ if callable(_pmc_fragment_api):
 
 
 def _pmc_home_alert_styles():
-    """Estilos globales en Inicio (sin depender de abrir 'Mis Comunicados')."""
+    """Aviso de Comunicados: misma identidad pastel que Mi día, en bloque separado."""
     st.markdown(r"""<style>
+      /* No convertir Comunicados en un banner. La tarjeta está separada, como antes. */
       .st-key-pmc_home_alert{
-        position:relative!important;overflow:hidden!important;
-        padding:20px 20px 16px!important;margin:22px 0 24px!important;
-        border:1px solid #e8e8f0!important;border-radius:24px!important;
-        background:linear-gradient(132deg,#ffffff 0%,#fef9fb 58%,#fff2f5 100%)!important;
-        box-shadow:0 18px 42px -30px rgba(32,41,66,.29),0 5px 18px -15px rgba(191,43,72,.22)!important;
+        width:100%!important;min-width:0!important;box-sizing:border-box!important;
+        margin:20px 0 22px!important;padding:17px 19px 13px!important;
+        border:1px solid #e4d8f1!important;border-radius:18px!important;
+        background:#fcfaff!important;
+        box-shadow:0 4px 12px -12px rgba(27,44,75,.18)!important;
+        overflow:hidden!important;
       }
-      .st-key-pmc_home_alert:before{
-        content:"";position:absolute;left:0;top:0;bottom:0;width:5px;
-        background:linear-gradient(180deg,#ed6379,#bf2847 58%,#263c64);
+      .st-key-pmc_home_alert::before,.st-key-pmc_home_alert::after{content:none!important;display:none!important}
+      /* Un único cuerpo, seguido del pie con la acción, como las tarjetas superiores. */
+      .st-key-pmc_home_alert [data-testid="stVerticalBlock"]{
+        display:flex!important;flex-direction:column!important;gap:0!important;min-width:0!important;
       }
-      .st-key-pmc_home_alert:after{
-        content:"";position:absolute;right:-58px;top:-72px;width:190px;height:190px;
-        border-radius:50%;pointer-events:none;
-        background:radial-gradient(circle,rgba(226,51,82,.10),rgba(226,51,82,0) 69%);
-      }
-      .pmc-home-intro{display:flex;align-items:flex-start;gap:14px;position:relative;z-index:1;}
-      .pmc-home-icon{
-        flex:none;display:grid;place-items:center;width:52px;height:52px;border-radius:17px;
-        color:#fff;background:linear-gradient(145deg,#223957 0%,#c43150 100%);
-        box-shadow:0 11px 25px -16px rgba(40,46,78,.58);
-      }
-      .pmc-home-icon svg{width:25px;height:25px;display:block;}
-      .pmc-home-body{flex:1;min-width:0;}
-      .pmc-home-kicker{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px;}
-      .pmc-home-kicker span{font-size:.67rem;letter-spacing:.1em;font-weight:850;color:#b52c46;}
-      .pmc-home-count{
-        display:inline-flex;align-items:center;justify-content:center;min-width:27px;height:25px;
-        border:1px solid #f7c9d3;border-radius:9px;padding:2px 7px;
-        font-size:.8rem;font-weight:850;color:#c02948;background:#fff0f3;
-      }
-      .pmc-home-headline{display:block;color:#1c2b43;font-size:clamp(1.03rem,2vw,1.27rem);
-        letter-spacing:-.035em;font-weight:850;line-height:1.36;margin:0 0 7px;overflow-wrap:anywhere;}
-      .pmc-home-description{font-size:.82rem;line-height:1.65;color:#6d7b90;margin:0 0 12px;}
-      .pmc-home-foot{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
-      .pmc-home-chip{display:inline-flex;align-items:center;border:1px solid #e6e9f1;border-radius:999px;
-        padding:5px 10px;color:#53647b;background:rgba(255,255,255,.85);font-size:.69rem;font-weight:750;}
-      .st-key-pmc_home_alert [data-testid="stButton"]{position:relative;z-index:2;margin-top:15px!important;}
+      .pmc-home-main{display:flex;flex-direction:column;min-width:0;gap:0}
+      .pmc-home-top{display:flex;align-items:center;justify-content:space-between;gap:12px;
+        margin-bottom:12px;min-width:0}
+      .pmc-home-icon{display:grid;place-items:center;flex:none;width:38px;height:38px;
+        border-radius:12px;background:#f1eafd;color:#8756b5;box-shadow:none;border:0}
+      .pmc-home-icon svg{display:block!important;width:21px!important;height:21px!important;
+        stroke:currentColor;fill:none;max-width:none!important}
+      .pmc-home-count{display:inline-flex;align-items:center;justify-content:center;
+        border-radius:999px;background:#f4edfc;border:0;padding:5px 10px;
+        font-size:.70rem;line-height:1.3;color:#7955a3;font-weight:780;white-space:nowrap;
+        font-variant-numeric:tabular-nums}
+      .pmc-home-title{color:#243651;font-size:.93rem;line-height:1.35;font-weight:850;
+        margin:0 0 7px;letter-spacing:0}
+      .pmc-home-kicker{color:#7a8ca3;font-weight:700;font-size:.71rem;line-height:1.35;margin:0 0 5px}
+      .pmc-home-headline{display:block;color:#334862;font-weight:740;font-size:.83rem;
+        line-height:1.5;margin:0 0 6px;overflow-wrap:anywhere;letter-spacing:0}
+      .pmc-home-description{color:#728197;font-size:.74rem;line-height:1.52;
+        margin:0 0 13px;overflow-wrap:anywhere}
+      .st-key-pmc_home_alert [data-testid="stButton"]{margin:0!important;
+        padding-top:9px!important;border-top:1px solid #e9e0f2!important}
       .st-key-pmc_home_alert [data-testid="stButton"] button{
-        min-height:50px!important;width:100%!important;border:0!important;border-radius:14px!important;
-        background:linear-gradient(105deg,#c02b47 0%,#e13d57 100%)!important;
-        color:#fff!important;font-weight:820!important;font-size:.88rem!important;
-        box-shadow:0 11px 24px -16px rgba(171,27,60,.64)!important;
+        width:100%!important;min-height:39px!important;padding:6px 8px!important;
+        display:flex!important;align-items:center!important;justify-content:center!important;
+        border:0!important;border-radius:7px!important;background:transparent!important;
+        box-shadow:none!important;color:#2e486a!important;font-size:.77rem!important;
+        font-weight:790!important;text-align:center!important;transition:color .15s!important;
       }
+      .st-key-pmc_home_alert [data-testid="stButton"] button *{color:inherit!important}
       .st-key-pmc_home_alert [data-testid="stButton"] button:hover{
-        background:linear-gradient(105deg,#a9233c,#c4314c)!important;transform:translateY(-1px);
+        color:#8655b0!important;background:#f6effc!important;transform:none!important;
       }
-      .st-key-pmc_home_alert [data-testid="stButton"] button *{color:#fff!important;}
+      .st-key-pmc_home_alert [data-testid="stButton"] button:focus-visible{
+        outline:2px solid #7852b2!important;outline-offset:2px!important}
       @media(max-width:780px){
-        .st-key-pmc_home_alert{padding:17px 15px 15px!important;margin:20px 0 24px!important;border-radius:21px!important;}
-        .pmc-home-intro{gap:11px;}
-        .pmc-home-icon{width:44px;height:44px;border-radius:14px;}
-        .pmc-home-icon svg{width:22px;height:22px;}
-        .pmc-home-headline{font-size:1rem;}
-        .pmc-home-description{font-size:.79rem;line-height:1.58;}
-        .st-key-pmc_home_alert [data-testid="stButton"] button{min-height:49px!important;}
+        .st-key-pmc_home_alert{margin:14px 0 18px!important;padding:14px 13px 11px!important;border-radius:17px!important}
+        .pmc-home-top{margin-bottom:10px}
+        .pmc-home-headline{font-size:.81rem}
+        .pmc-home-description{margin-bottom:12px}
+        .st-key-pmc_home_alert [data-testid="stButton"] button{min-height:44px!important}
       }
-      @media(max-width:355px){
-        .pmc-home-intro{gap:9px;}.pmc-home-icon{width:40px;height:40px;}
-        .pmc-home-kicker span{font-size:.62rem;}
+      @media(prefers-reduced-motion:reduce){
+        .st-key-pmc_home_alert [data-testid="stButton"] button{transition:none!important}
       }
     </style>""", unsafe_allow_html=True)
 
@@ -14980,23 +14976,26 @@ def _pmc_home_notice():
                 else f"Tienes {pending} comunicados por confirmar")
     description = ("Hay una comunicación oficial que requiere tu lectura." if pending == 1
                    else "Tienes comunicaciones oficiales que requieren tu lectura.")
+    # Separado de Mi día, pero con la misma estructura: icono, contador,
+    # título, detalle breve y acción discreta en una franja inferior.
     with st.container(key="pmc_home_alert"):
         st.markdown(
-            '<div class="pmc-home-intro"><div class="pmc-home-icon" aria-hidden="true">'
+            '<article class="pmc-home-main">'
+            '<div class="pmc-home-top"><span class="pmc-home-icon" aria-hidden="true">'
             '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"'
-            ' stroke-linecap="round" stroke-linejoin="round"><path d="M3 11v2a2 2 0 0 0 2 2h2l3 5h3l-3-5h1l9 4V5l-9 4H5a2 2 0 0 0-2 2Z"/>'
-            '<path d="M21 9a4 4 0 0 1 0 6"/></svg></div>'
-            '<div class="pmc-home-body"><div class="pmc-home-kicker">'
-            '<span>NOVEDADES PARA TI</span><b class="pmc-home-count">' + str(pending) + '</b></div>'
+            ' stroke-linecap="round" stroke-linejoin="round">'
+            '<path d="M3 11v2a2 2 0 0 0 2 2h2l3 5h3l-3-5h1l9 4V5l-9 4H5a2 2 0 0 0-2 2Z"/>'
+            '<path d="M21 9a4 4 0 0 1 0 6"/></svg></span>'
+            '<span class="pmc-home-count">' + str(pending) +
+            (' pendiente' if pending == 1 else ' pendientes') + '</span></div>'
+            '<div class="pmc-home-title">Comunicados</div>'
+            '<div class="pmc-home-kicker">Pendiente de lectura</div>'
             '<strong class="pmc-home-headline">' + headline + '</strong>'
-            '<p class="pmc-home-description">' + description +
-            ' Revisa su contenido y deja constancia de lectura.</p>'
-            '<div class="pmc-home-foot"><span class="pmc-home-chip">Lectura requerida</span>'
-            '<span class="pmc-home-chip">Comunicación interna</span></div>'
-            '</div></div>', unsafe_allow_html=True,
+            '<p class="pmc-home-description">' + description + '</p>'
+            '</article>', unsafe_allow_html=True,
         )
-        st.button("Abrir mis comunicados", key="pmc_home_go", use_container_width=True,
-                  on_click=_ir_a, args=("Mis Comunicados",), icon=":material/campaign:")
+        st.button('Ver comunicados  →', key='pmc_home_go', use_container_width=True,
+                  on_click=_ir_a, args=('Mis Comunicados',))
 
     # Este fragmento NO consulta Google: entrega un único toast después de otros
     # diálogos o toasts, sin competir con alertas de cumpleaños y botellas.
