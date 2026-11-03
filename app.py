@@ -6718,9 +6718,12 @@ def _cap_course_detail(data,dni,cid):
                             key='cap_answer_'+q['id_pregunta'],index=None)
                         answers[q['id_pregunta']]=choice
                     checked=st.checkbox('Confirmo que deseo enviar mis respuestas para calificación.')
-                    sent=st.form_submit_button('Enviar evaluación',type='primary',disabled=not checked,use_container_width=True)
+                    sent=st.form_submit_button('Enviar evaluación',type='primary',use_container_width=True)
                 if sent:
-                    _pmi_ui_action(lambda:_cap_submit_exam(cid,dni,answers),'Evaluación registrada y calificada.')
+                    if not checked:
+                        st.warning('Confirma el envío de tus respuestas para calificar la evaluación.')
+                    else:
+                        _pmi_ui_action(lambda:_cap_submit_exam(cid,dni,answers),'Evaluación registrada y calificada.')
             if state['tries']:
                 try:
                     last=state['tries'][-1]
@@ -7268,8 +7271,15 @@ def _cap_admin_panel():
                     dest=st.selectbox('Destinatario',['TODOS']+sorted(mapping),
                         format_func=lambda x:'Todo el equipo (incluye futuras altas)' if x=='TODOS' else mapping[x]+' · '+x)
                     confirm=st.checkbox('Confirmo que deseo asignar esta capacitación')
-                    saved=st.form_submit_button('Asignar curso',disabled=not confirm,type='primary',use_container_width=True)
-                if saved:_pmi_ui_action(lambda:_cap_assign(cid,dest),'Capacitación asignada.')
+                    # Los widgets de un st.form solo envían su valor al pulsar submit.
+                    # Deshabilitar el submit según una casilla del mismo formulario
+                    # impide confirmar, porque la casilla no provoca un rerun.
+                    saved=st.form_submit_button('Asignar curso',type='primary',use_container_width=True)
+                if saved:
+                    if not confirm:
+                        st.warning('Marca la casilla de confirmación antes de asignar el curso.')
+                    else:
+                        _pmi_ui_action(lambda:_cap_assign(cid,dest),'Capacitación asignada.')
                 if data[_CAP_ASSIGNS]:
                     st.caption('Nota: las asignaciones individuales retiradas prevalecen sobre la asignación general.')
                     for a in reversed(data[_CAP_ASSIGNS][-60:]):
