@@ -6056,6 +6056,28 @@ def _cap_cache_merge(name, record, update=False, before=None):
     item['at']=time.monotonic()
 
 
+def _cap_data_cached():
+    """Determina si el panel puede abrirse inmediatamente sin otro viaje a Sheets."""
+    item = st.session_state.get('_cap_cache')
+    return (isinstance(item, dict) and item.get('sig') == _cap_cache_signature()
+            and time.monotonic() - item.get('at', 0) < 35)
+
+
+def _pm_polish_loading_markup(area):
+    """Indicador liviano, sin imágenes ni SVG para proteger el diseño al cargar."""
+    area = str(area)
+    if area not in ('Capacitaciones','Rutinas Operativas','Comunicados'):
+        area = 'datos'
+    return ('<div class="pm-polish-loading" role="status" aria-label="Cargando '+area+'">'
+            '<div class="pm-polish-load-top"><i></i><i></i></div>'
+            '<div class="pm-polish-load-grid"><i></i><i></i><i></i></div>'
+            '<small>Consultando '+area.lower()+'…</small></div>')
+
+
+def _cap_loading_markup():
+    return _pm_polish_loading_markup('Capacitaciones')
+
+
 def _cap_data(force=False):
     if not st.session_state.get('usuario_login'):
         raise PermissionError('Inicia sesión para consultar las capacitaciones.')
@@ -6158,6 +6180,37 @@ def _cap_status(data, course, dni):
     return {'total': total, 'count':count, 'pct':round(100*count/total) if total else 0,
             'completed':completed,'lessons':lessons,'questions':questions,'done':done,'passed':passed,
             'tries':tries}
+
+
+def _cap_worker_pending_summary(dni, force=False):
+    summary={'count':0,'first':'','items':[],'error':None}
+    try:
+        who=_pmi_dni(dni)
+        data=_cap_data(force=force)
+        pending=[]
+        for course in _cap_assigned(data,who):
+            state=_cap_status(data,course,who)
+            if state['completed']:
+                continue
+            pending.append({'id_curso':course['id_curso'],'titulo':course['titulo'],'pct':int(state['pct']),
+                            'categoria':course.get('categoria',''),'duracion':str(course.get('duracion_min') or ''),
+                            'started':int(state['pct'])>0})
+        pending.sort(key=lambda x:(0 if x['started'] else 1, x['titulo'].casefold()))
+        summary['count']=len(pending)
+        summary['items']=pending
+        summary['first']=pending[0]['id_curso'] if pending else ''
+    except Exception as exc:
+        summary['error']=type(exc).__name__
+    return summary
+
+
+def _pm_open_pending_training():
+    info=st.session_state.get('_pm_cap_pending') or {}
+    first=str(info.get('first') or '')
+    if first:
+        st.session_state['cap_selected_course']=first
+        st.session_state['cap_selected_lesson']=''
+    _ir_a('Capacitaciones')
 
 
 def _cap_create_course(title, desc, cat, minutes, image_key, passing):
@@ -6555,7 +6608,19 @@ def _cap_styles():
     .st-key-cap_admin_view [role="radiogroup"] label:has(input:checked) p{color:#fff!important}
     .st-key-cap_admin_view [role="radiogroup"] label input[type="radio"]{width:1px!important;height:1px!important;opacity:0!important;position:absolute!important}
     .st-key-cap_admin_view [role="radiogroup"] label{min-height:41px!important;padding:9px 13px!important;align-items:center!important}
-    .st-key-cap_admin_view [role="radiogroup"]{margin-bottom:6px}
+    .st-key-cap_admin_view [role="radiogroup"]{margin-bottom:6px;justify-content:center!important;align-items:stretch!important}
+    .st-key-cap_admin_view [role="radiogroup"] > label{display:flex!important;align-items:center!important;justify-content:center!important;text-align:center!important;min-width:122px!important}
+    .capm-kpis{align-items:stretch}
+    .capm-kpi{height:100%}
+    .capm-card,.st-key-capm_quick_actions{height:100%}
+    .capm-card{padding:20px 22px 18px}
+    .st-key-capm_quick_actions{padding:20px 22px 18px;display:flex;flex-direction:column;justify-content:flex-start}
+    .st-key-capm_quick_actions [data-testid="stVerticalBlock"]{height:100%}
+    .st-key-capm_quick_actions [data-testid="stButton"] button{min-height:40px!important}
+    .capm-heading{min-height:26px;align-items:center}
+    .capm-progress-main{min-height:188px;align-items:center}
+    .capm-activity{min-height:55px;align-items:center}
+    .capm-mini-row{align-items:center}
     .st-key-cap_shell .cap-heading{margin:5px 0 15px}
     .st-key-cap_shell .cap-heading .cap-heading-icon{width:32px;height:32px;overflow:hidden;flex:none}
     .st-key-cap_shell .cap-heading .cap-heading-icon svg{width:19px!important;height:19px!important}
@@ -7306,58 +7371,65 @@ def _capm_coverage(data,mapping):
 
 def _capm_overview(data,courses,mapping,names):
     report,done,started,pending,pct=_capm_coverage(data,mapping)
-    left,right=st.columns([1.45,1],gap='medium')
-    with left:
-        html=('<div class="capm-card"><div class="capm-heading"><span>Avance general del equipo</span></div>'
-          '<small>Combinaciones de colaborador y curso asignado</small>'
-          '<div class="capm-progress-main"><div class="capm-ring" style="--cap-p:'+str(pct)+'%"><div class="capm-ring-inner"><strong>'+str(pct)+'%</strong><small>Completados</small></div></div>'
-          '<div class="capm-ring-legend">')
-        for cls,label,n in [('','Completados',done),('progress','En proceso',started),('pending','Sin iniciar',pending)]:
-            html+='<div class="capm-legend-row"><span><i class="capm-dot '+cls+'"></i>'+label+'</span><b>'+str(n)+'</b></div>'
-        st.markdown(html+'</div></div></div>',unsafe_allow_html=True)
-    with right:
-        with st.container(key='capm_quick_actions'):
-            st.markdown('<div class="capm-heading"><span>Accesos rápidos</span></div><div class="cap-admin-navhint">Continúa con la gestión del equipo</div>',unsafe_allow_html=True)
-            for text,destination,icon in [('Crear un curso','Cursos',':material/add_circle:'),
-                                          ('Asignar capacitación','Asignaciones',':material/groups:'),
-                                          ('Importar desde Excel','Importar Excel',':material/upload_file:')]:
-                st.button(text,key='capm_quick_'+destination,icon=icon,use_container_width=True,
-                          on_click=_capm_nav,args=(destination,))
-    bleft,bright=st.columns([1.45,1],gap='medium')
-    with bleft:
-        html='<div class="capm-card"><div class="capm-heading"><span>Avance por curso</span></div>'
-        for course in courses[:6]:
-            rows=[r for r in report if r['cid']==course['id_curso']]
-            value=round(100*sum(x['done'] for x in rows)/len(rows)) if rows else 0
-            html+='<div class="capm-mini-row"><img src="'+_cap_thumb(course.get('miniatura',''))+'" alt="Portada">'
-            html+='<div class="capm-mini-copy"><b>'+_cap_escape(course['titulo'])+'</b><small>'+str(len(rows))+' colaborador(es) asignado(s)</small></div>'
-            html+='<div class="capm-track"><i style="width:'+str(value)+'%"></i></div><b class="capm-track-label">'+str(value)+'%</b></div>'
-        if not courses:html+='<div class="cap-empty">Aún no hay cursos creados.</div>'
-        st.markdown(html+'</div>',unsafe_allow_html=True)
-    with bright:
-        events=[]
-        for r in data[_CAP_ASSIGNS]:
-            events.append((r.get('asignado_el',''), 'Asignación '+('activa' if r['estado']=='Activa' else 'retirada'),names.get(r['id_curso'],'Curso')))
-        for r in data[_CAP_ATTEMPTS]:
-            events.append((r.get('realizado_el',''),'Evaluación registrada',names.get(r['id_curso'],'Curso')))
-        for r in data[_CAP_CERTS]:
-            events.append((r.get('emitido_el',''),'Constancia emitida',names.get(r['id_curso'],'Curso')))
-        html='<div class="capm-card"><div class="capm-heading"><span>Actividad reciente</span></div>'
-        for date,title,subtitle in sorted(events,key=lambda x:x[0],reverse=True)[:4]:
-            html+='<div class="capm-activity"><span class="capm-activity-icon">'+_capm_svg('check')+'</span><div class="capm-activity-copy"><b>'+_cap_escape(title)+'</b><small>'+_cap_escape(subtitle)+' · '+_cap_escape(str(date)[:16])+'</small></div></div>'
-        if not events:html+='<div class="cap-empty">Todavía no hay movimientos registrados.</div>'
-        st.markdown(html+'</div>',unsafe_allow_html=True)
+    with st.container(key='capm_overview_top'):
+        left,right=st.columns([1.45,1],gap='medium')
+        with left:
+            html=('<div class="capm-card"><div class="capm-heading"><span>Avance general del equipo</span></div>'
+              '<small>Combinaciones de colaborador y curso asignado</small>'
+              '<div class="capm-progress-main"><div class="capm-ring" style="--cap-p:'+str(pct)+'%"><div class="capm-ring-inner"><strong>'+str(pct)+'%</strong><small>Completados</small></div></div>'
+              '<div class="capm-ring-legend">')
+            for cls,label,n in [('','Completados',done),('progress','En proceso',started),('pending','Sin iniciar',pending)]:
+                html+='<div class="capm-legend-row"><span><i class="capm-dot '+cls+'"></i>'+label+'</span><b>'+str(n)+'</b></div>'
+            st.markdown(html+'</div></div></div>',unsafe_allow_html=True)
+        with right:
+            with st.container(key='capm_quick_actions'):
+                st.markdown('<div class="capm-heading"><span>Accesos rápidos</span></div><div class="cap-admin-navhint">Continúa con la gestión del equipo</div>',unsafe_allow_html=True)
+                for text,destination,icon in [('Crear un curso','Cursos',':material/add_circle:'),
+                                              ('Asignar capacitación','Asignaciones',':material/groups:'),
+                                              ('Importar desde Excel','Importar Excel',':material/upload_file:')]:
+                    st.button(text,key='capm_quick_'+destination,icon=icon,use_container_width=True,
+                              on_click=_capm_nav,args=(destination,))
+    with st.container(key='capm_overview_bottom'):
+        bleft,bright=st.columns([1.45,1],gap='medium')
+        with bleft:
+            html='<div class="capm-card"><div class="capm-heading"><span>Avance por curso</span></div>'
+            for course in courses[:6]:
+                rows=[r for r in report if r['cid']==course['id_curso']]
+                value=round(100*sum(x['done'] for x in rows)/len(rows)) if rows else 0
+                html+='<div class="capm-mini-row"><img src="'+_cap_thumb(course.get('miniatura',''))+'" alt="Portada">'
+                html+='<div class="capm-mini-copy"><b>'+_cap_escape(course['titulo'])+'</b><small>'+str(len(rows))+' colaborador(es) asignado(s)</small></div>'
+                html+='<div class="capm-track"><i style="width:'+str(value)+'%"></i></div><b class="capm-track-label">'+str(value)+'%</b></div>'
+            if not courses:html+='<div class="cap-empty">Aún no hay cursos creados.</div>'
+            st.markdown(html+'</div>',unsafe_allow_html=True)
+        with bright:
+            events=[]
+            for r in data[_CAP_ASSIGNS]:
+                events.append((r.get('asignado_el',''), 'Asignación '+('activa' if r['estado']=='Activa' else 'retirada'),names.get(r['id_curso'],'Curso')))
+            for r in data[_CAP_ATTEMPTS]:
+                events.append((r.get('realizado_el',''),'Evaluación registrada',names.get(r['id_curso'],'Curso')))
+            for r in data[_CAP_CERTS]:
+                events.append((r.get('emitido_el',''),'Constancia emitida',names.get(r['id_curso'],'Curso')))
+            html='<div class="capm-card"><div class="capm-heading"><span>Actividad reciente</span></div>'
+            for date,title,subtitle in sorted(events,key=lambda x:x[0],reverse=True)[:4]:
+                html+='<div class="capm-activity"><span class="capm-activity-icon">'+_capm_svg('check')+'</span><div class="capm-activity-copy"><b>'+_cap_escape(title)+'</b><small>'+_cap_escape(subtitle)+' · '+_cap_escape(str(date)[:16])+'</small></div></div>'
+            if not events:html+='<div class="cap-empty">Todavía no hay movimientos registrados.</div>'
+            st.markdown(html+'</div>',unsafe_allow_html=True)
 
 
 def _cap_admin_panel():
     _cap_admin_guard()
     _cap_styles()
     with st.container(key='cap_shell'):
+        _load_slot = st.empty()
+        if not _cap_data_cached():
+            _load_slot.markdown(_cap_loading_markup(), unsafe_allow_html=True)
         try:
             data=_cap_data()
         except Exception:
             st.error('No se pudo consultar Capacitaciones. Revisa conexión o encabezados de las hojas de Google Sheets.')
             return
+        finally:
+            _load_slot.empty()
         courses=sorted(data[_CAP_COURSES],key=lambda r:r['creado_el'],reverse=True)
         people=st.session_state.get('empleados',pd.DataFrame())
         mapping={}
@@ -7715,11 +7787,16 @@ def _cap_worker_panel():
     _cap_styles()
     dni=_pmi_dni(dni_actual)
     _pmi_check_access(dni)
+    _load_slot = st.empty()
+    if not _cap_data_cached():
+        _load_slot.markdown(_cap_loading_markup(), unsafe_allow_html=True)
     try:
         data=_cap_data()
     except Exception:
         st.error('No fue posible consultar Capacitaciones. Verifica la conexión con Google Sheets.')
         return
+    finally:
+        _load_slot.empty()
     cid=st.session_state.get('cap_selected_course','')
     if cid:
         _cap_course_detail(data,dni,cid)
@@ -11831,6 +11908,19 @@ def _pm2_shared_snapshot():
 _PM2_SNAPSHOT_TTL = 12  # Cambios entre instancias se detectan pronto, sin sondear en cada clic.
 
 
+def _pm2_data_cached():
+    """Existe una instantánea aún válida en sesión o en memoria compartida."""
+    try:
+        shared = _pm2_shared_snapshot()
+        local = st.session_state.get('_pm2_cache')
+        now = time.monotonic()
+        if isinstance(local, dict) and local.get('version') == shared['version'] and now-local.get('at',0)<_PM2_SNAPSHOT_TTL:
+            return True
+        return shared.get('data') is not None and now-shared.get('at',0)<_PM2_SNAPSHOT_TTL
+    except Exception:
+        return False
+
+
 def _pm2_load(force=False):
     shared = _pm2_shared_snapshot()
     now = time.monotonic()
@@ -12030,9 +12120,10 @@ def _pm2_assignment_apply_source(version, saved_library):
 
 
 def _pm2_assignment_pick_library(source):
-    """Solicita reabrir el editor con la actividad escogida, sin mutar widgets creados."""
+    """Reutilizar plantilla y abrir el formulario antes de crear sus widgets."""
     st.session_state["_pm2_assignment_requested_source"] = str(source)
     st.session_state["_pm2_assignment_library_notice"] = True
+    st.session_state["pm2_admin_view"] = "Asignar actividades"
 
 
 def _pm2_assignment_change_day(version):
@@ -14212,6 +14303,16 @@ def _pmc_rows(ws, headers):
             for row in matrix[1:] if row and str(row[0]).strip()]
 
 
+def _pmc_data_cached():
+    """Solo comprueba la vigencia de la caché, sin devolver registros privados."""
+    try:
+        cache = _pmc_shared_state()
+        with cache['lock']:
+            return cache.get('records') is not None and time.monotonic()-cache.get('at',0)<_PMC_CACHE_TTL
+    except Exception:
+        return False
+
+
 def _pmc_load(force=False):
     """Caché común de lectura; nunca devuelve información filtrada por usuario."""
     cache = _pmc_shared_state()
@@ -15839,7 +15940,13 @@ def _pmc_admin_ui():
     if not _pmc_admin():
         st.error("Esta sección requiere una sesión administrativa real.")
         return
-    notices, reads, err = _pmc_load()
+    _loading = st.empty()
+    if not _pmc_data_cached():
+        _loading.markdown(_pm_polish_loading_markup('Comunicados'),unsafe_allow_html=True)
+    try:
+        notices, reads, err = _pmc_load()
+    finally:
+        _loading.empty()
     if err:
         st.warning(err)
         if st.button("Preparar las hojas de Comunicados", key="pmc_init", type="primary", use_container_width=True):
@@ -15851,8 +15958,12 @@ def _pmc_admin_ui():
                 st.error(msg)
         return
     _pmc_reference_styles()
-    t_monitor, t_pub = st.tabs(("Seguimiento e historial", "Publicar comunicado"))
-    with t_pub:
+    _pmc_areas = ["Seguimiento e historial", "Publicar comunicado"]
+    if st.session_state.get("pmc_admin_area") not in _pmc_areas:
+        st.session_state["pmc_admin_area"] = _pmc_areas[0]
+    _pmc_area = st.radio("Área de Gestión de Comunicados", _pmc_areas,
+                         horizontal=True, key="pmc_admin_area", label_visibility="collapsed")
+    if _pmc_area == "Publicar comunicado":
         persons = _pmc_personas()
         if not persons:
             st.warning("No se encontraron colaboradores activos.")
@@ -15898,7 +16009,7 @@ def _pmc_admin_ui():
                     st.rerun()
                 else:
                     st.error(msg)
-    with t_monitor:
+    if _pmc_area == "Seguimiento e historial":
         _pmc_monitor_ui_styles()
         st.markdown(_pmc_admin_kpis_html(notices, reads), unsafe_allow_html=True)
         with st.container(key="pmc_admin_monitor_filters"):
@@ -16569,6 +16680,45 @@ def _pm_av_dialog(messages, read_ids, ready):
 
 
 
+def _pm_cap_home_notice():
+    if rol_actual == 'admin' or st.session_state.get('ver_como'):
+        return
+    info=st.session_state.get('_pm_cap_pending') or _cap_worker_pending_summary(dni_actual)
+    st.session_state['_pm_cap_pending']=info
+    if info.get('error') or not info.get('count'):
+        return
+    items=info.get('items') or []
+    lead=items[0] if items else {}
+    title=_html.escape(str(lead.get('titulo') or 'Capacitación pendiente'))
+    pct=int(lead.get('pct') or 0)
+    count=int(info.get('count') or 0)
+    extra='' if count<=1 else f' y {count-1} más'
+    st.markdown("""<style>
+    .pm-cap-home{margin:6px 0 15px;border:1px solid #e7edf5;border-radius:22px;background:linear-gradient(135deg,#ffffff 0%,#fbfdff 100%);padding:17px 18px 15px;box-shadow:0 14px 28px -26px rgba(20,36,59,.28)}
+    .pm-cap-home-top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+    .pm-cap-home-tag{font-size:.68rem;letter-spacing:.1em;font-weight:850;color:#2b61b2}
+    .pm-cap-home-count{border-radius:999px;background:#edf4ff;border:1px solid #d7e5ff;color:#2c5fa7;padding:6px 10px;font-size:.74rem;font-weight:800}
+    .pm-cap-home-title{font-size:1.03rem;font-weight:850;color:#1f304a;line-height:1.35;margin:0 0 4px}
+    .pm-cap-home-sub{font-size:.8rem;color:#6e7e93;line-height:1.55;margin:0 0 10px}
+    .pm-cap-home-track{height:8px;background:#e8edf4;border-radius:999px;overflow:hidden;margin:0 0 8px}
+    .pm-cap-home-track i{display:block;height:100%;background:linear-gradient(90deg,#2d6fd0,#4f93ef);border-radius:999px}
+    .pm-cap-home-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:.75rem;color:#6a7b91}
+    .st-key-pm_cap_home_action button{min-height:44px!important;border-radius:13px!important}
+    @media(max-width:680px){.pm-cap-home{padding:15px 14px 14px;border-radius:19px}}
+    </style>""",unsafe_allow_html=True)
+    with st.container(key='pm_cap_home_box'):
+        st.markdown(
+            '<div class="pm-cap-home"><div class="pm-cap-home-top"><span class="pm-cap-home-tag">CAPACITACIÓN</span>'
+            '<span class="pm-cap-home-count">'+str(count)+' pendiente(s)</span></div>'
+            '<div class="pm-cap-home-title">Tienes capacitación por completar</div>'
+            '<p class="pm-cap-home-sub">Continúa con <b>'+title+'</b>'+_html.escape(extra)+' para mantener tu aprendizaje al día.</p>'
+            '<div class="pm-cap-home-track"><i style="width:'+str(pct)+'%"></i></div>'
+            '<div class="pm-cap-home-foot"><span>Avance actual: '+str(pct)+'%</span><span>Abre tu módulo de aprendizaje desde aquí</span></div></div>',
+            unsafe_allow_html=True)
+        st.button('Ir a mi capacitación', key='pm_cap_home_action', icon=':material/school:',
+                  type='primary', use_container_width=True, on_click=_pm_open_pending_training)
+
+
 def _pm_av_home_summary():
     """Bandeja central en Marcar Asistencia: lectura sin consultar Sheets de nuevo."""
     if rol_actual == 'admin' or st.session_state.get('ver_como'):
@@ -16729,6 +16879,12 @@ def _pm_sidebar_active_alerts():
     if _bf_total_pendientes:
         alerts.append(('Botellas por devolver',_bf_total_pendientes,'Botellas Fiadas',':material/liquor:','pm_notice_bottles'))
     if rol_actual!='admin':
+        cap_pending=_cap_worker_pending_summary(dni_actual, force=fresh)
+        st.session_state['_pm_cap_pending']=cap_pending
+        if cap_pending.get('error'):
+            errors.append('capacitaciones')
+        elif cap_pending.get('count'):
+            alerts.append(('Capacitaciones pendientes',int(cap_pending['count']),'Capacitaciones',':material/school:','pm_notice_training'))
         unread=_pmc_unread_count()
         if unread is None:
             errors.append('comunicados')
@@ -16755,6 +16911,7 @@ _PM_NOTICE_PRESENTATION = {
     'pm_notice_rut_worker': ('Por atender', 'Actividades que todavía debes realizar', 'info'),
     'pm_notice_rut_observed': ('Por atender', 'Corrige las actividades observadas', 'urgent'),
     'pm_notice_messages': ('Mensajes y seguimiento', 'Comentarios de supervisión por leer', 'message'),
+    'pm_notice_training': ('Mensajes y seguimiento', 'Capacitaciones asignadas pendientes de completar', 'info'),
     'pm_notice_comm': ('Mensajes y seguimiento', 'Comunicados pendientes de confirmación', 'message'),
     'pm_notice_requests': ('Por atender' if rol_actual == 'admin' else 'Mensajes y seguimiento',
                            'Solicitudes del equipo por evaluar' if rol_actual == 'admin' else 'Solicitudes a la espera de respuesta',
@@ -16768,7 +16925,11 @@ def _pm_notice_open(destino, key):
     if key == 'pm_notice_messages':
         _pm_av_request_panel()
         return
+    if key == 'pm_notice_training':
+        _pm_open_pending_training()
+        return
     if key == 'pm_notice_rut_admin' and rol_actual == 'admin':
+        st.session_state['pm2_admin_view'] = 'Seguimiento'
         date_txt = str(st.session_state.get('_pm_notice_rut_date') or '')
         try:
             st.session_state['pm2_monitor_date'] = datetime.strptime(date_txt[:10], '%Y-%m-%d').date()
@@ -17031,6 +17192,9 @@ def _pm_cerrar_sesion():
         st.session_state.pop("nav_radio", None)
         st.session_state.pop("gs_q", None)
         st.session_state.pop("_pm_navigation_requested", None)
+        st.session_state.pop('_pm_cap_pending', None)
+        st.session_state.pop('pmc_admin_area', None)
+        st.session_state.pop('pm2_admin_view', None)
         for _cap_private_key in ('_cap_cache','cap_import_preview','cap_admin_last_view',
                                   'cap_admin_view','cap_import_type','cap_import_target','cap_import_nonce'):
             st.session_state.pop(_cap_private_key,None)
@@ -18300,6 +18464,8 @@ def _pm_mobile_notices():
             st.info(f"Rutinas: {por_validar} por validar · {observadas} con observaciones.")
             st.button("Abrir mis rutinas", key="pm_mobile_review_link", use_container_width=True,
                       on_click=_ir_a, args=("Mis Rutinas",), icon=":material/fact_check:")
+        # La tarjeta única _pm_cap_home_notice ya muestra la capacitación
+        # y su acceso directo en escritorio y móvil. Evitar aviso duplicado.
         st.markdown(
             '<section class="pm-m-notice-heading"><div class="pm-m-eyebrow">MIS AVISOS</div>'
             '<h2>Lo que necesitas revisar</h2>'
@@ -18335,6 +18501,132 @@ if choice != "Marcar Asistencia":
 # Mostrar las confirmaciones de la ejecución anterior antes del módulo activo.
 _pm62_mostrar_confirmacion(choice)
 
+# PREMIUM MARKET / PULIDO TRANSVERSAL 2026 · solo presentación.
+# Evitar reflows de indicadores mientras las pantallas cargan, sin ocultar
+# ventanas ni modificar formatos o tamaños de imágenes de evidencia.
+st.markdown(r"""<style>
+/* La navegación de páginas completas no debe usar smooth-scroll: evita
+   la sensación de vistas retenidas durante los cambios de módulo. */
+html{scroll-behavior:auto!important}
+/* Sólo los SVG DE INTERFAZ tienen tamaño máximo; no tocar gráficas,
+   ilustraciones, logos, miniaturas, imágenes ni reproductores de vídeo. */
+.stApp [data-testid="stSpinner"] svg,
+.stApp [data-testid="stStatusWidget"] svg,
+.stApp [data-testid="stIcon"] svg,
+.stApp [data-testid="stIconMaterial"],
+.stApp [data-testid="stIconMaterial"] svg,
+.stApp [data-testid="stAlert"] [data-testid="stIconMaterial"]{
+  width:22px!important;height:22px!important;max-width:22px!important;
+  max-height:22px!important;font-size:20px!important;flex:0 0 22px!important;
+  line-height:1!important;overflow:hidden!important;vertical-align:middle!important;
+}
+.stApp [data-testid="stSpinner"]{min-height:40px!important}
+/* Carga sin iconos gigantes, una sola transición en lugar de placeholders anidados. */
+.pm-polish-loading{border:1px solid #e7edf4;background:#fff;border-radius:18px;
+  padding:18px 20px;margin:8px 0 16px;box-shadow:0 9px 25px -28px rgba(20,39,70,.22)}
+.pm-polish-load-top,.pm-polish-load-grid{display:flex;gap:12px;margin-bottom:12px}
+.pm-polish-load-top i,.pm-polish-load-grid i{display:block;border-radius:9px;background:#eef2f7;min-width:0}
+.pm-polish-load-top i:first-child{width:35%;height:18px}.pm-polish-load-top i:last-child{width:18%;height:18px}
+.pm-polish-load-grid i{height:57px;flex:1}
+.pm-polish-loading small{font-size:.76rem;color:#8492a6;line-height:1.45}
+/* Sistema uniforme de superficies administrativas: radios, filtros y espacios. */
+.st-key-capm_overview_top [data-testid="stHorizontalBlock"],
+.st-key-capm_overview_bottom [data-testid="stHorizontalBlock"]{align-items:stretch!important;gap:20px!important}
+.st-key-capm_overview_top [data-testid="stColumn"],
+.st-key-capm_overview_bottom [data-testid="stColumn"]{min-width:0!important}
+.st-key-capm_overview_top .capm-card,
+.st-key-capm_overview_top .st-key-capm_quick_actions{min-height:332px!important;
+  height:100%!important;padding:22px 23px!important;margin:0!important;
+  border-radius:20px!important;box-sizing:border-box!important}
+.st-key-capm_overview_bottom .capm-card{min-height:250px!important;margin:0!important;
+  padding:22px 23px!important;border-radius:20px!important;box-sizing:border-box!important}
+.st-key-capm_overview_top,.st-key-capm_overview_bottom{margin:4px 0 18px!important}
+.st-key-capm_overview_top .capm-heading,.st-key-capm_overview_bottom .capm-heading{
+  margin:0 0 13px!important;min-height:26px!important;align-items:center!important}
+.st-key-capm_overview_top .capm-progress-main{padding-top:14px!important;min-height:185px!important}
+.st-key-capm_overview_top .st-key-capm_quick_actions{
+  display:flex!important;flex-direction:column!important;gap:10px!important}
+.st-key-capm_overview_top .st-key-capm_quick_actions [data-testid="stButton"] button{
+  min-height:46px!important;width:100%!important;border-radius:12px!important;
+  justify-content:center!important;text-align:center!important;margin:0!important}
+.st-key-capm_overview_top .st-key-capm_quick_actions .cap-admin-navhint{margin:2px 0 13px!important}
+/* Las nueve áreas de Capacitación se centran y se adaptan con salto natural. */
+.st-key-cap_admin_view [role="radiogroup"]{width:100%!important;display:flex!important;
+  flex-wrap:wrap!important;align-items:stretch!important;justify-content:center!important;
+  gap:9px!important;margin:8px auto 18px!important;padding:0!important}
+.st-key-cap_admin_view [role="radiogroup"] >label{
+  display:flex!important;position:relative!important;align-items:center!important;
+  justify-content:center!important;text-align:center!important;min-width:114px!important;
+  min-height:44px!important;box-sizing:border-box!important;flex:0 1 auto!important;
+  padding:10px 13px!important;border-radius:12px!important}
+.st-key-cap_admin_view [role="radiogroup"] >label>div:first-child{
+  position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;
+  clip-path:inset(50%)!important;opacity:0!important}
+.st-key-cap_admin_view [role="radiogroup"] label p{margin:0!important;line-height:1.25!important;text-align:center!important}
+/* Rutinas: misma proporción de métricas, filtros y paneles, sin tocar acciones. */
+.st-key-pm_v_rutinas_operativas .pm4-admin-kpis,
+.st-key-pmc_admin_monitor_filters .pmr-admin-kpis{gap:13px!important}
+.st-key-pm_v_rutinas_operativas .pm4-admin-kpi,
+.pmr-admin-kpi{border-radius:18px!important;padding:17px!important;min-height:99px!important;
+  box-sizing:border-box!important}
+.st-key-pm4_monitor_filters,.st-key-pmc_admin_monitor_filters,.st-key-pmc_admin_editor{
+  border:1px solid #e6edf5!important;border-radius:19px!important;
+  padding:17px 19px 16px!important;box-sizing:border-box!important;background:#fff!important;
+  box-shadow:0 14px 29px -28px rgba(22,40,68,.28)!important}
+.st-key-pm4_staff_panel,.st-key-pm4_activities_panel{padding:19px!important;
+  border-radius:20px!important;box-sizing:border-box!important}
+.st-key-pm_v_rutinas_operativas .pm4-monitor-panel-heading{min-height:43px!important;
+  margin-bottom:16px!important;align-items:center!important}
+.st-key-pm4_activities_panel [class*="st-key-pm4_activity_row_"]{
+  padding:13px 15px!important;border-radius:15px!important;margin-bottom:11px!important}
+/* Comunicados: una navegación estable con botones nativos, no tabs duplicadas. */
+.st-key-pmc_admin_area [role="radiogroup"],
+.st-key-pm2_admin_view [role="radiogroup"]{
+  display:flex!important;justify-content:center!important;flex-wrap:wrap!important;
+  gap:9px!important;margin:6px auto 17px!important}
+.st-key-pmc_admin_area [role="radiogroup"]>label,
+.st-key-pm2_admin_view [role="radiogroup"]>label{
+  background:#fff!important;border:1px solid #e3eaf2!important;border-radius:12px!important;
+  padding:10px 15px!important;min-height:44px!important;box-sizing:border-box!important;
+  justify-content:center!important;align-items:center!important;text-align:center!important}
+.st-key-pmc_admin_area [role="radiogroup"]>label:has(input:checked),
+.st-key-pm2_admin_view [role="radiogroup"]>label:has(input:checked){
+  background:#e02a44!important;border-color:#e02a44!important}
+.st-key-pmc_admin_area [role="radiogroup"]>label:has(input:checked) p,
+.st-key-pm2_admin_view [role="radiogroup"]>label:has(input:checked) p{color:#fff!important}
+.st-key-pmc_admin_area [role="radiogroup"]>label>div:first-child,
+.st-key-pm2_admin_view [role="radiogroup"]>label>div:first-child{
+  position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;
+  clip-path:inset(50%)!important;opacity:0!important}
+.st-key-pmc_admin_area [role="radiogroup"] label p,
+.st-key-pm2_admin_view [role="radiogroup"] label p{
+  font-size:.79rem!important;font-weight:760!important;line-height:1.3!important;margin:0!important}
+@media(max-width:1050px){
+  .st-key-capm_overview_top .capm-card,
+  .st-key-capm_overview_top .st-key-capm_quick_actions{min-height:315px!important;padding:18px!important}
+}
+@media(max-width:780px){
+  .st-key-capm_overview_top .capm-card,
+  .st-key-capm_overview_top .st-key-capm_quick_actions,
+  .st-key-capm_overview_bottom .capm-card{min-height:0!important;height:auto!important;padding:15px!important}
+  .st-key-capm_overview_top,.st-key-capm_overview_bottom{margin:4px 0 12px!important}
+  .st-key-capm_overview_top [data-testid="stHorizontalBlock"],
+  .st-key-capm_overview_bottom [data-testid="stHorizontalBlock"]{gap:12px!important}
+  .st-key-cap_admin_view [role="radiogroup"] >label{min-width:105px!important;padding:9px!important}
+  .st-key-pm4_monitor_filters,.st-key-pmc_admin_monitor_filters,.st-key-pmc_admin_editor{
+    padding:13px!important;border-radius:16px!important}
+  .st-key-pm4_staff_panel,.st-key-pm4_activities_panel{padding:14px!important;border-radius:17px!important}
+  .pm-polish-load-grid i{height:44px}
+}
+@media(max-width:390px){
+  .st-key-cap_admin_view [role="radiogroup"] >label{min-width:96px!important;font-size:.76rem!important}
+  .st-key-capm_overview_top .capm-progress-main{min-height:0!important}
+}
+@media(prefers-reduced-motion:reduce){
+  .st-key-cap_admin_view label,.st-key-pmc_admin_area label,.st-key-pm2_admin_view label{transition:none!important}
+}
+</style>""",unsafe_allow_html=True)
+
 # PREMIUM MARKET 8.0 — CAPA FINAL DE COMPONENTES Y ACCESIBILIDAD
 # ============================================================
 
@@ -18349,6 +18641,7 @@ elif choice == "Marcar Asistencia":
     # Único centro visible de mensajes de supervisor, boletas y solicitudes.
     # El sidebar conserva únicamente el contador para el acceso rápido.
     _pm_av_home_summary()
+    _pm_cap_home_notice()
 
     # Recordatorio breve al abrir la jornada: no compite con los diálogos
     # existentes ni invade otras vistas. Se puede descartar durante el día.
@@ -21859,9 +22152,15 @@ elif choice == "Rutinas Operativas":
         _pm2_css()
         _pm3_evidence_setup_ui()
         _pmt_telegram_admin_ui()
-        t_monitor, t_week, t_create, t_library = st.tabs(["Seguimiento", "Planificación semanal", "Asignar actividades", "Biblioteca e historial"])
+        _pm2_admin_areas = ["Seguimiento", "Planificación semanal", "Asignar actividades", "Biblioteca e historial"]
+        if st.session_state.get("pm2_admin_view") not in _pm2_admin_areas:
+            st.session_state["pm2_admin_view"] = "Seguimiento"
+        _pm2_admin_area = st.radio(
+            "Área de Rutinas Operativas", _pm2_admin_areas, horizontal=True,
+            key="pm2_admin_view", label_visibility="collapsed",
+        )
 
-        with t_monitor:
+        if _pm2_admin_area == "Seguimiento":
             _pm3_show_flash("admin", "review")
             with st.container(key="pm4_monitor_filters", border=False):
                 cf, cp, cs, cr = st.columns([1.1, 1.4, 1.05, .8], vertical_alignment="bottom", gap="small")
@@ -21878,7 +22177,13 @@ elif choice == "Rutinas Operativas":
                     if st.button("Actualizar", key="pm2_admin_refresh", use_container_width=True):
                         _pm2_clear_cache()
                         st.rerun()
-            data, err = _pm2_load()
+            _loading = st.empty()
+            if not _pm2_data_cached():
+                _loading.markdown(_pm_polish_loading_markup('Rutinas Operativas'),unsafe_allow_html=True)
+            try:
+                data, err = _pm2_load()
+            finally:
+                _loading.empty()
             if err:
                 st.error(err)
             elif data is not None:
@@ -21967,20 +22272,30 @@ elif choice == "Rutinas Operativas":
                                         st.button('Ver', key='pm2_open_task_' + task_id,
                                                   on_click=_pm2_admin_open_task, args=(task_id,),
                                                   use_container_width=True, icon=':material/visibility:')
-        with t_week:
-            _pmw_history, _pmw_error = _pm2_load()
+        if _pm2_admin_area == "Planificación semanal":
+            _loading = st.empty()
+            if not _pm2_data_cached():
+                _loading.markdown(_pm_polish_loading_markup('Rutinas Operativas'),unsafe_allow_html=True)
+            try:
+                _pmw_history, _pmw_error = _pm2_load()
+            finally:
+                _loading.empty()
             _pmw_render_week(_pmw_history, _pmw_error)
 
-        # La biblioteca proviene del historial real, sin otra hoja de configuración.
-        _pm2_history_for_library, _pm2_history_library_error = _pm2_load()
-        _pm2_saved_templates = _pm2_saved_library(_pm2_history_for_library)
-        _pm2_saved_labels = {
-            f"Guardada · {v['title'][:48]} · {v['zone'][:22]} · ID {token}": token
-            for token, v in _pm2_saved_templates.items()
-        }
-        _pm2_source_options = list(_PM2_TEMPLATES) + list(_pm2_saved_labels)
+        # Solo preparar la biblioteca para sus dos vistas consumidoras.
+        # Antes se construía también al consultar el Seguimiento o Calendario.
+        if _pm2_admin_area in ("Asignar actividades", "Biblioteca e historial"):
+            _pm2_history_for_library, _pm2_history_library_error = _pm2_load()
+            _pm2_saved_templates = _pm2_saved_library(_pm2_history_for_library)
+            _pm2_saved_labels = {
+                f"Guardada · {v['title'][:48]} · {v['zone'][:22]} · ID {token}": token
+                for token, v in _pm2_saved_templates.items()
+            }
+            _pm2_source_options = list(_PM2_TEMPLATES) + list(_pm2_saved_labels)
 
-        with t_create:
+        if _pm2_admin_area == "Asignar actividades":
+            if st.session_state.pop("_pm2_assignment_library_notice", False):
+                st.toast("Actividad de la biblioteca lista para asignar.", icon="✅")
             st.markdown('<div class="pm2-split-title">Nueva asignación personalizada</div>', unsafe_allow_html=True)
             st.caption("Asigna una actividad, reutiliza tu biblioteca y programa varios días. Fechas y horas de Perú.")
             _pm3_show_flash("admin", "assignment")
@@ -22088,10 +22403,8 @@ elif choice == "Rutinas Operativas":
                     st.error(msg + " Tus datos siguen en el formulario para corregir o reintentar.")
             st.caption("Cada asignación guardada también queda disponible en la pestaña «Biblioteca e historial», sin duplicar hojas de Google Sheets.")
 
-        with t_library:
+        if _pm2_admin_area == "Biblioteca e historial":
             st.markdown('<div class="pm2-split-title">Mi biblioteca de actividades</div>', unsafe_allow_html=True)
-            if st.session_state.pop("_pm2_assignment_library_notice", False):
-                st.success("Actividad cargada. Abre «Asignar actividades» para elegir el trabajador y las fechas.")
             st.caption("Las rutinas asignadas se guardan automáticamente aquí. Elige una para reutilizar título, instrucciones, lugar, horario y prioridad.")
             if _pm2_history_library_error:
                 st.warning("No se pudo actualizar la biblioteca desde Google Sheets. Los ejemplos incorporados siguen disponibles.")
