@@ -6016,11 +6016,51 @@ def _cap_read(name):
             for row in values[1:] if row and str(row[0]).strip()]
 
 
+def _cap_cache_signature():
+    # Cuando la aplicación escribe una hoja, su revisión invalida solo los datos
+    # necesarios, incluso si otro usuario abrió Capacitaciones en otra sesión.
+    return (str(st.session_state.get('usuario_login')), str(st.session_state.get('ver_como')),
+            tuple(_revision_hoja(name) for name in _CAP_SCHEMAS))
+
+
+def _cap_cache_merge(name, record, update=False, before=None):
+    """Evita releer las ocho hojas después de una escritura confirmada."""
+    item=st.session_state.get('_cap_cache')
+    current=(str(st.session_state.get('usuario_login')),str(st.session_state.get('ver_como')))
+    changed_elsewhere=False
+    if before is not None:
+        after=_cap_cache_signature()
+        rev_before=list(before[2])
+        rev_target=list(rev_before)
+        rev_target[list(_CAP_SCHEMAS).index(name)]+=1
+        changed_elsewhere=(after[:2]!=before[:2] or
+                           after[2] not in (tuple(rev_before),tuple(rev_target)))
+    if (not isinstance(item,dict) or tuple(item.get('sig',()))[:2]!=current
+            or (before is not None and item.get('sig')!=before) or changed_elsewhere):
+        st.session_state.pop('_cap_cache',None)
+        return
+    rows=item.get('rows')
+    if not isinstance(rows,dict) or name not in rows:
+        st.session_state.pop('_cap_cache',None)
+        return
+    fields={col:str(record.get(col,'')) for col in _CAP_SCHEMAS[name]}
+    if update:
+        index=[i for i,r in enumerate(rows[name]) if r[_CAP_SCHEMAS[name][0]]==fields[_CAP_SCHEMAS[name][0]]]
+        if len(index)!=1:
+            st.session_state.pop('_cap_cache',None)
+            return
+        rows[name][index[0]]=fields
+    else:
+        rows[name].append(fields)
+    item['sig']=_cap_cache_signature()
+    item['at']=time.monotonic()
+
+
 def _cap_data(force=False):
     if not st.session_state.get('usuario_login'):
         raise PermissionError('Inicia sesión para consultar las capacitaciones.')
-    sig = (str(st.session_state.get('usuario_login')), str(st.session_state.get('ver_como')))
-    item = st.session_state.get('_cap_cache')
+    sig=_cap_cache_signature()
+    item=st.session_state.get('_cap_cache')
     if (not force and isinstance(item, dict) and item.get('sig') == sig
             and time.monotonic()-item.get('at',0) < 35):
         return item['rows']
@@ -6034,8 +6074,9 @@ def _cap_write(name, record):
     ws = _cap_sheet(name)
     if ws is None:
         raise ValueError('Antes de registrar, prepara las hojas en Capacitaciones (administrador).')
+    previous_revision=_cap_cache_signature()
     ws.append_row([str(record.get(c,'')) for c in _CAP_SCHEMAS[name]], value_input_option='RAW')
-    st.session_state.pop('_cap_cache',None)
+    _cap_cache_merge(name,record,before=previous_revision)
     _pmi_clear()
 
 
@@ -6055,8 +6096,9 @@ def _cap_update(name, ident, changes):
     n, values = found[0]
     row = dict(zip(_CAP_SCHEMAS[name], values + ['']*len(_CAP_SCHEMAS[name])))
     row.update({k:str(v) for k,v in changes.items()})
+    previous_revision=_cap_cache_signature()
     ws.update(f'A{n}', [[row[c] for c in _CAP_SCHEMAS[name]]], value_input_option='RAW')
-    st.session_state.pop('_cap_cache',None)
+    _cap_cache_merge(name,row,update=True,before=previous_revision)
 
 
 def _cap_id(prefix):
@@ -6433,6 +6475,12 @@ def _cap_styles():
     .st-key-cap_shell button{border-radius:12px!important;min-height:40px!important;font-weight:700!important}
     .st-key-cap_shell button[kind="primary"]{background:#d6253d!important;border-color:#d6253d!important}
     .st-key-cap_shell [data-testid="stFileUploader"]{border-radius:15px}
+    .st-key-cap_admin_view [role="radiogroup"]{gap:7px!important;flex-wrap:wrap!important;padding:5px 0 13px}
+    .st-key-cap_admin_view [role="radiogroup"] label{border:1px solid #e5eaf2;background:#fff;
+         border-radius:11px;padding:8px 11px!important;min-height:37px;box-shadow:none;transition:background .15s,border-color .15s}
+    .st-key-cap_admin_view [role="radiogroup"] label:has(input:checked){background:#fff0f2;border-color:#e9a4af}
+    .st-key-cap_admin_view [role="radiogroup"] label p{font-size:.77rem!important;font-weight:750!important;color:#34465e!important}
+    .st-key-cap_admin_view [role="radiogroup"] label:has(input:checked) p{color:#ae2740!important}
     .st-key-cap_shell [data-baseweb="tab-list"]{gap:8px;overflow-x:auto;scrollbar-width:none}
     .st-key-cap_shell [data-baseweb="tab"]{white-space:nowrap;min-height:43px;border-radius:13px;background:#fff;flex:none}
     .st-key-cap_shell [data-testid="stVideo"]{border-radius:14px;overflow:hidden;max-width:100%}
@@ -6691,6 +6739,419 @@ def _cap_course_detail(data,dni,cid):
         st.caption('La confirmación de una lección es declarativa: no equivale a una comprobación automática del tiempo reproducido.')
 
 
+# ============================================================================
+# Premium Market · Importación de capacitaciones desde Excel (solo administración)
+# Lectura XLSX de datos con la biblioteca estándar (sin dependencia openpyxl).
+# Requiere plantilla con encabezados exactos. No ejecuta fórmulas del archivo.
+# ============================================================================
+_CAP_EXCEL_COLS = {
+    'Cursos': ('codigo_curso','titulo','descripcion','categoria','duracion_min','portada','nota_minima'),
+    'Lecciones': ('codigo_curso','orden','titulo','tipo','descripcion','url_youtube','minutos'),
+    'Preguntas': ('codigo_curso','pregunta','opcion_a','opcion_b','opcion_c','opcion_d','correcta'),
+}
+_CAP_EXCEL_CATEGORIES = ('Ventas','Facturación','Atención al cliente','Operaciones','Seguridad','General')
+_CAP_EXCEL_COVERS = ('sales','invoice','service','negosy','receipt','client')
+_CAP_EXCEL_TEMPLATE_B64 = (
+    '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'
+    'ge7nNxa4RO2jLwS1hEx3Bbd/JmRW+QYXwAJxXdMTCYuSyLzVk+H9VSY78y5Y/R5q1hPZ6jqq6dgJU5T2+Hrp/xFWT+veVXzDN+ONdHzuN'
+    'g0JTHpG9bBQU53z2rL0Fm+FVksW4v90lGlfKbCZaM4djwcUHIFTpW3b+pS98o5M9bOl365e5ybrDu2QNjZCcLOnhBm5L5/68X5k+bgaIS'
+    'S7qyDEg2lRQBGiu9eH5vBeLmKZgDLmBiY4Gj8yo1plGE+wOQG7H5OYZ9rllTO04ubFK/qsskXVTCKBGOHRrZXxkHWj0sMVrpmIFcWhXVS'
+    'oU4mM4R1cnXS8+ziGNNmxFnL/8pRvW4vXNQ+N97ktLf31cX3gIuvgSoc00/oxsp40DQK3eLo4KIAV4OWfg+2Sr+dFVB/47h4mhBKcvx0U'
+    'sDI2rB8qL93Wn6X+v7/UEsDBBQAAAAAAHV/Y12s/p07KAEAACgBAAALAAAAX3JlbHMvLnJlbHPvu788P3htbCB2ZXJzaW9uPSIxLjAiIG'
+    'VuY29kaW5nPSJ1dGYtOCI/PjxSZWxhdGlvbnNoaXBzIHhtbG5zPSJodHRwOi8vc2NoZW1hcy5vcGVueG1sZm9ybWF0cy5vcmcvcGFja2F'
+    'nZS8yMDA2L3JlbGF0aW9uc2hpcHMiPjxSZWxhdGlvbnNoaXAgVHlwZT0iaHR0cDovL3NjaGVtYXMub3BlbnhtbGZvcm1hdHMub3JnL29m'
+    'ZmljZURvY3VtZW50LzIwMDYvcmVsYXRpb25zaGlwcy9vZmZpY2VEb2N1bWVudCIgVGFyZ2V0PSIveGwvd29ya2Jvb2sueG1sIiBJZD0iU'
+    'jAxM2FjMjdkM2U4NTQwNmMiIC8+PC9SZWxhdGlvbnNoaXBzPlBLAwQUAAAACAB1f2NddZ9nckIBAADPBAAAGgAAAHhsL19yZWxzL3dvcm'
+    'tib29rLnhtbC5yZWxzzdS7bsMgFAbgV7HYazDgWxUnS5euaV7gBI4vigELSOs8W4c+Ul+halNVTtWhS6QsDD/Sr48j4P31bbWZzZg8ow+'
+    'Dsw3JUkYStMrpwXYNOcb2riKb9WqLI8TB2dAPU0hmM9rQkD7G6Z7SoHo0EFI3oZ3N2DpvIIbU+Y5OoA7QIeWMFdQvO8hlZ7I7TfifRte2'
+    'g8IHp44GbfyjmIZ4GjGQZAe+w9gQOo/fWTqbkSSPuiFbVhQ656BLnRWyzRhJ6NVAsUeDl56v6LxmC5VmXLBc5TUHLiXn11SFHjzqp+gH2'
+    '/2e1nJrwdsDb/da1KAUSN3CNXkvzh9CjxgvaT/x5wEQ43J6eSGxrFitKwDJ8vIGeHzBa2vOQMM+Z2Uhea1vgCeWLwKrTGImpEAt80LdAE'
+    '8ueHUJQtS1FHlZSlGc7x69+JbWH1BLAwQUAAAACAB1f2Ndw8UgKCIBAADuBAAAEwAAAFtDb250ZW50X1R5cGVzXS54bWzNlMFKAzEQhl9'
+    'lyVWatFVEpNse1KsK+gIhO7sbmkxCZrpun82Dj+QrSFMpIsJS3EIvmcvk/77/Mp/vH4tV713RQSIbsBQzORUFoAmVxaYUG64nN2K1XLxu'
+    'I1DRe4dUipY53ipFpgWvSYYI2HtXh+Q1kwypUVGbtW5AzafTa2UCMiBPeJchlot7qPXGcfHQM+Ae23snirv93g5VCh2js0azDag6rH5BJ'
+    'qGurYEqmI0HZEkxga6oBWDvZJ7Sa4sXOVj9yUzg6DjodyuZwOUdam2kA+Kpg5RsBcWzTvyoPZRC9U4Rbx2QHLlhDh1Ccwse9u/s3wI5Zr'
+    'BsqxNUL5wsNqN3/pk9JPIW0jp/JJXHbGSZQ/6xIvNzEbk8F5Grk4uofL2WX1BLAQIUAxQAAAAIAHR/Y10O2+6BDQEAAMwCAAAPAAAAAAA'
+    'AAAAAAACkgQAAAAB4bC93b3JrYm9vay54bWxQSwECFAMUAAAACAB0f2Nd5W6+FewBAAAHDQAADQAAAAAAAAAAAAAApIE6AQAAeGwvc3R5'
+    'bGVzLnhtbFBLAQIUAxQAAAAIAHV/Y136XAFZAwMAANoNAAATAAAAAAAAAAAAAACkgVEDAAB4bC90aGVtZS90aGVtZTEueG1sUEsBAhQDF'
+    'AAAAAgAdX9jXQ0euehlAAAAcwAAABQAAAAAAAAAAAAAAKSBhQYAAHhsL3NoYXJlZFN0cmluZ3MueG1sUEsBAhQDFAAAAAgAdX9jXYwd/f'
+    'UMBAAAKQ0AABgAAAAAAAAAAAAAAKSBHAcAAHhsL3dvcmtzaGVldHMvc2hlZXQxLnhtbFBLAQIUAxQAAAAIAHV/Y10as1IKqQIAAHcHAAA'
+    'YAAAAAAAAAAAAAACkgV4LAAB4bC93b3Jrc2hlZXRzL3NoZWV0Mi54bWxQSwECFAMUAAAACAB1f2NdGY9D7psCAAAxBwAAGAAAAAAAAAAA'
+    'AAAApIE9DgAAeGwvd29ya3NoZWV0cy9zaGVldDMueG1sUEsBAhQDFAAAAAgAdX9jXensI4+1BwAAfx0AABgAAAAAAAAAAAAAAKSBDhEAA'
+    'HhsL3dvcmtzaGVldHMvc2hlZXQ0LnhtbFBLAQIUAxQAAAAAAHV/Y12s/p07KAEAACgBAAALAAAAAAAAAAAAAACkgfkYAABfcmVscy8ucm'
+    'Vsc1BLAQIUAxQAAAAIAHV/Y111n2dyQgEAAM8EAAAaAAAAAAAAAAAAAACkgUoaAAB4bC9fcmVscy93b3JrYm9vay54bWwucmVsc1BLAQI'
+    'UAxQAAAAIAHV/Y13DxSAoIgEAAO4EAAATAAAAAAAAAAAAAACkgcQbAABbQ29udGVudF9UeXBlc10ueG1sUEsFBgAAAAALAAsA1QIAABcd'
+    'AAAAAA=='
+)
+
+
+def _cap_excel_xlsx_sheets(contents, required):
+    """Lee XLSX de datos con zip/xml; nunca evalúa fórmulas ni enlaces externos."""
+    import zipfile as _z, posixpath as _pp, re as _re
+    from xml.etree import ElementTree as _et
+    from io import BytesIO as _Bio
+    if not isinstance(contents, bytes) or not contents or len(contents) > 3*1024*1024:
+        raise ValueError('El Excel debe ser un archivo .xlsx válido de hasta 3 MB.')
+    ns = {'m':'http://schemas.openxmlformats.org/spreadsheetml/2006/main',
+          'r':'http://schemas.openxmlformats.org/officeDocument/2006/relationships',
+          'p':'http://schemas.openxmlformats.org/package/2006/relationships'}
+    try:
+        z = _z.ZipFile(_Bio(contents))
+    except (_z.BadZipFile, ValueError):
+        raise ValueError('El archivo no es un Excel .xlsx válido.')
+    with z:
+        infos=z.infolist()
+        if len(infos)>130 or sum(i.file_size for i in infos)>15*1024*1024:
+            raise ValueError('El Excel excede el tamaño o complejidad permitidos.')
+        try:
+            workbook=_et.fromstring(z.read('xl/workbook.xml'))
+            relations=_et.fromstring(z.read('xl/_rels/workbook.xml.rels'))
+        except (KeyError, _et.ParseError):
+            raise ValueError('No se pudo leer la estructura del Excel.')
+        rels={r.attrib.get('Id'):r.attrib.get('Target') for r in relations}
+        indexed={}
+        for s in workbook.findall('.//m:sheets/m:sheet',ns):
+            indexed[s.attrib.get('name')]=rels.get(s.attrib.get('{'+ns['r']+'}id'))
+        missing=[key for key in required if key not in indexed]
+        if missing:
+            raise ValueError('Faltan hojas en la plantilla: '+', '.join(missing))
+        strings=[]
+        if 'xl/sharedStrings.xml' in z.namelist():
+            try:
+                root=_et.fromstring(z.read('xl/sharedStrings.xml'))
+                strings=[''.join(t.text or '' for t in si.findall('.//m:t',ns)) for si in root.findall('m:si',ns)]
+            except _et.ParseError:
+                raise ValueError('El Excel contiene una tabla de textos inválida.')
+        result={}
+        for name in required:
+            raw_target=str(indexed[name] or '').replace('\\','/')
+            target=_pp.normpath(raw_target.lstrip('/') if raw_target.startswith('/')
+                                else _pp.join('xl',raw_target))
+            if not target.startswith('xl/worksheets/') or target not in z.namelist():
+                raise ValueError('La hoja '+name+' no tiene una ubicación válida.')
+            try:
+                root=_et.fromstring(z.read(target))
+            except _et.ParseError:
+                raise ValueError('La hoja '+name+' no se pudo leer.')
+            rows=[]
+            for row in root.findall('.//m:sheetData/m:row',ns):
+                if len(rows)>600:
+                    raise ValueError('Demasiadas filas en '+name+'. Máximo 600.')
+                values={}
+                for cell in row.findall('m:c',ns):
+                    addr=cell.attrib.get('r','')
+                    match=_re.match(r'^([A-Z]{1,3})\d+$',addr)
+                    if not match:
+                        continue
+                    col=0
+                    for c in match.group(1):col=col*26+ord(c)-64
+                    if col>25:continue
+                    if cell.find('m:f',ns) is not None:
+                        raise ValueError('No uses fórmulas en '+name+'; ingresa valores de texto.')
+                    kind=cell.attrib.get('t','')
+                    if kind=='s':
+                        val=cell.find('m:v',ns)
+                        try: txt=strings[int(val.text)] if val is not None else ''
+                        except (ValueError,IndexError,TypeError):
+                            raise ValueError('Hay una referencia de texto inválida en '+name+'.')
+                    elif kind=='inlineStr':
+                        txt=''.join(x.text or '' for x in cell.findall('.//m:t',ns))
+                    else:
+                        val=cell.find('m:v',ns)
+                        txt=str(val.text or '') if val is not None else ''
+                    values[col-1]=txt
+                if values and any(str(x).strip() for x in values.values()):
+                    rows.append((int(row.attrib.get('r') or len(rows)+1), values))
+            if not rows:
+                raise ValueError('La hoja '+name+' está vacía. Conserva sus encabezados.')
+            expected=list(_CAP_EXCEL_COLS[name])
+            header=[str(rows[0][1].get(i,'')).strip().lower() for i in range(len(expected))]
+            if header!=expected:
+                raise ValueError('Encabezados incorrectos en '+name+'. Descarga la plantilla original.')
+            items=[]
+            for rownum, vals in rows[1:]:
+                if all(not str(vals.get(i,'')).strip() for i in range(len(expected))):continue
+                items.append(dict(zip(expected,(str(vals.get(i,'')).strip() for i in range(len(expected))))))
+                items[-1]['_fila']=rownum
+            result[name]=items
+        return result
+
+
+def _cap_excel_int(value, title, low, high):
+    import decimal as _dec
+    try:
+        d=_dec.Decimal(str(value))
+        if not d.is_finite() or d!=d.to_integral_value():raise ValueError()
+        v=int(d)
+    except (_dec.InvalidOperation, ValueError):
+        raise ValueError(title+' debe ser un número entero.')
+    if v<low or v>high:raise ValueError(title+f' debe estar entre {low} y {high}.')
+    return v
+
+
+def _cap_excel_norm(text):
+    return ' '.join(str(text or '').casefold().split())
+
+
+def _cap_excel_validate(contents, mode='nuevo'):
+    """Valida todo el archivo ANTES de escribir en Sheets; salida de datos normalizados."""
+    if mode not in ('nuevo','preguntas'):
+        raise ValueError('Modo de importación inválido.')
+    data=_cap_excel_xlsx_sheets(contents,('Cursos','Lecciones','Preguntas') if mode=='nuevo' else ('Preguntas',))
+    courses=[]; lessons=[]; questions=[]; codes=set(); titles=set()
+    if mode=='nuevo':
+        if not data['Cursos'] or len(data['Cursos'])>10:
+            raise ValueError('Ingresa entre 1 y 10 cursos en la hoja Cursos.')
+        if len(data['Lecciones'])>100:
+            raise ValueError('Máximo 100 lecciones por archivo.')
+        for r in data['Cursos']:
+            pos=f'Cursos, fila {r["_fila"]}'
+            code=r['codigo_curso'].strip().upper()
+            if not code or len(code)>40 or not code.replace('-','').replace('_','').isalnum():
+                raise ValueError(pos+': ingresa un código de curso alfanumérico (máx. 40).')
+            if code in codes or _cap_excel_norm(r['titulo']) in titles:
+                raise ValueError(pos+': curso o código repetido dentro del archivo.')
+            codes.add(code);titles.add(_cap_excel_norm(r['titulo']))
+            if not 4<=len(r['titulo'])<=130 or not 12<=len(r['descripcion'])<=900:
+                raise ValueError(pos+': título (4–130) o descripción (12–900) inválida.')
+            if r['categoria'] not in _CAP_EXCEL_CATEGORIES or r['portada'] not in _CAP_EXCEL_COVERS:
+                raise ValueError(pos+': categoría o portada no reconocida.')
+            minutes=_cap_excel_int(r['duracion_min'],pos+' · Duración',5,1800)
+            score=_cap_excel_int(r['nota_minima'],pos+' · Nota mínima',50,100)
+            if score%5:
+                raise ValueError(pos+': la nota mínima debe ser múltiplo de 5.')
+            courses.append({**r,'codigo_curso':code,'duracion_min':minutes,'nota_minima':score})
+        for r in data['Lecciones']:
+            pos=f'Lecciones, fila {r["_fila"]}'
+            code=r['codigo_curso'].upper()
+            if code not in codes:raise ValueError(pos+': código de curso inexistente.')
+            if not 4<=len(r['titulo'])<=140 or len(r['descripcion'])>1300:
+                raise ValueError(pos+': título o descripción inválida.')
+            if r['tipo'] not in ('YouTube','Lectura'):
+                raise ValueError(pos+': formato permitido en Excel: YouTube o Lectura (MP4 se carga manualmente).')
+            if r['tipo']=='YouTube':
+                link=_pmx_youtube_link(r['url_youtube'])
+            else:
+                link=''
+                if len(r['descripcion'])<15:
+                    raise ValueError(pos+': la lectura requiere instrucciones de al menos 15 caracteres.')
+            order=_cap_excel_int(r['orden'],pos+' · Orden',1,500)
+            minutes=_cap_excel_int(r['minutos'],pos+' · Minutos',1,600)
+            lessons.append({**r,'codigo_curso':code,'url_youtube':link,'orden':order,'minutos':minutes})
+        for code in codes:
+            if not any(l['codigo_curso']==code for l in lessons):
+                raise ValueError('El curso '+code+' necesita al menos una lección antes de importarlo.')
+        if len({(r['codigo_curso'],_cap_excel_norm(r['titulo'])) for r in lessons})!=len(lessons):
+            raise ValueError('Existen lecciones con el mismo título dentro de un curso.')
+    if len(data['Preguntas'])>300:
+        raise ValueError('Máximo 300 preguntas por archivo.')
+    for r in data['Preguntas']:
+        pos=f'Preguntas, fila {r["_fila"]}'
+        code=r['codigo_curso'].upper()
+        if mode=='nuevo' and code not in codes:
+            raise ValueError(pos+': código de curso inexistente.')
+        q=r['pregunta']; choices=[r['opcion_'+x] for x in 'abcd']
+        if not 10<=len(q)<=450 or any(not x or len(x)>240 for x in choices):
+            raise ValueError(pos+': completa la pregunta (10–450) y sus 4 opciones (máx. 240).')
+        if len({_cap_excel_norm(x) for x in choices})!=4 or r['correcta'].upper() not in 'ABCD' or len(r['correcta'])!=1:
+            raise ValueError(pos+': las alternativas deben ser distintas y la correcta A, B, C o D.')
+        questions.append({**r,'codigo_curso':code,'correcta':r['correcta'].upper()})
+    if len({(r['codigo_curso'],_cap_excel_norm(r['pregunta'])) for r in questions})!=len(questions):
+        if mode=='preguntas':
+            if len({_cap_excel_norm(r['pregunta']) for r in questions})!=len(questions):
+                raise ValueError('Hay preguntas duplicadas dentro del Excel.')
+        else:raise ValueError('Hay preguntas duplicadas dentro del mismo curso.')
+    if mode=='preguntas' and not questions:
+        raise ValueError('La hoja Preguntas no contiene ninguna pregunta para importar.')
+    return {'Cursos':courses,'Lecciones':lessons,'Preguntas':questions}
+
+
+def _cap_excel_equal_lesson(existing, src):
+    return (str(existing.get('tipo'))==src['tipo'] and
+        _cap_excel_norm(existing.get('descripcion'))==_cap_excel_norm(src['descripcion']) and
+        str(existing.get('url_youtube') or '')==str(src['url_youtube'] or '') and
+        int(existing.get('minutos') or 0)==src['minutos'] and
+        int(existing.get('orden') or 0)==src['orden'])
+
+
+def _cap_excel_equal_question(existing, src):
+    return (all(_cap_excel_norm(existing.get('op_'+letter))==_cap_excel_norm(src['opcion_'+letter])
+                for letter in 'abcd') and str(existing.get('correcta') or '').upper()==src['correcta'])
+
+
+def _cap_excel_batch_write(sheet, records):
+    """Escribe un grupo por llamada a Sheets. Un reintento concilia los datos reales."""
+    if not records:return
+    ws=_cap_sheet(sheet)
+    if ws is None:raise ValueError('Primero prepara las hojas de Capacitaciones.')
+    ws.append_rows([[str(rec.get(col,'')) for col in _CAP_SCHEMAS[sheet]] for rec in records],
+                   value_input_option='RAW')
+    st.session_state.pop('_cap_cache',None)
+
+
+def _cap_excel_import(preview, mode, target_course=None):
+    """Importación conservadora e idempotente de contenido; sin publicación ni asignación."""
+    _cap_admin_guard()
+    if mode not in ('nuevo','preguntas') or not isinstance(preview,dict):
+        raise ValueError('Carga y valida nuevamente tu archivo Excel.')
+    data=_cap_data(force=True)
+    needed=(_CAP_COURSES,_CAP_LESSONS,_CAP_QUESTIONS) if mode=='nuevo' else (_CAP_QUESTIONS,)
+    for name in needed:
+        if _cap_sheet(name) is None:
+            raise ValueError('Antes de importar, utiliza «Verificar o preparar hojas de Capacitaciones».')
+    mapping={}; existing_by_name={}
+    for c in data[_CAP_COURSES]:
+        existing_by_name.setdefault(_cap_excel_norm(c['titulo']),[]).append(c)
+    if mode=='preguntas':
+        course=_cap_course(data,target_course,published=False)
+        if any(r['id_curso']==target_course for name in (_CAP_PROGRESS,_CAP_ATTEMPTS,_CAP_CERTS) for r in data[name]):
+            raise ValueError('Este curso ya tiene avances o evaluaciones. No se pueden añadir preguntas.')
+        mapping={r['codigo_curso']:target_course for r in preview['Preguntas']}
+        if not mapping:mapping={'':target_course}
+    else:
+        for c in preview['Cursos']:
+            matches=existing_by_name.get(_cap_excel_norm(c['titulo']),[])
+            if len(matches)>1:raise ValueError('Hay varios cursos existentes con el título '+c['titulo']+'.')
+            if matches:
+                found=matches[0]
+                if (found['estado']!='Borrador' or found['categoria']!=c['categoria'] or
+                    str(found['duracion_min'])!=str(c['duracion_min']) or
+                    str(found['umbral_pct'])!=str(c['nota_minima']) or
+                    found['miniatura']!=c['portada'] or
+                    _cap_excel_norm(found['descripcion'])!=_cap_excel_norm(c['descripcion'])):
+                    raise ValueError('Ya existe «'+c['titulo']+'» con datos distintos o publicado. Renombra el curso o usa «Solo preguntas».')
+                if any(r['id_curso']==found['id_curso'] for name in (_CAP_PROGRESS,_CAP_ATTEMPTS,_CAP_CERTS) for r in data[name]):
+                    raise ValueError('No se puede reanudar «'+c['titulo']+'» porque ya tiene avances de trabajadores.')
+                mapping[c['codigo_curso']]=found['id_curso']
+            else:
+                mapping[c['codigo_curso']]=_cap_id('CUR-')
+    # Primero detectar conflictos antes de escribir cualquier registro.
+    new_courses=[]; new_lessons=[]; new_questions=[]; ignored={'Cursos':0,'Lecciones':0,'Preguntas':0}
+    for c in preview.get('Cursos',[]):
+        if not existing_by_name.get(_cap_excel_norm(c['titulo'])):
+            new_courses.append({'id_curso':mapping[c['codigo_curso']],'titulo':c['titulo'],
+                'descripcion':c['descripcion'],'categoria':c['categoria'],'duracion_min':c['duracion_min'],
+                'miniatura':c['portada'],'umbral_pct':c['nota_minima'],'estado':'Borrador',
+                'creado_por':str(st.session_state.get('usuario_login')),'creado_el':_pmi_time()})
+        else:ignored['Cursos']+=1
+    for r in preview.get('Lecciones',[]):
+        cid=mapping[r['codigo_curso']]
+        matches=[x for x in data[_CAP_LESSONS] if x['id_curso']==cid and
+                 _cap_excel_norm(x['titulo'])==_cap_excel_norm(r['titulo'])]
+        if len(matches)>1:raise ValueError('Lección duplicada en Sheets: '+r['titulo'])
+        if matches:
+            if not _cap_excel_equal_lesson(matches[0],r):
+                raise ValueError('La lección «'+r['titulo']+'» existe con contenido distinto. No se modificó.')
+            ignored['Lecciones']+=1
+        else:
+            new_lessons.append({'id_leccion':_cap_id('LEC-'),'id_curso':cid,'titulo':r['titulo'],
+                'tipo':r['tipo'],'descripcion':r['descripcion'],'url_youtube':r['url_youtube'],
+                'drive_file_id':'','minutos':r['minutos'],'orden':r['orden'],'estado':'Publicado',
+                'creado_el':_pmi_time()})
+    for r in preview.get('Preguntas',[]):
+        cid=target_course if mode=='preguntas' else mapping[r['codigo_curso']]
+        matches=[x for x in data[_CAP_QUESTIONS] if x['id_curso']==cid and
+                 _cap_excel_norm(x['enunciado'])==_cap_excel_norm(r['pregunta'])]
+        if len(matches)>1:raise ValueError('Pregunta duplicada en Sheets: '+r['pregunta'][:75])
+        if matches:
+            if not _cap_excel_equal_question(matches[0],r):
+                raise ValueError('La pregunta «'+r['pregunta'][:75]+'» existe con respuestas diferentes. No se modificó.')
+            ignored['Preguntas']+=1
+        else:
+            new_questions.append({'id_pregunta':_cap_id('PRE-'),'id_curso':cid,
+                'enunciado':r['pregunta'],**{'op_'+a:r['opcion_'+a] for a in 'abcd'},
+                'correcta':r['correcta'],'estado':'Publicado'})
+    if mode=='nuevo' and new_lessons:
+        for c in preview['Cursos']:
+            if c['codigo_curso'] not in mapping:raise ValueError('Código inválido.')
+    # Una falla de red puede suceder después de que Sheets aceptó una escritura.
+    # No reintentamos a ciegas: la próxima carga compara contenidos y salta los existentes.
+    _cap_excel_batch_write(_CAP_COURSES,new_courses)
+    _cap_excel_batch_write(_CAP_LESSONS,new_lessons)
+    _cap_excel_batch_write(_CAP_QUESTIONS,new_questions)
+    for name in needed:
+        st.session_state.pop('_cap_cache',None)
+    registrar_auditoria('Importar Excel de capacitaciones','Capacitaciones',
+        f'Modo {mode} · cursos {len(new_courses)} · lecciones {len(new_lessons)} · preguntas {len(new_questions)}')
+    return {'Cursos':len(new_courses),'Lecciones':len(new_lessons),'Preguntas':len(new_questions),
+            'omitidas':ignored}
+
+
 def _cap_admin_panel():
     _cap_admin_guard()
     _cap_styles()
@@ -6725,9 +7186,25 @@ def _cap_admin_panel():
         k2.metric('Cursos publicados',sum(c['estado']=='Publicado' for c in courses))
         k3.metric('Asignaciones activas',sum(r['estado']=='Activa' for r in data[_CAP_ASSIGNS]))
         k4.metric('Certificados emitidos',len(data[_CAP_CERTS]))
-        tabs=st.tabs(['📚 Cursos','🎬 Materiales','👥 Asignaciones','📝 Evaluaciones','🗓️ Sesiones','📊 Seguimiento','🏅 Certificados'])
-        with tabs[0]:
+        # Streamlit reinicia st.tabs al guardar y hacer st.rerun().
+        # Un radio con key conserva la sección activa (también en móvil).
+        _cap_admin_areas=['Cursos','Materiales','Asignaciones','Evaluaciones',
+                          'Importar Excel','Sesiones','Seguimiento','Certificados']
+        if st.session_state.get('cap_admin_view') not in _cap_admin_areas:
+            st.session_state['cap_admin_view']=st.session_state.get('cap_admin_last_view','Cursos')
+        if st.session_state['cap_admin_view'] not in _cap_admin_areas:
+            st.session_state['cap_admin_view']='Cursos'
+        _cap_current=st.radio('Área de Gestión de Capacitaciones',_cap_admin_areas,
+                    horizontal=True,key='cap_admin_view',label_visibility='collapsed',
+                    on_change=lambda:st.session_state.__setitem__('cap_admin_last_view',
+                                                      st.session_state.get('cap_admin_view','Cursos')))
+        if _cap_current == 'Cursos':
             _cap_section('📚','Crear una ruta de aprendizaje','El curso se guarda como borrador hasta que publiques una lección.')
+            st.button('Crear o importar cursos desde Excel',icon=':material/table_view:',
+                      key='cap_courses_open_excel',use_container_width=True,
+                      on_click=lambda:st.session_state.update(cap_admin_view='Importar Excel',
+                                                               cap_admin_last_view='Importar Excel',
+                                                               cap_import_type='Curso completo'))
             with st.form('cap_new_course',clear_on_submit=True):
                 title=st.text_input('Nombre del curso',max_chars=130,placeholder='Ej. Sistema de ventas — Nivel básico')
                 desc=st.text_area('Descripción',max_chars=900,placeholder='Qué aprenderá el colaborador en esta ruta de aprendizaje')
@@ -6759,12 +7236,12 @@ def _cap_admin_panel():
                         elif c['estado']=='Archivado':
                             if st.button('Reactivar curso',key='cap_reactivate_'+c['id_curso'],use_container_width=True):
                                 _pmi_ui_action(lambda cid=c['id_curso']:_cap_set_course(cid,'Publicado'),'Curso reactivado.')
-        with tabs[1]:
+        if _cap_current == 'Materiales':
             _cap_section('🎬','Biblioteca de contenido','Publica enlaces de YouTube, MP4 en Drive privado o material de lectura.')
             if not courses:st.info('Primero crea un curso.')
             else:
+                cid=st.selectbox('Curso destino',options,format_func=lambda x:names[x],key='cap_lesson_course')
                 with st.form('cap_new_lesson',clear_on_submit=True):
-                    cid=st.selectbox('Curso destino',options,format_func=lambda x:names[x])
                     title=st.text_input('Título de la lección',max_chars=140)
                     kind=st.selectbox('Formato',['YouTube','MP4 privado','Lectura'])
                     desc=st.text_area('Descripción / instrucciones',max_chars=1300)
@@ -6782,7 +7259,7 @@ def _cap_admin_panel():
                     st.markdown('<div class="cap-certificate"><span class="cap-cert-icon">▶</span><div class="cap-cert-copy"><strong>'+
                         _cap_escape(l['titulo'])+'</strong><small>'+_cap_escape(names.get(l['id_curso'],'Curso'))+' · '+
                         _cap_escape(l['tipo'])+' · Orden '+_cap_escape(l['orden'])+'</small></div></div>',unsafe_allow_html=True)
-        with tabs[2]:
+        if _cap_current == 'Asignaciones':
             _cap_section('👥','Asignación de rutas','El contenido solo es visible para los colaboradores con asignación activa.')
             if not courses:st.info('Primero crea un curso.')
             else:
@@ -6803,12 +7280,17 @@ def _cap_admin_panel():
                             agree=st.checkbox('Confirmo que deseo retirar esta asignación',key='cap_unassign_ok_'+a['id_asignacion'])
                             if st.button('Retirar asignación',key='cap_unassign_'+a['id_asignacion'],disabled=not agree):
                                 _pmi_ui_action(lambda x=a:_cap_unassign(x['id_curso'],x['dni']),'Asignación retirada.')
-        with tabs[3]:
+        if _cap_current == 'Evaluaciones':
             _cap_section('📝','Banco de evaluaciones','Crea preguntas con cuatro opciones y una respuesta correcta.')
+            st.button('Importar muchas preguntas desde Excel',icon=':material/upload_file:',
+                      key='cap_questions_open_excel',use_container_width=True,
+                      on_click=lambda:st.session_state.update(cap_admin_view='Importar Excel',
+                                                               cap_admin_last_view='Importar Excel',
+                                                               cap_import_type='Solo preguntas a curso existente'))
             if not courses:st.info('Primero crea un curso.')
             else:
+                cid=st.selectbox('Curso evaluado',options,format_func=lambda x:names[x],key='cap_quest_course')
                 with st.form('cap_new_question',clear_on_submit=True):
-                    cid=st.selectbox('Curso evaluado',options,format_func=lambda x:names[x],key='cap_quest_course')
                     q=st.text_area('Pregunta',max_chars=450)
                     col1,col2=st.columns(2)
                     A=col1.text_input('Opción A',max_chars=240)
@@ -6823,12 +7305,100 @@ def _cap_admin_panel():
                           'Nota mínima':str(next(c['umbral_pct'] for c in courses if c['id_curso']==cid))+'%'}
                          for cid in options]),hide_index=True,use_container_width=True)
                 st.caption('El trabajador puede realizar como máximo tres intentos. Cada intento y nota quedan registrados.')
-        with tabs[4]:
+        if _cap_current == 'Importar Excel':
+            _cap_section('📥','Importación desde Excel',
+                         'Una plantilla para crear cursos y evaluaciones sin introducir cada pregunta por separado.')
+            st.info('Revisa la vista previa antes de guardar. Los cursos nuevos se crean en borrador; '
+                    'no se publican ni se asignan automáticamente.')
+            st.caption('1. Descarga la plantilla.  2. Completa sus hojas en Excel.  '
+                       '3. Sube el archivo.  4. Revisa y confirma.')
+            # Archivo preparado con la misma estructura que valida la aplicación.
+            import base64 as _cap_b64
+            st.download_button('Descargar plantilla Excel',_cap_b64.b64decode(_CAP_EXCEL_TEMPLATE_B64),
+                file_name='Plantilla_Capacitaciones_Premium_Market.xlsx',
+                mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                icon=':material/download:',use_container_width=True,key='cap_import_template')
+            _mode_text=st.selectbox('Qué deseas importar',
+                ['Curso completo','Solo preguntas a curso existente'],key='cap_import_type')
+            _mode='nuevo' if _mode_text=='Curso completo' else 'preguntas'
+            _target=None
+            if _mode=='preguntas':
+                if not courses:
+                    st.info('Primero crea un curso en Cursos o importa uno completo.')
+                else:
+                    _target=st.selectbox('Curso que recibirá las preguntas',options,
+                              format_func=lambda cid:names[cid]+' · '+next(
+                               (c['estado'] for c in courses if c['id_curso']==cid),''),
+                              key='cap_import_target')
+                st.caption('En este modo solo se lee la hoja Preguntas; puedes dejar las demás como ejemplo. '
+                           'No repite una pregunta idéntica ya existente.')
+            _nonce=int(st.session_state.get('cap_import_nonce',0))
+            _excel=st.file_uploader('Selecciona la plantilla completada (.xlsx)',type=['xlsx'],
+                                   key=f'cap_import_file_{_nonce}')
+            if _excel is not None:
+                try:
+                    import hashlib as _cap_import_hashlib
+                    _raw=_excel.getvalue()
+                    _hash=_cap_import_hashlib.sha256(_raw+_mode.encode()).hexdigest()
+                    _cached=st.session_state.get('cap_import_preview')
+                    if not isinstance(_cached,dict) or _cached.get('hash')!=_hash:
+                        _preview=_cap_excel_validate(_raw,_mode)
+                        st.session_state['cap_import_preview']={'hash':_hash,'data':_preview}
+                    else:
+                        _preview=_cached['data']
+                    st.success('Archivo revisado: estructura y respuestas válidas. Todavía no se guardó nada.')
+                    a,b,c=st.columns(3)
+                    a.metric('Cursos',len(_preview['Cursos']))
+                    b.metric('Lecciones',len(_preview['Lecciones']))
+                    c.metric('Preguntas',len(_preview['Preguntas']))
+                    if _preview['Cursos']:
+                        st.markdown('**Cursos incluidos**')
+                        st.dataframe(pd.DataFrame([{'Código':r['codigo_curso'],'Curso':r['titulo'],
+                            'Categoría':r['categoria'],'Nota mínima':str(r['nota_minima'])+'%'}
+                            for r in _preview['Cursos']]),use_container_width=True,hide_index=True)
+                    if _preview['Lecciones']:
+                        st.markdown('**Lecciones**')
+                        st.dataframe(pd.DataFrame([{'Código':r['codigo_curso'],'Lección':r['titulo'],
+                            'Formato':r['tipo'],'Orden':r['orden']} for r in _preview['Lecciones']]),
+                            use_container_width=True,hide_index=True)
+                    if _preview['Preguntas']:
+                        st.markdown('**Preguntas y respuestas correctas**')
+                        st.dataframe(pd.DataFrame([{'Pregunta':r['pregunta'],
+                           'Correcta':r['correcta'],'Respuesta':r['opcion_'+r['correcta'].lower()]}
+                           for r in _preview['Preguntas']]),use_container_width=True,hide_index=True)
+                    _approved=st.checkbox('He revisado las preguntas y autorizo registrar este contenido.',
+                            key=f'cap_import_confirm_{_nonce}')
+                    if st.button('Importar contenido validado',type='primary',
+                          disabled=not _approved or (_mode=='preguntas' and not _target),
+                          icon=':material/publish:',use_container_width=True,key=f'cap_import_save_{_nonce}'):
+                        with st.spinner('Registrando el contenido. No cierres esta pantalla.'):
+                            try:
+                                _out=_cap_excel_import(_preview,_mode,_target)
+                            except Exception as _exc:
+                                st.error(str(_exc) if isinstance(_exc,(ValueError,PermissionError))
+                                  else 'No se pudo confirmar toda la importación. Revisa Sheets '
+                                       'antes de reintentar; el próximo intento omitirá lo ya registrado.')
+                                print('Capacitaciones Excel:',type(_exc).__name__)
+                            else:
+                                _text=('Excel procesado: '+str(_out['Cursos'])+' curso(s), '+
+                                  str(_out['Lecciones'])+' lección(es) y '+str(_out['Preguntas'])+
+                                  ' pregunta(s) nuevas. Los elementos idénticos ya existentes se omitieron.')
+                                _pm62_confirmar_despues_de_actualizar(_text)
+                                st.session_state['cap_import_nonce']=_nonce+1
+                                st.session_state.pop('cap_import_preview',None)
+                                st.rerun()
+                except Exception as _exc:
+                    st.error(str(_exc) if isinstance(_exc,ValueError)
+                      else 'No fue posible leer el Excel. Comprueba que corresponda a la plantilla.')
+            else:
+                st.caption('La importación solo acepta archivos XLSX y no modifica el historial '
+                           'de evaluaciones ni los certificados existentes.')
+        if _cap_current == 'Sesiones':
             _cap_section('🗓️','Próximas sesiones','Agrega encuentros presenciales o virtuales a los cursos.')
             if not courses:st.info('Primero crea un curso.')
             else:
+                cid=st.selectbox('Curso relacionado',options,format_func=lambda x:names[x],key='cap_session_course')
                 with st.form('cap_new_session',clear_on_submit=True):
-                    cid=st.selectbox('Curso relacionado',options,format_func=lambda x:names[x],key='cap_session_course')
                     title=st.text_input('Nombre de la sesión',max_chars=130)
                     col1,col2=st.columns(2)
                     day=col1.date_input('Fecha',value=obtener_ahora_peru().date())
@@ -6852,7 +7422,7 @@ def _cap_admin_panel():
                             if st.button('Cancelar sesión',key='cap_cancel_'+s['id_sesion'],disabled=not agree):
                                 _cap_admin_guard()
                                 _pmi_ui_action(lambda ident=s['id_sesion']:_cap_update(_CAP_SESSIONS,ident,{'estado':'Cancelada'}),'Sesión cancelada.')
-        with tabs[5]:
+        if _cap_current == 'Seguimiento':
             _cap_section('📊','Seguimiento de aprendizaje','Avance, evaluaciones y constancias de cursos asignados.')
             report=[]
             for pid,person in mapping.items():
@@ -6868,7 +7438,7 @@ def _cap_admin_panel():
                 st.download_button('⬇ Descargar seguimiento CSV',csv,file_name='Seguimiento_Capacitaciones.csv',
                     mime='text/csv',key='cap_report_csv',use_container_width=True)
             else:st.info('Todavía no hay asignaciones activas con cursos publicados.')
-        with tabs[6]:
+        if _cap_current == 'Certificados':
             _cap_section('🏅','Certificados emitidos','Constancias generadas después de completar los cursos.')
             if not data[_CAP_CERTS]:st.info('No hay certificados emitidos por ahora.')
             else:
@@ -16208,6 +16778,9 @@ def _pm_cerrar_sesion():
         st.session_state.pop("nav_radio", None)
         st.session_state.pop("gs_q", None)
         st.session_state.pop("_pm_navigation_requested", None)
+        for _cap_private_key in ('_cap_cache','cap_import_preview','cap_admin_last_view',
+                                  'cap_admin_view','cap_import_type','cap_import_target','cap_import_nonce'):
+            st.session_state.pop(_cap_private_key,None)
 
 # Herramientas del sidebar clásico, manteniendo cierre de sesión seguro.
 st.sidebar.markdown('<div style="height:16px"></div>', unsafe_allow_html=True)
