@@ -6715,7 +6715,13 @@ def _cap_styles():
     .cap-admin-bar h3{font-size:1.06rem;color:#23314b;margin:0 0 5px}.cap-admin-bar p{font-size:.82rem;color:#718198;margin:0}
     .st-key-cap_routes_panel,.st-key-cap_sessions_panel,.st-key-cap_cert_panel,.st-key-cap_library_panel,.st-key-cap_performance_panel{
        background:#fff;border:1px solid #e7edf3;border-radius:22px;padding:18px 16px;
-       box-shadow:0 13px 27px -23px rgba(16,32,55,.28);margin-bottom:16px}
+       box-shadow:0 13px 27px -23px rgba(16,32,55,.28);margin-bottom:16px;display:flex;flex-direction:column}
+    .st-key-cap_shell [data-testid="stHorizontalBlock"]{align-items:stretch}
+    .st-key-cap_routes_panel{min-height:646px}
+    .st-key-cap_sessions_panel{min-height:212px}
+    .st-key-cap_cert_panel{min-height:318px}
+    .st-key-cap_library_panel{min-height:314px}
+    .st-key-cap_performance_panel{min-height:314px}
     .st-key-cap_shell .cap-hero{height:auto;min-height:166px}
     .st-key-cap_shell .cap-stat-grid{margin:0 0 17px;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
     .st-key-cap_shell .cap-stat{padding:15px 14px;min-height:116px}
@@ -6864,7 +6870,9 @@ def _cap_styles():
     .st-key-cap_shell .cap-detail-track{height:8px;background:#ecf0f4;border-radius:99px;overflow:hidden;margin-top:7px}
     .st-key-cap_shell .cap-detail-track i{height:100%;display:block;border-radius:99px}
     .st-key-cap_course_lessons,.st-key-cap_course_results{background:#fff;border:1px solid #e7ebf1;border-radius:19px;
-        padding:20px 19px;min-height:325px;box-shadow:0 10px 30px -28px rgba(16,32,56,.3)}
+        padding:20px 19px 22px;min-height:575px;height:100%;box-shadow:0 10px 30px -28px rgba(16,32,56,.3);display:flex;flex-direction:column}
+    .st-key-cap_course_lessons [data-testid="stVerticalBlock"],.st-key-cap_course_results [data-testid="stVerticalBlock"]{height:100%}
+    .cap-detail-bottom-gap{height:18px}
     .st-key-cap_course_lessons [data-testid="stExpander"]{border:1px solid #e4e9f0!important;border-radius:12px!important;margin:9px 0!important}
     .st-key-cap_course_lessons [data-testid="stExpander"] summary{font-size:.84rem!important;color:#223149;font-weight:650}
     .st-key-cap_course_results .cap-detail-result{display:flex;gap:17px;align-items:center;background:#eaf8ef;
@@ -6915,7 +6923,8 @@ def _cap_styles():
       .st-key-cap_shell .cap-detail-illustration svg{width:45px;height:45px}
       .st-key-cap_shell .cap-detail-progress{grid-column:1/-1;border-left:0;border-top:1px solid #edf0f5;padding:12px 4px 0}
       .st-key-cap_shell .cap-detail-progress strong{font-size:1.8rem}
-      .st-key-cap_course_lessons,.st-key-cap_course_results{padding:15px 13px;min-height:0}
+      .st-key-cap_routes_panel,.st-key-cap_sessions_panel,.st-key-cap_cert_panel,.st-key-cap_library_panel,.st-key-cap_performance_panel{min-height:0}
+      .st-key-cap_course_lessons,.st-key-cap_course_results{padding:15px 13px;min-height:0;height:auto}
       .st-key-cap_course_results .cap-detail-result{gap:13px;padding:14px}
       .st-key-cap_course_results .cap-result-score{width:100%;min-width:0}
       .st-key-cap_course_results .cap-result-facts{grid-template-columns:1fr 1fr}
@@ -7234,7 +7243,7 @@ def _cap_course_detail(data,dni,cid):
             '<small>'+str(state['count'])+'/'+str(state['total'])+' actividades completadas</small>'
             '<div class="cap-detail-track"><i style="width:'+str(state['pct'])+'%;background:'+('#12a365' if state['completed'] else '#d6253d')+'"></i></div></div>'
             '</div>',unsafe_allow_html=True)
-        lessons_col,results_col=st.columns(2,gap='medium')
+        lessons_col,results_col=st.columns([0.95,1.45],gap='medium')
         with lessons_col:
             with st.container(key='cap_course_lessons'):
                 _cap_section('📚','Contenido del curso','Revisa cada lección y confirma su finalización.')
@@ -7344,6 +7353,7 @@ def _cap_course_detail(data,dni,cid):
                                 'border-radius:12px;background:#fff"></iframe>',height=660,scrolling=False)
                     elif len(found)==1 and not REPORTLAB_AVAILABLE:
                         st.caption('Instala reportlab para habilitar la descarga del certificado.')
+        st.markdown('<div class="cap-detail-bottom-gap"></div>',unsafe_allow_html=True)
         st.caption('La confirmación de una lección es declarativa: no equivale a una comprobación automática del tiempo reproducido.')
 
 
