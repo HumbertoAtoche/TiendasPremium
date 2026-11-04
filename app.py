@@ -6425,35 +6425,232 @@ def _cap_issue_certificate(cid,dni):
     registrar_auditoria('Emitir constancia de capacitación','Capacitaciones',cid+' · '+code)
 
 
-def _cap_pdf(cert,course,dni):
+def _cap_pdf(cert,course,dni, state=None):
+    """Certificado Premium Market: diseño editorial, logo original y datos auténticos.
+
+    Mantiene las verificaciones de acceso existentes; solo cambia la presentación.
+    El logo se recupera del mismo assets/logo (2).png usado por la aplicación.
+    """
     _pmi_check_access(dni)
     if _pmi_dni(cert.get('dni')) != _pmi_dni(dni) or cert.get('id_curso') != course.get('id_curso'):
         raise PermissionError('El certificado no corresponde al colaborador o al curso solicitado.')
     if not REPORTLAB_AVAILABLE:
         raise RuntimeError('Para generar certificados PDF instala reportlab en requirements.txt.')
     from reportlab.pdfgen import canvas
+    from reportlab.lib.pagesizes import landscape, A4
     from reportlab.lib.colors import HexColor
-    out=io.BytesIO(); pdf=canvas.Canvas(out,pagesize=(842,595))
-    pdf.setFillColor(HexColor('#f8fafc'));pdf.rect(0,0,842,595,fill=1,stroke=0)
-    pdf.setFillColor(HexColor('#ba2639'));pdf.rect(0,560,842,35,fill=1,stroke=0)
-    pdf.setFillColor(HexColor('#18243a'));pdf.setFont('Helvetica-Bold',15)
-    pdf.drawCentredString(421,499,'PREMIUM MARKET')
-    pdf.setFont('Helvetica-Bold',29);pdf.drawCentredString(421,427,'CONSTANCIA DE CAPACITACION')
-    pdf.setFont('Helvetica',13);pdf.drawCentredString(421,383,'Se deja constancia de que')
-    person=_pmi_person(dni)
-    name=str(person.get('nombre') or 'Colaborador')[:75]
-    pdf.setFont('Helvetica-Bold',19);pdf.drawCentredString(421,342,name.encode('latin-1','replace').decode('latin-1'))
-    pdf.setFont('Helvetica',13);pdf.drawCentredString(421,302,'ha completado satisfactoriamente el curso')
-    pdf.setFillColor(HexColor('#a51f35'));pdf.setFont('Helvetica-Bold',18)
-    title=str(course['titulo'])[:78].encode('latin-1','replace').decode('latin-1')
-    pdf.drawCentredString(421,258,title)
-    pdf.setFillColor(HexColor('#344257'));pdf.setFont('Helvetica',10)
-    pdf.drawCentredString(421,190,'Fecha de emision: '+str(cert['emitido_el'])[:10]+'  |  DNI: '+_pmi_dni(dni))
-    pdf.drawCentredString(421,170,'Codigo de registro: '+str(cert['codigo']))
-    pdf.drawCentredString(421,130,'Documento generado desde el portal interno de Capacitaciones de Premium Market.')
-    pdf.setStrokeColor(HexColor('#e1e7ef'));pdf.rect(24,25,794,515,stroke=1,fill=0)
-    pdf.showPage();pdf.save();return out.getvalue()
+    from reportlab.lib.utils import ImageReader
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
 
+    # Usa tipografías del sistema si están disponibles, sin requerir archivos nuevos.
+    font_candidates = {
+        'PMCRegular': ['assets/fonts/DejaVuSans.ttf', '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf',
+                       '/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf'],
+        'PMCBold': ['assets/fonts/DejaVuSans-Bold.ttf', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
+                    '/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf'],
+        'PMCSerif': ['assets/fonts/DejaVuSerif-Bold.ttf', '/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf',
+                     '/usr/share/fonts/truetype/liberation2/LiberationSerif-Bold.ttf'],
+    }
+    for label, candidates in font_candidates.items():
+        if label not in pdfmetrics.getRegisteredFontNames():
+            for candidate in candidates:
+                path = candidate if os.path.isabs(candidate) else os.path.join(BASE_DIR, candidate)
+                if os.path.isfile(path):
+                    try:
+                        pdfmetrics.registerFont(TTFont(label, path))
+                        break
+                    except Exception:
+                        continue
+    sans = 'PMCRegular' if 'PMCRegular' in pdfmetrics.getRegisteredFontNames() else 'Helvetica'
+    bold = 'PMCBold' if 'PMCBold' in pdfmetrics.getRegisteredFontNames() else 'Helvetica-Bold'
+    serif = 'PMCSerif' if 'PMCSerif' in pdfmetrics.getRegisteredFontNames() else bold
+
+    navy = HexColor('#18243a')
+    red = HexColor('#b61e39')
+    muted = HexColor('#69778e')
+    pale = HexColor('#fff1f3')
+    line = HexColor('#ead4d9')
+    green = HexColor('#087b48')
+
+    person = _pmi_person(dni)
+    name = str(person.get('nombre') or 'Colaborador').strip()
+    course_title = str(course.get('titulo') or 'Capacitación').strip().replace(' ? ', ' – ')
+    code = str(cert.get('codigo') or '').strip()
+    date_issued = str(cert.get('emitido_el') or '')[:10]
+
+    if state is None:
+        # El PDF debe seguir siendo descargable aunque falle una consulta secundaria.
+        # Los certificados ya emitidos conservan sus permisos y validez previos.
+        try:
+            state = _cap_status(_cap_data(), course, dni)
+        except Exception:
+            state = {'tries': [], 'questions': [], 'passed': False, 'completed': True}
+    approved = next((r for r in reversed(state.get('tries', [])) if r.get('aprobado') == 'Sí'), None)
+    grade = None
+    if approved:
+        try:
+            grade = float(approved.get('nota_pct'))
+        except (TypeError, ValueError):
+            pass
+
+    out = io.BytesIO()
+    pdf = canvas.Canvas(out, pagesize=landscape(A4), pageCompression=1)
+    W, H = landscape(A4)
+    pdf.setTitle('Constancia de capacitación - Premium Market')
+    pdf.setAuthor('Premium Market - Portal de Capacitaciones')
+    pdf.setSubject('Constancia de capacitación interna')
+
+    def fitted(text, font, initial, minimum, width):
+        size = initial
+        while size > minimum and pdfmetrics.stringWidth(text, font, size) > width:
+            size -= 0.5
+        return size
+
+    def wrap_words(text, font, font_size, width, max_rows):
+        result, row = [], ''
+        for word in text.split():
+            trial = (row + ' ' + word).strip()
+            if row and pdfmetrics.stringWidth(trial, font, font_size) > width:
+                result.append(row)
+                row = word
+            else:
+                row = trial
+        if row:
+            result.append(row)
+        if len(result) > max_rows:
+            result = result[:max_rows]
+            while result[-1] and pdfmetrics.stringWidth(result[-1] + '…', font, font_size) > width:
+                result[-1] = result[-1][:-1]
+            result[-1] += '…'
+        return result
+
+    def label(text, x, y, size=8.5):
+        pdf.setFillColor(muted)
+        pdf.setFont(bold, size)
+        pdf.drawString(x, y, text)
+
+    # Superficie del certificado e identidad visual.
+    pdf.setFillColor(HexColor('#faf9f9'))
+    pdf.rect(0, 0, W, H, stroke=0, fill=1)
+    pdf.setFillColor(HexColor('#ffffff'))
+    pdf.roundRect(24, 24, W-48, H-48, 15, stroke=0, fill=1)
+    pdf.setStrokeColor(red)
+    pdf.setLineWidth(2.0)
+    pdf.roundRect(35, 35, W-70, H-70, 12, stroke=1, fill=0)
+    pdf.setStrokeColor(line)
+    pdf.setLineWidth(0.8)
+    pdf.roundRect(42, 42, W-84, H-84, 9, stroke=1, fill=0)
+
+    # Logo oficial si existe en el repositorio del usuario.
+    logo = LOGO_PATH if os.path.isfile(LOGO_PATH) else (
+        FAVICON_PATH if os.path.isfile(FAVICON_PATH) else None)
+    if logo:
+        try:
+            img = ImageReader(logo)
+            iw, ih = img.getSize()
+            # Logo horizontal o vertical: siempre conservar su proporción.
+            maxw, maxh = 116, 47
+            factor = min(maxw/max(1, iw), maxh/max(1, ih))
+            dw, dh = iw*factor, ih*factor
+            pdf.drawImage(img, (W-dw)/2, 502+(47-dh)/2, width=dw, height=dh,
+                          preserveAspectRatio=True, mask='auto')
+        except Exception:
+            logo = None
+    if not logo:
+        pdf.setFillColor(navy)
+        pdf.setFont(bold, 16)
+        pdf.drawCentredString(W/2, 522, 'PREMIUM MARKET')
+
+    pdf.setFillColor(red)
+    pdf.setFont(bold, 9)
+    pdf.drawCentredString(W/2, 483, 'FORMACIÓN Y DESARROLLO')
+    pdf.setFillColor(navy)
+    title = 'CONSTANCIA DE CAPACITACIÓN'
+    pdf.setFont(serif, fitted(title, serif, 28, 22, W-132))
+    pdf.drawCentredString(W/2, 438, title)
+    pdf.setStrokeColor(line)
+    pdf.setLineWidth(1.0)
+    pdf.line(217, 421, 347, 421)
+    pdf.line(495, 421, 625, 421)
+    # Emblema de formación, puramente decorativo (sin firma ficticia).
+    pdf.setFillColor(pale)
+    pdf.circle(W/2, 421, 18, fill=1, stroke=0)
+    pdf.setStrokeColor(red)
+    pdf.setLineWidth(1.4)
+    pdf.circle(W/2, 421, 11, fill=0, stroke=1)
+    pdf.line(W/2-5, 421, W/2-1, 417)
+    pdf.line(W/2-1, 417, W/2+7, 426)
+
+    pdf.setFillColor(muted)
+    pdf.setFont(sans, 11.5)
+    pdf.drawCentredString(W/2, 384, 'Se deja constancia de que')
+    name_rows = wrap_words(name, bold, 23, W-132, 2)
+    name_size = fitted(name_rows[0], bold, 23, 16, W-130)
+    name_y = 350
+    pdf.setFillColor(navy)
+    for nr, txt in enumerate(name_rows):
+        font_size = fitted(txt, bold, name_size, 15.5, W-130)
+        pdf.setFont(bold, font_size)
+        pdf.drawCentredString(W/2, name_y - nr*25, txt)
+    body_y = name_y-37 if len(name_rows)==1 else name_y-58
+    pdf.setFillColor(muted)
+    pdf.setFont(sans, 11)
+    pdf.drawCentredString(W/2, body_y, 'ha completado satisfactoriamente la ruta de aprendizaje')
+
+    course_y = body_y-31
+    course_rows = wrap_words(course_title, bold, 16.5, W-176, 2)
+    band_y = course_y-(len(course_rows)-1)*19 - 17
+    pdf.setFillColor(pale)
+    pdf.roundRect(94, band_y, W-188, 35+(len(course_rows)-1)*19, 17, fill=1, stroke=0)
+    pdf.setFillColor(red)
+    for idx, line_text in enumerate(course_rows):
+        sz = fitted(line_text, bold, 16.5, 12.5, W-206)
+        pdf.setFont(bold, sz)
+        pdf.drawCentredString(W/2, course_y - idx*19, line_text)
+
+    # Sello de aprobación y nota real del intento que aprobó.
+    badge_y = max(140, band_y - 50)
+    pdf.setFillColor(navy)
+    pdf.circle(W/2, badge_y, 30, fill=1, stroke=0)
+    pdf.setStrokeColor(HexColor('#eab3bd'))
+    pdf.setLineWidth(1.5)
+    pdf.circle(W/2, badge_y, 26.5, stroke=1, fill=0)
+    pdf.setStrokeColor(HexColor('#ffffff'))
+    pdf.setLineWidth(2.4)
+    pdf.line(W/2-9, badge_y+6, W/2-3, badge_y)
+    pdf.line(W/2-3, badge_y, W/2+10, badge_y+13)
+    pdf.setFillColor(HexColor('#ffffff'))
+    badge_txt = 'APROBADO' if state.get('questions') else 'COMPLETADO'
+    pdf.setFont(bold, fitted(badge_txt, bold, 8.0, 6.0, 52))
+    pdf.drawCentredString(W/2, badge_y-12, badge_txt)
+    if grade is not None:
+        pdf.setFillColor(green)
+        pdf.setFont(bold, 10)
+        grade_txt = ('%.2f' % grade).rstrip('0').rstrip('.')
+        pdf.drawCentredString(W/2, badge_y-43, 'Calificación final: '+grade_txt+' / 100')
+
+    # Bloque inferior con información verificada y código real.
+    pdf.setStrokeColor(line)
+    pdf.setLineWidth(.7)
+    pdf.line(96, 125, W-96, 125)
+    label('FECHA DE EMISIÓN', 103, 105)
+    label('DOCUMENTO (DNI)', 329, 105)
+    label('CÓDIGO DE REGISTRO', 500, 105)
+    pdf.setFillColor(navy)
+    pdf.setFont(bold, 10)
+    pdf.drawString(103, 87, date_issued)
+    pdf.drawString(329, 87, _pmi_dni(dni))
+    pdf.setFont(bold, fitted(code, bold, 9, 6.5, W-535))
+    pdf.drawString(500, 87, code)
+    pdf.setStrokeColor(line)
+    pdf.line(103, 73, W-103, 73)
+    pdf.setFillColor(muted)
+    pdf.setFont(sans, 8.0)
+    pdf.drawCentredString(W/2, 56, 'Documento generado desde el portal interno de Capacitaciones de Premium Market.')
+    pdf.showPage()
+    pdf.save()
+    return out.getvalue()
 
 def _cap_private_video(cid,lid,dni):
     data=_cap_data(force=True); _cap_authorize_course(data,dni,cid)
@@ -6645,6 +6842,84 @@ def _cap_styles():
       .st-key-cap_shell .cap-hero{min-height:130px;padding:13px}.st-key-cap_shell .cap-hero img{width:75px;height:100px}
       .st-key-cap_shell .cap-hero h2{font-size:1.85rem}.st-key-cap_shell .cap-stat-grid{gap:8px}.st-key-cap_shell .cap-stat{min-height:95px;padding:11px}
       .capm-cover{height:145px}.capm-mini-row .capm-track{display:none}.capm-mini-row img{width:43px;height:42px}.capm-mini-row{gap:7px}}
+
+    /* 2026-11-04 · Solo detalle del curso: vistas Premium Market (sin afectar otras páginas). */
+    .st-key-cap_shell .cap-detail-hero{display:grid;grid-template-columns:105px minmax(0,1fr) 230px;gap:20px;align-items:center;
+        background:#fff;border:1px solid #e7eaf0;border-radius:19px;padding:22px 24px;margin:8px 0 24px;
+        box-shadow:0 12px 26px -24px rgba(16,32,56,.38)}
+    .st-key-cap_shell .cap-detail-illustration{height:104px;width:104px;display:grid;place-items:center;border-radius:20px;
+        color:#c3213d;background:linear-gradient(140deg,#fff2f4,#ffe5e9)}
+    .st-key-cap_shell .cap-detail-illustration svg{height:72px;width:72px}
+    .st-key-cap_shell .cap-detail-info{min-width:0}
+    .st-key-cap_shell .cap-detail-kicker{display:inline-block;background:#fff0f2;color:#bd2440;padding:5px 11px;border-radius:8px;
+        font-size:.65rem;font-weight:800;letter-spacing:.055em}
+    .st-key-cap_shell .cap-detail-info h2{font-size:clamp(1.08rem,1.8vw,1.52rem);line-height:1.35;margin:9px 0 9px;
+        color:#19253b;font-weight:800;letter-spacing:-.025em;overflow-wrap:anywhere}
+    .st-key-cap_shell .cap-detail-info p{font-size:.8rem;color:#677890;line-height:1.65;margin:0;overflow-wrap:anywhere}
+    .st-key-cap_shell .cap-detail-rule{font-size:.77rem;color:#8a5361;font-weight:600;margin-top:11px}
+    .st-key-cap_shell .cap-detail-progress{border-left:1px solid #e6ebf2;padding:12px 0 12px 22px;display:flex;flex-direction:column;gap:6px}
+    .st-key-cap_shell .cap-detail-progress span{font-size:.81rem;color:#26374d;font-weight:750}
+    .st-key-cap_shell .cap-detail-progress strong{font-size:2.15rem;color:#098a4f;line-height:1.05;font-weight:850}
+    .st-key-cap_shell .cap-detail-progress small{font-size:.72rem;color:#607187}
+    .st-key-cap_shell .cap-detail-track{height:8px;background:#ecf0f4;border-radius:99px;overflow:hidden;margin-top:7px}
+    .st-key-cap_shell .cap-detail-track i{height:100%;display:block;border-radius:99px}
+    .st-key-cap_course_lessons,.st-key-cap_course_results{background:#fff;border:1px solid #e7ebf1;border-radius:19px;
+        padding:20px 19px;min-height:325px;box-shadow:0 10px 30px -28px rgba(16,32,56,.3)}
+    .st-key-cap_course_lessons [data-testid="stExpander"]{border:1px solid #e4e9f0!important;border-radius:12px!important;margin:9px 0!important}
+    .st-key-cap_course_lessons [data-testid="stExpander"] summary{font-size:.84rem!important;color:#223149;font-weight:650}
+    .st-key-cap_course_results .cap-detail-result{display:flex;gap:17px;align-items:center;background:#eaf8ef;
+        border:1px solid #d7efe0;border-radius:15px;padding:19px;min-height:140px}
+    .st-key-cap_course_results .cap-detail-result.fail{background:#fff2f3;border-color:#f9d9dc}
+    .st-key-cap_course_results .cap-detail-result.pending{background:#f5f7fb;border-color:#e5eaf1}
+    .st-key-cap_course_results .cap-result-badge{width:59px;height:59px;flex:none;border-radius:50%;background:#27a665;
+        display:grid;place-items:center;color:#fff;box-shadow:0 0 0 5px #fff8}
+    .st-key-cap_course_results .fail .cap-result-badge{background:#d34b52}
+    .st-key-cap_course_results .pending .cap-result-badge{background:#9eabba}
+    .st-key-cap_course_results .cap-result-badge svg{height:31px;width:31px}
+    .st-key-cap_course_results .cap-result-main{flex:1;min-width:0}
+    .st-key-cap_course_results .cap-result-main strong{font-size:clamp(1.08rem,2vw,1.43rem);font-weight:850;
+        color:#087f44;display:block;line-height:1.25}
+    .st-key-cap_course_results .fail .cap-result-main strong{color:#ab293d}
+    .st-key-cap_course_results .pending .cap-result-main strong{color:#344256}
+    .st-key-cap_course_results .cap-result-main span{display:block;color:#5d6f84;font-size:.8rem;margin-top:5px}
+    .st-key-cap_course_results .cap-result-score{background:#fff;border:1px solid #e5e9ef;border-radius:13px;
+        min-width:170px;display:flex;flex-direction:column;text-align:center;padding:14px 13px}
+    .st-key-cap_course_results .cap-result-score small{font-size:.68rem;font-weight:800;color:#637287;letter-spacing:.08em}
+    .st-key-cap_course_results .cap-result-score b{font-size:2rem;line-height:1.15;color:#087f44;white-space:nowrap;font-weight:850;margin:3px 0}
+    .st-key-cap_course_results .fail .cap-result-score b{color:#b42d40}
+    .st-key-cap_course_results .pending .cap-result-score b{color:#59677a}
+    .st-key-cap_course_results .cap-result-score em{font-size:1.08rem;font-style:normal;color:#8793a2}
+    .st-key-cap_course_results .cap-result-score span{font-size:.72rem;color:#6a778b}
+    .st-key-cap_course_results .cap-result-facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:13px 0 16px}
+    .st-key-cap_course_results .cap-result-facts>div{border:1px solid #e8edf3;border-radius:12px;padding:11px 13px;background:#fbfcfe}
+    .st-key-cap_course_results .cap-result-facts small{display:block;color:#718096;font-size:.62rem;letter-spacing:.06em;font-weight:750}
+    .st-key-cap_course_results .cap-result-facts b{display:block;color:#24344b;font-size:.9rem;margin-top:5px}
+    .st-key-cap_course_results .cap-detail-congrats{display:flex;align-items:center;gap:14px;
+        padding:16px 6px 15px;margin:14px 0 2px;border-top:1px solid #edf0f5}
+    .st-key-cap_course_results .cap-detail-trophy{display:grid;place-items:center;height:43px;width:43px;
+        border-radius:12px;color:#e2a217;background:#fff6e4;font-size:1.75rem;flex:none}
+    .st-key-cap_course_results .cap-detail-congrats strong{font-size:1.05rem;color:#a5223b;font-weight:850;display:block}
+    .st-key-cap_course_results .cap-detail-congrats small{display:block;color:#728198;font-size:.77rem;margin-top:2px}
+    .st-key-cap_course_results .cap-detail-empty{border:1px dashed #dce3ec;border-radius:13px;padding:21px;color:#61728a;
+        background:#f8fafc;font-size:.81rem;line-height:1.6}
+    .st-key-cap_course_results [data-testid="stDownloadButton"] button,
+    .st-key-cap_course_results [data-testid="stButton"] button[kind="primary"]{
+        background:#d6253d!important;color:#fff!important;border-color:#d6253d!important;min-height:46px!important}
+    .st-key-cap_course_results [data-testid="stDownloadButton"] button *{color:#fff!important}
+    .st-key-cap_cert_preview_btn button{background:#fff!important;color:#253348!important;border:1px solid #d6dde7!important}
+    @media(max-width:1050px){.st-key-cap_shell .cap-detail-hero{grid-template-columns:85px minmax(0,1fr) 190px;gap:13px;padding:18px}
+      .st-key-cap_shell .cap-detail-illustration{width:85px;height:85px}.st-key-cap_shell .cap-detail-illustration svg{width:58px;height:58px}
+      .st-key-cap_course_results .cap-detail-result{flex-wrap:wrap}}
+    @media(max-width:720px){.st-key-cap_shell .cap-detail-hero{grid-template-columns:65px minmax(0,1fr);gap:12px;padding:14px}
+      .st-key-cap_shell .cap-detail-illustration{width:65px;height:65px;border-radius:13px}
+      .st-key-cap_shell .cap-detail-illustration svg{width:45px;height:45px}
+      .st-key-cap_shell .cap-detail-progress{grid-column:1/-1;border-left:0;border-top:1px solid #edf0f5;padding:12px 4px 0}
+      .st-key-cap_shell .cap-detail-progress strong{font-size:1.8rem}
+      .st-key-cap_course_lessons,.st-key-cap_course_results{padding:15px 13px;min-height:0}
+      .st-key-cap_course_results .cap-detail-result{gap:13px;padding:14px}
+      .st-key-cap_course_results .cap-result-score{width:100%;min-width:0}
+      .st-key-cap_course_results .cap-result-facts{grid-template-columns:1fr 1fr}
+      .st-key-cap_course_results .cap-result-facts>div:last-child{grid-column:1/-1}}
     </style>''',unsafe_allow_html=True)
 
 
@@ -6819,85 +7094,147 @@ def _cap_course_detail(data,dni,cid):
         st.button('Volver a capacitaciones',key='cap_back_absent',on_click=_cap_close_course)
         return
     state=_cap_status(data,course,dni)
+    attempts=state['tries']
+    last=attempts[-1] if attempts else None
+    approved=next((r for r in reversed(attempts) if r.get('aprobado')=='Sí'),None)
+    grade_record=approved or last
+    def _score_num(row):
+        try:return max(0.0,min(100.0,float(row.get('nota_pct'))))
+        except (ValueError,TypeError,AttributeError):return None
+    score=_score_num(grade_record)
+    last_score=_score_num(last)
+    minimum=float(course.get('umbral_pct') or 70)
+    def _score_text(num):
+        return ('%.2f'%num).rstrip('0').rstrip('.') if num is not None else '—'
     with st.container(key='cap_shell'):
         st.button('← Volver a mis capacitaciones',key='cap_back',on_click=_cap_close_course)
-        st.markdown('<div class="cap-hero"><div class="cap-hero-body"><div class="cap-hero-kicker">MI RUTA DE APRENDIZAJE</div>'
-            '<h2 style="font-size:1.5rem">'+_cap_escape(course['titulo'])+'</h2><p>'+_cap_escape(course['descripcion'])+'</p>'
-            '<div class="cap-progress '+('done' if state['completed'] else '')+'"><i style="width:'+str(state['pct'])+'%"></i></div>'
-            '<p>Progreso: '+str(state['count'])+'/'+str(state['total'])+' actividades · '+str(state['pct'])+'%</p></div></div>',unsafe_allow_html=True)
-        _cap_section('📚','Contenido del curso','Revisa cada lección y confirma su finalización.')
-        for i,lesson in enumerate(state['lessons'],start=1):
-            completed=lesson['id_leccion'] in state['done']
-            with st.expander(('✅ ' if completed else '▶️ ')+str(i)+'. '+lesson['titulo'],
-                             expanded=(lesson['id_leccion']==st.session_state.get('cap_selected_lesson'))):
-                st.markdown('**'+_cap_escape(lesson['titulo'])+'**')
-                if lesson.get('descripcion'):st.write(lesson['descripcion'])
-                if lesson['tipo']=='YouTube':
-                    try:st.video(_pmx_youtube_link(lesson['url_youtube']))
-                    except ValueError:st.warning('El enlace de YouTube debe actualizarse por administración.')
-                elif lesson['tipo']=='MP4 privado':
-                    k='cap_video_bytes_'+_pmi_dni(dni)+'_'+lesson['id_leccion']
-                    loaded=st.session_state.get(k)
-                    login=str(st.session_state.get('usuario_login'))
-                    if not loaded or loaded[0]!=login:
-                        if st.button('▶ Cargar video privado',key='cap_load_'+lesson['id_leccion'],use_container_width=True):
-                            try:
-                                for old in list(st.session_state):
-                                    if str(old).startswith('cap_video_bytes_'):st.session_state.pop(old,None)
-                                st.session_state[k]=(login,_cap_private_video(cid,lesson['id_leccion'],dni))
-                                loaded=st.session_state[k]
-                            except Exception:
-                                st.error('No se pudo cargar el video privado desde Drive.')
-                    if loaded and loaded[0]==login:st.video(loaded[1],format='video/mp4')
-                if completed:
-                    st.success('Lección marcada como completada.')
-                else:
-                    agree=st.checkbox('Confirmo que revisé este material',key='cap_conf_'+lesson['id_leccion'])
-                    if st.button('Marcar lección completada',key='cap_done_'+lesson['id_leccion'],
-                                 disabled=not agree,use_container_width=True):
-                        _pmi_ui_action(lambda c=cid,l=lesson['id_leccion'],d=dni:_cap_complete_lesson(c,l,d),
-                                       'Se registró tu progreso en el curso.')
-        if state['questions']:
-            _cap_section('📝','Evaluación del curso','Resuelve las preguntas después de estudiar todas las lecciones.')
-            if state['passed']:
-                st.success('Evaluación aprobada.')
-            elif len(state['tries'])>=3:
-                st.warning('Se agotaron los tres intentos. Consulta a administración.')
-            elif any(l['id_leccion'] not in state['done'] for l in state['lessons']):
-                st.info('Completa todas las lecciones para desbloquear la evaluación.')
-            else:
-                st.caption('Nota mínima: '+str(course.get('umbral_pct') or 70)+'% · Intentos disponibles: '+str(3-len(state['tries'])))
-                with st.form('cap_exam_form_'+cid):
-                    answers={}
-                    for n,q in enumerate(state['questions'],start=1):
-                        st.markdown('**'+str(n)+'. '+_cap_escape(q['enunciado'])+'**')
-                        options=[('A',q['op_a']),('B',q['op_b']),('C',q['op_c']),('D',q['op_d'])]
-                        choice=st.radio('Respuesta '+str(n),[x[0] for x in options],
-                            format_func=lambda v, o=options:next((txt for key,txt in o if key==v),v),
-                            key='cap_answer_'+q['id_pregunta'],index=None)
-                        answers[q['id_pregunta']]=choice
-                    checked=st.checkbox('Confirmo que deseo enviar mis respuestas para calificación.')
-                    sent=st.form_submit_button('Enviar evaluación',type='primary',use_container_width=True)
-                if sent:
-                    if not checked:
-                        st.warning('Confirma el envío de tus respuestas para calificar la evaluación.')
+        st.markdown(
+            '<div class="cap-detail-hero">'
+            '<div class="cap-detail-illustration">'
+            '<svg viewBox="0 0 88 88" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">'
+            '<path d="M18 48V40a26 26 0 0 1 52 0v8" stroke="currentColor" stroke-width="5" stroke-linecap="round"/>'
+            '<rect x="11" y="44" width="17" height="28" rx="8" fill="currentColor"/>'
+            '<rect x="61" y="44" width="17" height="28" rx="8" fill="currentColor"/>'
+            '<path d="M69 69c-4 9-13 12-24 12h-5" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>'
+            '<rect x="33" y="76" width="14" height="7" rx="3.5" fill="currentColor"/>'
+            '</svg></div>'
+            '<div class="cap-detail-info"><span class="cap-detail-kicker">MI RUTA DE APRENDIZAJE</span>'
+            '<h2>'+_cap_escape(course['titulo'])+'</h2><p>'+_cap_escape(course['descripcion'])+'</p>'
+            '<div class="cap-detail-rule">'+('Curso completado' if state['completed'] and not state['questions'] else 'Curso completado y aprobado' if state['completed'] else 'Avanza en las lecciones y supera la evaluación para obtener tu constancia')+'</div></div>'
+            '<div class="cap-detail-progress"><span>Progreso del curso</span><strong>'+str(state['pct'])+'%</strong>'
+            '<small>'+str(state['count'])+'/'+str(state['total'])+' actividades completadas</small>'
+            '<div class="cap-detail-track"><i style="width:'+str(state['pct'])+'%;background:'+('#12a365' if state['completed'] else '#d6253d')+'"></i></div></div>'
+            '</div>',unsafe_allow_html=True)
+        lessons_col,results_col=st.columns([1.03,2.1],gap='medium')
+        with lessons_col:
+            with st.container(key='cap_course_lessons'):
+                _cap_section('📚','Contenido del curso','Revisa cada lección y confirma su finalización.')
+                for i,lesson in enumerate(state['lessons'],start=1):
+                    completed=lesson['id_leccion'] in state['done']
+                    with st.expander(('✅ ' if completed else '▶️ ')+str(i)+'. '+lesson['titulo'],
+                                     expanded=(lesson['id_leccion']==st.session_state.get('cap_selected_lesson'))):
+                        st.markdown('**'+_cap_escape(lesson['titulo'])+'**')
+                        if lesson.get('descripcion'):st.write(lesson['descripcion'])
+                        if lesson['tipo']=='YouTube':
+                            try:st.video(_pmx_youtube_link(lesson['url_youtube']))
+                            except ValueError:st.warning('El enlace de YouTube debe actualizarse por administración.')
+                        elif lesson['tipo']=='MP4 privado':
+                            k='cap_video_bytes_'+_pmi_dni(dni)+'_'+lesson['id_leccion']
+                            loaded=st.session_state.get(k)
+                            login=str(st.session_state.get('usuario_login'))
+                            if not loaded or loaded[0]!=login:
+                                if st.button('▶ Cargar video privado',key='cap_load_'+lesson['id_leccion'],use_container_width=True):
+                                    try:
+                                        for old in list(st.session_state):
+                                            if str(old).startswith('cap_video_bytes_'):st.session_state.pop(old,None)
+                                        st.session_state[k]=(login,_cap_private_video(cid,lesson['id_leccion'],dni))
+                                        loaded=st.session_state[k]
+                                    except Exception:
+                                        st.error('No se pudo cargar el video privado desde Drive.')
+                            if loaded and loaded[0]==login:st.video(loaded[1],format='video/mp4')
+                        if completed:
+                            st.success('Lección marcada como completada.')
+                        else:
+                            agree=st.checkbox('Confirmo que revisé este material',key='cap_conf_'+lesson['id_leccion'])
+                            if st.button('Marcar lección completada',key='cap_done_'+lesson['id_leccion'],
+                                         disabled=not agree,use_container_width=True):
+                                _pmi_ui_action(lambda c=cid,l=lesson['id_leccion'],d=dni:_cap_complete_lesson(c,l,d),
+                                               'Se registró tu progreso en el curso.')
+        with results_col:
+            with st.container(key='cap_course_results'):
+                _cap_section('📝','Evaluación y resultados','Consulta el resultado de tu evaluación final.')
+                if state['questions']:
+                    tone = 'ok' if state['passed'] else ('fail' if score is not None else 'pending')
+                    title = 'Evaluación aprobada' if state['passed'] else ('Evaluación no aprobada' if score is not None else 'Evaluación pendiente')
+                    message = ('Desempeño excelente' if score is not None and score>=95 and state['passed']
+                               else '¡Buen trabajo! Superaste la nota mínima' if state['passed']
+                               else 'Puedes mejorar tu resultado' if score is not None else 'Todavía no has rendido el examen')
+                    correct = str(grade_record.get('correctas') or '—') if grade_record else '—'
+                    total = str(grade_record.get('total') or len(state['questions'])) if grade_record else str(len(state['questions']))
+                    st.markdown('<div class="cap-detail-result '+tone+'">'
+                        '<div class="cap-result-badge">'+_capm_svg('award')+'</div>'
+                        '<div class="cap-result-main"><strong>'+title+'</strong><span>'+message+'</span></div>'
+                        '<div class="cap-result-score"><small>NOTA FINAL</small><b>'+_score_text(score)+'<em>/100</em></b>'
+                        '<span>'+(('Último intento: '+_score_text(last_score)+'%') if last_score is not None else 'Sin intentos registrados')+'</span></div></div>'
+                        '<div class="cap-result-facts">'
+                        '<div><small>NOTA MÍNIMA</small><b>'+_score_text(minimum)+'%</b></div>'
+                        '<div><small>INTENTOS UTILIZADOS</small><b>'+str(len(attempts))+' de 3</b></div>'
+                        '<div><small>RESPUESTAS CORRECTAS</small><b>'+correct+' de '+total+'</b></div>'
+                        '</div>',unsafe_allow_html=True)
+                    if state['passed']:
+                        pass  # No se vuelve a habilitar un examen aprobado.
+                    elif len(state['tries'])>=3:
+                        st.warning('Se agotaron los tres intentos. Consulta a administración.')
+                    elif any(l['id_leccion'] not in state['done'] for l in state['lessons']):
+                        st.info('Completa todas las lecciones para desbloquear la evaluación.')
                     else:
-                        _pmi_ui_action(lambda:_cap_submit_exam(cid,dni,answers),'Evaluación registrada y calificada.')
-            if state['tries']:
-                try:
-                    last=state['tries'][-1]
-                    st.caption('Último intento: '+str(last['nota_pct'])+'% · '+('Aprobado' if last['aprobado']=='Sí' else 'No aprobado'))
-                except Exception:pass
-        if state['completed']:
-            st.success('¡Felicitaciones! Completaste la ruta de aprendizaje.')
-            found=[r for r in data[_CAP_CERTS] if r['id_curso']==cid and _pmi_dni(r['dni'])==_pmi_dni(dni)]
-            if not found:
-                if st.button('🏅 Emitir mi constancia digital',key='cap_issue_'+cid,type='primary',use_container_width=True):
-                    _pmi_ui_action(lambda:_cap_issue_certificate(cid,dni),'Constancia emitida correctamente.')
-            elif len(found)==1 and REPORTLAB_AVAILABLE:
-                st.download_button('⬇ Descargar mi certificado en PDF',_cap_pdf(found[0],course,dni),
-                    file_name='Certificado_'+str(found[0]['codigo'])+'.pdf',mime='application/pdf',
-                    key='cap_cert_download_'+cid,use_container_width=True)
+                        st.caption('Nota mínima: '+str(course.get('umbral_pct') or 70)+'% · Intentos disponibles: '+str(3-len(state['tries'])))
+                        with st.form('cap_exam_form_'+cid):
+                            answers={}
+                            for n,q in enumerate(state['questions'],start=1):
+                                st.markdown('**'+str(n)+'. '+_cap_escape(q['enunciado'])+'**')
+                                options=[('A',q['op_a']),('B',q['op_b']),('C',q['op_c']),('D',q['op_d'])]
+                                choice=st.radio('Respuesta '+str(n),[x[0] for x in options],
+                                    format_func=lambda v, o=options:next((txt for key,txt in o if key==v),v),
+                                    key='cap_answer_'+q['id_pregunta'],index=None)
+                                answers[q['id_pregunta']]=choice
+                            checked=st.checkbox('Confirmo que deseo enviar mis respuestas para calificación.')
+                            sent=st.form_submit_button('Enviar evaluación',type='primary',use_container_width=True)
+                        if sent:
+                            if not checked:
+                                st.warning('Confirma el envío de tus respuestas para calificar la evaluación.')
+                            else:
+                                _pmi_ui_action(lambda:_cap_submit_exam(cid,dni,answers),'Evaluación registrada y calificada.')
+                else:
+                    st.markdown('<div class="cap-detail-empty">Este curso no requiere una evaluación calificada. '
+                                'La finalización depende de sus lecciones.</div>',unsafe_allow_html=True)
+                if state['completed']:
+                    st.markdown('<div class="cap-detail-congrats"><span class="cap-detail-trophy">★</span>'
+                        '<div><strong>¡Felicitaciones!</strong><small>Completaste la ruta de aprendizaje.</small></div></div>',
+                        unsafe_allow_html=True)
+                    found=[r for r in data[_CAP_CERTS] if r['id_curso']==cid and _pmi_dni(r['dni'])==_pmi_dni(dni)]
+                    if not found:
+                        if st.button('Emitir mi constancia digital',key='cap_issue_'+cid,type='primary',use_container_width=True):
+                            _pmi_ui_action(lambda:_cap_issue_certificate(cid,dni),'Constancia emitida correctamente.')
+                    elif len(found)==1 and REPORTLAB_AVAILABLE:
+                        cert_bytes=_cap_pdf(found[0],course,dni,state=state)
+                        dl,preview=st.columns([2.05,1],gap='small')
+                        with dl:
+                            st.download_button('⬇ Descargar certificado en PDF',cert_bytes,
+                                file_name='Certificado_'+str(found[0]['codigo'])+'.pdf',mime='application/pdf',
+                                key='cap_cert_download_'+cid,use_container_width=True,type='primary')
+                        with preview:
+                            if st.button('Ver certificado',key='cap_cert_preview_btn_'+cid,use_container_width=True):
+                                pkey='cap_cert_preview_'+cid
+                                st.session_state[pkey]=not st.session_state.get(pkey,False)
+                        if st.session_state.get('cap_cert_preview_'+cid,False):
+                            st.caption('Vista previa del PDF emitido. Si el navegador no permite visualizarlo, utiliza Descargar certificado.')
+                            uri='data:application/pdf;base64,'+base64.b64encode(cert_bytes).decode('ascii')
+                            components.html('<iframe title="Constancia de capacitación" '
+                                'src="'+uri+'" style="width:100%;height:635px;border:1px solid #e5eaf1;'
+                                'border-radius:12px;background:#fff"></iframe>',height=660,scrolling=False)
+                    elif len(found)==1 and not REPORTLAB_AVAILABLE:
+                        st.caption('Instala reportlab para habilitar la descarga del certificado.')
         st.caption('La confirmación de una lección es declarativa: no equivale a una comprobación automática del tiempo reproducido.')
 
 
