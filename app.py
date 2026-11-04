@@ -6945,12 +6945,12 @@ def _cap_styles():
         height:100%;
     }
 
-    /* La pantalla de detalle tiene dos columnas iguales y bordes inferiores alineados.
-       Grid hace que ambas columnas adopten la altura del contenido más alto. */
+    /* Detalle: resultados destacados (64%) y contenido (36%), con altura nivelada.
+       Grid adopta la altura del contenido más alto sin cambiar formularios. */
     @media (min-width:721px){
       .st-key-cap_shell [data-testid="stHorizontalBlock"]:has(.st-key-cap_course_lessons):has(.st-key-cap_course_results){
           display:grid!important;
-          grid-template-columns:repeat(2,minmax(0,1fr))!important;
+          grid-template-columns:minmax(0,0.9fr) minmax(0,1.6fr)!important;
           gap:20px!important;
           align-items:stretch!important;
       }
@@ -7005,7 +7005,7 @@ def _cap_styles():
       .st-key-cap_shell .st-key-cap_cert_panel{
           margin-bottom:0!important;
       }
-      .st-key-cap_shell .st-key-cap_sessions_panel{margin-bottom:16px!important}
+      .st-key-cap_shell .st-key-cap_sessions_panel{margin-bottom:0!important} /* Streamlit ya aplica gap entre paneles */
       .st-key-cap_shell .st-key-cap_cert_panel{min-height:360px!important}
       .st-key-cap_shell .st-key-cap_library_panel,.st-key-cap_shell .st-key-cap_performance_panel{min-height:408px!important}
       .st-key-cap_shell .st-key-cap_routes_panel{min-height:585px!important}
@@ -7040,6 +7040,40 @@ def _cap_styles():
           margin-bottom:14px!important;
       }
       .st-key-cap_shell:has(.cap-stat-grid) .cap-hero{margin-bottom:15px!important}
+    }
+
+    /* Capacitaciones · centrado preciso de las insignias en Mi desempeño.
+       Cada insignia ocupa un tercio del espacio y su etiqueta se centra bajo el icono. */
+    .st-key-cap_performance_panel .cap-performance{
+        display:grid!important;
+        grid-template-columns:minmax(0,0.9fr) minmax(0,1.8fr)!important;
+        gap:14px!important;
+        align-items:center!important;
+    }
+    .st-key-cap_performance_panel .cap-score{
+        width:100%;min-width:0;box-sizing:border-box;flex:none!important;
+    }
+    .st-key-cap_performance_panel .cap-badges{
+        display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;
+        align-items:center!important;justify-items:center!important;
+        gap:8px!important;width:100%;min-width:0;flex:none!important;
+    }
+    .st-key-cap_performance_panel .cap-badge{
+        display:flex!important;flex-direction:column!important;align-items:center!important;
+        justify-content:center!important;text-align:center!important;
+        width:100%;min-width:0;gap:7px!important;line-height:1.15;
+    }
+    .st-key-cap_performance_panel .cap-badge small{
+        display:flex!important;align-items:center!important;justify-content:center!important;
+        text-align:center!important;min-height:34px;width:100%;margin:0!important;
+        line-height:1.35;overflow-wrap:anywhere;
+    }
+    @media(max-width:1200px){
+      .st-key-cap_performance_panel .cap-performance{grid-template-columns:minmax(0,1fr)!important}
+      .st-key-cap_performance_panel .cap-score{max-width:none}
+    }
+    @media(max-width:720px){
+      .st-key-cap_performance_panel .cap-badges{gap:6px!important}
     }
     </style>''',unsafe_allow_html=True)
 
@@ -7246,7 +7280,7 @@ def _cap_course_detail(data,dni,cid):
             '<small>'+str(state['count'])+'/'+str(state['total'])+' actividades completadas</small>'
             '<div class="cap-detail-track"><i style="width:'+str(state['pct'])+'%;background:'+('#12a365' if state['completed'] else '#d6253d')+'"></i></div></div>'
             '</div>',unsafe_allow_html=True)
-        lessons_col,results_col=st.columns([0.86,1.54],gap='medium')
+        lessons_col,results_col=st.columns([0.9,1.6],gap='medium')
         with lessons_col:
             with st.container(key='cap_course_lessons'):
                 _cap_section('📚','Contenido del curso','Revisa cada lección y confirma su finalización.')
