@@ -6920,6 +6920,115 @@ def _cap_styles():
       .st-key-cap_course_results .cap-result-score{width:100%;min-width:0}
       .st-key-cap_course_results .cap-result-facts{grid-template-columns:1fr 1fr}
       .st-key-cap_course_results .cap-result-facts>div:last-child{grid-column:1/-1}}
+
+    /* 2026-11-04 | AJUSTE DE ALINEACIÓN - SOLO CAPACITACIONES DEL COLABORADOR
+       Mantener funciones, estados y manejo de datos originales. */
+    .st-key-cap_shell:has(.cap-stat-grid) .cap-hero{
+        margin-bottom:18px!important;
+    }
+    .st-key-cap_shell .cap-stat-grid{
+        align-items:stretch!important;
+        row-gap:13px!important;
+        column-gap:13px!important;
+    }
+    .st-key-cap_shell .cap-stat-grid .cap-stat{
+        box-sizing:border-box!important;
+        height:100%;
+    }
+
+    /* La pantalla de detalle tiene dos columnas iguales y bordes inferiores alineados.
+       Grid hace que ambas columnas adopten la altura del contenido más alto. */
+    @media (min-width:721px){
+      .st-key-cap_shell [data-testid="stHorizontalBlock"]:has(.st-key-cap_course_lessons):has(.st-key-cap_course_results){
+          display:grid!important;
+          grid-template-columns:repeat(2,minmax(0,1fr))!important;
+          gap:20px!important;
+          align-items:stretch!important;
+      }
+      .st-key-cap_shell [data-testid="stHorizontalBlock"]:has(.st-key-cap_course_lessons):has(.st-key-cap_course_results) > [data-testid="stColumn"]{
+          width:100%!important;min-width:0!important;max-width:none!important;
+          display:flex!important;flex-direction:column!important;align-self:stretch!important;
+      }
+      .st-key-cap_shell [data-testid="stHorizontalBlock"]:has(.st-key-cap_course_lessons):has(.st-key-cap_course_results) > [data-testid="stColumn"] > [data-testid="stVerticalBlock"]{
+          display:flex!important;flex:1 1 auto!important;flex-direction:column!important;
+      }
+      .st-key-cap_shell .st-key-cap_course_lessons,
+      .st-key-cap_shell .st-key-cap_course_results{
+          min-height:400px!important;height:100%!important;box-sizing:border-box!important;
+          margin-bottom:0!important;
+      }
+      /* Streamlit incluye envoltorios entre la columna y st.container:
+         extender también esos envoltorios, sin tocar sus widgets. */
+      .st-key-cap_shell [data-testid="stColumn"] [data-testid="stElementContainer"]:has(> .st-key-cap_course_lessons),
+      .st-key-cap_shell [data-testid="stColumn"] [data-testid="stElementContainer"]:has(> .st-key-cap_course_results),
+      .st-key-cap_shell [data-testid="stColumn"] [data-testid="stVerticalBlockBorderWrapper"]:has(> .st-key-cap_course_lessons),
+      .st-key-cap_shell [data-testid="stColumn"] [data-testid="stVerticalBlockBorderWrapper"]:has(> .st-key-cap_course_results){
+          flex:1 1 auto!important;display:flex!important;flex-direction:column!important;
+      }
+
+      /* Dashboard: cuadrícula 2:1, filas alineadas y esquinas consistentes. */
+      .st-key-cap_shell [data-testid="stHorizontalBlock"]:has(.st-key-cap_routes_panel):has(.st-key-cap_sessions_panel),
+      .st-key-cap_shell [data-testid="stHorizontalBlock"]:has(.st-key-cap_library_panel):has(.st-key-cap_performance_panel){
+          display:grid!important;grid-template-columns:minmax(0,2fr) minmax(0,1fr)!important;
+          align-items:stretch!important;gap:20px!important;
+      }
+      .st-key-cap_shell [data-testid="stHorizontalBlock"]:has(.st-key-cap_routes_panel):has(.st-key-cap_sessions_panel) > [data-testid="stColumn"],
+      .st-key-cap_shell [data-testid="stHorizontalBlock"]:has(.st-key-cap_library_panel):has(.st-key-cap_performance_panel) > [data-testid="stColumn"]{
+          width:100%!important;max-width:none!important;min-width:0!important;align-self:stretch!important;
+          display:flex!important;flex-direction:column!important;
+      }
+      .st-key-cap_shell [data-testid="stHorizontalBlock"]:has(.st-key-cap_routes_panel):has(.st-key-cap_sessions_panel) > [data-testid="stColumn"] > [data-testid="stVerticalBlock"],
+      .st-key-cap_shell [data-testid="stHorizontalBlock"]:has(.st-key-cap_library_panel):has(.st-key-cap_performance_panel) > [data-testid="stColumn"] > [data-testid="stVerticalBlock"]{
+          display:flex!important;flex:1 1 auto!important;flex-direction:column!important;
+      }
+      .st-key-cap_shell .st-key-cap_routes_panel,
+      .st-key-cap_shell .st-key-cap_library_panel,
+      .st-key-cap_shell .st-key-cap_performance_panel{
+          flex:1 1 auto!important;height:100%!important;min-width:0!important;
+          box-sizing:border-box!important;
+      }
+      .st-key-cap_shell .st-key-cap_cert_panel{
+          flex:1 1 auto!important;min-width:0!important;box-sizing:border-box!important;
+      }
+      .st-key-cap_shell .st-key-cap_routes_panel,
+      .st-key-cap_shell .st-key-cap_library_panel,
+      .st-key-cap_shell .st-key-cap_performance_panel,
+      .st-key-cap_shell .st-key-cap_cert_panel{
+          margin-bottom:0!important;
+      }
+      .st-key-cap_shell .st-key-cap_sessions_panel{margin-bottom:16px!important}
+      .st-key-cap_shell [data-testid="stHorizontalBlock"]:has(.st-key-cap_routes_panel):has(.st-key-cap_sessions_panel){
+          margin-bottom:20px!important;
+      }
+      /* Aplicar la altura a los envoltorios de st.container, no sólo al panel:
+         evita desalineaciones si Streamlit inserta ElementContainer/BorderWrapper. */
+      .st-key-cap_shell [data-testid="stColumn"] [data-testid="stElementContainer"]:has(.st-key-cap_routes_panel),
+      .st-key-cap_shell [data-testid="stColumn"] [data-testid="stElementContainer"]:has(.st-key-cap_library_panel),
+      .st-key-cap_shell [data-testid="stColumn"] [data-testid="stElementContainer"]:has(.st-key-cap_performance_panel),
+      .st-key-cap_shell [data-testid="stColumn"] [data-testid="stElementContainer"]:has(.st-key-cap_cert_panel),
+      .st-key-cap_shell [data-testid="stColumn"] [data-testid="stVerticalBlockBorderWrapper"]:has(.st-key-cap_routes_panel),
+      .st-key-cap_shell [data-testid="stColumn"] [data-testid="stVerticalBlockBorderWrapper"]:has(.st-key-cap_library_panel),
+      .st-key-cap_shell [data-testid="stColumn"] [data-testid="stVerticalBlockBorderWrapper"]:has(.st-key-cap_performance_panel),
+      .st-key-cap_shell [data-testid="stColumn"] [data-testid="stVerticalBlockBorderWrapper"]:has(.st-key-cap_cert_panel){
+          flex:1 1 auto!important;display:flex!important;flex-direction:column!important;
+          min-width:0!important;
+      }
+    }
+    @media (max-width:720px){
+      .st-key-cap_shell .st-key-cap_course_lessons,
+      .st-key-cap_shell .st-key-cap_course_results{
+          height:auto!important;min-height:0!important;
+      }
+      .st-key-cap_shell .st-key-cap_routes_panel,
+      .st-key-cap_shell .st-key-cap_sessions_panel,
+      .st-key-cap_shell .st-key-cap_cert_panel,
+      .st-key-cap_shell .st-key-cap_library_panel,
+      .st-key-cap_shell .st-key-cap_performance_panel{
+          height:auto!important;min-height:0!important;
+          margin-bottom:14px!important;
+      }
+      .st-key-cap_shell:has(.cap-stat-grid) .cap-hero{margin-bottom:15px!important}
+    }
     </style>''',unsafe_allow_html=True)
 
 
@@ -7125,7 +7234,7 @@ def _cap_course_detail(data,dni,cid):
             '<small>'+str(state['count'])+'/'+str(state['total'])+' actividades completadas</small>'
             '<div class="cap-detail-track"><i style="width:'+str(state['pct'])+'%;background:'+('#12a365' if state['completed'] else '#d6253d')+'"></i></div></div>'
             '</div>',unsafe_allow_html=True)
-        lessons_col,results_col=st.columns([1.03,2.1],gap='medium')
+        lessons_col,results_col=st.columns(2,gap='medium')
         with lessons_col:
             with st.container(key='cap_course_lessons'):
                 _cap_section('📚','Contenido del curso','Revisa cada lección y confirma su finalización.')
