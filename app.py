@@ -494,7 +494,7 @@ table.tp-shift-detail td.cob span.cero{color:#C62828;font-weight:700;}
 .tp-up-calendar table{min-width:850px!important;}
 .tp-shift-detail-wrap{max-width:100%!important;overflow-x:auto!important;-webkit-overflow-scrolling:touch;}
 .tp-cal-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;}
-.tp-mgrid{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
+.tp-mgrid{grid-template-columns:minmax(0,0.86fr) minmax(0,1.54fr)!important;}
 }
 @media screen and (max-width: 640px){
 .market-header{padding:16px!important;margin-bottom:12px!important;}
@@ -6717,11 +6717,11 @@ def _cap_styles():
        background:#fff;border:1px solid #e7edf3;border-radius:22px;padding:18px 16px;
        box-shadow:0 13px 27px -23px rgba(16,32,55,.28);margin-bottom:16px;display:flex;flex-direction:column}
     .st-key-cap_shell [data-testid="stHorizontalBlock"]{align-items:stretch}
-    .st-key-cap_routes_panel{min-height:646px}
+    .st-key-cap_routes_panel{min-height:585px}
     .st-key-cap_sessions_panel{min-height:212px}
-    .st-key-cap_cert_panel{min-height:318px}
-    .st-key-cap_library_panel{min-height:314px}
-    .st-key-cap_performance_panel{min-height:314px}
+    .st-key-cap_cert_panel{min-height:360px}
+    .st-key-cap_library_panel{min-height:408px}
+    .st-key-cap_performance_panel{min-height:408px}
     .st-key-cap_shell .cap-hero{height:auto;min-height:166px}
     .st-key-cap_shell .cap-stat-grid{margin:0 0 17px;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
     .st-key-cap_shell .cap-stat{padding:15px 14px;min-height:116px}
@@ -6963,7 +6963,7 @@ def _cap_styles():
       }
       .st-key-cap_shell .st-key-cap_course_lessons,
       .st-key-cap_shell .st-key-cap_course_results{
-          min-height:400px!important;height:100%!important;box-sizing:border-box!important;
+          min-height:560px!important;height:100%!important;box-sizing:border-box!important;
           margin-bottom:0!important;
       }
       /* Streamlit incluye envoltorios entre la columna y st.container:
@@ -7006,6 +7006,9 @@ def _cap_styles():
           margin-bottom:0!important;
       }
       .st-key-cap_shell .st-key-cap_sessions_panel{margin-bottom:16px!important}
+      .st-key-cap_shell .st-key-cap_cert_panel{min-height:360px!important}
+      .st-key-cap_shell .st-key-cap_library_panel,.st-key-cap_shell .st-key-cap_performance_panel{min-height:408px!important}
+      .st-key-cap_shell .st-key-cap_routes_panel{min-height:585px!important}
       .st-key-cap_shell [data-testid="stHorizontalBlock"]:has(.st-key-cap_routes_panel):has(.st-key-cap_sessions_panel){
           margin-bottom:20px!important;
       }
@@ -7243,7 +7246,7 @@ def _cap_course_detail(data,dni,cid):
             '<small>'+str(state['count'])+'/'+str(state['total'])+' actividades completadas</small>'
             '<div class="cap-detail-track"><i style="width:'+str(state['pct'])+'%;background:'+('#12a365' if state['completed'] else '#d6253d')+'"></i></div></div>'
             '</div>',unsafe_allow_html=True)
-        lessons_col,results_col=st.columns([0.95,1.45],gap='medium')
+        lessons_col,results_col=st.columns([0.86,1.54],gap='medium')
         with lessons_col:
             with st.container(key='cap_course_lessons'):
                 _cap_section('📚','Contenido del curso','Revisa cada lección y confirma su finalización.')
